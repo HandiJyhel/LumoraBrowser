@@ -1,0 +1,13 @@
+[package]
+name = "pulse-browser"
+version = "0.9.7-dev"
+edition = "2024"
+description = "Pulse Browser development shell"
+license = "Proprietary"
+publish = false
+
+[dependencies]
+cef = { version = "149.3.0", default-features = false, features = ["build-util"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"

@@ -1,0 +1,22 @@
+# Rust build artifacts
+/target/
+
+# .NET build artifacts
+**/bin/
+**/obj/
+*.user
+
+# Build outputs and captures
+/artifacts/
+
+# Runtime logs
+/logs/*.log
+*.log
+
+# WebView2 user data (runtime profiles)
+**/EBWebView/
+**/WebView2/
+
+# OS cruft
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,608 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Konscious.Security.Cryptography;
+
+namespace PulseBrowser.WinUI;
+
+// Coffre local C# pur — zéro dépendance Rust, zéro IPC, souverain.
+//
+// Philosophie : le fichier "vault.pulse" appartient à l'utilisateur. Il est
+// autonome et portable — il ne dépend que du mot de passe maître (celui du
+// profil). On peut le copier sur une clé USB, un NAS, le restaurer après un
+// formatage : il s'ouvrira partout du moment qu'on connaît le mot de passe.
+//
+// Mode "aes256" (par défaut) : clé dérivée par Argon2id à partir du mot de passe,
+//   chiffrement AES-256-CBC. Portable, indépendant de la machine.
+// Mode "dpapi" (confort/legacy) : chiffré par Windows, lié au compte Windows.
+//   NON portable — proposé seulement en secours.
+//
+// Contrepartie assumée : pas de récupération. Mot de passe perdu = données perdues.
+internal sealed class VaultStore
+{
+    // Paramètres Argon2id (coût mémoire fort = résistance GPU/ASIC).
+    private const int Argon2MemoryKib   = 65536; // 64 Mio
+    private const int Argon2Iterations  = 3;
+    private const int Argon2Parallelism = 4;
+
+    // Ancien KDF (lecture des coffres créés avant Argon2id).
+    private const int LegacyPbkdf2Iterations = 100_000;
+
+    private const int KeySize = 32;
+    private const int IvSize  = 16;
+
+    private static readonly byte[] VaultEntropy = Encoding.UTF8.GetBytes("PulseBrowser.Vault.v1");
+    private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
+
+    private readonly string _vaultFile;
+    private VaultHeader _header = new();
+    private List<VaultCredential> _credentials = new();
+    private byte[]? _unlockedKey;
+    private byte[]? _recoveryDataKey;
+
+    public VaultStore(string vaultFile)
+    {
+        _vaultFile = vaultFile;
+        Load();
+    }
+
+    public bool HasMasterPassword => _header.Mode == "aes256";
+
+    // Verrouillé = mode AES activé ET clé non encore fournie (Unlock() pas appelé)
+    public bool IsLocked => HasMasterPassword && _unlockedKey is null && _recoveryDataKey is null;
+
+    public bool HasRecoveryUnlock =>
+        _header.RecoverySalt is not null &&
+        _header.RecoveryWrappedKey is not null &&
+        _header.RecoveryData is not null;
+
+    public List<VaultCredential> ListCredentials()
+    {
+        if (IsLocked) return new();
+        return _credentials.ToList();
+    }
+
+    private static string TombstoneKey(string origin, string username) =>
+        (origin ?? string.Empty).ToLowerInvariant() + "|" + (username ?? string.Empty).ToLowerInvariant();
+
+    public void Upsert(string origin, string username, string password, string loginUrl = "")
+    {
+        if (IsLocked) return;
+        // Ajout/màj explicite : lever une éventuelle suppression persistante.
+        _header.Deleted.Remove(TombstoneKey(origin, username));
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var idx = _credentials.FindIndex(c =>
+            c.Origin.Equals(origin, StringComparison.OrdinalIgnoreCase) &&
+            c.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        if (idx >= 0)
+        {
+            var old = _credentials[idx];
+            _credentials[idx] = new VaultCredential
+            {
+                Origin = origin, Username = username, Password = password,
+                Label = old.Label,
+                LoginUrl = string.IsNullOrWhiteSpace(loginUrl) ? old.LoginUrl : loginUrl,
+                CreatedAt = old.CreatedAt, UpdatedAt = now
+            };
+        }
+        else
+        {
+            _credentials.Add(new VaultCredential
+            {
+                Origin = origin, Username = username, Password = password,
+                LoginUrl = loginUrl ?? string.Empty,
+                CreatedAt = now, UpdatedAt = now
+            });
+        }
+        Save();
+    }
+
+    // Définit (ou efface) le nom personnalisé d'un identifiant.
+    public void SetLabel(string origin, string username, string label)
+    {
+        if (IsLocked) return;
+        var idx = _credentials.FindIndex(c =>
+            c.Origin.Equals(origin, StringComparison.OrdinalIgnoreCase) &&
+            c.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        if (idx < 0) return;
+        var old = _credentials[idx];
+        _credentials[idx] = new VaultCredential
+        {
+            Origin = old.Origin, Username = old.Username, Password = old.Password,
+            Label = label?.Trim() ?? string.Empty, LoginUrl = old.LoginUrl,
+            CreatedAt = old.CreatedAt, UpdatedAt = old.UpdatedAt
+        };
+        Save();
+    }
+
+    public void Delete(string origin, string username)
+    {
+        if (IsLocked) return;
+        _credentials.RemoveAll(c =>
+            c.Origin.Equals(origin, StringComparison.OrdinalIgnoreCase) &&
+            c.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        // Suppression persistante : empêche la resynchro depuis Chromium de le réimporter.
+        var key = TombstoneKey(origin, username);
+        if (!_header.Deleted.Contains(key)) _header.Deleted.Add(key);
+        Save();
+    }
+
+    // ── Couplage au mot de passe du profil ────────────────────────────────────
+
+    // Point d'entrée unique du couplage coffre ↔ mot de passe de profil.
+    // - Coffre neuf (aucun mot de passe maître) : on l'active avec ce mot de passe.
+    // - Coffre verrouillé : on tente de le déverrouiller.
+    // - Coffre déjà ouvert : rien à faire.
+    // Retourne false uniquement si le déverrouillage échoue (mauvais mot de passe).
+    public bool EnsureUnlockedWith(string password)
+    {
+        if (string.IsNullOrEmpty(password)) return false;
+        if (!HasMasterPassword)
+        {
+            SetMasterPassword(password);
+            return true;
+        }
+        if (_unlockedKey is not null) return true;
+        return Unlock(password);
+    }
+
+    // Déverrouille le coffre AES ; retourne false si le mot de passe est incorrect
+    public bool Unlock(string password)
+    {
+        if (!HasMasterPassword || _header.Salt is null) return false;
+        var salt = Convert.FromBase64String(_header.Salt);
+        var key  = DeriveKey(password, salt, _header);
+        if (!TryDecrypt(_header.Data ?? string.Empty, key, out var creds)) return false;
+        _unlockedKey  = key;
+        _credentials  = creds;
+        return true;
+    }
+
+    public void Lock()
+    {
+        if (!HasMasterPassword) return;
+        ZeroKey();
+    }
+
+    // Active (ou re-chiffre) le coffre AES + définit le mot de passe maître.
+    // Utilisé aussi pour le changement de mot de passe (re-clé du fichier).
+    public void SetMasterPassword(string password)
+    {
+        var deleted = _header.Deleted.ToList();
+        var recoverySalt = _header.RecoverySalt;
+        var recoveryWrappedKey = _header.RecoveryWrappedKey;
+        var recoveryDataKey = TryGetRecoveryDataKey();
+        var salt = RandomNumberGenerator.GetBytes(32);
+        var key  = DeriveKey(password, salt, ArgonHeaderDefaults());
+        _header  = new VaultHeader
+        {
+            Mode        = "aes256",
+            Kdf         = "argon2id",
+            Salt        = Convert.ToBase64String(salt),
+            Argon2Mem   = Argon2MemoryKib,
+            Argon2Iter  = Argon2Iterations,
+            Argon2Par   = Argon2Parallelism,
+            Deleted     = deleted,
+            RecoverySalt = recoverySalt,
+            RecoveryWrappedKey = recoveryWrappedKey
+        };
+        _unlockedKey = key;
+        _recoveryDataKey = recoveryDataKey;
+        Save();
+    }
+
+    // Vérifie sans déverrouiller (pour confirmation avant changement / désactivation)
+    public bool VerifyMasterPassword(string password)
+    {
+        if (!HasMasterPassword || _header.Salt is null) return false;
+        var salt = Convert.FromBase64String(_header.Salt);
+        return TryDecrypt(_header.Data ?? string.Empty, DeriveKey(password, salt, _header), out _);
+    }
+
+    // Repasse en mode DPAPI (confort) — coffre doit être déverrouillé avant l'appel
+    public void ClearMasterPassword()
+    {
+        if (IsLocked) return;
+        _header = new VaultHeader { Mode = "dpapi", Kdf = "none" };
+        Save();
+        ZeroKey();
+    }
+
+    // ── Déverrouillage par code PIN ───────────────────────────────────────────
+
+    public bool HasPinUnlock => _header.PinSalt is not null && _header.PinWrappedKey is not null;
+
+    // Active le déverrouillage par PIN. Le coffre doit être déverrouillé (clé en mémoire).
+    public void EnablePinUnlock(string pin)
+    {
+        if (_unlockedKey is null || string.IsNullOrEmpty(pin)) return;
+        var salt   = RandomNumberGenerator.GetBytes(32);
+        var pinKey = DeriveKey(pin, salt, ArgonHeaderDefaults());
+
+        var nonce  = RandomNumberGenerator.GetBytes(12);
+        var cipher = new byte[_unlockedKey.Length];
+        var tag    = new byte[16];
+        using (var aes = new AesGcm(pinKey, 16))
+            aes.Encrypt(nonce, _unlockedKey, cipher, tag);
+
+        var wrapped = new byte[nonce.Length + cipher.Length + tag.Length];
+        Buffer.BlockCopy(nonce,  0, wrapped, 0,                          nonce.Length);
+        Buffer.BlockCopy(cipher, 0, wrapped, nonce.Length,              cipher.Length);
+        Buffer.BlockCopy(tag,    0, wrapped, nonce.Length + cipher.Length, tag.Length);
+
+        var dpapi = ProtectedData.Protect(wrapped, VaultEntropy, DataProtectionScope.CurrentUser);
+        _header.PinSalt       = Convert.ToBase64String(salt);
+        _header.PinWrappedKey = Convert.ToBase64String(dpapi);
+        Save();
+    }
+
+    public void DisablePinUnlock()
+    {
+        _header.PinSalt       = null;
+        _header.PinWrappedKey = null;
+        Save();
+    }
+
+    // Déverrouille le coffre à partir du PIN. Retourne false si PIN incorrect ou emballage
+    // périmé (ex. après un changement de mot de passe).
+    public bool UnlockWithPin(string pin)
+    {
+        if (!HasMasterPassword || _header.PinSalt is null || _header.PinWrappedKey is null) return false;
+        try
+        {
+            var salt    = Convert.FromBase64String(_header.PinSalt);
+            var pinKey  = DeriveKey(pin, salt, _header);
+            var dpapi   = Convert.FromBase64String(_header.PinWrappedKey);
+            var wrapped = ProtectedData.Unprotect(dpapi, VaultEntropy, DataProtectionScope.CurrentUser);
+
+            var nonce    = wrapped[..12];
+            var tag      = wrapped[^16..];
+            var cipher   = wrapped[12..^16];
+            var vaultKey = new byte[cipher.Length];
+            using (var aes = new AesGcm(pinKey, 16))
+                aes.Decrypt(nonce, cipher, tag, vaultKey);
+
+            if (!TryDecrypt(_header.Data ?? string.Empty, vaultKey, out var creds)) return false;
+            _unlockedKey = vaultKey;
+            _credentials = creds;
+            return true;
+        }
+        catch { return false; }
+    }
+
+    // ── Recuperation locale ─────────────────────────────────────────────────
+
+    public bool SetRecoveryKey(string recoveryKey)
+    {
+        if (_unlockedKey is null || string.IsNullOrWhiteSpace(recoveryKey)) return false;
+
+        var recoveryDataKey = RandomNumberGenerator.GetBytes(KeySize);
+        var recoverySalt = RandomNumberGenerator.GetBytes(32);
+        var recoveryWrapKey = DeriveKey(NormalizeRecoveryKey(recoveryKey), recoverySalt, ArgonHeaderDefaults());
+
+        _header.RecoverySalt = Convert.ToBase64String(recoverySalt);
+        _header.RecoveryWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, recoveryWrapKey));
+        _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey));
+        _recoveryDataKey = recoveryDataKey;
+        Save();
+        return true;
+    }
+
+    public bool UnlockWithRecoveryKey(string recoveryKey)
+    {
+        if (_header.RecoverySalt is null ||
+            _header.RecoveryWrappedKey is null ||
+            _header.RecoveryData is null ||
+            string.IsNullOrWhiteSpace(recoveryKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            var salt = Convert.FromBase64String(_header.RecoverySalt);
+            var recoveryWrapKey = DeriveKey(NormalizeRecoveryKey(recoveryKey), salt, _header);
+            if (!TryUnwrapKey(_header.RecoveryWrappedKey, recoveryWrapKey, out var recoveryDataKey))
+            {
+                return false;
+            }
+
+            if (!TryDecrypt(_header.RecoveryData, recoveryDataKey, out var creds))
+            {
+                CryptographicOperations.ZeroMemory(recoveryDataKey);
+                return false;
+            }
+
+            _recoveryDataKey = recoveryDataKey;
+            _credentials = creds;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // ── Export / Import (maîtrise du fichier par l'utilisateur) ────────────────
+
+    // Renvoie une copie en clair des identifiants (coffre déverrouillé requis).
+    public IReadOnlyList<VaultCredential> ExportClear()
+    {
+        if (IsLocked) return Array.Empty<VaultCredential>();
+        return _credentials.ToList();
+    }
+
+    // Fusionne des identifiants importés (upsert par origine+utilisateur). Renvoie le nombre traité.
+    public int ImportClear(IEnumerable<(string origin, string username, string password)> items)
+    {
+        if (IsLocked) return 0;
+        var count = 0;
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        foreach (var (origin, username, password) in items)
+        {
+            if (string.IsNullOrWhiteSpace(origin) || string.IsNullOrWhiteSpace(password)) continue;
+            // Respecter une suppression persistante : ne pas réimporter ce que l'utilisateur a supprimé.
+            if (_header.Deleted.Contains(TombstoneKey(origin, username))) continue;
+            var idx = _credentials.FindIndex(c =>
+                c.Origin.Equals(origin, StringComparison.OrdinalIgnoreCase) &&
+                c.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0)
+                _credentials[idx] = new VaultCredential
+                {
+                    Origin = _credentials[idx].Origin, Username = _credentials[idx].Username,
+                    Password = password, Label = _credentials[idx].Label,
+                    LoginUrl = _credentials[idx].LoginUrl,
+                    CreatedAt = _credentials[idx].CreatedAt, UpdatedAt = now
+                };
+            else
+                _credentials.Add(new VaultCredential
+                {
+                    Origin = origin, Username = username, Password = password,
+                    CreatedAt = now, UpdatedAt = now
+                });
+            count++;
+        }
+        if (count > 0) Save();
+        return count;
+    }
+
+    // ── Chargement ────────────────────────────────────────────────────────────
+
+    private void Load()
+    {
+        try
+        {
+            if (!File.Exists(_vaultFile)) return;
+            var outer = File.ReadAllText(_vaultFile, Encoding.UTF8);
+            _header = JsonSerializer.Deserialize<VaultHeader>(outer, JsonOpts) ?? new VaultHeader();
+
+            if (_header.Mode == "aes256")
+                return; // credentials chargés dans Unlock()
+
+            if (_header.Data is null) return;
+            var cipher = Convert.FromBase64String(_header.Data);
+            var plain  = ProtectedData.Unprotect(cipher, VaultEntropy, DataProtectionScope.CurrentUser);
+            _credentials = JsonSerializer.Deserialize<List<VaultCredential>>(plain, JsonOpts) ?? new();
+        }
+        catch { }
+    }
+
+    private void Save()
+    {
+        try
+        {
+            var json = JsonSerializer.SerializeToUtf8Bytes(_credentials, JsonOpts);
+            if (_header.Mode == "aes256" && _unlockedKey is not null)
+                _header.Data = Convert.ToBase64String(EncryptAes(json, _unlockedKey));
+            else if (_header.Mode == "aes256")
+                _header.Data ??= string.Empty;
+            else
+                _header.Data = Convert.ToBase64String(
+                    ProtectedData.Protect(json, VaultEntropy, DataProtectionScope.CurrentUser));
+
+            SaveRecoveryPayload(json);
+            var dir = Path.GetDirectoryName(_vaultFile);
+            if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(_vaultFile, JsonSerializer.Serialize(_header, JsonOpts), Encoding.UTF8);
+        }
+        catch { }
+    }
+
+    // ── Crypto ────────────────────────────────────────────────────────────────
+
+    private static bool TryDecrypt(string dataBase64, byte[] key, out List<VaultCredential> result)
+    {
+        result = new();
+        try
+        {
+            if (string.IsNullOrEmpty(dataBase64)) return true; // coffre vide = valide
+            var bytes = Convert.FromBase64String(dataBase64);
+            var plain = DecryptAes(bytes, key);
+            result = JsonSerializer.Deserialize<List<VaultCredential>>(plain, JsonOpts) ?? new();
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private static byte[] EncryptAes(byte[] plaintext, byte[] key)
+    {
+        using var aes = Aes.Create();
+        aes.KeySize = 256;
+        aes.Mode    = CipherMode.CBC;
+        aes.Padding = PaddingMode.PKCS7;
+        aes.Key     = key;
+        aes.GenerateIV();
+        using var enc    = aes.CreateEncryptor();
+        var cipher       = enc.TransformFinalBlock(plaintext, 0, plaintext.Length);
+        var result       = new byte[IvSize + cipher.Length];
+        Buffer.BlockCopy(aes.IV, 0, result, 0,      IvSize);
+        Buffer.BlockCopy(cipher, 0, result, IvSize, cipher.Length);
+        return result;
+    }
+
+    private static byte[] DecryptAes(byte[] data, byte[] key)
+    {
+        if (data.Length < IvSize) throw new CryptographicException("Vault data too short");
+        var iv     = data[..IvSize];
+        var cipher = data[IvSize..];
+        using var aes = Aes.Create();
+        aes.KeySize = 256;
+        aes.Mode    = CipherMode.CBC;
+        aes.Padding = PaddingMode.PKCS7;
+        aes.Key     = key;
+        aes.IV      = iv;
+        using var dec = aes.CreateDecryptor();
+        return dec.TransformFinalBlock(cipher, 0, cipher.Length);
+    }
+
+    private void SaveRecoveryPayload(byte[] json)
+    {
+        var recoveryDataKey = TryGetRecoveryDataKey();
+        if (recoveryDataKey is null) return;
+
+        _header.RecoveryData = Convert.ToBase64String(EncryptAes(json, recoveryDataKey));
+        if (_unlockedKey is not null)
+        {
+            _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey));
+        }
+    }
+
+    private byte[]? TryGetRecoveryDataKey()
+    {
+        if (_recoveryDataKey is not null)
+        {
+            return _recoveryDataKey;
+        }
+
+        if (_unlockedKey is null || _header.RecoveryVaultWrappedKey is null)
+        {
+            return null;
+        }
+
+        return TryUnwrapKey(_header.RecoveryVaultWrappedKey, _unlockedKey, out var recoveryDataKey)
+            ? recoveryDataKey
+            : null;
+    }
+
+    private static byte[] WrapKey(byte[] keyToWrap, byte[] wrappingKey)
+    {
+        var nonce = RandomNumberGenerator.GetBytes(12);
+        var cipher = new byte[keyToWrap.Length];
+        var tag = new byte[16];
+        using (var aes = new AesGcm(wrappingKey, 16))
+            aes.Encrypt(nonce, keyToWrap, cipher, tag);
+
+        var wrapped = new byte[nonce.Length + cipher.Length + tag.Length];
+        Buffer.BlockCopy(nonce, 0, wrapped, 0, nonce.Length);
+        Buffer.BlockCopy(cipher, 0, wrapped, nonce.Length, cipher.Length);
+        Buffer.BlockCopy(tag, 0, wrapped, nonce.Length + cipher.Length, tag.Length);
+        return wrapped;
+    }
+
+    private static bool TryUnwrapKey(string wrappedBase64, byte[] wrappingKey, out byte[] key)
+    {
+        key = Array.Empty<byte>();
+        try
+        {
+            var wrapped = Convert.FromBase64String(wrappedBase64);
+            if (wrapped.Length < 12 + 16 + 1) return false;
+
+            var nonce = wrapped[..12];
+            var tag = wrapped[^16..];
+            var cipher = wrapped[12..^16];
+            var plain = new byte[cipher.Length];
+            using (var aes = new AesGcm(wrappingKey, 16))
+                aes.Decrypt(nonce, cipher, tag, plain);
+            key = plain;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string NormalizeRecoveryKey(string recoveryKey) =>
+        new(recoveryKey
+            .Trim()
+            .ToUpperInvariant()
+            .Where(char.IsLetterOrDigit)
+            .ToArray());
+
+    // Dérivation de clé selon le KDF indiqué par l'en-tête (Argon2id par défaut,
+    // PBKDF2 conservé pour lire les anciens coffres).
+    private static byte[] DeriveKey(string password, byte[] salt, VaultHeader header)
+    {
+        if (header.Kdf == "pbkdf2")
+        {
+            using var rfc = new Rfc2898DeriveBytes(
+                password, salt, LegacyPbkdf2Iterations, HashAlgorithmName.SHA256);
+            return rfc.GetBytes(KeySize);
+        }
+
+        using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
+        {
+            Salt                = salt,
+            MemorySize          = header.Argon2Mem  > 0 ? header.Argon2Mem  : Argon2MemoryKib,
+            Iterations          = header.Argon2Iter > 0 ? header.Argon2Iter : Argon2Iterations,
+            DegreeOfParallelism = header.Argon2Par  > 0 ? header.Argon2Par  : Argon2Parallelism
+        };
+        return argon2.GetBytes(KeySize);
+    }
+
+    private static VaultHeader ArgonHeaderDefaults() => new()
+    {
+        Kdf        = "argon2id",
+        Argon2Mem  = Argon2MemoryKib,
+        Argon2Iter = Argon2Iterations,
+        Argon2Par  = Argon2Parallelism
+    };
+
+    private void ZeroKey()
+    {
+        if (_unlockedKey is not null)
+        {
+            CryptographicOperations.ZeroMemory(_unlockedKey);
+            _unlockedKey = null;
+        }
+
+        if (_recoveryDataKey is not null)
+        {
+            CryptographicOperations.ZeroMemory(_recoveryDataKey);
+            _recoveryDataKey = null;
+        }
+    }
+}
+
+internal sealed class VaultHeader
+{
+    [JsonPropertyName("version")]    public int     Version    { get; set; } = 2;
+    [JsonPropertyName("mode")]       public string  Mode       { get; set; } = "dpapi";
+    // Défaut "pbkdf2" : un fichier sans champ "kdf" est un ancien coffre PBKDF2.
+    // Les nouveaux fichiers écrivent toujours "kdf" explicitement (argon2id / none).
+    [JsonPropertyName("kdf")]        public string  Kdf        { get; set; } = "pbkdf2";
+    [JsonPropertyName("salt")]       public string? Salt       { get; set; }
+    [JsonPropertyName("argon2_mem")] public int     Argon2Mem  { get; set; }
+    [JsonPropertyName("argon2_iter")]public int     Argon2Iter { get; set; }
+    [JsonPropertyName("argon2_par")] public int     Argon2Par  { get; set; }
+    [JsonPropertyName("data")]       public string? Data       { get; set; }
+
+    // Déverrouillage optionnel par code PIN : la clé du coffre est emballée (AES-GCM
+    // avec une clé dérivée du PIN par Argon2id), puis protégée par DPAPI. Ainsi le PIN
+    // seul ne suffit pas hors de la session Windows.
+    [JsonPropertyName("pin_salt")] public string? PinSalt       { get; set; }
+    [JsonPropertyName("pin_key")]  public string? PinWrappedKey { get; set; }
+
+    // Recuperation locale : une cle de donnees de secours chiffre une copie du
+    // coffre. Elle est emballée par la cle de recuperation utilisateur et, quand
+    // le coffre est ouvert, par la cle du coffre pour pouvoir maintenir la copie
+    // a jour sans stocker la cle de recuperation en clair.
+    [JsonPropertyName("recovery_salt")]      public string? RecoverySalt            { get; set; }
+    [JsonPropertyName("recovery_key")]       public string? RecoveryWrappedKey      { get; set; }
+    [JsonPropertyName("recovery_vault_key")] public string? RecoveryVaultWrappedKey { get; set; }
+    [JsonPropertyName("recovery_data")]      public string? RecoveryData            { get; set; }
+
+    // Suppressions persistantes (clés "origin|username") pour ne pas réimporter depuis Chromium.
+    [JsonPropertyName("deleted")]  public List<string> Deleted  { get; set; } = new();
+}

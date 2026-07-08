@@ -1,0 +1,1712 @@
+<Window
+    x:Class="PulseBrowser.WinUI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Pulse Browser">
+
+    <Grid x:Name="RootShell" Background="#FF22211F">
+        <Grid.Resources>
+            <SolidColorBrush x:Key="PulseAppBackgroundBrush" Color="#FF22211F" />
+            <SolidColorBrush x:Key="PulseChromeSurfaceBrush" Color="#FF262522" />
+            <SolidColorBrush x:Key="PulseChromeSurfaceAltBrush" Color="#FF2D2B28" />
+            <SolidColorBrush x:Key="PulseChromeStrokeBrush" Color="#FF3B3834" />
+            <SolidColorBrush x:Key="PulseChromeStrokeSoftBrush" Color="#FF302E2A" />
+            <SolidColorBrush x:Key="PulseAddressBackgroundBrush" Color="#FF34312D" />
+            <SolidColorBrush x:Key="PulseAddressBorderBrush" Color="#FF514C45" />
+            <SolidColorBrush x:Key="PulseAddressForegroundBrush" Color="#FFF5F1EA" />
+            <SolidColorBrush x:Key="PulseTextMutedBrush" Color="#FFA9A39A" />
+            <SolidColorBrush x:Key="PulseAccentBrush" Color="#FFE17818" />
+            <SolidColorBrush x:Key="PulseAccentSoftBrush" Color="#33E17818" />
+            <Style x:Key="PulseChromeIconButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinWidth" Value="32" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="7" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="Foreground" Value="{StaticResource PulseTextMutedBrush}" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="PulseCompactButtonStyle" TargetType="Button">
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinHeight" Value="32" />
+                <Setter Property="Padding" Value="10,0" />
+                <Setter Property="CornerRadius" Value="7" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0" />
+            <RowDefinition x:Name="TopTabsRow" Height="38" />
+            <RowDefinition x:Name="NavigationRow" Height="42" />
+            <RowDefinition x:Name="BookmarksRow" Height="28" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Padding="10,0" ColumnSpacing="6"
+              Visibility="Collapsed"
+              Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Border Width="20" Height="20" CornerRadius="6" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                    <TextBlock Text="P"
+                               Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Text="Pulse" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <Button Grid.Column="2"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Nouvel onglet"
+                    Click="NewTabMenu_Click">
+                <SymbolIcon Symbol="Add" />
+            </Button>
+            <Button Grid.Column="3"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Accueil"
+                    Click="HomeMenu_Click">
+                <SymbolIcon Symbol="Home" />
+            </Button>
+            <Button x:Name="MainMenuButton"
+                    Grid.Column="4"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Menu Pulse">
+                <SymbolIcon Symbol="More" />
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
+                        <MenuFlyoutItem Text="Accueil" Click="HomeMenu_Click" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
+                        <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
+                        <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
+                        <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
+                        <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <TabView
+            x:Name="BrowserTabs"
+            Grid.Row="1"
+            Background="{StaticResource PulseChromeSurfaceBrush}"
+            BorderBrush="{StaticResource PulseChromeStrokeSoftBrush}"
+            AddTabButtonClick="BrowserTabs_AddTabButtonClick"
+            SelectionChanged="BrowserTabs_SelectionChanged"
+            TabCloseRequested="BrowserTabs_TabCloseRequested"
+            Tapped="BrowserTabs_Tapped" />
+
+        <Border x:Name="TitleBarDragRegion"
+                Grid.Row="1"
+                Width="180"
+                Height="32"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Background="Transparent" />
+
+        <Grid x:Name="NavigationToolbar"
+              Grid.Row="2"
+              Padding="10,4,10,5"
+              ColumnSpacing="4"
+              Background="{StaticResource PulseChromeSurfaceBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Retour" Click="BackButton_Click">
+                <SymbolIcon Symbol="Back" />
+            </Button>
+            <Button Grid.Column="1" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Avancer" Click="ForwardButton_Click">
+                <SymbolIcon Symbol="Forward" />
+            </Button>
+            <Button Grid.Column="2" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Recharger" Click="ReloadButton_Click">
+                <SymbolIcon Symbol="Refresh" />
+            </Button>
+            <Button Grid.Column="3" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Stop" Click="StopButton_Click">
+                <SymbolIcon Symbol="Cancel" />
+            </Button>
+            <TextBox
+                x:Name="AddressBox"
+                Grid.Column="4"
+                Margin="6,0"
+                MinHeight="34"
+                Padding="14,4"
+                CornerRadius="17"
+                Background="{StaticResource PulseAddressBackgroundBrush}"
+                BorderBrush="{StaticResource PulseAddressBorderBrush}"
+                Foreground="{StaticResource PulseAddressForegroundBrush}"
+                PlaceholderForeground="{StaticResource PulseTextMutedBrush}"
+                VerticalAlignment="Center"
+                KeyDown="AddressBox_KeyDown"
+                PlaceholderText="Rechercher ou entrer une adresse" />
+            <Button Grid.Column="5"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Ouvrir l'adresse"
+                    Click="GoButton_Click">
+                <SymbolIcon Symbol="Forward" />
+            </Button>
+
+            <!-- Bouton bouclier confidentialité -->
+            <Button x:Name="ShieldButton"
+                    Grid.Column="6"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Confidentialite">
+                <FontIcon Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                <Button.Flyout>
+                    <Flyout x:Name="ShieldFlyout"
+                            Opening="ShieldFlyout_Opening"
+                            Placement="BottomEdgeAlignedRight">
+                        <StackPanel Width="270" Spacing="12">
+                            <TextBlock x:Name="ShieldDomainText"
+                                       FontWeight="SemiBold"
+                                       FontSize="14"
+                                       TextWrapping="Wrap" />
+                            <TextBlock x:Name="ShieldBlockedCountText"
+                                       Opacity="0.65"
+                                       FontSize="12"
+                                       TextWrapping="Wrap" />
+                            <TextBlock x:Name="ShieldSiteSummaryText"
+                                       Opacity="0.65"
+                                       FontSize="12"
+                                       TextWrapping="Wrap" />
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                            <ToggleSwitch x:Name="ShieldSiteExcludeToggle"
+                                          Header="Exclure ce site du bloqueur"
+                                          Toggled="ShieldSiteExcludeToggle_Toggled" />
+                            <Button x:Name="ShieldSiteCenterButton"
+                                    Content="Centre du site"
+                                    HorizontalAlignment="Stretch"
+                                    Click="ShieldSiteCenterButton_Click" />
+                            <HyperlinkButton Content="Parametres de confidentialite"
+                                             Click="ShieldSettingsLink_Click"
+                                             HorizontalAlignment="Left"
+                                             Padding="0" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+
+            <Button Grid.Column="7" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" Click="AddBookmarkButton_Click">
+                <SymbolIcon Symbol="Favorite" />
+            </Button>
+            <Button Grid.Column="8"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Accueil"
+                    Click="HomeMenu_Click">
+                <SymbolIcon Symbol="Home" />
+            </Button>
+            <Button x:Name="CompactModeButton"
+                    Grid.Column="9"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Interface compacte"
+                    Click="CompactModeButton_Click">
+                <SymbolIcon Symbol="FullScreen" />
+            </Button>
+            <Button x:Name="NavigationMenuButton"
+                    Grid.Column="10"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Menu Pulse">
+                <SymbolIcon Symbol="More" />
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
+                        <MenuFlyoutItem Text="Accueil" Click="HomeMenu_Click" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
+                        <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
+                        <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
+                        <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
+                        <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <Grid x:Name="BookmarksBarRow"
+              Grid.Row="3"
+              Padding="12,0,10,2"
+              ColumnSpacing="6"
+              Background="{StaticResource PulseChromeSurfaceBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <FontIcon Grid.Column="0"
+                      Glyph="&#xE734;"
+                      FontFamily="Segoe MDL2 Assets"
+                      FontSize="12"
+                      Opacity="0.68"
+                      VerticalAlignment="Center" />
+            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="BookmarksBarPanel" Orientation="Horizontal" Spacing="4" />
+            </ScrollViewer>
+            <Border Grid.Column="2" Width="1" Height="16" Margin="6,0" Background="{StaticResource PulseChromeStrokeBrush}" />
+            <StackPanel x:Name="OtherBookmarksBarHost" Grid.Column="3" Orientation="Horizontal" Spacing="4" />
+        </Grid>
+
+        <Grid x:Name="ContentHost" Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                x:Name="VerticalTabsRail"
+                Grid.Column="0"
+                Width="210"
+                Padding="8"
+                BorderThickness="0,0,1,0"
+                BorderBrush="{StaticResource PulseChromeStrokeSoftBrush}"
+                Background="{StaticResource PulseChromeSurfaceBrush}"
+                Visibility="Collapsed">
+                <StackPanel Spacing="8">
+                    <StackPanel x:Name="VerticalTabsActionsPanel" Orientation="Horizontal" Spacing="6">
+                        <Button x:Name="VerticalTabsNewTabButton" HorizontalAlignment="Stretch" Click="NewTabMenu_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <SymbolIcon Symbol="Add" />
+                                <TextBlock x:Name="VerticalTabsNewTabLabel" Text="Nouvel onglet" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="VerticalTabsCompactButton"
+                            Width="34"
+                            ToolTipService.ToolTip="Reduire/agrandir les onglets verticaux"
+                            Click="VerticalTabsCompactButton_Click">
+                            <SymbolIcon Symbol="Pin" />
+                        </Button>
+                    </StackPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="VerticalTabsPanelItems" Spacing="4" />
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+            <Thumb
+                x:Name="VerticalTabsResizeThumb"
+                Grid.Column="1"
+                Width="12"
+                DragDelta="VerticalTabsResizeThumb_DragDelta"
+                DragCompleted="VerticalTabsResizeThumb_DragCompleted"
+                Visibility="Collapsed">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbRoot"
+                                Background="Transparent"
+                                ToolTipService.ToolTip="Faire glisser pour redimensionner">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="ThumbLine.Opacity" Value="1" />
+                                            <Setter Target="ThumbRoot.Background" Value="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <VisualState.Setters>
+                                            <Setter Target="ThumbLine.Opacity" Value="1" />
+                                            <Setter Target="ThumbRoot.Background" Value="{ThemeResource SystemControlHighlightBaseLowBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Border x:Name="ThumbLine"
+                                    Width="3" Height="48" CornerRadius="2"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    Opacity="0.45" />
+                        </Border>
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
+
+            <Grid x:Name="BrowserPanel" Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Barre de proposition d'enregistrement d'identifiants -->
+                <Border x:Name="CredentialSaveBar" Grid.Row="0" Visibility="Collapsed"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <SymbolIcon Grid.Column="0" Symbol="Permissions" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CredentialSaveText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button x:Name="CredentialSaveAccept" Grid.Column="2" Content="Enregistrer" Click="CredentialSaveAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="CredentialSaveDismiss" Grid.Column="3" Content="Ignorer" Click="CredentialSaveDismiss_Click" Style="{StaticResource PulseCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Barre de proposition de remplissage automatique -->
+                <Border x:Name="AutoFillBar" Grid.Row="1" Visibility="Collapsed"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <SymbolIcon Grid.Column="0" Symbol="Contact" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="AutoFillText" Grid.Column="1" VerticalAlignment="Center"/>
+                        <Button x:Name="AutoFillAccept" Grid.Column="2" Content="Remplir" Click="AutoFillAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="AutoFillDismiss" Grid.Column="3" Content="Ignorer" Click="AutoFillDismiss_Click" Style="{StaticResource PulseCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <Grid x:Name="BrowserHost" Grid.Row="2" />
+            </Grid>
+
+            <Grid x:Name="BookmarksPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" RowSpacing="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Favoris Pulse" FontSize="24" FontWeight="SemiBold" />
+                        <TextBlock Text="Dossiers" Opacity="0.68" />
+                    </StackPanel>
+                    <ListView
+                        x:Name="BookmarkFoldersList"
+                        Grid.Row="1"
+                        RightTapped="BookmarkFoldersList_RightTapped"
+                        SelectionChanged="BookmarkFoldersList_SelectionChanged">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="6" ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image Grid.Column="0" Width="16" Height="16" Source="{Binding IconImageUri}" Visibility="{Binding IconImageVisibility}" />
+                                    <FontIcon Grid.Column="0" Glyph="{Binding IconGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="14" Visibility="{Binding IconGlyphVisibility}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Detail}" Opacity="0.62" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+
+                <Grid Grid.Column="2" RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="3">
+                            <TextBlock x:Name="CurrentBookmarkFolderTitle" Text="Barre des favoris" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock x:Name="BookmarkBreadcrumbText" Opacity="0.68" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Nouveau dossier" Click="NewBookmarkFolderButton_Click" />
+                        <Button Grid.Column="2" Content="Renommer" Click="RenameBookmarkButton_Click" />
+                        <Button Grid.Column="3" Content="Supprimer" Click="DeleteBookmarkButton_Click" />
+                        <Button Grid.Column="4" Content="Importer" Click="ImportMenu_Click" />
+                        <Button Grid.Column="5" Content="Exporter" Click="ExportHtmlButton_Click" />
+                    </Grid>
+
+                    <TextBox
+                        x:Name="BookmarksSearchBox"
+                        Grid.Row="1"
+                        TextChanged="BookmarksSearchBox_TextChanged"
+                        PlaceholderText="Rechercher dans les favoris..." />
+
+                    <ListView
+                        x:Name="BookmarksList"
+                        Grid.Row="2"
+                        DoubleTapped="BookmarksList_DoubleTapped"
+                        RightTapped="BookmarksList_RightTapped"
+                        SelectionChanged="BookmarksList_SelectionChanged">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="280" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image Grid.Column="0" Width="16" Height="16" Source="{Binding IconImageUri}" Visibility="{Binding IconImageVisibility}" />
+                                    <FontIcon Grid.Column="0" Glyph="{Binding IconGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="15" Visibility="{Binding IconGlyphVisibility}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Detail}" Opacity="0.7" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </Grid>
+
+            <Grid x:Name="ImportPanel" Grid.Column="2" Padding="28" Visibility="Collapsed">
+                <StackPanel Spacing="14" MaxWidth="820">
+                    <TextBlock Text="Importer et exporter" FontSize="28" FontWeight="SemiBold" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.78"
+                               Text="Pulse Browser lit les profils Chromium detectes sur cette machine et peut aussi importer/exporter un fichier HTML de favoris. Les donnees restent dans le profil local Pulse Browser." />
+                    <TextBlock Text="Depuis un navigateur installe" FontWeight="SemiBold" />
+                    <TextBlock x:Name="ImportSourcesStatusText" TextWrapping="Wrap" Opacity="0.72" />
+                    <ListView x:Name="ImportSourcesList" MaxHeight="260" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Fusionner le navigateur selectionne" Click="ImportBrowserButton_Click" />
+                        <Button Content="Remplacer par le navigateur selectionne" Click="ReplaceBrowserButton_Click" />
+                    </StackPanel>
+                    <TextBlock Text="Fichier HTML" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Importer un fichier HTML" Click="ImportHtmlButton_Click" />
+                        <Button Content="Exporter en HTML" Click="ExportHtmlButton_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- SettingsPanel : sidebar gauche + contenu à droite -->
+            <Grid x:Name="SettingsPanel" Grid.Column="2" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Barre de navigation des paramètres -->
+                <Border Grid.Column="0"
+                        BorderThickness="0,0,1,0"
+                        BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}">
+                    <StackPanel Padding="12,20,12,12" Spacing="4">
+                        <TextBlock Text="Parametres" FontSize="18" FontWeight="SemiBold" Margin="8,0,0,12" />
+                        <RadioButton x:Name="SettingsNavNavigation" Content="Navigation"
+                                     GroupName="SettingsNav" IsChecked="True"
+                                     Click="SettingsNav_Click" Tag="navigation" />
+                        <RadioButton x:Name="SettingsNavAppearance" Content="Apparence"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="appearance" />
+                        <RadioButton x:Name="SettingsNavAccessibility" Content="Accessibilite"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="accessibility" />
+                        <RadioButton x:Name="SettingsNavStartup" Content="Demarrage"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="startup" />
+                        <RadioButton x:Name="SettingsNavVault" Content="Coffre"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="vault" />
+                        <RadioButton x:Name="SettingsNavProfile" Content="Profil"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="profile" />
+                        <RadioButton x:Name="SettingsNavStorage" Content="Stockage"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="storage" />
+                        <RadioButton x:Name="SettingsNavPrivacy" Content="Confidentialite"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="privacy" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Zone de contenu des paramètres -->
+                <ScrollViewer Grid.Column="1" Padding="28,20,28,28">
+                    <StackPanel Spacing="18" MaxWidth="640">
+
+                        <!-- Section : Navigation -->
+                        <StackPanel x:Name="SettingsSectionNavigation" Spacing="12">
+                            <TextBlock Text="Navigation" FontSize="22" FontWeight="SemiBold" />
+                            <ComboBox x:Name="SearchEngineCombo" Header="Moteur de recherche" Width="280"
+                                      SelectionChanged="SearchEngineCombo_SelectionChanged">
+                                <ComboBoxItem Content="Google" Tag="google" />
+                                <ComboBoxItem Content="DuckDuckGo" Tag="duckduckgo" />
+                                <ComboBoxItem Content="Brave Search" Tag="brave" />
+                                <ComboBoxItem Content="Bing" Tag="bing" />
+                            </ComboBox>
+                            <ToggleSwitch x:Name="VerticalTabsSwitch" Header="Barre d'onglets verticale" Toggled="VerticalTabsSwitch_Toggled" />
+                            <ToggleSwitch x:Name="CommandPaletteEnabledSwitch"
+                                          Header="Palette de commande Ctrl+K"
+                                          Toggled="CommandPaletteEnabledSwitch_Toggled" />
+                            <ToggleSwitch x:Name="CommandPaletteWebPagesSwitch"
+                                          Header="Autoriser Ctrl+K depuis les pages web"
+                                          Toggled="CommandPaletteContextSwitch_Toggled" />
+                            <ToggleSwitch x:Name="CommandPaletteTextFieldsSwitch"
+                                          Header="Autoriser Ctrl+K pendant la saisie dans un champ"
+                                          Toggled="CommandPaletteContextSwitch_Toggled" />
+                            <TextBlock Text="Par defaut, Ctrl+K ne vole pas le focus dans les formulaires ni dans le contenu web."
+                                       FontSize="12"
+                                       Opacity="0.68"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Section : Apparence -->
+                        <StackPanel x:Name="SettingsSectionAppearance" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Apparence" FontSize="22" FontWeight="SemiBold" />
+                            <ToggleSwitch x:Name="BookmarksBarSwitch" Header="Barre de favoris visible" IsOn="True" Toggled="BookmarksBarSwitch_Toggled" />
+                            <ToggleSwitch x:Name="CompactModeSwitch" Header="Interface compacte" Toggled="CompactModeSwitch_Toggled" />
+                            <ToggleSwitch x:Name="CompactModeHideBookmarksSwitch"
+                                          Header="Masquer les favoris en interface compacte"
+                                          Toggled="CompactModeHideBookmarksSwitch_Toggled" />
+                            <ComboBox x:Name="WindowBackdropCombo"
+                                      Header="Effet translucide"
+                                      Width="280"
+                                      SelectionChanged="WindowBackdropCombo_SelectionChanged">
+                                <ComboBoxItem Content="Desactive" Tag="solid" />
+                                <ComboBoxItem Content="Mica" Tag="mica" />
+                                <ComboBoxItem Content="Acrylic" Tag="acrylic" />
+                            </ComboBox>
+                            <Slider x:Name="WindowTransparencySlider"
+                                    Header="Intensite de transparence"
+                                    Minimum="0"
+                                    Maximum="100"
+                                    StepFrequency="1"
+                                    ValueChanged="WindowTransparencySlider_ValueChanged" />
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,8,0,0" />
+                            <TextBlock Text="Nouvel onglet" FontSize="18" FontWeight="SemiBold" />
+                            <TextBox x:Name="NewTabTitleBox"
+                                     Header="Titre affiche"
+                                     MaxLength="32"
+                                     TextChanged="NewTabTitleBox_TextChanged" />
+                            <ToggleSwitch x:Name="NewTabShortcutsSwitch"
+                                          Header="Afficher les raccourcis"
+                                          Toggled="NewTabShortcutsSwitch_Toggled" />
+                            <TextBox x:Name="NewTabShortcutsBox"
+                                     Header="Raccourcis"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     Height="120"
+                                     PlaceholderText="Nom | https://exemple.com"
+                                     TextChanged="NewTabShortcutsBox_TextChanged" />
+                            <TextBlock Text="Un raccourci par ligne : Nom | URL. L'ordre des lignes devient l'ordre d'affichage."
+                                       FontSize="12"
+                                       Opacity="0.68"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Section : Accessibilite -->
+                        <StackPanel x:Name="SettingsSectionAccessibility" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Accessibilite" FontSize="22" FontWeight="SemiBold" />
+                            <ToggleSwitch x:Name="AccessibilityHighContrastSwitch"
+                                          Header="Contraste renforce"
+                                          Toggled="AccessibilitySwitch_Toggled" />
+                            <ToggleSwitch x:Name="AccessibilityLargeTextSwitch"
+                                          Header="Texte plus lisible"
+                                          Toggled="AccessibilitySwitch_Toggled" />
+                            <ToggleSwitch x:Name="AccessibilityReduceMotionSwitch"
+                                          Header="Reduire les animations et transitions"
+                                          Toggled="AccessibilitySwitch_Toggled" />
+                            <ToggleSwitch x:Name="AccessibilityVisibleFocusSwitch"
+                                          Header="Focus clavier plus visible"
+                                          Toggled="AccessibilitySwitch_Toggled" />
+                            <TextBlock Text="Ces options restent locales a ce profil et servent aussi a guider les futures surfaces Pulse."
+                                       FontSize="12"
+                                       Opacity="0.68"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Section : Démarrage -->
+                        <StackPanel x:Name="SettingsSectionStartup" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Demarrage" FontSize="22" FontWeight="SemiBold" />
+                            <RadioButtons x:Name="StartupModeRadio" Header="Page au demarrage" SelectionChanged="StartupModeRadio_SelectionChanged">
+                                <RadioButton x:Name="StartupRestoreRadio" Content="Restaurer la session precedente" Tag="restore" />
+                                <RadioButton x:Name="StartupHomeRadio" Content="Accueil Pulse" Tag="home" />
+                                <RadioButton x:Name="StartupCustomRadio" Content="URL personnalisee" Tag="custom" />
+                            </RadioButtons>
+                            <TextBox x:Name="StartupUrlBox" Header="URL de demarrage"
+                                     Visibility="Collapsed" PlaceholderText="https://..."
+                                     TextChanged="StartupUrlBox_TextChanged" MaxWidth="400" HorizontalAlignment="Left" />
+                        </StackPanel>
+
+                        <!-- Section : Coffre -->
+                        <StackPanel x:Name="SettingsSectionVault" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Gestionnaire de mots de passe" FontSize="22" FontWeight="SemiBold" />
+                            <TextBlock Text="Votre coffre est un fichier vous appartenant : vault.pulse, chiffre AES-256 avec une cle derivee de votre mot de passe de profil par Argon2id. Il reste local et ne depend d'aucun serveur Pulse."
+                                       TextWrapping="Wrap" Opacity="0.78" FontSize="13" />
+                            <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                    CornerRadius="6" Padding="12,8" Margin="0,4,0,0">
+                                <TextBlock TextWrapping="Wrap" FontSize="13"
+                                           Text="La recuperation n'est possible qu'avec la cle de recuperation locale que vous avez notee. Sans mot de passe et sans cette cle, Pulse Browser ne peut pas dechiffrer le coffre." />
+                            </Border>
+                            <TextBlock Text="Le mot de passe du coffre se change depuis la section Profil (Changer le mot de passe)."
+                                       TextWrapping="Wrap" Opacity="0.6" FontSize="12" />
+                        </StackPanel>
+
+                        <!-- Section : Profil -->
+                        <StackPanel x:Name="SettingsSectionProfile" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Profil" FontSize="22" FontWeight="SemiBold" />
+                            <TextBlock x:Name="ProfileNameDisplay" Opacity="0.78" />
+                            <Button Content="Changer de profil" Click="OpenProfilePickerFromSettingsButton_Click" />
+                            <Button Content="Creer un autre profil" Click="CreateAnotherProfileFromSettingsButton_Click" />
+                            <Button Content="Changer le nom du profil" Click="ChangeProfileNameButton_Click" />
+                            <Button Content="Changer le mot de passe" Click="ChangeProfilePasswordButton_Click" />
+                            <Button Content="Creer une nouvelle cle de recuperation"
+                                    Click="CreateRecoveryKeyButton_Click" />
+                            <ToggleSwitch x:Name="ProfilePinSwitch" Header="Code PIN rapide (6 chiffres)"
+                                         Toggled="ProfilePinSwitch_Toggled" />
+                            <ComboBox x:Name="SessionTimeoutCombo"
+                                      Header="Verrouillage automatique de la session"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="SessionTimeoutCombo_SelectionChanged">
+                                <ComboBoxItem Content="Jamais" Tag="0" />
+                                <ComboBoxItem Content="10 minutes" Tag="10" />
+                                <ComboBoxItem Content="1 heure" Tag="60" />
+                                <ComboBoxItem Content="5 heures" Tag="300" />
+                            </ComboBox>
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                                    Margin="0,8,0,0" />
+                            <TextBlock Text="Zone de reinitialisation" FontWeight="SemiBold" Opacity="0.72" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.6" FontSize="12"
+                                       Text="Supprime definitivement toutes vos donnees : favoris, historique, onglets, parametres, coffre et identifiants de connexion. Operation irreversible." />
+                            <Button Content="Reinitialiser le profil..."
+                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                    Click="ResetProfileButton_Click" />
+                        </StackPanel>
+
+                        <!-- Section : Stockage -->
+                        <StackPanel x:Name="SettingsSectionStorage" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Stockage des donnees" FontSize="22" FontWeight="SemiBold" />
+
+                            <TextBlock Text="Dossier actuel" FontWeight="SemiBold" />
+                            <TextBox x:Name="StorageCurrentFolderText"
+                                     IsReadOnly="True" TextWrapping="Wrap"
+                                     Opacity="0.78" FontFamily="Consolas" FontSize="12" />
+                            <Button Content="Changer de dossier..." Click="ChangeFolderButton_Click" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Choisissez un dossier synchronise (OneDrive, disque externe...) pour que vos donnees survivent a une reinstallation. Les fichiers existants seront copies vers le nouvel emplacement. Un redemarrage est necessaire." />
+
+                            <InfoBar x:Name="StorageRestartBar"
+                                     Title="Redemarrage requis"
+                                     Message="Le dossier de donnees a ete modifie. Redemarrez Pulse Browser pour appliquer le changement."
+                                     Severity="Warning"
+                                     IsOpen="False">
+                                <InfoBar.ActionButton>
+                                    <Button Content="Fermer Pulse Browser" Click="StorageRestartCloseButton_Click" />
+                                </InfoBar.ActionButton>
+                            </InfoBar>
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
+
+                            <TextBlock Text="Donnees de navigation" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Supprime les cookies, sessions actives, cache et donnees des sites. Vous serez deconnecte de tous les sites." />
+                            <Button Content="Vider les donnees de navigation"
+                                    Click="ClearBrowsingDataButton_Click" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
+
+                            <TextBlock Text="Sauvegarde et restauration" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Exportez vos favoris, historique, onglets et parametres dans un fichier chiffre par mot de passe. Ce fichier peut etre restaure sur n'importe quel PC. Le coffre de mots de passe n'est pas inclus (lie au compte Windows)." />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Content="Exporter une sauvegarde..." Click="ExportBackupButton_Click" />
+                                <Button Content="Importer une sauvegarde..." Click="ImportBackupButton_Click" />
+                            </StackPanel>
+
+                            <InfoBar x:Name="StorageImportBar"
+                                     Title="Restauration reussie"
+                                     Message="Les donnees ont ete importees. Redemarrez Pulse Browser pour appliquer tous les changements."
+                                     Severity="Success"
+                                     IsOpen="False">
+                                <InfoBar.ActionButton>
+                                    <Button Content="Fermer Pulse Browser" Click="StorageRestartCloseButton_Click" />
+                                </InfoBar.ActionButton>
+                            </InfoBar>
+                        </StackPanel>
+
+                        <!-- Section : Confidentialite -->
+                        <StackPanel x:Name="SettingsSectionPrivacy" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Confidentialite" FontSize="22" FontWeight="SemiBold" />
+
+                            <!-- Compteur de blocages -->
+                            <Border Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                                    CornerRadius="8" Padding="14,10">
+                                <StackPanel Spacing="2">
+                                    <TextBlock x:Name="PrivacyBlockedCountText"
+                                               Text="0 requetes bloquees"
+                                               FontSize="18" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="PrivacyRuleCountText"
+                                               Text="Chargement des regles..."
+                                               Opacity="0.7" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Bloqueur pub / trackers -->
+                            <TextBlock Text="Bloqueur de pubs et trackers" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Bloque les requetes vers les serveurs publicitaires et de tracking (EasyList, EasyPrivacy, uBlock Origin, AdGuard). Les listes sont telechargees localement et mises a jour automatiquement." />
+                            <ToggleSwitch x:Name="NetworkBlockerSwitch"
+                                         Header="Activer le bloqueur"
+                                         Toggled="NetworkBlockerSwitch_Toggled" />
+                            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left">
+                                <Button x:Name="UpdatePrivacyListsButton"
+                                        Content="Mettre a jour les listes maintenant"
+                                        Click="UpdatePrivacyListsButton_Click" />
+                                <TextBlock x:Name="PrivacyLastUpdateText"
+                                           VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="12" />
+                            </StackPanel>
+                            <TextBlock x:Name="PrivacyStatusText"
+                                       Opacity="0.65" FontSize="12" FontStyle="Italic" />
+                            <InfoBar x:Name="PrivacyListsUpdateBar"
+                                     Title="Listes mises a jour"
+                                     Message="Les nouvelles regles de filtrage sont actives."
+                                     Severity="Success"
+                                     IsOpen="False" IsClosable="True" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Nettoyage URL -->
+                            <TextBlock Text="Nettoyage des URL de tracking" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Supprime automatiquement les parametres de tracking (utm_*, fbclid, gclid, msclkid, et +40 autres) des URL avant navigation. La page chargee est identique, mais votre visite n'est pas rattachee a une campagne publicitaire." />
+                            <ToggleSwitch x:Name="ParameterCleanerSwitch"
+                                         Header="Nettoyer les URL"
+                                         Toggled="ParameterCleanerSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- HTTPS enforcer -->
+                            <TextBlock Text="Forcage HTTPS" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Upgrade automatiquement les connexions HTTP en HTTPS avant navigation. Si le site ne supporte pas HTTPS, une erreur sera affichee." />
+                            <ToggleSwitch x:Name="HttpsEnforcerSwitch"
+                                         Header="Forcer HTTPS"
+                                         Toggled="HttpsEnforcerSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- CNAME uncloaker -->
+                            <TextBlock Text="Detection CNAME cloaking" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Detecte les trackers caches derriere un alias DNS (CNAME cloaking). Ex : analytics.monsite.com pointe vers collect.tracker-tiers.net. La premiere requete passe, toutes les suivantes sont bloquees. Resolution via le DNS configure sur votre systeme, aucune donnee envoyee a Pulse." />
+                            <ToggleSwitch x:Name="CnameUncloakerSwitch"
+                                         Header="Detecter le CNAME cloaking"
+                                         Toggled="CnameUncloakerSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Filtre cosmétique -->
+                            <TextBlock Text="Masquage visuel des emplacements pub" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Injecte du CSS dans chaque page pour masquer les conteneurs publicitaires connus (Google Ads, Taboola, Outbrain, Criteo…). Complementaire au bloqueur reseau : elimine les espaces vides laisses par les requetes bloquees. Actif des le premier lancement grace a une seed integree, enrichi par les listes telechargees." />
+                            <ToggleSwitch x:Name="CosmeticFilterSwitch"
+                                         Header="Masquer les emplacements pub"
+                                         Toggled="CosmeticFilterSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Gestionnaire de consentement cookies -->
+                            <TextBlock Text="Refus automatique des cookies" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Interagit automatiquement avec les bandeaux cookies pour selectionner le niveau minimal de consentement. Supporte les standards IAB TCF v1/v2 (Cookiebot, OneTrust, Didomi, Axeptio, Quantcast, TrustArc…) et les banneaux personnalises via detection de boutons 'Refuser tout'. Aucune donnee envoyee, tout se passe localement dans la page." />
+                            <ToggleSwitch x:Name="ConsentManagerSwitch"
+                                         Header="Refuser automatiquement les cookies"
+                                         Toggled="ConsentManagerSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Sessions éphémères -->
+                            <TextBlock Text="Sessions ephemeres" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="A chaque demarrage, Pulse Browser purge les cookies et sessions de la visite precedente : les sites ne se souviennent de vous que si vous l'avez decide. Les sites de confiance (geres dans Outils > Sites connectes) conservent leur session. Le coffre de mots de passe n'est jamais concerne et l'auto-remplissage prend le relais sur les pages de connexion." />
+                            <ToggleSwitch x:Name="SessionPurgeSwitch"
+                                         Header="Purger les sessions au demarrage"
+                                         Toggled="SessionPurgeSwitch_Toggled" />
+                            <HyperlinkButton Content="Gerer les sites connectes"
+                                             Click="SessionsManageLink_Click"
+                                             HorizontalAlignment="Left"
+                                             Padding="0" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Whitelist utilisateur -->
+                            <TextBlock Text="Sites exclus du blocage" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Ces domaines ne seront jamais bloques par le bloqueur de pubs. Utile pour les sites ou le blocage casse des fonctionnalites." />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBox x:Name="PrivacyWhitelistBox"
+                                         PlaceholderText="exemple.com"
+                                         Width="220" />
+                                <Button Content="Ajouter"
+                                        Click="PrivacyWhitelistAddButton_Click"
+                                        VerticalAlignment="Bottom" />
+                            </StackPanel>
+                            <StackPanel x:Name="PrivacyWhitelistPanel" Spacing="6" />
+
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="AboutPanel" Grid.Column="2" Padding="28" Visibility="Collapsed">
+                <ScrollViewer>
+                    <StackPanel Spacing="14" MaxWidth="760">
+                        <TextBlock Text="Pulse Browser" FontSize="30" FontWeight="SemiBold" />
+                        <TextBlock x:Name="AboutVersionText" Opacity="0.72" />
+
+                        <TextBlock Text="Notre philosophie" FontSize="20" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
+Internet ne devrait pas être une fenêtre à sens unique. Vous naviguez, mais vous êtes aussi observé, analysé, et monétisé. Pulse Browser part d'un principe différent : vos données vous appartiennent, et elles restent chez vous.
+                        </TextBlock>
+                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
+Pas de synchronisation vers un serveur Pulse. Pas de télémétrie cachée. Pas de profil publicitaire. Vos favoris, votre historique, vos mots de passe : tout reste sur votre machine, chiffré, sous votre contrôle. Si vous éteignez votre ordinateur, vos données ne sont accessibles à personne d'autre.
+                        </TextBlock>
+                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
+Nous pensons qu'un navigateur moderne peut être à la fois simple à utiliser et respectueux de la vie privée. La sécurité ne devrait pas être une contrainte ou un abonnement. Elle devrait être le comportement par défaut.
+                        </TextBlock>
+                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
+Pulse Browser est en développement actif. Chaque version avance par petits pas solides. Pas de promesses géantes, pas de fonctions à moitié finies. Juste un navigateur construit avec soin, pour durer.
+                        </TextBlock>
+
+                        <TextBlock Text="Informations techniques" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <TextBlock Text="Interface : C# + WinUI 3" />
+                        <TextBlock Text="Moteur web : WebView2 (Chromium)" />
+                        <TextBlock Text="Coeur local : Rust (modules privacy, analyse reseau)" />
+                        <TextBlock Text="Chiffrement : AES-256-CBC / DPAPI (C# pur)" />
+                        <TextBlock Text="Developpeur : H.J." />
+
+                        <TextBlock Text="Profil local" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <TextBlock x:Name="AboutProfilePathText" TextWrapping="Wrap" Opacity="0.72" />
+                        <TextBlock Text="Favoris, historique, données de session et informations sensibles sont chiffrés et stockés localement au format .pulse, lisibles uniquement par Pulse Browser." TextWrapping="Wrap" Opacity="0.78" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="HistoryPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock Text="Historique" FontSize="24" FontWeight="SemiBold" />
+                        <TextBlock Text="Pages visitees localement sur cet appareil." Opacity="0.68" />
+                    </StackPanel>
+                    <Button x:Name="ClearHistoryButton" Grid.Column="1"
+                            Content="Vider l'historique"
+                            Click="ClearHistoryButton_Click"
+                            VerticalAlignment="Bottom" />
+                </Grid>
+                <TextBox x:Name="HistorySearchBox" Grid.Row="1" Margin="0,12,0,0"
+                         TextChanged="HistorySearchBox_TextChanged"
+                         PlaceholderText="Rechercher dans l'historique..." />
+                <ListView x:Name="HistoryList" Grid.Row="2" Margin="0,8,0,0"
+                          DoubleTapped="HistoryList_DoubleTapped"
+                          RightTapped="HistoryList_RightTapped">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="4,5" ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="22" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="130" />
+                                </Grid.ColumnDefinitions>
+                                <Image Grid.Column="0" Width="16" Height="16"
+                                       Source="{Binding IconImageUri}" Visibility="{Binding IconImageVisibility}"
+                                       VerticalAlignment="Center" />
+                                <FontIcon Grid.Column="0" Glyph="{Binding IconGlyph}"
+                                          FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                          Visibility="{Binding IconGlyphVisibility}"
+                                          VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding Domain}"
+                                           Opacity="0.65" FontSize="12"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding TimeDisplay}"
+                                           Opacity="0.55" FontSize="12"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <Grid x:Name="DownloadsPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Spacing="4" Margin="0,0,0,16">
+                    <TextBlock Text="Telechargements" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="Fichiers telecharges dans cette session." Opacity="0.68" />
+                </StackPanel>
+                <ScrollViewer Grid.Row="1">
+                    <StackPanel x:Name="DownloadsPanelItems" Spacing="6" />
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="VaultPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Gestionnaire de mots de passe" FontSize="24" FontWeight="SemiBold" />
+                        <TextBlock Text="Comptes locaux stockes dans vault.pulse, chiffre AES-256 avec une cle derivee du mot de passe du profil." Opacity="0.68" />
+                    </StackPanel>
+                    <Button Grid.Column="1" x:Name="VaultImportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Importer depuis un fichier CSV (Chrome, Firefox...)" Click="VaultImportButton_Click">
+                        <SymbolIcon Symbol="Import" />
+                    </Button>
+                    <Button Grid.Column="2" x:Name="VaultExportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Exporter en clair vers un fichier CSV" Click="VaultExportButton_Click">
+                        <SymbolIcon Symbol="Save" />
+                    </Button>
+                    <Button Grid.Column="3" x:Name="VaultRefreshButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Actualiser" Click="VaultRefreshButton_Click">
+                        <SymbolIcon Symbol="Refresh" />
+                    </Button>
+                    <Button Grid.Column="4" x:Name="VaultAddButton" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Ajouter un identifiant" Click="VaultAddButton_Click">
+                        <SymbolIcon Symbol="Add" />
+                    </Button>
+                </Grid>
+                <Grid Grid.Row="1" Margin="0,0,0,12">
+                    <TextBox x:Name="PasswordManagerSearchBox"
+                             PlaceholderText="Rechercher un site, un identifiant ou un domaine"
+                             TextChanged="PasswordManagerSearchBox_TextChanged" />
+                </Grid>
+                <ScrollViewer Grid.Row="2">
+                    <StackPanel x:Name="VaultPanelItems" Spacing="8" />
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Clés d'accès (Passkeys) -->
+            <Grid x:Name="PasskeysPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="Clés d'accès (Passkeys)" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.68" Margin="0,4,0,0"
+                               Text="Connexion sans mot de passe via Windows Hello. Les clés sont chiffrées localement et ne quittent jamais votre appareil." />
+                </StackPanel>
+
+                <Border Grid.Row="1" Padding="16" CornerRadius="8" Margin="0,0,0,16"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Gestion complète via Windows" FontWeight="SemiBold" />
+                        <TextBlock TextWrapping="Wrap" Opacity="0.72" FontSize="13"
+                                   Text="Windows Hello stocke et sécurise vos clés d'accès. Pulse Browser enregistre les sites où vous en créez ou utilisez une." />
+                        <Button Click="PasskeysWindowsSettingsButton_Click" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE770;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                <TextBlock Text="Paramètres Windows — Clés d'accès" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <ScrollViewer Grid.Row="2">
+                    <StackPanel x:Name="PasskeysPanelItems" Spacing="8" />
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Centre du site actuel -->
+            <Grid x:Name="SiteControlPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Margin="0,0,0,16" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Name="SiteControlTitleText" Text="Site actuel" FontSize="24" FontWeight="SemiBold" />
+                        <TextBlock x:Name="SiteControlAddressText" TextWrapping="Wrap" Opacity="0.68" />
+                    </StackPanel>
+                    <Button Grid.Column="1" x:Name="SiteControlRefreshButton" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Actualiser" Click="SiteControlRefreshButton_Click">
+                        <SymbolIcon Symbol="Refresh" />
+                    </Button>
+                    <Button Grid.Column="2" x:Name="SiteControlReturnButton" VerticalAlignment="Bottom"
+                            Content="Retour au site"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Click="SiteControlReturnButton_Click" />
+                </Grid>
+
+                <ScrollViewer Grid.Row="1">
+                    <StackPanel Spacing="12" MaxWidth="860" HorizontalAlignment="Left">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Padding="14,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                                        <TextBlock Text="Confidentialite" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="SiteControlPrivacyText" TextWrapping="Wrap" Opacity="0.72" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Padding="14,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                                        <TextBlock Text="Session" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="SiteControlSessionText" TextWrapping="Wrap" Opacity="0.72" />
+                                    <ToggleSwitch x:Name="SiteControlTrustToggle"
+                                                  Header="Conserver la session au demarrage"
+                                                  Toggled="SiteControlTrustToggle_Toggled" />
+                                    <Button x:Name="SiteControlForgetButton"
+                                            Content="Oublier ce site maintenant"
+                                            HorizontalAlignment="Left"
+                                            Click="SiteControlForgetButton_Click" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Padding="14,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                                        <TextBlock Text="Mots de passe" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="SiteControlPasswordText" TextWrapping="Wrap" Opacity="0.72" />
+                                    <Button x:Name="SiteControlOpenPasswordsButton"
+                                            Content="Voir les identifiants"
+                                            HorizontalAlignment="Left"
+                                            Click="SiteControlOpenPasswordsButton_Click" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Padding="14,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Clock" />
+                                        <TextBlock Text="Historique" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="SiteControlHistoryText" TextWrapping="Wrap" Opacity="0.72" />
+                                    <Button x:Name="SiteControlOpenHistoryButton"
+                                            Content="Voir l'historique du site"
+                                            HorizontalAlignment="Left"
+                                            Click="SiteControlOpenHistoryButton_Click" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <StackPanel x:Name="SiteControlRecentHistoryPanel" Spacing="6" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Sites connectés (sessions éphémères) -->
+            <Grid x:Name="SessionsPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Margin="0,0,0,16" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Sites connectés" FontSize="24" FontWeight="SemiBold" />
+                        <TextBlock TextWrapping="Wrap" Opacity="0.68"
+                                   Text="Sites ayant une session active (cookies). Au démarrage, Pulse Browser purge toutes les sessions sauf celles des sites de confiance. Le coffre de mots de passe n'est jamais concerné." />
+                    </StackPanel>
+                    <Button Grid.Column="1" x:Name="SessionsForgetAllButton" VerticalAlignment="Bottom"
+                            Content="Tout oublier maintenant"
+                            ToolTipService.ToolTip="Supprime les cookies de tous les sites, sauf les sites de confiance"
+                            Click="SessionsForgetAllButton_Click" />
+                    <Button Grid.Column="2" x:Name="SessionsRefreshButton" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Actualiser" Click="SessionsRefreshButton_Click">
+                        <SymbolIcon Symbol="Refresh" />
+                    </Button>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1">
+                    <StackPanel x:Name="SessionsPanelItems" Spacing="8" MaxWidth="760" HorizontalAlignment="Left" />
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <Grid x:Name="StatusBarRow" Grid.Row="5" Visibility="Collapsed" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" Grid.Column="0" Padding="10,4"
+                       Text="Pulse Browser WinUI 3 initialise." Opacity="0.72"
+                       FontSize="12"
+                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+            <Button x:Name="BackToPageButton" Grid.Column="1" Visibility="Collapsed"
+                    Padding="9,1,9,1" Margin="0,2,0,2" FontSize="12"
+                    Style="{StaticResource AccentButtonStyle}"
+                    ToolTipService.ToolTip="Revenir a la page web en cours"
+                    Click="BackToPageButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
+                    <TextBlock Text="Retour au site" FontSize="12" />
+                </StackPanel>
+            </Button>
+            <Border Grid.Column="2" Padding="10,2" CornerRadius="6"
+                    Margin="6,3,8,3"
+                    Background="Transparent">
+                <TextBlock x:Name="ProfileStatusText" FontSize="12" VerticalAlignment="Center"
+                           Opacity="0.85" />
+            </Border>
+        </Grid>
+
+        <!-- Palette de commande Ctrl+K -->
+        <Grid x:Name="CommandPaletteOverlay"
+              Grid.RowSpan="6"
+              Visibility="Collapsed"
+              Background="#66000000">
+            <Border Width="700"
+                    MaxHeight="560"
+                    VerticalAlignment="Top"
+                    HorizontalAlignment="Center"
+                    Margin="0,54,0,0"
+                    Padding="14"
+                    CornerRadius="8"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <Grid RowSpacing="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0"
+                                  Glyph="&#xE721;"
+                                  FontFamily="Segoe MDL2 Assets"
+                                  FontSize="18"
+                                  VerticalAlignment="Center" />
+                        <TextBox x:Name="CommandPaletteSearchBox"
+                                 Grid.Column="1"
+                                 MinHeight="36"
+                                 PlaceholderText="Chercher une commande, un onglet, un favori, une page..."
+                                 TextChanged="CommandPaletteSearchBox_TextChanged"
+                                 KeyDown="CommandPaletteSearchBox_KeyDown" />
+                        <Button Grid.Column="2"
+                                Style="{StaticResource PulseChromeIconButtonStyle}"
+                                ToolTipService.ToolTip="Fermer"
+                                Click="CommandPaletteCloseButton_Click">
+                            <SymbolIcon Symbol="Cancel" />
+                        </Button>
+                    </Grid>
+
+                    <TextBlock x:Name="CommandPaletteHintText"
+                               Grid.Row="1"
+                               Text="Entrée pour ouvrir, Échap pour fermer."
+                               Opacity="0.58"
+                               FontSize="12" />
+
+                    <ListView x:Name="CommandPaletteList"
+                              Grid.Row="2"
+                              MaxHeight="440"
+                              SelectionMode="Single"
+                              DoubleTapped="CommandPaletteList_DoubleTapped"
+                              KeyDown="CommandPaletteList_KeyDown">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8,7" ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Width="24"
+                                            Height="24"
+                                            CornerRadius="6"
+                                            Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                        <FontIcon Glyph="{Binding Glyph}"
+                                                  FontFamily="Segoe MDL2 Assets"
+                                                  FontSize="13"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Detail}"
+                                                   Opacity="0.62"
+                                                   FontSize="12"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding Kind}"
+                                               Opacity="0.54"
+                                               FontSize="12"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Overlay de connexion (dernier enfant = au-dessus de tout) -->
+        <Grid x:Name="LoginOverlay" Grid.RowSpan="6" Visibility="Collapsed"
+              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <ScrollViewer HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="12"
+                        Padding="40,36,40,36" Margin="0,32,0,32">
+                    <StackPanel Width="300" Spacing="0">
+
+                        <!-- Logo -->
+                        <StackPanel Orientation="Horizontal" Spacing="12"
+                                    HorizontalAlignment="Center" Margin="0,0,0,28">
+                            <Border Width="40" Height="40" CornerRadius="10">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#E87C1E" Offset="0" />
+                                        <GradientStop Color="#C45A00" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <TextBlock Text="P" FontSize="20" FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="Pulse Browser" FontSize="22" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Message de statut -->
+                        <TextBlock x:Name="LoginStatusText"
+                                   HorizontalAlignment="Center" Opacity="0.65"
+                                   TextWrapping="Wrap" TextAlignment="Center"
+                                   FontSize="13" Margin="0,0,0,14" />
+
+                        <!-- Choix du profil -->
+                        <StackPanel x:Name="ProfilePickerPanel" Spacing="10" Visibility="Collapsed">
+                            <TextBlock Text="Choisir un profil" FontSize="18" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" />
+                            <TextBlock Text="Chaque profil garde ses favoris, son historique, ses sessions, son coffre et ses parametres separes."
+                                       TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center"
+                                       FontSize="13" Margin="0,0,0,6" />
+                            <ListBox x:Name="ProfilePickerList"
+                                     MaxHeight="190"
+                                     SelectionChanged="ProfilePickerList_SelectionChanged" />
+                            <Button x:Name="ProfilePickerContinueButton"
+                                    Content="Continuer avec ce profil"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    Click="ProfilePickerContinueButton_Click" />
+                            <Button Content="Creer un autre profil"
+                                    HorizontalAlignment="Stretch"
+                                    Click="CreateAnotherProfileButton_Click" />
+                            <Border Height="1"
+                                    Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                    Margin="0,6,0,2" />
+                            <HyperlinkButton Content="Continuer sans profil (mode invite)"
+                                             HorizontalAlignment="Center" Opacity="0.6"
+                                             Click="SkipProfileButton_Click" />
+                        </StackPanel>
+
+                        <!-- Connexion par mot de passe -->
+                        <StackPanel x:Name="LoginPasswordPanel" Spacing="10" Visibility="Collapsed">
+                            <TextBlock x:Name="LoginWelcomeText" FontSize="15" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center"
+                                       Margin="0,0,0,2" />
+                            <PasswordBox x:Name="LoginPasswordBox" PlaceholderText="Mot de passe"
+                                         KeyDown="LoginPasswordBox_KeyDown" />
+                            <Button x:Name="LoginButton" Content="Se connecter"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch" Click="LoginButton_Click" />
+                            <HyperlinkButton Content="Mot de passe oublie ?"
+                                             HorizontalAlignment="Center"
+                                             Click="ForgotPasswordButton_Click" />
+                            <HyperlinkButton x:Name="ShowPinButton" Content="Utiliser le code PIN"
+                                             HorizontalAlignment="Center" Visibility="Collapsed"
+                                             Click="ShowPinButton_Click" />
+                            <HyperlinkButton Content="Changer de profil"
+                                             HorizontalAlignment="Center"
+                                             Click="ShowProfilePickerButton_Click" />
+                            <Border Height="1"
+                                    Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                    Margin="0,10,0,2" />
+                            <HyperlinkButton Content="Continuer sans profil (mode invite)"
+                                             HorizontalAlignment="Center" Opacity="0.6"
+                                             Click="SkipProfileButton_Click" />
+                        </StackPanel>
+
+                        <!-- Connexion par code PIN -->
+                        <StackPanel x:Name="LoginPinPanel" Spacing="10" Visibility="Collapsed">
+                            <TextBlock x:Name="PinWelcomeText" FontSize="15" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" />
+                            <TextBlock x:Name="PinDotsDisplay" Text="○ ○ ○ ○ ○ ○" FontSize="26"
+                                       HorizontalAlignment="Center" Margin="0,4,0,4" />
+                            <Grid ColumnSpacing="8" RowSpacing="8" HorizontalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="72" />
+                                    <ColumnDefinition Width="72" />
+                                    <ColumnDefinition Width="72" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="46" />
+                                    <RowDefinition Height="46" />
+                                    <RowDefinition Height="46" />
+                                    <RowDefinition Height="46" />
+                                </Grid.RowDefinitions>
+                                <Button Content="1" Tag="1" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="2" Tag="2" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="3" Tag="3" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="4" Tag="4" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="5" Tag="5" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="6" Tag="6" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="7" Tag="7" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="8" Tag="8" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="9" Tag="9" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="⌫" Tag="back" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="16" />
+                                <Button Content="0" Tag="0" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="18" />
+                                <Button Content="✕" Tag="clear" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="PinDigit_Click" FontSize="14" />
+                            </Grid>
+                            <HyperlinkButton Content="Utiliser le mot de passe"
+                                             HorizontalAlignment="Center"
+                                             Click="ShowPasswordButton_Click" />
+                            <HyperlinkButton Content="Changer de profil"
+                                             HorizontalAlignment="Center"
+                                             Click="ShowProfilePickerButton_Click" />
+                            <Border Height="1"
+                                    Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                    Margin="0,6,0,2" />
+                            <HyperlinkButton Content="Continuer sans profil (mode invite)"
+                                             HorizontalAlignment="Center" Opacity="0.6"
+                                             Click="SkipProfileButton_Click" />
+                        </StackPanel>
+
+                        <!-- Création de profil (premier lancement) -->
+                        <StackPanel x:Name="CreateProfilePanel" Spacing="10" Visibility="Collapsed">
+                            <TextBlock Text="Bienvenue" FontSize="18" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" />
+                            <TextBlock Text="Creez votre profil pour proteger vos donnees."
+                                       TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center"
+                                       FontSize="13" Margin="0,0,0,6" />
+                            <TextBox x:Name="ProfileNameBox" Header="Prenom ou pseudo"
+                                     PlaceholderText="Jean" MaxLength="32" />
+                            <PasswordBox x:Name="CreatePasswordBox" Header="Mot de passe (min. 8 caracteres)"
+                                         PlaceholderText="••••••••" />
+                            <PasswordBox x:Name="ConfirmPasswordBox" Header="Confirmer le mot de passe"
+                                         PlaceholderText="••••••••" />
+                            <ToggleSwitch x:Name="EnablePinSwitch" Header="Connexion rapide par PIN"
+                                          Toggled="EnablePinSwitch_Toggled" Margin="0,4,0,0" />
+                            <PasswordBox x:Name="PinSetupBox" Header="Code PIN (6 chiffres)"
+                                         PlaceholderText="● ● ● ● ● ●" MaxLength="6"
+                                         Visibility="Collapsed" />
+                            <PasswordBox x:Name="ConfirmPinBox" Header="Confirmer le code PIN"
+                                         PlaceholderText="● ● ● ● ● ●" MaxLength="6"
+                                         Visibility="Collapsed" />
+
+                            <Button x:Name="CreateProfileButton" Content="Creer mon profil"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch" Click="CreateProfileButton_Click"
+                                    Margin="0,6,0,0" />
+                            <InfoBar x:Name="GuestModeInfoBar" IsOpen="False" IsClosable="False"
+                                     Severity="Informational" Visibility="Collapsed"
+                                     Message="En mode sans profil, rien ne sera enregistre a la fermeture." />
+                        </StackPanel>
+
+                        <!-- Emplacement du profil (étape 2 de la création) -->
+                        <StackPanel x:Name="ProfileLocationPanel" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Ou stocker votre profil ?"
+                                       FontSize="18" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" />
+                            <TextBlock Text="Votre profil contient tout ce qui vous appartient :"
+                                       TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center"
+                                       FontSize="13" Margin="0,0,0,2" />
+
+                            <Border CornerRadius="8" Padding="14,10"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="• Favoris et historique de navigation" FontSize="13" />
+                                    <TextBlock Text="• Mots de passe (coffre chiffre AES-256)" FontSize="13" />
+                                    <TextBlock Text="• Onglets ouverts et sessions" FontSize="13" />
+                                    <TextBlock Text="• Parametres et preferences" FontSize="13" />
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel Spacing="6" Margin="0,4,0,0">
+                                <TextBlock Text="Emplacement de stockage"
+                                           FontWeight="SemiBold" FontSize="13" />
+                                <TextBlock TextWrapping="Wrap" Opacity="0.6" FontSize="12">
+En choisissant un dossier personnalise (disque externe, dossier Documents...), votre profil restera accessible apres une reinstallation de Windows. Par defaut, le profil est dans %LOCALAPPDATA%\PulseBrowser\profile.
+                                </TextBlock>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                    <TextBlock x:Name="ProfileLocationPathText"
+                                               Text="Emplacement par defaut"
+                                               FontSize="12" Opacity="0.72"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap" MaxWidth="200" />
+                                    <Button Content="Changer"
+                                            Click="ChooseProfileLocationButton_Click" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Button x:Name="ProfileLocationContinueButton" Content="Continuer"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    Click="ProfileLocationContinueButton_Click"
+                                    Margin="0,6,0,0" />
+                        </StackPanel>
+
+                        <!-- Migration depuis un autre navigateur (après création du profil) -->
+                        <StackPanel x:Name="MigrationPanel" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Importer vos favoris ?" FontSize="15" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" />
+                            <TextBlock Text="Selectionnez un navigateur pour recuperer vos favoris."
+                                       TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center" FontSize="13" />
+                            <ListBox x:Name="MigrationSourcesList" MaxHeight="180" />
+                            <TextBlock Text="Firefox : exportez d'abord vos favoris en HTML depuis Firefox (Signets › Afficher tous les signets › Importer et sauvegarder › Exporter en HTML), puis utilisez le bouton ci-dessous."
+                                       TextWrapping="Wrap" Opacity="0.45" FontSize="11" />
+                            <Button x:Name="MigrationImportButton" Content="Importer les favoris"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    Click="MigrationImportButton_Click" />
+                            <Button Content="Depuis un fichier HTML..."
+                                    HorizontalAlignment="Stretch"
+                                    Click="MigrationImportHtmlButton_Click" />
+                            <Border Height="1"
+                                    Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                    Margin="0,4,0,0" />
+                            <HyperlinkButton Content="Passer cette etape"
+                                             HorizontalAlignment="Center" Opacity="0.6"
+                                             Click="MigrationSkipButton_Click" />
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Wizard premier lancement (visible une seule fois apres creation de compte) -->
+        <Grid x:Name="SetupWizardOverlay" Grid.RowSpan="6" Visibility="Collapsed"
+              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <ScrollViewer HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="12"
+                        Padding="40,36,40,36" Margin="0,32,0,32">
+                    <StackPanel Width="340" Spacing="0">
+
+                        <!-- Logo -->
+                        <StackPanel Orientation="Horizontal" Spacing="12"
+                                    HorizontalAlignment="Center" Margin="0,0,0,24">
+                            <Border Width="36" Height="36" CornerRadius="9">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#E87C1E" Offset="0" />
+                                        <GradientStop Color="#C45A00" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <TextBlock Text="P" FontSize="18" FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="Pulse Browser" FontSize="20" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Indicateur d'etape -->
+                        <TextBlock x:Name="WizardStepIndicator" Text="Etape 1 / 3"
+                                   HorizontalAlignment="Center" Opacity="0.5"
+                                   FontSize="12" Margin="0,0,0,20" />
+
+                        <!-- Etape 0 : Bienvenue -->
+                        <StackPanel x:Name="WizardStep0" Spacing="14">
+                            <TextBlock Text="Bienvenue !" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Pulse Browser protege votre vie privee par defaut. Quelques reglages rapides pour personnaliser votre experience."
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                    CornerRadius="8" Padding="16,14">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Bloqueur de publicites et traceurs integre"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock Text="Refus automatique des bandeaux cookies"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock Text="Donnees stockees uniquement sur votre machine"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Etape 1 : Moteur de recherche -->
+                        <StackPanel x:Name="WizardStep1" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Moteur de recherche" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Quel moteur souhaitez-vous utiliser par defaut ?"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <RadioButton x:Name="WizardSearchGoogle" Content="Google"
+                                         GroupName="WizardSearchGroup" IsChecked="True"
+                                         Tag="google" Checked="WizardSearch_Checked" />
+                            <RadioButton x:Name="WizardSearchDuckDuckGo" Content="DuckDuckGo"
+                                         GroupName="WizardSearchGroup"
+                                         Tag="duckduckgo" Checked="WizardSearch_Checked" />
+                            <RadioButton x:Name="WizardSearchBrave" Content="Brave Search"
+                                         GroupName="WizardSearchGroup"
+                                         Tag="brave" Checked="WizardSearch_Checked" />
+                            <RadioButton x:Name="WizardSearchBing" Content="Bing"
+                                         GroupName="WizardSearchGroup"
+                                         Tag="bing" Checked="WizardSearch_Checked" />
+                        </StackPanel>
+
+                        <!-- Etape 2 : Resume et confirmation -->
+                        <StackPanel x:Name="WizardStep2" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Vous etes pret !" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Pulse Browser est configure. Vous pouvez modifier ces reglages a tout moment dans Parametres."
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                    CornerRadius="8" Padding="16,14">
+                                <StackPanel Spacing="8">
+                                    <TextBlock x:Name="WizardSummarySearch"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock Text="Protection de la vie privee activee"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Separateur -->
+                        <Border Height="1"
+                                Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                Margin="0,24,0,20" />
+
+                        <!-- Boutons de navigation -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="WizardPrevButton" Content="Precedent"
+                                    Grid.Column="0" IsEnabled="False"
+                                    Click="WizardPrevButton_Click" />
+                            <Button x:Name="WizardNextButton" Content="Suivant"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Grid.Column="2"
+                                    Click="WizardNextButton_Click" />
+                        </Grid>
+
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+        </Grid>
+
+    </Grid>
+</Window>
