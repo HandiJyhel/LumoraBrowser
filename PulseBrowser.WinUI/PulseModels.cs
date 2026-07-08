@@ -1351,6 +1351,13 @@ internal sealed record UserProfile
     public string RecoverySalt   { get; init; } = string.Empty;
     public long   RecoveryCreatedAt { get; init; }
 
+    // Nombre d'itérations PBKDF2 réellement utilisé pour chaque secret. Absent dans
+    // les anciens profils → LegacyPbkdf2Iterations (100k), qui restent donc vérifiables.
+    // Tout secret créé ou modifié est ré-haché à Pbkdf2Iterations (600k).
+    public int PasswordIterations { get; init; } = LegacyPbkdf2Iterations;
+    public int PinIterations      { get; init; } = LegacyPbkdf2Iterations;
+    public int RecoveryIterations { get; init; } = LegacyPbkdf2Iterations;
+
     public bool HasRecoveryKey => !string.IsNullOrWhiteSpace(RecoveryHash) && !string.IsNullOrWhiteSpace(RecoverySalt);
 
     // ── Fabrique ─────────────────────────────────────────────────────────────
@@ -1363,12 +1370,14 @@ internal sealed record UserProfile
 
         return new UserProfile
         {
-            Name         = name,
-            PasswordHash = pwHash,
-            PasswordSalt = pwSalt,
-            HasPinLogin  = hasPinLogin,
-            PinHash      = pinHash,
-            PinSalt      = pinSalt
+            Name               = name,
+            PasswordHash       = pwHash,
+            PasswordSalt       = pwSalt,
+            PasswordIterations = Pbkdf2Iterations,
+            HasPinLogin        = hasPinLogin,
+            PinHash            = pinHash,
+            PinSalt            = pinSalt,
+            PinIterations      = Pbkdf2Iterations
         };
     }
 
@@ -1378,7 +1387,7 @@ internal sealed record UserProfile
     {
         if (string.IsNullOrEmpty(PasswordSalt)) return false;
         var salt = Convert.FromBase64String(PasswordSalt);
-        var candidate = Pbkdf2(password, salt);
+        var candidate = Pbkdf2(password, salt, PasswordIterations);
         return CryptographicOperations.FixedTimeEquals(
             Convert.FromBase64String(PasswordHash), candidate);
     }
@@ -1387,7 +1396,7 @@ internal sealed record UserProfile
     {
         if (!HasPinLogin || string.IsNullOrEmpty(PinSalt)) return false;
         var salt = Convert.FromBase64String(PinSalt);
-        var candidate = Pbkdf2(pin, salt);
+        var candidate = Pbkdf2(pin, salt, PinIterations);
         return CryptographicOperations.FixedTimeEquals(
             Convert.FromBase64String(PinHash), candidate);
     }
@@ -1398,7 +1407,7 @@ internal sealed record UserProfile
         try
         {
             var salt = Convert.FromBase64String(RecoverySalt);
-            var candidate = Pbkdf2(NormalizeRecoveryKey(recoveryKey), salt);
+            var candidate = Pbkdf2(NormalizeRecoveryKey(recoveryKey), salt, RecoveryIterations);
             return CryptographicOperations.FixedTimeEquals(
                 Convert.FromBase64String(RecoveryHash), candidate);
         }
@@ -1413,7 +1422,7 @@ internal sealed record UserProfile
     public UserProfile WithNewPassword(string newPassword)
     {
         var (hash, salt) = DeriveKey(newPassword);
-        return this with { PasswordHash = hash, PasswordSalt = salt };
+        return this with { PasswordHash = hash, PasswordSalt = salt, PasswordIterations = Pbkdf2Iterations };
     }
 
     public UserProfile WithRecoveryKey(string recoveryKey)
@@ -1423,6 +1432,7 @@ internal sealed record UserProfile
         {
             RecoveryHash = hash,
             RecoverySalt = salt,
+            RecoveryIterations = Pbkdf2Iterations,
             RecoveryCreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         };
     }
@@ -1430,7 +1440,7 @@ internal sealed record UserProfile
     public UserProfile WithPin(string pin)
     {
         var (hash, salt) = DeriveKey(pin);
-        return this with { HasPinLogin = true, PinHash = hash, PinSalt = salt };
+        return this with { HasPinLogin = true, PinHash = hash, PinSalt = salt, PinIterations = Pbkdf2Iterations };
     }
 
     public UserProfile WithoutPin() =>
@@ -1481,18 +1491,24 @@ internal sealed record UserProfile
         }
     }
 
-    // ── PBKDF2 (100 000 itérations, SHA-256, 32 octets) ─────────────────────
+    // ── PBKDF2 (SHA-256, 32 octets) ─────────────────────────────────────────
+    // Nouveaux secrets : 600 000 itérations (recommandation OWASP). Les anciens
+    // profils gardent 100 000 (compteur stocké par secret) pour rester ouvrables,
+    // et sont ré-haché à 600k dès qu'on modifie le secret concerné.
+
+    private const int Pbkdf2Iterations = 600_000;
+    private const int LegacyPbkdf2Iterations = 100_000;
 
     private static (string hash, string salt) DeriveKey(string secret)
     {
         var saltBytes = RandomNumberGenerator.GetBytes(32);
-        var hashBytes = Pbkdf2(secret, saltBytes);
+        var hashBytes = Pbkdf2(secret, saltBytes, Pbkdf2Iterations);
         return (Convert.ToBase64String(hashBytes), Convert.ToBase64String(saltBytes));
     }
 
-    private static byte[] Pbkdf2(string secret, byte[] salt)
+    private static byte[] Pbkdf2(string secret, byte[] salt, int iterations)
     {
-        using var rfc = new Rfc2898DeriveBytes(secret, salt, 100_000, HashAlgorithmName.SHA256);
+        using var rfc = new Rfc2898DeriveBytes(secret, salt, iterations, HashAlgorithmName.SHA256);
         return rfc.GetBytes(32);
     }
 

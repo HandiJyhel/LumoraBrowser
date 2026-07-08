@@ -34,6 +34,16 @@ internal sealed class PrivacyEngine
         return false;
     }
 
+    // Comme ShouldBlock, mais sans incrémenter les compteurs — pour les vérifications
+    // hors rendu de page (ex. téléchargement direct de favicon).
+    public bool IsBlocked(string requestUri, string pageUri)
+    {
+        foreach (var m in _modules)
+            if (m.IsEnabled && m.ShouldBlock(requestUri, pageUri))
+                return true;
+        return false;
+    }
+
     // Returns cleaned URL if any module modified it, null if unchanged
     public string? CleanUrl(string uri)
     {

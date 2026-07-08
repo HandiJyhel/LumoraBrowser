@@ -29,8 +29,10 @@ internal sealed class VaultStore
     // Ancien KDF (lecture des coffres créés avant Argon2id).
     private const int LegacyPbkdf2Iterations = 100_000;
 
-    private const int KeySize = 32;
-    private const int IvSize  = 16;
+    private const int KeySize   = 32;
+    private const int IvSize    = 16; // AES-CBC (lecture des anciens coffres)
+    private const int GcmNonce  = 12;
+    private const int GcmTag     = 16;
 
     private static readonly byte[] VaultEntropy = Encoding.UTF8.GetBytes("PulseBrowser.Vault.v1");
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
@@ -153,7 +155,7 @@ internal sealed class VaultStore
         if (!HasMasterPassword || _header.Salt is null) return false;
         var salt = Convert.FromBase64String(_header.Salt);
         var key  = DeriveKey(password, salt, _header);
-        if (!TryDecrypt(_header.Data ?? string.Empty, key, out var creds)) return false;
+        if (!TryDecrypt(_header.Data ?? string.Empty, key, _header.DataCipher, out var creds)) return false;
         _unlockedKey  = key;
         _credentials  = creds;
         return true;
@@ -197,7 +199,7 @@ internal sealed class VaultStore
     {
         if (!HasMasterPassword || _header.Salt is null) return false;
         var salt = Convert.FromBase64String(_header.Salt);
-        return TryDecrypt(_header.Data ?? string.Empty, DeriveKey(password, salt, _header), out _);
+        return TryDecrypt(_header.Data ?? string.Empty, DeriveKey(password, salt, _header), _header.DataCipher, out _);
     }
 
     // Repasse en mode DPAPI (confort) — coffre doit être déverrouillé avant l'appel
@@ -263,7 +265,7 @@ internal sealed class VaultStore
             using (var aes = new AesGcm(pinKey, 16))
                 aes.Decrypt(nonce, cipher, tag, vaultKey);
 
-            if (!TryDecrypt(_header.Data ?? string.Empty, vaultKey, out var creds)) return false;
+            if (!TryDecrypt(_header.Data ?? string.Empty, vaultKey, _header.DataCipher, out var creds)) return false;
             _unlockedKey = vaultKey;
             _credentials = creds;
             return true;
@@ -308,7 +310,7 @@ internal sealed class VaultStore
                 return false;
             }
 
-            if (!TryDecrypt(_header.RecoveryData, recoveryDataKey, out var creds))
+            if (!TryDecrypt(_header.RecoveryData, recoveryDataKey, _header.RecoveryDataCipher, out var creds))
             {
                 CryptographicOperations.ZeroMemory(recoveryDataKey);
                 return false;
@@ -394,7 +396,10 @@ internal sealed class VaultStore
         {
             var json = JsonSerializer.SerializeToUtf8Bytes(_credentials, JsonOpts);
             if (_header.Mode == "aes256" && _unlockedKey is not null)
-                _header.Data = Convert.ToBase64String(EncryptAes(json, _unlockedKey));
+            {
+                _header.Data = Convert.ToBase64String(EncryptGcm(json, _unlockedKey));
+                _header.DataCipher = "gcm";
+            }
             else if (_header.Mode == "aes256")
                 _header.Data ??= string.Empty;
             else
@@ -411,36 +416,52 @@ internal sealed class VaultStore
 
     // ── Crypto ────────────────────────────────────────────────────────────────
 
-    private static bool TryDecrypt(string dataBase64, byte[] key, out List<VaultCredential> result)
+    // Déchiffre le blob du coffre. cipher = valeur de l'en-tête "data_cipher" :
+    // "gcm" pour les coffres actuels (AES-256-GCM authentifié), "cbc" pour les
+    // anciens (AES-256-CBC, lus tels quels puis réécrits en GCM au prochain Save).
+    private static bool TryDecrypt(string dataBase64, byte[] key, string cipher, out List<VaultCredential> result)
     {
         result = new();
         try
         {
             if (string.IsNullOrEmpty(dataBase64)) return true; // coffre vide = valide
             var bytes = Convert.FromBase64String(dataBase64);
-            var plain = DecryptAes(bytes, key);
+            var plain = cipher == "gcm" ? DecryptGcm(bytes, key) : DecryptAes(bytes, key);
             result = JsonSerializer.Deserialize<List<VaultCredential>>(plain, JsonOpts) ?? new();
             return true;
         }
         catch { return false; }
     }
 
-    private static byte[] EncryptAes(byte[] plaintext, byte[] key)
+    // AES-256-GCM authentifié : nonce(12) ‖ tag(16) ‖ ciphertext.
+    private static byte[] EncryptGcm(byte[] plaintext, byte[] key)
     {
-        using var aes = Aes.Create();
-        aes.KeySize = 256;
-        aes.Mode    = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-        aes.Key     = key;
-        aes.GenerateIV();
-        using var enc    = aes.CreateEncryptor();
-        var cipher       = enc.TransformFinalBlock(plaintext, 0, plaintext.Length);
-        var result       = new byte[IvSize + cipher.Length];
-        Buffer.BlockCopy(aes.IV, 0, result, 0,      IvSize);
-        Buffer.BlockCopy(cipher, 0, result, IvSize, cipher.Length);
+        var nonce  = RandomNumberGenerator.GetBytes(GcmNonce);
+        var cipher = new byte[plaintext.Length];
+        var tag    = new byte[GcmTag];
+        using (var aes = new AesGcm(key, GcmTag))
+            aes.Encrypt(nonce, plaintext, cipher, tag);
+
+        var result = new byte[GcmNonce + GcmTag + cipher.Length];
+        Buffer.BlockCopy(nonce,  0, result, 0,                 GcmNonce);
+        Buffer.BlockCopy(tag,    0, result, GcmNonce,          GcmTag);
+        Buffer.BlockCopy(cipher, 0, result, GcmNonce + GcmTag, cipher.Length);
         return result;
     }
 
+    private static byte[] DecryptGcm(byte[] data, byte[] key)
+    {
+        if (data.Length < GcmNonce + GcmTag) throw new CryptographicException("Vault data too short");
+        var nonce  = data[..GcmNonce];
+        var tag    = data[GcmNonce..(GcmNonce + GcmTag)];
+        var cipher = data[(GcmNonce + GcmTag)..];
+        var plain  = new byte[cipher.Length];
+        using var aes = new AesGcm(key, GcmTag);
+        aes.Decrypt(nonce, cipher, tag, plain);
+        return plain;
+    }
+
+    // Lecture seule des coffres hérités (AES-256-CBC : IV(16) ‖ ciphertext).
     private static byte[] DecryptAes(byte[] data, byte[] key)
     {
         if (data.Length < IvSize) throw new CryptographicException("Vault data too short");
@@ -461,7 +482,8 @@ internal sealed class VaultStore
         var recoveryDataKey = TryGetRecoveryDataKey();
         if (recoveryDataKey is null) return;
 
-        _header.RecoveryData = Convert.ToBase64String(EncryptAes(json, recoveryDataKey));
+        _header.RecoveryData = Convert.ToBase64String(EncryptGcm(json, recoveryDataKey));
+        _header.RecoveryDataCipher = "gcm";
         if (_unlockedKey is not null)
         {
             _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey));
@@ -587,6 +609,9 @@ internal sealed class VaultHeader
     [JsonPropertyName("argon2_iter")]public int     Argon2Iter { get; set; }
     [JsonPropertyName("argon2_par")] public int     Argon2Par  { get; set; }
     [JsonPropertyName("data")]       public string? Data       { get; set; }
+    // Chiffrement du blob "data" / "recovery_data". "gcm" = AES-256-GCM authentifié
+    // (défaut à l'écriture). Absent = ancien coffre en AES-256-CBC → lu en "cbc".
+    [JsonPropertyName("data_cipher")] public string DataCipher { get; set; } = "cbc";
 
     // Déverrouillage optionnel par code PIN : la clé du coffre est emballée (AES-GCM
     // avec une clé dérivée du PIN par Argon2id), puis protégée par DPAPI. Ainsi le PIN
@@ -602,6 +627,10 @@ internal sealed class VaultHeader
     [JsonPropertyName("recovery_key")]       public string? RecoveryWrappedKey      { get; set; }
     [JsonPropertyName("recovery_vault_key")] public string? RecoveryVaultWrappedKey { get; set; }
     [JsonPropertyName("recovery_data")]      public string? RecoveryData            { get; set; }
+    // Chiffrement du blob "recovery_data", indépendant de "data_cipher" car les deux
+    // blobs peuvent être réécrits à des instants différents (déverrouillage par clé
+    // de secours). Absent = ancien coffre CBC.
+    [JsonPropertyName("recovery_data_cipher")] public string RecoveryDataCipher { get; set; } = "cbc";
 
     // Suppressions persistantes (clés "origin|username") pour ne pas réimporter depuis Chromium.
     [JsonPropertyName("deleted")]  public List<string> Deleted  { get; set; } = new();

@@ -457,6 +457,13 @@ public sealed partial class MainWindow
 
         foreach (var url in candidates)
         {
+            // Ce téléchargement sort du moteur (HttpClient direct) : on le soumet quand
+            // même au bloqueur pour ne pas contacter une origine que l'utilisateur bloque.
+            if (_privacy.IsBlocked(url, address))
+            {
+                continue;
+            }
+
             try
             {
                 var bytes = await FaviconHttpClient.GetByteArrayAsync(url);

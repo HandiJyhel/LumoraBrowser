@@ -1,27 +1,38 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using Konscious.Security.Cryptography;
 
 namespace PulseBrowser.WinUI;
 
 // Format .pulsebackup :
 //   [0-7]   Magic "PULSEBAK"
-//   [8]     Version 0x01
-//   [9-24]  Salt PBKDF2 (16 octets)
-//   [25-40] IV AES (16 octets)
-//   [41+]   Payload AES-256-CBC(PBKDF2-SHA256(password), zip)
+//   [8]     Version
+//   [9-24]  Salt (16 octets)
+//   Version 0x02 (actuelle) : clé Argon2id, payload AES-256-GCM authentifié.
+//     [25-36] Nonce (12) ‖ [37-52] Tag (16) ‖ [53+] ciphertext
+//   Version 0x01 (héritée, lue seulement) : clé PBKDF2-SHA256 100k, AES-256-CBC.
+//     [25-40] IV (16) ‖ [41+] ciphertext
 //
 // Le zip contient les fichiers de navigation décryptés (texte brut).
-// Le coffre Rust n'est pas inclus (DPAPI lié au compte Windows).
+// Le coffre n'est pas inclus (chiffré séparément).
 
 internal static class PulseBackup
 {
     private static readonly byte[] Magic = "PULSEBAK"u8.ToArray();
-    private const byte FormatVersion = 0x01;
+    private const byte FormatVersion = 0x02;
+    private const byte LegacyFormatVersion = 0x01;
     private const int SaltSize = 16;
-    private const int IvSize = 16;
-    private const int KeySize = 32; // AES-256
-    private const int Pbkdf2Iterations = 100_000;
+    private const int IvSize = 16;      // AES-CBC hérité (import v1)
+    private const int GcmNonce = 12;
+    private const int GcmTag = 16;
+    private const int KeySize = 32;     // AES-256
+    private const int LegacyPbkdf2Iterations = 100_000;
+
+    // Argon2id — aligné sur le coffre principal (voir VaultStore).
+    private const int Argon2MemoryKib = 65536; // 64 Mio
+    private const int Argon2Iterations = 3;
+    private const int Argon2Parallelism = 4;
 
     private static readonly (string RelativePath, string ZipEntry)[] NavFiles =
     [
@@ -51,28 +62,23 @@ internal static class PulseBackup
                 WriteEntry(zip, "profile.txt", profileContent);
         }
 
-        var salt = RandomNumberGenerator.GetBytes(SaltSize);
-        var iv   = RandomNumberGenerator.GetBytes(IvSize);
-        var key  = DeriveKey(password, salt);
+        var salt  = RandomNumberGenerator.GetBytes(SaltSize);
+        var nonce = RandomNumberGenerator.GetBytes(GcmNonce);
+        var key   = DeriveKey(password, salt);
 
-        byte[] encrypted;
-        using (var aes = Aes.Create())
-        {
-            aes.Key = key;
-            aes.IV  = iv;
-            using var encryptor = aes.CreateEncryptor();
-            using var buf = new MemoryStream();
-            using (var cs = new CryptoStream(buf, encryptor, CryptoStreamMode.Write))
-                cs.Write(zipStream.ToArray());
-            encrypted = buf.ToArray();
-        }
+        var plaintext = zipStream.ToArray();
+        var cipher    = new byte[plaintext.Length];
+        var tag       = new byte[GcmTag];
+        using (var aes = new AesGcm(key, GcmTag))
+            aes.Encrypt(nonce, plaintext, cipher, tag);
 
         using var file = new BinaryWriter(File.Open(destPath, FileMode.Create, FileAccess.Write));
         file.Write(Magic);
         file.Write(FormatVersion);
         file.Write(salt);
-        file.Write(iv);
-        file.Write(encrypted);
+        file.Write(nonce);
+        file.Write(tag);
+        file.Write(cipher);
     }
 
     public static void Import(string srcPath, string password, PulseProfilePaths profile)
@@ -84,26 +90,17 @@ internal static class PulseBackup
             throw new InvalidDataException("Ce fichier n'est pas une sauvegarde Pulse valide.");
 
         var version = file.ReadByte();
-        if (version != FormatVersion)
+        if (version != FormatVersion && version != LegacyFormatVersion)
             throw new InvalidDataException($"Version de sauvegarde non supportee ({version}).");
 
-        var salt      = file.ReadBytes(SaltSize);
-        var iv        = file.ReadBytes(IvSize);
-        var remaining = (int)(file.BaseStream.Length - file.BaseStream.Position);
-        var encrypted = file.ReadBytes(remaining);
+        var salt = file.ReadBytes(SaltSize);
 
         byte[] zipBytes;
         try
         {
-            var key = DeriveKey(password, salt);
-            using var aes = Aes.Create();
-            aes.Key = key;
-            aes.IV  = iv;
-            using var decryptor = aes.CreateDecryptor();
-            using var buf = new MemoryStream();
-            using (var cs = new CryptoStream(new MemoryStream(encrypted), decryptor, CryptoStreamMode.Read))
-                cs.CopyTo(buf);
-            zipBytes = buf.ToArray();
+            zipBytes = version == FormatVersion
+                ? DecryptV2(file, password, salt)
+                : DecryptV1Legacy(file, password, salt);
         }
         catch
         {
@@ -138,10 +135,53 @@ internal static class PulseBackup
         }
     }
 
+    private static byte[] DecryptV2(BinaryReader file, string password, byte[] salt)
+    {
+        var nonce     = file.ReadBytes(GcmNonce);
+        var tag       = file.ReadBytes(GcmTag);
+        var remaining = (int)(file.BaseStream.Length - file.BaseStream.Position);
+        var cipher    = file.ReadBytes(remaining);
+
+        var key   = DeriveKey(password, salt);
+        var plain = new byte[cipher.Length];
+        using var aes = new AesGcm(key, GcmTag);
+        aes.Decrypt(nonce, cipher, tag, plain); // lève si mot de passe incorrect / altération
+        return plain;
+    }
+
+    private static byte[] DecryptV1Legacy(BinaryReader file, string password, byte[] salt)
+    {
+        var iv        = file.ReadBytes(IvSize);
+        var remaining = (int)(file.BaseStream.Length - file.BaseStream.Position);
+        var encrypted = file.ReadBytes(remaining);
+
+        var key = DeriveKeyLegacy(password, salt);
+        using var aes = Aes.Create();
+        aes.Key = key;
+        aes.IV  = iv;
+        using var decryptor = aes.CreateDecryptor();
+        using var buf = new MemoryStream();
+        using (var cs = new CryptoStream(new MemoryStream(encrypted), decryptor, CryptoStreamMode.Read))
+            cs.CopyTo(buf);
+        return buf.ToArray();
+    }
+
     private static byte[] DeriveKey(string password, byte[] salt)
     {
+        using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
+        {
+            Salt                = salt,
+            MemorySize          = Argon2MemoryKib,
+            Iterations          = Argon2Iterations,
+            DegreeOfParallelism = Argon2Parallelism
+        };
+        return argon2.GetBytes(KeySize);
+    }
+
+    private static byte[] DeriveKeyLegacy(string password, byte[] salt)
+    {
         using var pbkdf2 = new Rfc2898DeriveBytes(
-            Encoding.UTF8.GetBytes(password), salt, Pbkdf2Iterations, HashAlgorithmName.SHA256);
+            Encoding.UTF8.GetBytes(password), salt, LegacyPbkdf2Iterations, HashAlgorithmName.SHA256);
         return pbkdf2.GetBytes(KeySize);
     }
 
