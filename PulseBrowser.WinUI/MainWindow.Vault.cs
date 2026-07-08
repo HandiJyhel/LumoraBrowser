@@ -803,12 +803,58 @@ public sealed partial class MainWindow
     private void PasswordManagerSearchBox_TextChanged(object sender, TextChangedEventArgs e) =>
         RefreshVaultPanel();
 
-    private void CopyPasswordManagerText(string value, string status)
+    private void CopyPasswordManagerText(string value, string status) =>
+        CopySecretToClipboard(value, status, clearAfterSeconds: 30);
+
+    // Copie d'un secret : exclu de l'historique du presse-papiers et de la synchro
+    // cloud, puis effacé après clearAfterSeconds (<= 0 = pas d'effacement auto).
+    private void CopySecretToClipboard(string value, string status, int clearAfterSeconds)
     {
+        var text = value ?? string.Empty;
         var package = new DataPackage();
-        package.SetText(value ?? string.Empty);
-        Clipboard.SetContent(package);
+        package.SetText(text);
+        try
+        {
+            Clipboard.SetContentWithOptions(package, new ClipboardContentOptions
+            {
+                IsAllowedInHistory = false,
+                IsRoamable = false
+            });
+        }
+        catch
+        {
+            Clipboard.SetContent(package); // repli si l'API d'options est indisponible
+        }
+
         StatusText.Text = status;
+        if (clearAfterSeconds > 0 && text.Length > 0)
+        {
+            ScheduleClipboardClear(text, clearAfterSeconds);
+        }
+    }
+
+    private void ScheduleClipboardClear(string copied, int seconds)
+    {
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromSeconds(seconds);
+        timer.IsRepeating = false;
+        timer.Tick += async (t, _) =>
+        {
+            t.Stop();
+            try
+            {
+                // N'effacer que si le presse-papiers contient TOUJOURS notre secret,
+                // pour ne pas jeter ce que l'utilisateur aurait copié entre-temps.
+                var current = Clipboard.GetContent();
+                if (current.Contains(StandardDataFormats.Text) &&
+                    await current.GetTextAsync() == copied)
+                {
+                    Clipboard.Clear();
+                }
+            }
+            catch { }
+        };
+        timer.Start();
     }
 
     private async Task<(PasswordManagerEntryDraft draft, bool cancelled)> PromptNewCredentialAsync()
@@ -818,6 +864,25 @@ public sealed partial class MainWindow
         var loginUrlBox = new TextBox { PlaceholderText = "URL de connexion optionnelle", MinWidth = 340 };
         var usernameBox = new TextBox { PlaceholderText = "utilisateur@email.com" };
         var passwordBox = new PasswordBox { PlaceholderText = "Mot de passe" };
+
+        // Générateur intégré : longueur réglable + tirage crypto-sûr, révélé après génération.
+        var lengthBox = new NumberBox
+        {
+            Value = 20,
+            Minimum = PasswordGenerator.MinLength,
+            Maximum = 64,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+            Width = 120
+        };
+        var generateButton = new Button { Content = "Générer" };
+        generateButton.Click += (_, _) =>
+        {
+            passwordBox.Password = PasswordGenerator.Generate((int)lengthBox.Value);
+            passwordBox.PasswordRevealMode = PasswordRevealMode.Visible;
+        };
+        var generatorRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        generatorRow.Children.Add(lengthBox);
+        generatorRow.Children.Add(generateButton);
 
         var panel = new StackPanel { Spacing = 6 };
         panel.Children.Add(new TextBlock { Text = "Nom" });
@@ -830,6 +895,7 @@ public sealed partial class MainWindow
         panel.Children.Add(usernameBox);
         panel.Children.Add(new TextBlock { Text = "Mot de passe", Margin = new Thickness(0, 8, 0, 0) });
         panel.Children.Add(passwordBox);
+        panel.Children.Add(generatorRow);
 
         var dialog = new ContentDialog
         {

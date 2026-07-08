@@ -40,7 +40,9 @@ internal sealed class UiSettings
         new("YouTube", "https://www.youtube.com"),
         new("GitHub", "https://github.com")
     ];
-    public int SessionTimeoutMinutes { get; set; } = 0;
+    // Verrouillage auto par défaut à 10 min (valeur présente dans le sélecteur).
+    // Les profils existants conservent la valeur enregistrée dans leur ui-settings.
+    public int SessionTimeoutMinutes { get; set; } = 10;
     public bool NetworkBlockerEnabled { get; set; } = true;
     public bool ParameterCleanerEnabled { get; set; } = true;
     public bool HttpsEnforcerEnabled { get; set; } = true;

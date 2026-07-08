@@ -195,6 +195,9 @@ public sealed partial class MainWindow
         _sessionTimer?.Stop();
         if (_isGuestMode || _userProfile is null) return;
         if (LoginOverlay.Visibility == Visibility.Visible) return;
+        // Verrouillage réel : on purge la clé du coffre de la mémoire, pas seulement
+        // l'écran. Le ré-login (mot de passe ou PIN) la reconstruit.
+        _vault.Lock();
         ShowLoginPanel(_userProfile.HasPinLogin ? "pin" : "password");
         LoginStatusText.Text = "Session verrouillee automatiquement.";
         LoginOverlay.Visibility = Visibility.Visible;
@@ -804,12 +807,7 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Left
         };
         copyButton.Click += (_, _) =>
-        {
-            var package = new DataPackage();
-            package.SetText(recoveryKey);
-            Clipboard.SetContent(package);
-            StatusText.Text = "Cle de recuperation copiee.";
-        };
+            CopySecretToClipboard(recoveryKey, "Cle de recuperation copiee.", clearAfterSeconds: 0);
 
         var panel = new StackPanel { Spacing = 12 };
         panel.Children.Add(new TextBlock

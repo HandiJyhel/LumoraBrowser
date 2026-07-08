@@ -29,7 +29,19 @@ internal sealed class HttpsEnforcerModule : IPrivacyModule
         host.StartsWith("127.") ||
         host.StartsWith("192.168.") ||
         host.StartsWith("10.") ||
+        IsPrivate172(host) ||
         host == "::1" ||
         host == "[::1]" ||
         host.EndsWith(".local", StringComparison.OrdinalIgnoreCase);
+
+    // Plage privée RFC1918 172.16.0.0/12 (172.16.x.x à 172.31.x.x).
+    private static bool IsPrivate172(string host)
+    {
+        if (!host.StartsWith("172.")) return false;
+        var rest = host[4..];
+        var dot = rest.IndexOf('.');
+        return dot > 0 &&
+               int.TryParse(rest[..dot], out var second) &&
+               second >= 16 && second <= 31;
+    }
 }
