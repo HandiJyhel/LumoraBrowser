@@ -1,5 +1,5 @@
-# Rust build artifacts
-/target/
+# Rust build artifacts (prototype archivé sous archive/rust-cef-prototype/)
+target/
 
 # .NET build artifacts
 **/bin/

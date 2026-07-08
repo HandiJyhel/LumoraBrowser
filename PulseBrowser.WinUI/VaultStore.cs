@@ -54,11 +54,6 @@ internal sealed class VaultStore
     // Verrouillé = mode AES activé ET clé non encore fournie (Unlock() pas appelé)
     public bool IsLocked => HasMasterPassword && _unlockedKey is null && _recoveryDataKey is null;
 
-    public bool HasRecoveryUnlock =>
-        _header.RecoverySalt is not null &&
-        _header.RecoveryWrappedKey is not null &&
-        _header.RecoveryData is not null;
-
     public List<VaultCredential> ListCredentials()
     {
         if (IsLocked) return new();
@@ -212,8 +207,6 @@ internal sealed class VaultStore
     }
 
     // ── Déverrouillage par code PIN ───────────────────────────────────────────
-
-    public bool HasPinUnlock => _header.PinSalt is not null && _header.PinWrappedKey is not null;
 
     // Active le déverrouillage par PIN. Le coffre doit être déverrouillé (clé en mémoire).
     public void EnablePinUnlock(string pin)
