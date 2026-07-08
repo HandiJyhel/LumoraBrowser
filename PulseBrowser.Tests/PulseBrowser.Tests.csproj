@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Projet de test autonome : il ne référence PAS l'application WinUI (dont le
+    packaging PRI/MSIX empêche « dotnet test »). Il compile directement les classes
+    PURES du produit, qui n'ont aucune dépendance UI. Résultat : les tests tournent
+    partout — CLI locale et intégration continue — via un simple « dotnet test ».
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>PulseBrowser.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- Classes pures du produit, compilées dans l'assembly de test (aucune UI). -->
+  <ItemGroup>
+    <Compile Include="..\PulseBrowser.WinUI\Credentials\PasswordGenerator.cs"  Link="Product\PasswordGenerator.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Credentials\PublicSuffixService.cs" Link="Product\PublicSuffixService.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\VaultStore.cs"                      Link="Product\VaultStore.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\VaultCredential.cs"                 Link="Product\VaultCredential.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\WinUiRuntimeTrace.cs"               Link="Product\WinUiRuntimeTrace.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Models\UserProfile.cs"             Link="Product\UserProfile.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Models\ProfilePaths.cs"            Link="Product\ProfilePaths.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\PulseConfig.cs"                    Link="Product\PulseConfig.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Storage\PulseFile.cs"              Link="Product\PulseFile.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\PulseBackup.cs"                    Link="Product\PulseBackup.cs" />
+    <EmbeddedResource Include="..\PulseBrowser.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
+  </ItemGroup>
+
+</Project>
