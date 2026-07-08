@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.UI.Xaml;
 using Microsoft.Web.WebView2.Core;
+using PulseBrowser.WinUI.Credentials;
 
 namespace PulseBrowser.WinUI;
 
@@ -193,12 +194,8 @@ public sealed class BookmarkStore
         return changed;
     }
 
-    private static string UrlOrigin(string url)
-    {
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)) return url;
-        var host = uri.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? uri.Host[4..] : uri.Host;
-        return $"{uri.Scheme}://{host}";
-    }
+    // Normalisation d'origine centralisée sur PublicSuffixService (source unique).
+    private static string UrlOrigin(string url) => PublicSuffixService.OriginOf(url);
 
     public void AddFolder(string parentId, string title)
     {

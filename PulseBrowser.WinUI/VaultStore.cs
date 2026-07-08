@@ -380,7 +380,12 @@ internal sealed class VaultStore
             var plain  = ProtectedData.Unprotect(cipher, VaultEntropy, DataProtectionScope.CurrentUser);
             _credentials = JsonSerializer.Deserialize<List<VaultCredential>>(plain, JsonOpts) ?? new();
         }
-        catch { }
+        catch (Exception error)
+        {
+            // Un coffre illisible (corruption, DPAPI d'un autre compte) ne doit pas
+            // planter le démarrage, mais l'échec doit être traçable.
+            WinUiRuntimeTrace.Write($"Vault load skipped: {error.GetType().Name}");
+        }
     }
 
     private void Save()
@@ -404,7 +409,12 @@ internal sealed class VaultStore
             if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(_vaultFile, JsonSerializer.Serialize(_header, JsonOpts), Encoding.UTF8);
         }
-        catch { }
+        catch (Exception error)
+        {
+            // Échec d'écriture (disque plein, verrou) : tracer pour diagnostiquer une
+            // perte silencieuse plutôt que de l'ignorer.
+            WinUiRuntimeTrace.Write($"Vault save skipped: {error.GetType().Name}");
+        }
     }
 
     // ── Crypto ────────────────────────────────────────────────────────────────

@@ -361,12 +361,8 @@ public sealed partial class MainWindow : Window
     private static string HashUrl(string url) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url))).ToLowerInvariant()[..32];
 
-    private static string OriginOf(string url)
-    {
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)) return url;
-        var host = uri.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? uri.Host[4..] : uri.Host;
-        return $"{uri.Scheme}://{host}";
-    }
+    // Normalisation d'origine centralisée sur PublicSuffixService (source unique).
+    private static string OriginOf(string url) => PublicSuffixService.OriginOf(url);
 
     private static string HashOrigin(string url) => HashUrl(OriginOf(url));
 
