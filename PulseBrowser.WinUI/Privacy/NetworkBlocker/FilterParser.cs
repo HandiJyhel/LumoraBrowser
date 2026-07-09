@@ -60,6 +60,12 @@ internal static class FilterParser
                 var o = opt.Trim();
                 if (o.Equals("third-party", StringComparison.OrdinalIgnoreCase))
                     thirdPartyOnly = true;
+                // Règle restreinte à des sites précis ($domain=a.com|b.com) : sans matching
+                // par domaine de page, l'appliquer globalement sur-bloquerait des ressources
+                // légitimes (ex. ||lh3.googleusercontent.com^$domain=site-pirate → casse les
+                // avatars Google partout). On préfère ignorer la règle plutôt que sur-bloquer.
+                if (o.StartsWith("domain=", StringComparison.OrdinalIgnoreCase))
+                    return null;
                 // ~third-party : ignorer (ne bloque que first-party — rare, on skip)
             }
         }

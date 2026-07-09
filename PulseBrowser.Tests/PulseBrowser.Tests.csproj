@@ -35,6 +35,7 @@
     <Compile Include="..\PulseBrowser.WinUI\PulseConfig.cs"                    Link="Product\PulseConfig.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Storage\PulseFile.cs"              Link="Product\PulseFile.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PulseBackup.cs"                    Link="Product\PulseBackup.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Privacy\NetworkBlocker\FilterParser.cs" Link="Product\FilterParser.cs" />
     <EmbeddedResource Include="..\PulseBrowser.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 
