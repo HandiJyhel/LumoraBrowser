@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using PulseBrowser.Privacy;
 using PulseBrowser.Privacy.NetworkBlocker;
+using PulseBrowser.Privacy.TelemetryBlocker;
 using PulseBrowser.Privacy.ParameterCleaner;
 using PulseBrowser.Privacy.HttpsEnforcer;
 using PulseBrowser.Privacy.CnameUncloaker;
@@ -25,6 +26,12 @@ public sealed partial class MainWindow
                 PrivacyStatusText.Text = msg;
         });
 
+        // Enregistré AVANT le bloqueur réseau : les domaines présents dans les deux
+        // seeds (ex. google-analytics.com) sont ainsi comptés comme télémétrie.
+        _telemetryBlocker = new TelemetryBlockerModule { IsEnabled = _uiSettings.TelemetryBlockerEnabled };
+        _telemetryBlocker.SetUserWhitelist(_uiSettings.PrivacyWhitelist);
+        _privacy.Register(_telemetryBlocker);
+
         _privacy.Register(_networkBlocker);
         _privacy.Register(new ParameterCleanerModule { IsEnabled = _uiSettings.ParameterCleanerEnabled });
         _privacy.Register(new HttpsEnforcerModule    { IsEnabled = _uiSettings.HttpsEnforcerEnabled });
@@ -44,6 +51,12 @@ public sealed partial class MainWindow
             _networkBlocker.SetUserWhitelist(_uiSettings.PrivacyWhitelist);
         }
 
+        if (_telemetryBlocker is not null)
+        {
+            _telemetryBlocker.IsEnabled = _uiSettings.TelemetryBlockerEnabled;
+            _telemetryBlocker.SetUserWhitelist(_uiSettings.PrivacyWhitelist);
+        }
+
         var cleaner = _privacy.Get<ParameterCleanerModule>();
         if (cleaner is not null) cleaner.IsEnabled = _uiSettings.ParameterCleanerEnabled;
 
@@ -59,7 +72,12 @@ public sealed partial class MainWindow
     private void UpdatePrivacyUi()
     {
         if (PrivacyBlockedCountText is not null)
-            PrivacyBlockedCountText.Text = $"{_privacy.BlockedCount:N0} requêtes bloquées";
+        {
+            var telemetry = _telemetryBlocker?.BlockedCount ?? 0;
+            PrivacyBlockedCountText.Text = telemetry > 0
+                ? $"{_privacy.BlockedCount:N0} requêtes bloquées · dont {telemetry:N0} télémétrie"
+                : $"{_privacy.BlockedCount:N0} requêtes bloquées";
+        }
 
         var cnameModule = _privacy.Get<CnameUncloakerModule>();
         var cnameCount  = cnameModule?.DetectedCount ?? 0;
@@ -85,6 +103,33 @@ public sealed partial class MainWindow
         _uiSettings.NetworkBlockerEnabled = NetworkBlockerSwitch.IsOn;
         SaveUiSettings();
         ApplyPrivacySettings();
+    }
+
+    private void TelemetryBlockerSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        _uiSettings.TelemetryBlockerEnabled = TelemetryBlockerSwitch.IsOn;
+        SaveUiSettings();
+        ApplyPrivacySettings();
+    }
+
+    private void SmartScreenSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        _uiSettings.SmartScreenEnabled = SmartScreenSwitch.IsOn;
+        SaveUiSettings();
+        ApplySmartScreenToAllCores();
+    }
+
+    // SmartScreen est un réglage par moteur (un WebView2 par onglet) : on
+    // l'applique immédiatement à tous les moteurs vivants.
+    private void ApplySmartScreenToAllCores()
+    {
+        foreach (var core in AttachedCores().ToList())
+        {
+            try { core.Settings.IsReputationCheckingRequired = _uiSettings.SmartScreenEnabled; }
+            catch { }
+        }
     }
 
     private void ParameterCleanerSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -294,9 +339,11 @@ public sealed partial class MainWindow
 
         ShieldDomainText.Text = domain;
         var count = _privacy.PageBlockedCount;
+        var telemetry = _telemetryBlocker?.PageBlockedCount ?? 0;
         ShieldBlockedCountText.Text = count == 0
             ? "Aucune requete bloquee sur cette page"
-            : $"{count} requete{(count > 1 ? "s" : "")} bloquee{(count > 1 ? "s" : "")} sur cette page";
+            : $"{count} requete{(count > 1 ? "s" : "")} bloquee{(count > 1 ? "s" : "")} sur cette page" +
+              (telemetry > 0 ? $" · dont {telemetry} telemetrie" : string.Empty);
         ShieldSiteSummaryText.Text = BuildShieldSiteSummary(domain);
 
         ShieldSiteExcludeToggle.IsEnabled = true;
@@ -331,6 +378,7 @@ public sealed partial class MainWindow
         }
 
         _networkBlocker?.SetUserWhitelist(_uiSettings.PrivacyWhitelist);
+        _telemetryBlocker?.SetUserWhitelist(_uiSettings.PrivacyWhitelist);
         SaveUiSettings();
         RenderPrivacyWhitelist();
     }

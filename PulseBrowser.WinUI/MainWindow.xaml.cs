@@ -21,6 +21,7 @@ using Windows.System;
 using WinRT.Interop;
 using PulseBrowser.Privacy;
 using PulseBrowser.Privacy.NetworkBlocker;
+using PulseBrowser.Privacy.TelemetryBlocker;
 using PulseBrowser.Privacy.ParameterCleaner;
 using PulseBrowser.Privacy.HttpsEnforcer;
 using PulseBrowser.Privacy.CnameUncloaker;
@@ -33,7 +34,7 @@ namespace PulseBrowser.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.43.0-dev";
+    private const string Version = "0.44.0-dev";
     private const double VerticalTabsCompactWidth = 50;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -97,6 +98,7 @@ public sealed partial class MainWindow : Window
     private DispatcherTimer? _sessionTimer;
     private readonly PrivacyEngine _privacy = new();
     private NetworkBlockerModule? _networkBlocker;
+    private TelemetryBlockerModule? _telemetryBlocker;
     private CosmeticFilterModule? _cosmeticFilter;
     private ConsentManagerModule? _consentModule;
     // Identifiants des scripts privacy enregistrés, PAR moteur (un WebView2 par onglet).
@@ -121,6 +123,18 @@ public sealed partial class MainWindow : Window
         // ou supprimer un profil déconnecte réellement des sites, et la purge est complète.
         // Doit être fait AVANT toute création de moteur WebView2 dans le process.
         try { Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", _profile.BrowserDataDir); } catch { }
+
+        // Télémétrie du moteur coupée à la racine, avant toute création de WebView2 :
+        // pas de rapports de crash vers Microsoft (crashpad), pas de rapports de
+        // fiabilité réseau (domain reliability), pas d'audit de liens <a ping>.
+        // Non négociable, donc pas un réglage : règle n°1 du projet, rien ne part
+        // vers un serveur sans décision de l'utilisateur.
+        try
+        {
+            Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+                "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings");
+        }
+        catch { }
 
         InitializeComponent();
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");

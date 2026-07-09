@@ -36,6 +36,9 @@
     <Compile Include="..\PulseBrowser.WinUI\Storage\PulseFile.cs"              Link="Product\PulseFile.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PulseBackup.cs"                    Link="Product\PulseBackup.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Privacy\NetworkBlocker\FilterParser.cs" Link="Product\FilterParser.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Privacy\IPrivacyModule.cs" Link="Product\IPrivacyModule.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Privacy\TelemetryBlocker\TelemetryBlockerModule.cs" Link="Product\TelemetryBlockerModule.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Privacy\TelemetryBlocker\TelemetrySeedList.cs" Link="Product\TelemetrySeedList.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Credentials\CredentialModels.cs" Link="Product\CredentialModels.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerEntryDraft.cs" Link="Product\PasswordManagerEntryDraft.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerDecision.cs" Link="Product\PasswordManagerDecision.cs" />

@@ -477,6 +477,8 @@ public sealed partial class MainWindow
             // Confidentialité
             SessionPurgeSwitch.IsOn     = _uiSettings.SessionPurgeEnabled;
             NetworkBlockerSwitch.IsOn   = _uiSettings.NetworkBlockerEnabled;
+            TelemetryBlockerSwitch.IsOn = _uiSettings.TelemetryBlockerEnabled;
+            SmartScreenSwitch.IsOn      = _uiSettings.SmartScreenEnabled;
             ParameterCleanerSwitch.IsOn = _uiSettings.ParameterCleanerEnabled;
             HttpsEnforcerSwitch.IsOn    = _uiSettings.HttpsEnforcerEnabled;
             CnameUncloakerSwitch.IsOn   = _uiSettings.CnameUncloakerEnabled;

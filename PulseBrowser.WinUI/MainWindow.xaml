@@ -804,6 +804,16 @@
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
 
+                            <!-- Anti-telemetrie -->
+                            <TextBlock Text="Anti-telemetrie" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Bloque les balises de telemetrie des sites : mesure d'audience (Google Analytics, Adobe Analytics...), enregistrement de session (Hotjar, FullStory, Clarity...), rapports de crash (Sentry, Bugsnag, Datadog...) et metriques produit (Segment, Mixpanel, Amplitude...). Complementaire au bloqueur de pubs : ici c'est la mesure d'usage qui est visee. La telemetrie du moteur web lui-meme (rapports de crash et pings vers Microsoft) est coupee en permanence, quel que soit ce reglage." />
+                            <ToggleSwitch x:Name="TelemetryBlockerSwitch"
+                                         Header="Bloquer la telemetrie"
+                                         Toggled="TelemetryBlockerSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
                             <!-- Nettoyage URL -->
                             <TextBlock Text="Nettoyage des URL de tracking" FontWeight="SemiBold" />
                             <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
@@ -865,6 +875,16 @@
                                              Click="SessionsManageLink_Click"
                                              HorizontalAlignment="Left"
                                              Padding="0" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- SmartScreen -->
+                            <TextBlock Text="Protection SmartScreen" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="SmartScreen verifie la reputation des sites pour bloquer le phishing, mais envoie pour cela chaque URL visitee a Microsoft. Desactive par defaut : aucune adresse ne quitte votre machine. Activez-le si vous preferez la protection anti-phishing a la confidentialite des adresses visitees." />
+                            <ToggleSwitch x:Name="SmartScreenSwitch"
+                                         Header="Activer SmartScreen (envoie les URL a Microsoft)"
+                                         Toggled="SmartScreenSwitch_Toggled" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
 

@@ -200,6 +200,13 @@ public sealed partial class MainWindow
         sender.CoreWebView2.Settings.IsPasswordAutosaveEnabled = false;
         sender.CoreWebView2.Settings.IsGeneralAutofillEnabled = false;
 
+        // SmartScreen envoie chaque URL visitée à Microsoft pour vérifier sa
+        // réputation : coupé par défaut. Réactivable dans Paramètres > Confidentialité
+        // pour qui préfère la protection anti-phishing. Try/catch : réglage absent
+        // des runtimes WebView2 anciens.
+        try { sender.CoreWebView2.Settings.IsReputationCheckingRequired = _uiSettings.SmartScreenEnabled; }
+        catch { }
+
         sender.CoreWebView2.DocumentTitleChanged += BrowserCore_DocumentTitleChanged;
         sender.CoreWebView2.SourceChanged += BrowserCore_SourceChanged;
         sender.CoreWebView2.FaviconChanged += BrowserCore_FaviconChanged;
@@ -295,6 +302,7 @@ public sealed partial class MainWindow
         if (IsActiveView(sender))
         {
             _privacy.ResetPageBlockedCount();
+            _telemetryBlocker?.ResetPageBlockedCount();
             _currentPageDomain = ExtractDomain(args.Uri);
             StatusText.Text = $"Chargement: {DisplayTitle(args.Uri)}";
         }

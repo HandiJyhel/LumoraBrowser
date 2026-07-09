@@ -1,0 +1,118 @@
+namespace PulseBrowser.Privacy.TelemetryBlocker;
+
+// Domaines de télémétrie bloqués dès le premier lancement.
+// Choix conservateur : uniquement des endpoints DÉDIÉS à la collecte (analytics,
+// session replay, rapports de crash, métriques produit). Jamais de domaine mixte
+// qui sert aussi du contenu fonctionnel — on ne casse pas les sites.
+internal static class TelemetrySeedList
+{
+    internal static readonly string[] Domains =
+    [
+        // ── Mesure d'audience ────────────────────────────────────────────────
+        "google-analytics.com",
+        "googletagmanager.com",
+        "app-measurement.com",
+        "mc.yandex.ru",
+        "mc.yandex.com",
+        "scorecardresearch.com",
+        "quantserve.com",
+        "quantcount.com",
+        "chartbeat.net",
+        "static.chartbeat.com",
+        "c.statcounter.com",
+        "secure.statcounter.com",
+        "heapanalytics.com",
+        "kissmetrics.io",
+        "matomo.cloud",
+        "cloudflareinsights.com",
+        "vercel-insights.com",
+        "p1.parsely.com",
+        "api.parsely.com",
+        "cdn.parsely.com",
+
+        // ── Adobe Experience Cloud (analytics + audience) ────────────────────
+        "omtrdc.net",
+        "2o7.net",
+        "demdex.net",
+
+        // ── Métriques produit / événements ───────────────────────────────────
+        "segment.io",
+        "cdn.segment.com",
+        "api.segment.com",
+        "api.mixpanel.com",
+        "api-js.mixpanel.com",
+        "mxpnl.com",
+        "api.amplitude.com",
+        "api2.amplitude.com",
+        "cdn.amplitude.com",
+        "data.pendo.io",
+        "cdn.pendo.io",
+        "logx.optimizely.com",
+
+        // ── Session replay / heatmaps ────────────────────────────────────────
+        "script.hotjar.com",
+        "insights.hotjar.com",
+        "surveys.hotjar.com",
+        "api.hotjar.com",
+        "static.hotjar.com",
+        "vars.hotjar.com",
+        "hotjar.io",
+        "rs.fullstory.com",
+        "edge.fullstory.com",
+        "cdn.logrocket.io",
+        "r.logrocket.io",
+        "lr-ingest.io",
+        "lr-in.com",
+        "lr-in-prod.com",
+        "rec.smartlook.com",
+        "web-sdk.smartlook.com",
+        "assets.smartlook.com",
+        "cdn.mouseflow.com",
+        "o2.mouseflow.com",
+        "api.mouseflow.com",
+        "cdn.inspectlet.com",
+        "hn.inspectlet.com",
+        "script.crazyegg.com",
+        "tracking.crazyegg.com",
+        "clarity.ms",
+
+        // ── Rapports de crash / monitoring d'erreurs ─────────────────────────
+        "ingest.sentry.io",
+        "sentry-cdn.com",
+        "notify.bugsnag.com",
+        "sessions.bugsnag.com",
+        "api.rollbar.com",
+        "cdn.rollbar.com",
+        "browser-intake-datadoghq.com",
+        "browser-intake-datadoghq.eu",
+        "datadoghq-browser-agent.com",
+        "nr-data.net",
+        "js-agent.newrelic.com",
+        "crashlytics.com",
+        "raygun.io",
+        "capture.trackjs.com",
+        "usage.trackjs.com",
+        "api.airbrake.io",
+        "api.honeybadger.io",
+        "in.appcenter.ms",
+        "firebaselogging-pa.googleapis.com",
+        "firebaselogging.googleapis.com",
+
+        // ── Télémétrie éditeurs / plateformes ────────────────────────────────
+        "events.data.microsoft.com",
+        "events.data.msn.com",
+        "telemetry.microsoft.com",
+        "vortex.data.microsoft.com",
+        "dc.services.visualstudio.com",
+        "bat.bing.com",
+        "analytics.tiktok.com",
+        "analytics-sg.tiktok.com",
+        "tr.snapchat.com",
+        "ct.pinterest.com",
+        "px.ads.linkedin.com",
+        "snap.licdn.com",
+        "static.ads-twitter.com",
+        "analytics.twitter.com",
+        "events.reddit.com",
+    ];
+}

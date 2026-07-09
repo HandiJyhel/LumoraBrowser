@@ -44,6 +44,10 @@ internal sealed class UiSettings
     // Les profils existants conservent la valeur enregistrée dans leur ui-settings.
     public int SessionTimeoutMinutes { get; set; } = 10;
     public bool NetworkBlockerEnabled { get; set; } = true;
+    public bool TelemetryBlockerEnabled { get; set; } = true;
+    // SmartScreen vérifie la réputation des sites en envoyant chaque URL à
+    // Microsoft : désactivé par défaut (philosophie locale-first).
+    public bool SmartScreenEnabled { get; set; }
     public bool ParameterCleanerEnabled { get; set; } = true;
     public bool HttpsEnforcerEnabled { get; set; } = true;
     public bool CnameUncloakerEnabled { get; set; } = true;

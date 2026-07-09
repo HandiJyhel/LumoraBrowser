@@ -1621,3 +1621,24 @@ Audit complet demande par l'utilisateur (fonctionnel, securite, proprete du code
 - Points de controle visuels/comportementaux confirmes par l'utilisateur : contenu opaque, badge Ctrl+K disparu, avatar Google revenu, navigation normale intacte.
 
 **Version :** `0.43.0-dev`.
+
+## 2026-07-09 — 0.44.0-dev
+
+Suite au `Go` utilisateur sur le plan anti-télémétrie + portefeuille numérique (recommandations retenues : SmartScreen désactivé par défaut, CVV jamais stocké, ajout manuel des cartes en v1).
+
+### Anti-télémétrie
+
+**Télémétrie du moteur (permanente, non réglable) :**
+- `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` posé dans le constructeur `MainWindow` avant toute création de WebView2 : `--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings`. Plus de rapports de crash ni de fiabilité réseau vers Microsoft, plus d'audit de liens `<a ping>`.
+- SmartScreen désactivé par défaut (`CoreWebView2Settings.IsReputationCheckingRequired = false`) : il envoyait chaque URL visitée à Microsoft. Toggle `Protection SmartScreen` dans `Paramètres > Confidentialité` (compromis anti-phishing/confidentialité expliqué), appliqué immédiatement à tous les moteurs vivants. `UiSettings.SmartScreenEnabled` (défaut false).
+
+**Télémétrie des sites :**
+- Nouveau module `Privacy/TelemetryBlocker/` : `TelemetrySeedList` (~100 endpoints DÉDIÉS à la collecte : analytics, session replay, rapports de crash, métriques produit, télémétrie éditeurs) + `TelemetryBlockerModule` (compteurs global/page, whitelist utilisateur partagée avec le bloqueur réseau).
+- Principe conservateur : domaines dédiés uniquement, pas d'heuristique de chemin, les sites corporate (sentry.io, mixpanel.com…) restent accessibles. Leçon du bug `$domain=` appliquée.
+- Enregistré AVANT le bloqueur réseau dans `PrivacyEngine` pour l'attribution des domaines présents dans les deux seeds.
+- UI : toggle `Bloquer la telemetrie` (`UiSettings.TelemetryBlockerEnabled`, défaut true), compteur `dont X télémétrie` dans la page Confidentialité et le flyout bouclier.
+- Ajout de `docs/TELEMETRY_BLOCKER_0_44.md` et `logs/2026-07-09-telemetry-blocker-0-44.md`.
+
+**Vérification :** `dotnet test` 61/61 verts (51 existants + 10 nouveaux `TelemetryBlockerTests`) ; `build-winui.cmd` 0 avertissement, 0 erreur. AGENTS.md : version de gouvernance corrigée (restée à 0.42.0-dev) → `0.44.0-dev`.
+
+**Version :** `0.44.0-dev`.
