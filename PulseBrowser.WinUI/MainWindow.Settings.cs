@@ -702,26 +702,9 @@ public sealed partial class MainWindow
     }
 
     private static string NewTabShortcutsToText(IEnumerable<NewTabShortcut> shortcuts) =>
-        string.Join(Environment.NewLine, shortcuts
-            .Where(shortcut => !string.IsNullOrWhiteSpace(shortcut.Title) && !string.IsNullOrWhiteSpace(shortcut.Url))
-            .Select(shortcut => $"{shortcut.Title.Trim()} | {shortcut.Url.Trim()}"));
+        Settings.NewTabShortcutText.ToText(shortcuts.Select(s => (s.Title, s.Url)));
 
-    private static List<NewTabShortcut> ParseNewTabShortcuts(string text)
-    {
-        var shortcuts = new List<NewTabShortcut>();
-        foreach (var rawLine in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var line = rawLine.Trim();
-            var parts = line.Split('|', 2, StringSplitOptions.TrimEntries);
-            if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
-                continue;
-
-            shortcuts.Add(new NewTabShortcut(parts[0], parts[1]));
-            if (shortcuts.Count >= 12)
-                break;
-        }
-
-        return shortcuts;
-    }
+    private static List<NewTabShortcut> ParseNewTabShortcuts(string text) =>
+        Settings.NewTabShortcutText.Parse(text).Select(s => new NewTabShortcut(s.Title, s.Url)).ToList();
 
 }

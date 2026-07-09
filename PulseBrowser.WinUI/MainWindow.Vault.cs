@@ -731,20 +731,6 @@ public sealed partial class MainWindow
         NavigateCurrentTab(target, DisplayTitle(target));
     }
 
-    private static string HostOf(string url) =>
-        Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) ? uri.Host : url ?? string.Empty;
-
-    // Affiche l'hôte sans le schéma ni "www." pour un titre plus propre.
-    private static string PrettyHost(string origin)
-    {
-        try
-        {
-            var host = new Uri(origin).Host;
-            return host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? host[4..] : host;
-        }
-        catch { return origin; }
-    }
-
     private void PasswordManagerSearchBox_TextChanged(object sender, TextChangedEventArgs e) =>
         RefreshVaultPanel();
 

@@ -53,6 +53,9 @@
     <Compile Include="..\PulseBrowser.WinUI\FaviconQuality.cs" Link="Product\FaviconQuality.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Credentials\CredentialCsv.cs" Link="Product\CredentialCsv.cs" />
     <Compile Include="..\PulseBrowser.WinUI\NewTabMarkup.cs" Link="Product\NewTabMarkup.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Settings\NewTabShortcutText.cs" Link="Product\NewTabShortcutText.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\WebApps\ShortcutNaming.cs" Link="Product\ShortcutNaming.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Models\HistoryTimeFormatter.cs" Link="Product\HistoryTimeFormatter.cs" />
     <EmbeddedResource Include="..\PulseBrowser.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 

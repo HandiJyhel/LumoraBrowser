@@ -320,7 +320,7 @@ public sealed partial class MainWindow
             ShellShortcut.Delete(Path.Combine(ShellShortcut.DesktopFolder(), app.ShortcutFileName));
         }
 
-        var fileName = SanitizeShortcutFileName(app.Title, app.Id) + ".lnk";
+        var fileName = ShortcutNaming.SanitizeFileName(app.Title, app.Id) + ".lnk";
         app.ShortcutFileName = fileName;
 
         var exePath = Path.Combine(AppContext.BaseDirectory, "PulseBrowser.WinUI.exe");
@@ -377,12 +377,4 @@ public sealed partial class MainWindow
         return File.Exists(fallback) ? fallback : null;
     }
 
-    private static string SanitizeShortcutFileName(string title, string id)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var cleaned = new string(title.Where(c => !invalid.Contains(c)).ToArray()).Trim();
-        if (string.IsNullOrWhiteSpace(cleaned)) cleaned = "Application Pulse";
-        if (cleaned.Length > 50) cleaned = cleaned[..50];
-        return $"{cleaned} - {id[..Math.Min(8, id.Length)]}";
-    }
 }

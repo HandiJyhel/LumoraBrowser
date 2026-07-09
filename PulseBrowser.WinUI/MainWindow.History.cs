@@ -148,22 +148,8 @@ public sealed partial class MainWindow
             hasIcon ? Visibility.Collapsed : Visibility.Visible,
             string.IsNullOrWhiteSpace(entry.Title) ? domain : entry.Title,
             domain,
-            FormatHistoryTime(entry.VisitedAt),
+            HistoryTimeFormatter.Format(entry.VisitedAt),
             entry);
-    }
-
-    private static string FormatHistoryTime(DateTimeOffset time)
-    {
-        var diff = DateTimeOffset.Now.Date - time.LocalDateTime.Date;
-        if (diff.TotalDays < 1) return $"Aujourd'hui {time.LocalDateTime:HH:mm}";
-        if (diff.TotalDays < 2) return $"Hier {time.LocalDateTime:HH:mm}";
-        if (diff.TotalDays < 7)
-        {
-            return time.LocalDateTime.ToString("ddd HH:mm",
-                System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
-        }
-
-        return time.LocalDateTime.ToString("dd/MM/yyyy HH:mm");
     }
 
     private void RenderDownloads()
