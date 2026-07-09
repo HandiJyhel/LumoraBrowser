@@ -1645,7 +1645,13 @@ Suite au `Go` utilisateur sur le plan anti-télémétrie + portefeuille numériq
 
 ## 2026-07-09 — 0.44.1-dev
 
-- Palier livré dans une session parallèle (icône d'application : `ApplyAppIcon()` dans le constructeur `MainWindow`, version passée à `0.44.1-dev`). Entrée détaillée à compléter par cette session si nécessaire.
+Palier livré dans une session parallèle : icône d'application Pulse.
+
+- Ajout de `PulseBrowser.WinUI/Assets/PulseBrowser.ico` et `PulseBrowser.png`, générés par le nouveau script `scripts/generate-app-icon.ps1`.
+- `PulseBrowser.WinUI.csproj` : `<ApplicationIcon>` (icône de l'exe) + copie de l'`.ico` en sortie.
+- `ApplyAppIcon()` appelé dans le constructeur `MainWindow` (icône de la fenêtre/barre des tâches via `AppWindow`).
+- Version passée à `0.44.1-dev`.
+- Note : ces fichiers, non commités par la session parallèle, ont été embarqués dans le commit du palier `0.45.0-dev` (`bb1dd99`).
 
 ## 2026-07-09 — 0.45.0-dev
 
