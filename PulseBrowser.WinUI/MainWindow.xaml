@@ -608,12 +608,6 @@
                                 <ComboBoxItem Content="Mica" Tag="mica" />
                                 <ComboBoxItem Content="Acrylic" Tag="acrylic" />
                             </ComboBox>
-                            <Slider x:Name="WindowTransparencySlider"
-                                    Header="Intensite de transparence"
-                                    Minimum="0"
-                                    Maximum="100"
-                                    StepFrequency="1"
-                                    ValueChanged="WindowTransparencySlider_ValueChanged" />
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,8,0,0" />
                             <TextBlock Text="Nouvel onglet" FontSize="18" FontWeight="SemiBold" />
                             <TextBox x:Name="NewTabTitleBox"

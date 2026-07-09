@@ -149,6 +149,10 @@ public sealed partial class MainWindow : Window
         };
         commandPaletteAccelerator.Invoked += CommandPaletteAccelerator_Invoked;
         Content.KeyboardAccelerators.Add(commandPaletteAccelerator);
+        // L'accélérateur est porté par la racine (toute la fenêtre). Son infobulle
+        // automatique « Ctrl+K » resterait collée car le WebView2 avale l'événement de
+        // sortie du pointeur → on la désactive.
+        Content.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
 
         _vault = new VaultStore(_profile.VaultFile);
         _passwordManager = new PasswordManagerService(_vault);

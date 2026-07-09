@@ -290,15 +290,6 @@ public sealed partial class MainWindow
         };
     }
 
-    private void WindowTransparencySlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
-    {
-        if (_suppressUiSettingsSave) return;
-        _uiSettings.WindowTransparency = (int)Math.Round(WindowTransparencySlider.Value);
-        ApplyWindowBackdrop();
-        SaveUiSettings();
-        StatusText.Text = $"Transparence reglee a {_uiSettings.WindowTransparency}%.";
-    }
-
     private void NewTabTitleBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
@@ -431,7 +422,6 @@ public sealed partial class MainWindow
             CompactModeSwitch.IsOn = _compactModeEnabled;
             CompactModeHideBookmarksSwitch.IsOn = _uiSettings.CompactModeHidesBookmarks;
             SelectWindowBackdropMode(_uiSettings.WindowBackdrop);
-            WindowTransparencySlider.Value = Math.Clamp(_uiSettings.WindowTransparency, 0, 100);
             CommandPaletteEnabledSwitch.IsOn = _uiSettings.CommandPaletteEnabled;
             CommandPaletteWebPagesSwitch.IsOn = _uiSettings.CommandPaletteOpenFromWebPages;
             CommandPaletteTextFieldsSwitch.IsOn = _uiSettings.CommandPaletteOpenFromTextFields;
@@ -532,7 +522,6 @@ public sealed partial class MainWindow
         _uiSettings.CompactModeEnabled = _compactModeEnabled;
         _uiSettings.CompactModeHidesBookmarks = CompactModeHideBookmarksSwitch.IsOn;
         _uiSettings.WindowBackdrop = SelectedWindowBackdropMode();
-        _uiSettings.WindowTransparency = (int)Math.Round(WindowTransparencySlider.Value);
         _uiSettings.VerticalTabsWidth = Math.Clamp(_verticalTabsExpandedWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
         _uiSettings.CommandPaletteEnabled = CommandPaletteEnabledSwitch.IsOn;
         _uiSettings.CommandPaletteOpenFromWebPages = CommandPaletteWebPagesSwitch.IsOn;
@@ -667,7 +656,10 @@ public sealed partial class MainWindow
                     _ => null
                 }
                 : null;
-            ApplyWindowLayeredAlpha();
+            // Le contenu web doit rester 100 % opaque : on ne teinte JAMAIS toute la
+            // fenêtre. La translucidité vient du seul backdrop Mica/Acrylic, qui n'affecte
+            // que le chrome (le WebView2 dessine par-dessus, opaque).
+            RemoveWindowLayeredAlpha();
         }
         catch (Exception error)
         {
@@ -686,38 +678,11 @@ public sealed partial class MainWindow
     [DllImport("user32.dll", SetLastError = true)]
     private static extern nint SetWindowLongPtr(nint hWnd, int nIndex, nint dwNewLong);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SetLayeredWindowAttributes(nint hwnd, uint crKey, byte bAlpha, uint dwFlags);
-
     private const int GwlExstyle = -20;
     private const long WsExLayered = 0x00080000L;
-    private const uint LwaAlpha = 0x00000002;
 
-    private void ApplyWindowLayeredAlpha()
-    {
-        if (!IsTranslucentChromeEnabled())
-        {
-            RemoveWindowLayeredAlpha();
-            return;
-        }
-
-        try
-        {
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            if (hwnd == nint.Zero) return;
-
-            var exStyle = (long)GetWindowLongPtr(hwnd, GwlExstyle);
-            var transparency = Math.Clamp(_uiSettings.WindowTransparency, 0, 100);
-            var alpha = (byte)(255 - transparency * 89 / 100);
-            SetWindowLongPtr(hwnd, GwlExstyle, (nint)(exStyle | WsExLayered));
-            SetLayeredWindowAttributes(hwnd, 0, alpha, LwaAlpha);
-        }
-        catch (Exception error)
-        {
-            WinUiRuntimeTrace.Write($"Window layered alpha skipped: {error.GetType().Name}");
-        }
-    }
-
+    // Retire l'éventuel style « layered » d'une session précédente : le contenu web ne
+    // doit jamais être translucide (voir ApplyWindowBackdrop).
     private void RemoveWindowLayeredAlpha()
     {
         try
