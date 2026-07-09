@@ -1642,3 +1642,40 @@ Suite au `Go` utilisateur sur le plan anti-télémétrie + portefeuille numériq
 **Vérification :** `dotnet test` 61/61 verts (51 existants + 10 nouveaux `TelemetryBlockerTests`) ; `build-winui.cmd` 0 avertissement, 0 erreur. AGENTS.md : version de gouvernance corrigée (restée à 0.42.0-dev) → `0.44.0-dev`.
 
 **Version :** `0.44.0-dev`.
+
+## 2026-07-09 — 0.44.1-dev
+
+- Palier livré dans une session parallèle (icône d'application : `ApplyAppIcon()` dans le constructeur `MainWindow`, version passée à `0.44.1-dev`). Entrée détaillée à compléter par cette session si nécessaire.
+
+## 2026-07-09 — 0.45.0-dev
+
+Deuxième chantier du `Go` utilisateur : le portefeuille numérique local (moyens de paiement), dans le respect du principe du coffre souverain.
+
+### Stockage — extension de vault.pulse
+- Nouveau modèle `Wallet/VaultPaymentCard.cs` : libellé, titulaire, numéro (chiffres normalisés), mois/année d'expiration, note. **Le CVV n'est JAMAIS stocké** (décision validée).
+- `VaultStore` : les cartes vivent dans un blob `cards` séparé de l'en-tête, chiffré avec la MÊME clé que les identifiants (AES-256-GCM, Argon2id). Rétro-compatible : un coffre antérieur n'a pas le champ → portefeuille vide, identifiants intacts.
+- Couverture complète des chemins existants : déverrouillage par mot de passe, par PIN, par clé de récupération (`recovery_cards` maintenu comme `recovery_data`), mode DPAPI, verrouillage de session (`Lock()` purge la clé, `ListCards()` vide quand verrouillé).
+- `TryDecrypt` rendu générique (`List<T>`) pour partager le déchiffrement entre identifiants et cartes.
+- API : `ListCards()`, `UpsertCard()` (par Id, Id attribué à la création), `DeleteCard()`.
+
+### Logique pure testable
+- `Wallet/PaymentCardUtil.cs` : validation Luhn (12-19 chiffres), détection du réseau (Visa/Mastercard/Amex/Discover), masquage `•••• 1234`, normalisation d'année (27→2027), validité/expiration (valable jusqu'à la fin du mois).
+
+### UI — panneau Portefeuille
+- Nouveau `WalletPanel` + `MainWindow.Wallet.cs` : cartes affichées MASQUÉES (jamais le numéro complet à l'écran), réseau + expiration + titulaire, alerte visuelle carte expirée.
+- Même barrière que le gestionnaire de mots de passe : `RequireVaultAccessAsync` (PIN/mot de passe redemandé à chaque ouverture), indisponible en mode invité.
+- Actions : ajouter/modifier (dialogue avec validation Luhn bloquante et note explicite « CVV jamais enregistré »), supprimer (confirmation), copier le numéro (presse-papiers hors historique/synchro, effacé à 30 s), « Utiliser sur la page active ».
+- Accès : palette `Ctrl+K` (« Portefeuille ») et `Paramètres > Coffre > Ouvrir le portefeuille`.
+
+### Remplissage non traçable par conception
+- Script moniteur injecté par moteur (comme les passkeys) : détecte la présence d'un champ carte (`autocomplete cc-*` + heuristiques name/id conservatrices, MutationObserver pour les checkouts SPA), signale UNE FOIS via `pulse.payment.form`, ne lit AUCUNE valeur.
+- Barre `WalletFillBar` (comme `AutoFillBar`) : proposition seulement, **remplissage uniquement au clic** — jamais de pré-remplissage silencieux qu'un script de page pourrait aspirer. Choix de carte par menu si plusieurs.
+- Remplissage : numéro, titulaire, expiration (champ combiné MM/AA ou mois/année séparés, input ou select), événements `input`/`change` déclenchés pour React/Vue. Jamais le CVV. Limite documentée : iframes de paiement externes (Stripe…) inaccessibles.
+- La barre est masquée au changement d'onglet et à chaque navigation. L'autofill natif WebView2 reste désactivé : aucune donnée de paiement ne touche le stockage Chromium.
+
+### Vérification
+- `dotnet test` : 75/75 verts (61 + 14 nouveaux `WalletTests` : Luhn, réseau, masquage, expiration, round-trip GCM disque, verrouillage, upsert par Id, suppression persistante, rétro-compat sans champ `cards`, récupération par clé de secours, numéro jamais en clair dans le fichier).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Ajout de `docs/WALLET_0_45.md` et `logs/2026-07-09-wallet-0-45.md`.
+
+**Version :** `0.45.0-dev`.

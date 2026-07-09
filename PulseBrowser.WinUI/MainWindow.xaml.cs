@@ -34,7 +34,7 @@ namespace PulseBrowser.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.44.0-dev";
+    private const string Version = "0.45.0-dev";
     private const double VerticalTabsCompactWidth = 50;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -145,6 +145,7 @@ public sealed partial class MainWindow : Window
         var winId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(winId);
         _appWindow.Changed += AppWindow_Changed;
+        ApplyAppIcon();
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(TitleBarDragRegion);
         ApplyWindowTitleBarColors();
@@ -322,6 +323,24 @@ public sealed partial class MainWindow : Window
 
     private static Windows.UI.Color UiColor(byte r, byte g, byte b, byte a = 255) =>
         new() { A = a, R = r, G = g, B = b };
+
+    private void ApplyAppIcon()
+    {
+        if (_appWindow is null) return;
+
+        try
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "PulseBrowser.ico");
+            if (File.Exists(iconPath))
+            {
+                _appWindow.SetIcon(iconPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"App icon apply failed: {ex.Message}");
+        }
+    }
 
     private void ApplyTitleBarSafeArea()
     {

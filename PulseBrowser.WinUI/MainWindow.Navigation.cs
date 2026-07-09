@@ -61,6 +61,7 @@ public sealed partial class MainWindow
 
         // Les barres de remplissage appartiennent à la page quittée.
         AutoFillBar.Visibility = Visibility.Collapsed;
+        WalletFillBar.Visibility = Visibility.Collapsed;
         _pendingAutoFill = null;
 
         if (tab.View is null)
@@ -226,6 +227,7 @@ public sealed partial class MainWindow
         _ = RegisterCosmeticScriptOnCoreAsync(sender.CoreWebView2);
         _ = RegisterConsentScriptOnCoreAsync(sender.CoreWebView2);
         _ = RegisterPasskeyMonitorAsync(sender.CoreWebView2);
+        _ = RegisterPaymentMonitorAsync(sender.CoreWebView2);
         _ = _credentialService.AttachAsync(sender.CoreWebView2);
         // Migration + nettoyage : importer ce que Chromium avait déjà, puis vider son coffre.
         _ = MigrateAndClearBrowserPasswordsAsync(sender.CoreWebView2);
@@ -303,6 +305,8 @@ public sealed partial class MainWindow
         {
             _privacy.ResetPageBlockedCount();
             _telemetryBlocker?.ResetPageBlockedCount();
+            // La proposition de carte appartient à la page quittée.
+            WalletFillBar.Visibility = Visibility.Collapsed;
             _currentPageDomain = ExtractDomain(args.Uri);
             StatusText.Text = $"Chargement: {DisplayTitle(args.Uri)}";
         }

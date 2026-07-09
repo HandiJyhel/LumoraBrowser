@@ -29,6 +29,8 @@
     <Compile Include="..\PulseBrowser.WinUI\Credentials\PublicSuffixService.cs" Link="Product\PublicSuffixService.cs" />
     <Compile Include="..\PulseBrowser.WinUI\VaultStore.cs"                      Link="Product\VaultStore.cs" />
     <Compile Include="..\PulseBrowser.WinUI\VaultCredential.cs"                 Link="Product\VaultCredential.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Wallet\VaultPaymentCard.cs"         Link="Product\VaultPaymentCard.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Wallet\PaymentCardUtil.cs"          Link="Product\PaymentCardUtil.cs" />
     <Compile Include="..\PulseBrowser.WinUI\WinUiRuntimeTrace.cs"               Link="Product\WinUiRuntimeTrace.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Models\UserProfile.cs"             Link="Product\UserProfile.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Models\ProfilePaths.cs"            Link="Product\ProfilePaths.cs" />

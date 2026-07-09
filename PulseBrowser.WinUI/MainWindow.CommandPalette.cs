@@ -168,6 +168,8 @@ public sealed partial class MainWindow
             () => SettingsMenu_Click(this, new RoutedEventArgs())), 90);
         Add(new("Commande", "Gestionnaire de mots de passe", "Ouvre le coffre local vault.pulse", "\uE72E",
             () => VaultMenu_Click(this, new RoutedEventArgs())), 88);
+        Add(new("Commande", "Portefeuille", "Cartes de paiement locales (vault.pulse)", "\uE8C7",
+            () => WalletMenu_Click(this, new RoutedEventArgs())), 87);
         Add(new("Commande", "Historique", "Ouvre l'historique local", "\uE81C",
             () => HistoryMenu_Click(this, new RoutedEventArgs())), 86);
         Add(new("Commande", "Telechargements", "Ouvre les telechargements de cette session", "\uE896",

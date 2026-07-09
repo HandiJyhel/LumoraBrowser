@@ -360,6 +360,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
@@ -401,7 +402,28 @@
                     </Grid>
                 </Border>
 
-                <Grid x:Name="BrowserHost" Grid.Row="2" />
+                <!-- Barre de proposition de remplissage d'une carte du portefeuille.
+                     Remplissage UNIQUEMENT sur clic : jamais de pré-remplissage silencieux
+                     (un script de page ne doit pas pouvoir aspirer la carte). -->
+                <Border x:Name="WalletFillBar" Grid.Row="2" Visibility="Collapsed"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Glyph="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="WalletFillText" Grid.Column="1" VerticalAlignment="Center" Text="Page de paiement détectée — remplir avec une carte du portefeuille ?"/>
+                        <Button x:Name="WalletFillAccept" Grid.Column="2" Content="Remplir" Click="WalletFillAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="WalletFillDismiss" Grid.Column="3" Content="Ignorer" Click="WalletFillDismiss_Click" Style="{StaticResource PulseCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <Grid x:Name="BrowserHost" Grid.Row="3" />
             </Grid>
 
             <Grid x:Name="BookmarksPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
@@ -676,6 +698,17 @@
                             </Border>
                             <TextBlock Text="Le mot de passe du coffre se change depuis la section Profil (Changer le mot de passe)."
                                        TextWrapping="Wrap" Opacity="0.6" FontSize="12" />
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                                    Margin="0,8,0,0" />
+                            <TextBlock Text="Portefeuille" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
+                                       Text="Vos moyens de paiement sont ranges dans le meme coffre vault.pulse, avec le meme chiffrement. Le remplissage sur une page de paiement ne se fait que sur clic explicite et le cryptogramme (CVV) n'est jamais enregistre." />
+                            <Button Click="WalletMenu_Click" HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                    <TextBlock Text="Ouvrir le portefeuille" />
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
 
                         <!-- Section : Profil -->
@@ -1089,6 +1122,34 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
 
                 <ScrollViewer Grid.Row="2">
                     <StackPanel x:Name="PasskeysPanelItems" Spacing="8" />
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Portefeuille (moyens de paiement locaux) -->
+            <Grid x:Name="WalletPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="Portefeuille" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.68" Margin="0,4,0,0"
+                               Text="Vos moyens de paiement sont stockés uniquement dans vault.pulse, chiffrés comme vos mots de passe. Rien n'est confié au moteur web, rien ne quitte votre machine. Le cryptogramme (CVV) n'est jamais enregistré : vous le saisissez au moment du paiement." />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,16">
+                    <Button Click="WalletAddButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                            <TextBlock Text="Ajouter une carte" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="2">
+                    <StackPanel x:Name="WalletPanelItems" Spacing="8" />
                 </ScrollViewer>
             </Grid>
 

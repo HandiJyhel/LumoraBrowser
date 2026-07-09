@@ -40,6 +40,10 @@ internal sealed class VaultStore
     private readonly string _vaultFile;
     private VaultHeader _header = new();
     private List<VaultCredential> _credentials = new();
+    // Portefeuille : cartes de paiement, même clé et même chiffrement que les
+    // identifiants, mais blob séparé dans l'en-tête (rétro-compatible : un
+    // ancien coffre n'a simplement pas le champ "cards").
+    private List<VaultPaymentCard> _cards = new();
     private byte[]? _unlockedKey;
     private byte[]? _recoveryDataKey;
 
@@ -58,6 +62,40 @@ internal sealed class VaultStore
     {
         if (IsLocked) return new();
         return _credentials.ToList();
+    }
+
+    // ── Portefeuille (cartes de paiement) ────────────────────────────────────
+
+    public List<VaultPaymentCard> ListCards()
+    {
+        if (IsLocked) return new();
+        return _cards.ToList();
+    }
+
+    // Ajout ou mise à jour par Id (un Id vide = nouvelle carte).
+    public void UpsertCard(VaultPaymentCard card)
+    {
+        if (IsLocked) return;
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var id = string.IsNullOrWhiteSpace(card.Id) ? Guid.NewGuid().ToString("N") : card.Id;
+        var idx = _cards.FindIndex(c => c.Id == id);
+        var stored = new VaultPaymentCard
+        {
+            Id = id, Label = card.Label, Holder = card.Holder,
+            Number = card.Number, ExpMonth = card.ExpMonth, ExpYear = card.ExpYear,
+            Note = card.Note,
+            CreatedAt = idx >= 0 ? _cards[idx].CreatedAt : now,
+            UpdatedAt = now
+        };
+        if (idx >= 0) _cards[idx] = stored;
+        else _cards.Add(stored);
+        Save();
+    }
+
+    public void DeleteCard(string id)
+    {
+        if (IsLocked) return;
+        if (_cards.RemoveAll(c => c.Id == id) > 0) Save();
     }
 
     private static string TombstoneKey(string origin, string username) =>
@@ -150,10 +188,31 @@ internal sealed class VaultStore
         if (!HasMasterPassword || _header.Salt is null) return false;
         var salt = Convert.FromBase64String(_header.Salt);
         var key  = DeriveKey(password, salt, _header);
-        if (!TryDecrypt(_header.Data ?? string.Empty, key, _header.DataCipher, out var creds)) return false;
+        if (!TryDecrypt(_header.Data ?? string.Empty, key, _header.DataCipher, out List<VaultCredential> creds)) return false;
         _unlockedKey  = key;
         _credentials  = creds;
+        LoadCardsWithKey(key);
         return true;
+    }
+
+    // Décrypte le blob du portefeuille avec la clé du coffre. Un blob de cartes
+    // illisible ne doit pas empêcher l'ouverture des identifiants : on trace et
+    // on repart d'un portefeuille vide.
+    private void LoadCardsWithKey(byte[] key)
+    {
+        if (string.IsNullOrEmpty(_header.Cards))
+        {
+            _cards = new();
+            return;
+        }
+
+        if (TryDecrypt(_header.Cards, key, "gcm", out List<VaultPaymentCard> cards))
+            _cards = cards;
+        else
+        {
+            WinUiRuntimeTrace.Write("Vault cards blob unreadable, starting empty");
+            _cards = new();
+        }
     }
 
     public void Lock()
@@ -194,7 +253,7 @@ internal sealed class VaultStore
     {
         if (!HasMasterPassword || _header.Salt is null) return false;
         var salt = Convert.FromBase64String(_header.Salt);
-        return TryDecrypt(_header.Data ?? string.Empty, DeriveKey(password, salt, _header), _header.DataCipher, out _);
+        return TryDecrypt(_header.Data ?? string.Empty, DeriveKey(password, salt, _header), _header.DataCipher, out List<VaultCredential> _);
     }
 
     // Repasse en mode DPAPI (confort) — coffre doit être déverrouillé avant l'appel
@@ -258,9 +317,10 @@ internal sealed class VaultStore
             using (var aes = new AesGcm(pinKey, 16))
                 aes.Decrypt(nonce, cipher, tag, vaultKey);
 
-            if (!TryDecrypt(_header.Data ?? string.Empty, vaultKey, _header.DataCipher, out var creds)) return false;
+            if (!TryDecrypt(_header.Data ?? string.Empty, vaultKey, _header.DataCipher, out List<VaultCredential> creds)) return false;
             _unlockedKey = vaultKey;
             _credentials = creds;
+            LoadCardsWithKey(vaultKey);
             return true;
         }
         catch { return false; }
@@ -303,7 +363,7 @@ internal sealed class VaultStore
                 return false;
             }
 
-            if (!TryDecrypt(_header.RecoveryData, recoveryDataKey, _header.RecoveryDataCipher, out var creds))
+            if (!TryDecrypt(_header.RecoveryData, recoveryDataKey, _header.RecoveryDataCipher, out List<VaultCredential> creds))
             {
                 CryptographicOperations.ZeroMemory(recoveryDataKey);
                 return false;
@@ -311,6 +371,12 @@ internal sealed class VaultStore
 
             _recoveryDataKey = recoveryDataKey;
             _credentials = creds;
+            // Copie de secours du portefeuille (absente sur les anciens coffres).
+            if (!string.IsNullOrEmpty(_header.RecoveryCards) &&
+                TryDecrypt(_header.RecoveryCards, recoveryDataKey, "gcm", out List<VaultPaymentCard> cards))
+                _cards = cards;
+            else
+                _cards = new();
             return true;
         }
         catch
@@ -379,6 +445,13 @@ internal sealed class VaultStore
             var cipher = Convert.FromBase64String(_header.Data);
             var plain  = ProtectedData.Unprotect(cipher, VaultEntropy, DataProtectionScope.CurrentUser);
             _credentials = JsonSerializer.Deserialize<List<VaultCredential>>(plain, JsonOpts) ?? new();
+
+            if (!string.IsNullOrEmpty(_header.Cards))
+            {
+                var cardsPlain = ProtectedData.Unprotect(
+                    Convert.FromBase64String(_header.Cards), VaultEntropy, DataProtectionScope.CurrentUser);
+                _cards = JsonSerializer.Deserialize<List<VaultPaymentCard>>(cardsPlain, JsonOpts) ?? new();
+            }
         }
         catch (Exception error)
         {
@@ -393,18 +466,24 @@ internal sealed class VaultStore
         try
         {
             var json = JsonSerializer.SerializeToUtf8Bytes(_credentials, JsonOpts);
+            var cardsJson = JsonSerializer.SerializeToUtf8Bytes(_cards, JsonOpts);
             if (_header.Mode == "aes256" && _unlockedKey is not null)
             {
                 _header.Data = Convert.ToBase64String(EncryptGcm(json, _unlockedKey));
                 _header.DataCipher = "gcm";
+                _header.Cards = Convert.ToBase64String(EncryptGcm(cardsJson, _unlockedKey));
             }
             else if (_header.Mode == "aes256")
                 _header.Data ??= string.Empty;
             else
+            {
                 _header.Data = Convert.ToBase64String(
                     ProtectedData.Protect(json, VaultEntropy, DataProtectionScope.CurrentUser));
+                _header.Cards = Convert.ToBase64String(
+                    ProtectedData.Protect(cardsJson, VaultEntropy, DataProtectionScope.CurrentUser));
+            }
 
-            SaveRecoveryPayload(json);
+            SaveRecoveryPayload(json, cardsJson);
             var dir = Path.GetDirectoryName(_vaultFile);
             if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(_vaultFile, JsonSerializer.Serialize(_header, JsonOpts), Encoding.UTF8);
@@ -419,10 +498,10 @@ internal sealed class VaultStore
 
     // ── Crypto ────────────────────────────────────────────────────────────────
 
-    // Déchiffre le blob du coffre. cipher = valeur de l'en-tête "data_cipher" :
+    // Déchiffre un blob du coffre. cipher = valeur de l'en-tête "data_cipher" :
     // "gcm" pour les coffres actuels (AES-256-GCM authentifié), "cbc" pour les
     // anciens (AES-256-CBC, lus tels quels puis réécrits en GCM au prochain Save).
-    private static bool TryDecrypt(string dataBase64, byte[] key, string cipher, out List<VaultCredential> result)
+    private static bool TryDecrypt<T>(string dataBase64, byte[] key, string cipher, out List<T> result)
     {
         result = new();
         try
@@ -430,7 +509,7 @@ internal sealed class VaultStore
             if (string.IsNullOrEmpty(dataBase64)) return true; // coffre vide = valide
             var bytes = Convert.FromBase64String(dataBase64);
             var plain = cipher == "gcm" ? DecryptGcm(bytes, key) : DecryptAes(bytes, key);
-            result = JsonSerializer.Deserialize<List<VaultCredential>>(plain, JsonOpts) ?? new();
+            result = JsonSerializer.Deserialize<List<T>>(plain, JsonOpts) ?? new();
             return true;
         }
         catch { return false; }
@@ -480,13 +559,14 @@ internal sealed class VaultStore
         return dec.TransformFinalBlock(cipher, 0, cipher.Length);
     }
 
-    private void SaveRecoveryPayload(byte[] json)
+    private void SaveRecoveryPayload(byte[] json, byte[] cardsJson)
     {
         var recoveryDataKey = TryGetRecoveryDataKey();
         if (recoveryDataKey is null) return;
 
         _header.RecoveryData = Convert.ToBase64String(EncryptGcm(json, recoveryDataKey));
         _header.RecoveryDataCipher = "gcm";
+        _header.RecoveryCards = Convert.ToBase64String(EncryptGcm(cardsJson, recoveryDataKey));
         if (_unlockedKey is not null)
         {
             _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey));
@@ -634,6 +714,12 @@ internal sealed class VaultHeader
     // blobs peuvent être réécrits à des instants différents (déverrouillage par clé
     // de secours). Absent = ancien coffre CBC.
     [JsonPropertyName("recovery_data_cipher")] public string RecoveryDataCipher { get; set; } = "cbc";
+
+    // Portefeuille : cartes de paiement, blob séparé chiffré avec la même clé que
+    // "data". Toujours en GCM (le portefeuille n'a jamais existé en CBC). Absent
+    // sur les coffres antérieurs à 0.45 → portefeuille vide.
+    [JsonPropertyName("cards")]          public string? Cards         { get; set; }
+    [JsonPropertyName("recovery_cards")] public string? RecoveryCards { get; set; }
 
     // Suppressions persistantes (clés "origin|username") pour ne pas réimporter depuis Chromium.
     [JsonPropertyName("deleted")]  public List<string> Deleted  { get; set; } = new();

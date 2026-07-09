@@ -80,6 +80,12 @@ public sealed partial class MainWindow
                 return;
             }
 
+            if (type == "pulse.payment.form")
+            {
+                HandlePaymentFormDetected(sender as CoreWebView2);
+                return;
+            }
+
             if (type is "newtab_add_shortcut" or "newtab_edit_shortcut" or "newtab_delete_shortcut")
             {
                 await HandleNewTabShortcutMessageAsync(type, obj);
