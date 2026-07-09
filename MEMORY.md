@@ -1800,3 +1800,33 @@ Retour utilisateur : « j'avais défini une icône propre à l'application, pour
 - Lancement court : fenêtre `Pulse Browser 0.48.2-dev` répondante.
 
 **Version :** `0.48.2-dev`.
+
+## 2026-07-09 — 0.48.3-dev
+
+Retour utilisateur : l'icone Pulse validee n'apparaissait plus pour une fenetre lancee depuis une application web installee ; capture fournie montrant un globe generique.
+
+### Diagnostic
+- Le raccourci Menu Demarrer `Connexion comptes Google - a8356f11.lnk` lancait `PulseBrowser.WinUI.exe --app=a8356f11fa6b4874b10729b3c06d886c`.
+- Le raccourci pointait vers `C:\Users\Handi-Jyhel\Desktop\bob\navigation\webapp-icons\a8356f11fa6b4874b10729b3c06d886c.ico`.
+- Extraction du PNG embarque dans l'ICO : c'etait exactement le globe generique WebView2 16x16 px visible dans la capture utilisateur.
+- Hash SHA-256 du PNG generique : `959A80AA9A16AD7B306D7895B34083F3817CC61FB6E8B676B05D5DD59AC89F15`.
+- Plusieurs favicons du profil custom `C:\Users\Handi-Jyhel\Desktop\bob` avaient le meme hash, confirmant que Pulse memorisait le fallback generique WebView2 comme favicon de site.
+
+### Correction
+- Ajout de `FaviconQuality` : validation PNG et rejet du globe generique WebView2 connu par hash.
+- `CaptureFaviconForTabAsync` ignore maintenant le PNG generique venant de `GetFaviconAsync` ou du fallback HTTP.
+- Les lectures de cache favicon pour favoris, onglets, historique et panneau Applications ignorent les fichiers contamines.
+- Les applications web ne peuvent plus utiliser un `.ico` genere depuis ce globe generique ; elles retombent sur `Assets\PulseBrowser.ico`.
+- Ajout d'une migration au demarrage de la fenetre principale : si une app web existante a une icone invalide, l'icone dediee est supprimee du registre, le fichier genere est retire et le raccourci est recree avec l'icone Pulse.
+- Version passee a `0.48.3-dev`.
+- Ajout de `docs/FAVICON_GENERIC_WEBVIEW2_FIX_0_48_3.md` et `logs/2026-07-09-favicon-generic-webview2-0-48-3.md`.
+
+### Verification
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` : 98/98 verts.
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Lancement court de `PulseBrowser.WinUI.exe` avec trace active : `Web app generic icon repaired: a8356f11fa6b4874b10729b3c06d886c`.
+- Lancement court avec `--app=a8356f11fa6b4874b10729b3c06d886c` : `PulseAppWindow activated for a8356f11fa6b4874b10729b3c06d886c`.
+- Apres migration, `C:\Users\Handi-Jyhel\Desktop\bob\navigation\webapp-icons` ne contient plus l'icone fautive.
+- Le raccourci Menu Demarrer `Connexion comptes Google - a8356f11.lnk` pointe maintenant son icone vers `Assets\PulseBrowser.ico`.
+
+**Version :** `0.48.3-dev`.
