@@ -1851,3 +1851,11 @@ Retour utilisateur : demande d'un avis honnete sur le projet, puis « il faut co
 **Why:** point de reprise sur l'audit et les corrections doc/tests, sans refaire le diagnostic.
 
 **How to apply:** avant de proposer un gros refactor `MainWindow.*`, relire cette entree et demander explicitement un « Go » (regle `AGENTS.md` #1, modification structurante) ; la stack reelle du projet est desormais C#/WinUI/WebView2, ne plus mentionner Rust/CEF comme travail actif.
+
+### Suite (« Go » donne) — 2 eme lot d'extraction
+
+Apres le « Go » explicite de l'utilisateur, poursuite du meme principe (extraire la logique pure, PAS de decoupage architectural de `MainWindow` en controleurs separes — trop risque sans verification interactive du cablage XAML) :
+- `Settings/NewTabShortcutText.cs` (serialisation "Titre | URL" des raccourcis nouvel onglet), `WebApps/ShortcutNaming.cs` (nom de fichier .lnk valide), `Models/HistoryTimeFormatter.cs` (affichage relatif des dates, bornes de jours testables via un parametre `now` injectable).
+- Code mort supprime : `HostOf`/`PrettyHost` dans `MainWindow.Vault.cs` (jamais appeles ; `HostOf` dupliquait en plus `PublicSuffixService.HostOf` deja teste).
+- **129 tests verts** (etait 116). `build-winui.cmd` : 0 avertissement, 0 erreur. Commit `443780f`.
+- **Constat honnete** : la taille des fichiers `MainWindow.*.cs` ne baisse que marginalement (`Navigation.cs` 1214→1187, `Vault.cs` 1113→1031, `Settings.cs` 727→710, `WebApps.cs` 388→380) car l'essentiel de leur volume est du cablage UI/WebView2, pas de la logique pure. L'extraction ameliore la testabilite et enleve la duplication/code mort, mais ne resout PAS le probleme de fond (God Class via partial class) — ca reste a faire dans une session dediee, avec un vrai plan et un Go explicite sur le decoupage architectural lui-meme.
