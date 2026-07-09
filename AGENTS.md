@@ -38,7 +38,7 @@ La version de depart du projet est:
 
 La version courante du projet est:
 
-`0.46.0-dev`
+`0.47.0-dev`
 
 La numerotation suit ce schema:
 

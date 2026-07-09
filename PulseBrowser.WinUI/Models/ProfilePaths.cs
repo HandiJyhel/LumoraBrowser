@@ -23,6 +23,8 @@ internal sealed class PulseProfilePaths
         ProfileFile         = Path.Combine(profileDir, "profile.pulse");
         LegacyProfileFile   = Path.Combine(profileDir, "profile.json");
         BrowserDataDir      = Path.Combine(profileDir, "webview2");
+        WebAppsFile         = Path.Combine(NavigationDir, "webapps.pulse");
+        WebAppIconsDir      = Path.Combine(NavigationDir, "webapp-icons");
     }
 
     public string ProfileDir           { get; }
@@ -42,6 +44,8 @@ internal sealed class PulseProfilePaths
     public string ProfileFile          { get; }
     public string LegacyProfileFile    { get; }
     public string BrowserDataDir       { get; }
+    public string WebAppsFile          { get; }
+    public string WebAppIconsDir       { get; }
 
     public static string ProfilesRoot()
     {

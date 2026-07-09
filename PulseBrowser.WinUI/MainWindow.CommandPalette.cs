@@ -176,6 +176,10 @@ public sealed partial class MainWindow
             () => DownloadsMenu_Click(this, new RoutedEventArgs())), 84);
         Add(new("Commande", "Sites connectes", "Gere les sessions et cookies conserves", "\uE8D4",
             () => SessionsMenu_Click(this, new RoutedEventArgs())), 82);
+        Add(new("Commande", "Applications", "Sites installes en fenetre dediee", "\uE71D",
+            () => WebAppsMenu_Click(this, new RoutedEventArgs())), 81);
+        Add(new("Commande", "Installer comme application", "Epingle la page active dans sa propre fenetre", "\uE710",
+            () => InstallAppMenu_Click(this, new RoutedEventArgs())), 79);
         Add(new("Commande", "Cles d'acces", "Ouvre les passkeys locales connues", "\uE8D7",
             () => PasskeysMenu_Click(this, new RoutedEventArgs())), 80);
         Add(new("Commande", "Ajouter aux favoris", "Ajoute la page active a la barre des favoris", "\uE734",

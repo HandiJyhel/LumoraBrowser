@@ -1710,3 +1710,28 @@ Retour utilisateur : perte de connexion Google constatée à chaque fermeture de
 - Lancement court de `PulseBrowser.WinUI.exe` : fenêtre `Pulse Browser 0.46.0-dev`, processus vivant et répondant, arrêté ensuite pour ne pas verrouiller l'exécutable.
 
 **Version :** `0.46.0-dev`.
+
+## 2026-07-09 — 0.47.0-dev
+
+Deuxième demande de la session : reprendre la fonctionnalité « Créer un raccourci / Installer comme application » de Chrome, en mieux (synergie avec les sessions éphémères, protections actives dans la fenêtre d'application, confinement de domaine). Rappel utilisateur en aparté : le « lecteur vidéo flottant » évoqué ne figurait dans aucune mémoire projet — supposé être du Picture-in-Picture, traité séparément au palier suivant (0.48.0-dev).
+
+### Applications web Pulse
+- `Models/WebApps.cs` + `WebApps/WebAppStore.cs` : registre local `webapps.pulse`, chiffré DPAPI comme les autres fichiers de navigation (pas de données sensibles, même tier que les favoris), gate mode invité.
+- `WebApps/WebAppLaunchArgs.cs`, `WebApps/WebAppUrlPolicy.cs`, `WebApps/IcoWriter.cs` : logique pure testée — parsing `--app=<id>`, confinement de domaine « doux » (jamais de blocage de navigation, pour ne pas casser les redirections OAuth Google/Microsoft), encapsulation d'un PNG existant en `.ico` minimal.
+- `WebApps/ShellShortcut.cs` : création/suppression de raccourcis `.lnk` via COM `IShellLinkW`/`IPersistFile`, sans dépendance NuGet.
+- `WebView2Bootstrap.cs` : configuration process-wide (dossier profil WebView2 + anti-télémétrie moteur) extraite de `MainWindow`, réutilisée par `App.xaml.cs` pour les fenêtres d'application lancées en processus séparé — garantit le partage des cookies/sessions avec la fenêtre principale.
+- `PulseAppWindow.xaml(.cs)` (nouvelle fenêtre) : pas d'onglets, pas de barre d'adresse, `PrivacyEngine` local actif (bloqueur pubs/trackers, anti-télémétrie, HTTPS, CNAME cloaking), barre de confinement de domaine douce avec bouton « Retour à l'application ». Limite documentée : filtre cosmétique, refus automatique des bannières cookies et auto-remplissage identifiants/cartes pas encore branchés dans les fenêtres d'application (v1).
+- `App.xaml.cs` : détecte `--app=<id>` et lance directement une `PulseAppWindow` sans passer par la fenêtre principale ; retombe proprement sur le navigateur normal si l'id est introuvable (vérifié par lancement avec un id inconnu).
+- `MainWindow.WebApps.cs` : installation depuis la page active (dialogue nom + option raccourci Bureau), icône générée depuis le favicon déjà en cache, ajout automatique du domaine aux sites de confiance (synergie directe avec [[0.46.0-dev]]), panneau « Applications » (ouvrir, toggle « toujours au premier plan », renommer, désinstaller).
+- Menu Pulse et palette `Ctrl+K` : entrées « Applications » et « Installer comme application ».
+- Correction incidente découverte en cours de route : `ShowPanel` ne masquait jamais `WalletPanel` en changeant de panneau (oubli du palier portefeuille 0.45.0-dev) — corrigé en même temps que l'ajout de `WebAppsPanel` à la liste de collapse.
+- Ajout de `docs/WEB_APPS_0_47.md` et `logs/2026-07-09-web-apps-0-47.md`.
+
+### Vérification
+- `dotnet test` : 94/94 verts (80 existants + 14 nouveaux : `WebAppLaunchArgsTests`, `WebAppUrlPolicyTests`, `IcoWriterTests`).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Lancement court normal : fenêtre `Pulse Browser 0.47.0-dev` répondante.
+- Lancement avec `--app=doesnotexist` : retombe correctement sur la fenêtre principale, aucun crash.
+- Non vérifié manuellement dans cette session : le parcours complet clic-à-clic (installer une vraie page depuis l'UI, ouvrir depuis un raccourci Menu Démarrer réel) — reste à valider par l'utilisateur, comme convenu pour cette session (vérification groupée en fin de session, palier par palier).
+
+**Version :** `0.47.0-dev`.

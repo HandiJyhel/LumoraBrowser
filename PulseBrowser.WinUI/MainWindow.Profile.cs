@@ -264,6 +264,7 @@ public sealed partial class MainWindow
         _isGuestMode = true;
         _bookmarks.SetGuestMode(true);
         _history.SetGuestMode(true);
+        _webApps.SetGuestMode(true);
         DismissLoginOverlay();
         // Reconstruire l'UI avec les stores vides
         ReloadBookmarks();

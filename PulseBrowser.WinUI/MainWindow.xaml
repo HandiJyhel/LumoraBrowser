@@ -99,6 +99,8 @@
                         <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
                         <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
                         <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
+                        <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
+                        <MenuFlyoutItem Text="Installer comme application" Click="InstallAppMenu_Click" />
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
                         <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />
@@ -247,6 +249,8 @@
                         <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
                         <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
                         <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
+                        <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
+                        <MenuFlyoutItem Text="Installer comme application" Click="InstallAppMenu_Click" />
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
                         <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />
@@ -1183,6 +1187,34 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
 
                 <ScrollViewer Grid.Row="2">
                     <StackPanel x:Name="WalletPanelItems" Spacing="8" />
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Applications web Pulse -->
+            <Grid x:Name="WebAppsPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="Applications" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.68" Margin="0,4,0,0"
+                               Text="Des sites épinglés, ouverts dans une fenêtre dédiée sans onglets ni barre d'adresse, comme une vraie application. Même profil : les sessions sont partagées avec Pulse Browser. Les protections (bloqueur de pubs/trackers, anti-télémétrie, HTTPS) restent actives." />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,16">
+                    <Button Click="InstallAppMenu_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                            <TextBlock Text="Installer la page active" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="2">
+                    <StackPanel x:Name="WebAppsPanelItems" Spacing="8" />
                 </ScrollViewer>
             </Grid>
 

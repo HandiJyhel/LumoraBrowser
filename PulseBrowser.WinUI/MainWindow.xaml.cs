@@ -34,7 +34,7 @@ namespace PulseBrowser.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.46.0-dev";
+    private const string Version = "0.47.0-dev";
     private const double VerticalTabsCompactWidth = 50;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -42,6 +42,7 @@ public sealed partial class MainWindow : Window
 
     private readonly PulseProfilePaths _profile = PulseProfilePaths.Default();
     private readonly BookmarkStore _bookmarks;
+    private readonly WebAppStore _webApps;
     private readonly ObservableCollection<BookmarkListItem> _bookmarkItems = new();
     private readonly ObservableCollection<BookmarkListItem> _bookmarkFolderItems = new();
     private readonly List<BrowserTabState> _tabs = new();
@@ -121,20 +122,10 @@ public sealed partial class MainWindow : Window
         // WebView2 stocke ses cookies/sessions dans le profil Pulse plutôt que dans un
         // dossier collé à l'exe (PulseBrowser.WinUI.exe.WebView2). Conséquence : changer
         // ou supprimer un profil déconnecte réellement des sites, et la purge est complète.
-        // Doit être fait AVANT toute création de moteur WebView2 dans le process.
-        try { Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", _profile.BrowserDataDir); } catch { }
-
-        // Télémétrie du moteur coupée à la racine, avant toute création de WebView2 :
-        // pas de rapports de crash vers Microsoft (crashpad), pas de rapports de
-        // fiabilité réseau (domain reliability), pas d'audit de liens <a ping>.
-        // Non négociable, donc pas un réglage : règle n°1 du projet, rien ne part
-        // vers un serveur sans décision de l'utilisateur.
-        try
-        {
-            Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings");
-        }
-        catch { }
+        // Doit être fait AVANT toute création de moteur WebView2 dans le process. Partagé
+        // avec les fenêtres d'application web (WebView2Bootstrap), qui doivent pointer
+        // vers le même profil pour partager cookies et sessions.
+        WebView2Bootstrap.ConfigureOnce(_profile.BrowserDataDir);
 
         InitializeComponent();
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");
@@ -175,6 +166,7 @@ public sealed partial class MainWindow : Window
         _credentialService.CredentialCaptured += CredentialService_CredentialCaptured;
         _credentialService.PageStateChanged += CredentialService_PageStateChanged;
         _bookmarks = new BookmarkStore(_profile.BookmarksFile, _profile.LegacyBookmarksFile, _profile.LegacyFavoritesFile);
+        _webApps = new WebAppStore(_profile.WebAppsFile);
         WinUiRuntimeTrace.Write("BookmarkStore created");
         BookmarksList.ItemsSource = _bookmarkItems;
         BookmarkFoldersList.ItemsSource = _bookmarkFolderItems;
@@ -280,6 +272,8 @@ public sealed partial class MainWindow : Window
         PasskeysPanel.Visibility = Visibility.Collapsed;
         SiteControlPanel.Visibility = Visibility.Collapsed;
         SessionsPanel.Visibility = Visibility.Collapsed;
+        WalletPanel.Visibility = Visibility.Collapsed;
+        WebAppsPanel.Visibility = Visibility.Collapsed;
 
         visiblePanel.Visibility = Visibility.Visible;
         StatusText.Text = status;
