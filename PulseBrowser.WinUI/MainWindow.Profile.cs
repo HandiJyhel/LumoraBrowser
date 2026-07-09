@@ -263,12 +263,12 @@ public sealed partial class MainWindow
     {
         _isGuestMode = true;
         _bookmarks.SetGuestMode(true);
-        _history.SetGuestMode(true);
+        _historyPanel.Store.SetGuestMode(true);
         _webApps.SetGuestMode(true);
         DismissLoginOverlay();
         // Reconstruire l'UI avec les stores vides
         ReloadBookmarks();
-        _historyItems.Clear();
+        _historyPanel.Items.Clear();
         _suppressTabSave = true;
         foreach (var item in BrowserTabs.TabItems.OfType<TabViewItem>().ToList())
             BrowserTabs.TabItems.Remove(item);
@@ -375,7 +375,7 @@ public sealed partial class MainWindow
         _pendingProfileId = null;
 
         ReloadBookmarks();
-        _historyItems.Clear();
+        _historyPanel.Items.Clear();
         ShowMigrationOrDismiss();
     }
 

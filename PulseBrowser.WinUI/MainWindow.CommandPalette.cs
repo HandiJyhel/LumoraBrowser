@@ -204,7 +204,7 @@ public sealed partial class MainWindow
                 }), 70);
         }
 
-        foreach (var entry in _history.AllEntries().Take(300))
+        foreach (var entry in _historyPanel.Store.AllEntries().Take(300))
         {
             Add(new("Historique",
                 string.IsNullOrWhiteSpace(entry.Title) ? DisplayTitle(entry.Url) : entry.Title,

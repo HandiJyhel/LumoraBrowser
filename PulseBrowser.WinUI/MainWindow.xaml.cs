@@ -68,11 +68,8 @@ public sealed partial class MainWindow : Window
     private Microsoft.UI.Windowing.AppWindow? _appWindow;
     private double _verticalTabsExpandedWidth = VerticalTabsDefaultWidth;
     private int _nextTabId = 1;
-    private readonly HistoryStore _history;
-    private readonly ObservableCollection<HistoryListItem> _historyItems = new();
+    private readonly HistoryPanelController _historyPanel;
     private readonly ObservableCollection<CommandPaletteItem> _commandPaletteItems = new();
-    private readonly List<DownloadEntry> _downloads = new();
-    private string _historySearch = string.Empty;
     private bool _suppressTabSave = true;
     private readonly VaultStore _vault;
     private readonly PasswordManagerService _passwordManager;
@@ -181,8 +178,8 @@ public sealed partial class MainWindow : Window
         WinUiRuntimeTrace.Write("Bookmarks loaded");
         ReloadImportSources();
         WinUiRuntimeTrace.Write("Import sources loaded");
-        _history = new HistoryStore(_profile.HistoryFile, _profile.LegacyHistoryFile);
-        HistoryList.ItemsSource = _historyItems;
+        _historyPanel = new HistoryPanelController(new HistoryStore(_profile.HistoryFile, _profile.LegacyHistoryFile));
+        HistoryList.ItemsSource = _historyPanel.Items;
         CommandPaletteList.ItemsSource = _commandPaletteItems;
         WinUiRuntimeTrace.Write("History store loaded");
         LoadPasskeys();

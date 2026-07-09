@@ -84,7 +84,7 @@ public sealed partial class MainWindow
     {
         if (CurrentSite() is not { } site) return;
 
-        _historySearch = site.RootDomain;
+        _historyPanel.SearchTerm = site.RootDomain;
         HistorySearchBox.Text = site.RootDomain;
         RenderHistory();
         ShowPanel(HistoryPanel, $"Historique: {site.RootDomain}");
@@ -211,7 +211,7 @@ public sealed partial class MainWindow
 
     private IEnumerable<HistoryEntry> HistoryEntriesForRootDomain(string rootDomain)
     {
-        return _history.AllEntries().Where(entry =>
+        return _historyPanel.Store.AllEntries().Where(entry =>
         {
             if (!Uri.TryCreate(entry.Url, UriKind.Absolute, out var uri)) return false;
             return RootDomainOf(uri.Host).Equals(rootDomain, StringComparison.OrdinalIgnoreCase);

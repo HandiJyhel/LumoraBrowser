@@ -11,7 +11,7 @@ public sealed partial class MainWindow
 
     private void HistoryMenu_Click(object sender, RoutedEventArgs e)
     {
-        _historySearch = string.Empty;
+        _historyPanel.SearchTerm = string.Empty;
         HistorySearchBox.Text = string.Empty;
         RenderHistory();
         ShowPanel(HistoryPanel, "Historique");
@@ -24,7 +24,7 @@ public sealed partial class MainWindow
     }
     private void HistorySearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        _historySearch = HistorySearchBox.Text.Trim();
+        _historyPanel.SearchTerm = HistorySearchBox.Text.Trim();
         RenderHistory();
     }
 
@@ -85,7 +85,7 @@ public sealed partial class MainWindow
         {
             if (s is MenuFlyoutItem { Tag: HistoryListItem i })
             {
-                _history.Remove(i.Entry);
+                _historyPanel.Store.Remove(i.Entry);
                 RenderHistory();
                 StatusText.Text = "Entree supprimee de l'historique.";
             }
@@ -96,7 +96,7 @@ public sealed partial class MainWindow
 
     private void ClearHistoryButton_Click(object sender, RoutedEventArgs e)
     {
-        _history.Clear();
+        _historyPanel.Store.Clear();
         RenderHistory();
         StatusText.Text = "Historique efface.";
     }
@@ -105,7 +105,7 @@ public sealed partial class MainWindow
     {
         var entry = new DownloadEntry(args.DownloadOperation);
         entry.OnChanged += () => DispatcherQueue.TryEnqueue(RenderDownloads);
-        _downloads.Insert(0, entry);
+        _historyPanel.Downloads.Insert(0, entry);
         DispatcherQueue.TryEnqueue(() =>
         {
             RenderDownloads();
@@ -116,18 +116,18 @@ public sealed partial class MainWindow
     private void AddHistoryEntry(string url, string title)
     {
         if (_isGuestMode) return;
-        _history.Add(url, title);
+        _historyPanel.Store.Add(url, title);
     }
 
     private void RenderHistory()
     {
-        _historyItems.Clear();
-        var entries = string.IsNullOrWhiteSpace(_historySearch)
-            ? _history.AllEntries()
-            : (IEnumerable<HistoryEntry>)_history.Search(_historySearch);
+        _historyPanel.Items.Clear();
+        var entries = string.IsNullOrWhiteSpace(_historyPanel.SearchTerm)
+            ? _historyPanel.Store.AllEntries()
+            : (IEnumerable<HistoryEntry>)_historyPanel.Store.Search(_historyPanel.SearchTerm);
         foreach (var entry in entries)
         {
-            _historyItems.Add(HistoryListItemFor(entry));
+            _historyPanel.Items.Add(HistoryListItemFor(entry));
         }
     }
 
@@ -155,7 +155,7 @@ public sealed partial class MainWindow
     private void RenderDownloads()
     {
         DownloadsPanelItems.Children.Clear();
-        if (_downloads.Count == 0)
+        if (_historyPanel.Downloads.Count == 0)
         {
             DownloadsPanelItems.Children.Add(new TextBlock
             {
@@ -166,7 +166,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        foreach (var dl in _downloads)
+        foreach (var dl in _historyPanel.Downloads)
         {
             DownloadsPanelItems.Children.Add(BuildDownloadCard(dl));
         }
