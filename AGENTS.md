@@ -14,13 +14,13 @@ Le navigateur doit rester different de Firefox, Chrome, Edge ou Brave dans son e
 - Trouver des mecanismes locaux pour stocker les donnees sensibles de maniere protegee.
 - Conserver une experience utilisateur pratique, notamment pour les cookies, sessions et connexions, sans forcer l'utilisateur a se reconnecter inutilement.
 
-## Stack cible
+## Stack reelle
 
-- Langage principal souhaite: Rust.
-- Interface cible: WinUI 3 pour une experience Windows moderne.
-- Moteur web cible: Chromium via CEF (Chromium Embedded Framework).
+- Langage et interface actifs: C# + WinUI 3 (`PulseBrowser.WinUI`).
+- Moteur web actif: Chromium via WebView2.
+- Stockage local: DPAPI + coffre `vault.pulse` (AES-256-GCM + Argon2id).
 
-Le moteur initialement envisage etait Gecko. La decision projet actuelle remplace Gecko par Chromium via CEF, car CEF est plus adapte a un navigateur desktop personnalisable, solide et embarquable.
+L'ambition initiale du projet visait Rust pour le coeur local et Chromium via CEF pour le moteur (apres abandon de Gecko). Cette piste a ete prototypee puis mise de cote: le prototype Rust/CEF est archive dans `archive/rust-cef-prototype/` et n'est plus au runtime ni en developpement actif depuis la bascule vers WinUI. Tant qu'aucune session de travail n'est explicitement consacree a relancer Rust/CEF, la stack reelle du projet reste C#/WinUI 3/WebView2, et c'est elle qui doit guider toute decision technique.
 
 ## Principes de securite
 
@@ -88,10 +88,10 @@ La seule interface produit active est `PulseBrowser.WinUI`. Toute nouvelle fonct
 
 Les lanceurs ambigus du prototype Win32 sont desactives. `run-winui.cmd` est le chemin de lancement normal du projet. Le script legacy sous `archive/win32-cef-prototype/` sert uniquement a un diagnostic technique volontaire et ne doit pas etre utilise pour valider une fonction produit.
 
-Le coeur local Rust doit rester responsable des donnees, profils, favoris, historique, coffre, regles de confidentialite et integration moteur. La coque WinUI 3 doit porter l'experience utilisateur, l'identite visuelle et les surfaces produit modernes.
+Le coeur local en C# (`PulseBrowser.WinUI`) est responsable des donnees, profils, favoris, historique, coffre, regles de confidentialite et integration moteur. Il n'y a pas de coeur Rust actif: le prototype Rust est archive et ne recoit plus de developpement.
 
 La migration WinUI 3 ne doit pas provoquer de regression fonctionnelle visible: les onglets, favoris, menus, import/export de favoris, parametres et page A propos deja acquis dans le prototype doivent etre repris dans la nouvelle interface, puis ameliores progressivement.
 
-La version WinUI peut utiliser WebView2 comme pont temporaire pour restaurer la navigation Internet dans l'interface moderne. Ce pont ne remplace pas la cible moteur du projet: le moteur final vise reste Chromium via CEF raccorde au coeur Rust local.
+WebView2 est le moteur de navigation reellement utilise, pas un pont temporaire vers autre chose. Un retour vers CEF resterait possible un jour si un besoin concret l'impose (fonctionnalite bloquee par WebView2, par exemple), mais ce n'est pas un chantier planifie: tant que ce n'est pas explicitement decide et lance, WebView2 est la cible.
 
 Pulse Browser doit avancer par petites versions coherentes plutot que par grosses promesses fragiles.
