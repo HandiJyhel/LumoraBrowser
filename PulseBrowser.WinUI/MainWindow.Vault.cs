@@ -46,9 +46,12 @@ public sealed partial class MainWindow
             return;
 
         _pendingCredential = (draft.Origin, draft.Username, draft.Password, draft.LoginUrl);
+        var forWhom = string.IsNullOrWhiteSpace(offer.Username)
+            ? offer.DisplayOrigin
+            : $"{offer.Username} sur {offer.DisplayOrigin}";
         CredentialSaveText.Text = offer.IsUpdate
-            ? $"Mettre a jour le mot de passe pour {offer.Username} sur {offer.DisplayOrigin} ?"
-            : $"Enregistrer le mot de passe pour {offer.Username} sur {offer.DisplayOrigin} ?";
+            ? $"Mettre a jour le mot de passe pour {forWhom} ?"
+            : $"Enregistrer le mot de passe pour {forWhom} ?";
         CredentialSaveBar.Visibility = Visibility.Visible;
     }
 

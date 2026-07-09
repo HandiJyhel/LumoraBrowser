@@ -93,10 +93,10 @@ internal sealed class PasswordManagerInteractionService
             username = RecentUsernameFor(origin);
         }
 
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            return null;
-        }
+        // On propose l'enregistrement même sans identifiant capturé (formulaires
+        // inhabituels, saisie en plusieurs étapes…) : l'utilisateur pourra compléter
+        // le nom depuis le coffre. Un mot de passe soumis suffit à justifier l'offre.
+        username = username?.Trim() ?? string.Empty;
 
         var loginUrl = PasswordManagerService.NormalizeLoginUrl(capture.LoginUrl, origin);
         RememberUsername(origin, username);

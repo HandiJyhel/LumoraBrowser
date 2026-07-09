@@ -36,6 +36,11 @@
     <Compile Include="..\PulseBrowser.WinUI\Storage\PulseFile.cs"              Link="Product\PulseFile.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PulseBackup.cs"                    Link="Product\PulseBackup.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Privacy\NetworkBlocker\FilterParser.cs" Link="Product\FilterParser.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Credentials\CredentialModels.cs" Link="Product\CredentialModels.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerEntryDraft.cs" Link="Product\PasswordManagerEntryDraft.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerDecision.cs" Link="Product\PasswordManagerDecision.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerService.cs" Link="Product\PasswordManagerService.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerInteractionService.cs" Link="Product\PasswordManagerInteractionService.cs" />
     <EmbeddedResource Include="..\PulseBrowser.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 
