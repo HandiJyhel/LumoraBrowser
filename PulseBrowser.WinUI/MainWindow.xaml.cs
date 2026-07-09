@@ -34,7 +34,7 @@ namespace PulseBrowser.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.48.2-dev";
+    private const string Version = "0.48.3-dev";
     private const double VerticalTabsCompactWidth = 50;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -167,6 +167,7 @@ public sealed partial class MainWindow : Window
         _credentialService.PageStateChanged += CredentialService_PageStateChanged;
         _bookmarks = new BookmarkStore(_profile.BookmarksFile, _profile.LegacyBookmarksFile, _profile.LegacyFavoritesFile);
         _webApps = new WebAppStore(_profile.WebAppsFile);
+        RepairInvalidWebAppIconsAndShortcuts();
         WinUiRuntimeTrace.Write("BookmarkStore created");
         BookmarksList.ItemsSource = _bookmarkItems;
         BookmarkFoldersList.ItemsSource = _bookmarkFolderItems;

@@ -68,7 +68,7 @@ public sealed partial class PulseAppWindow : Window
         if (!string.IsNullOrWhiteSpace(_app.IconFile))
         {
             var custom = Path.Combine(_profile.WebAppIconsDir, _app.IconFile);
-            if (File.Exists(custom)) return custom;
+            if (FaviconQuality.IsUsablePngBackedIcoFile(custom)) return custom;
         }
 
         var fallback = Path.Combine(AppContext.BaseDirectory, "Assets", "PulseBrowser.ico");

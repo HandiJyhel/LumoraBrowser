@@ -295,7 +295,9 @@ public sealed partial class MainWindow
     {
         foreach (var node in _allBookmarkNodes)
         {
-            if (node.Kind == BookmarkKind.Url && !string.IsNullOrWhiteSpace(node.IconPath) && File.Exists(node.IconPath))
+            if (node.Kind == BookmarkKind.Url &&
+                !string.IsNullOrWhiteSpace(node.IconPath) &&
+                FaviconQuality.IsUsablePngFile(node.IconPath))
             {
                 _faviconCache[node.Url] = node.IconPath;
                 // Indexer aussi par origine pour absorber les variantes (trailing slash, www., etc.)
@@ -311,20 +313,22 @@ public sealed partial class MainWindow
             return null;
         }
 
-        if (_faviconCache.TryGetValue(address, out var cachedPath) && File.Exists(cachedPath))
+        if (_faviconCache.TryGetValue(address, out var cachedPath) &&
+            FaviconQuality.IsUsablePngFile(cachedPath))
         {
             return cachedPath;
         }
 
         var origin = OriginOf(address);
-        if (_faviconCache.TryGetValue(origin, out var originCached) && File.Exists(originCached))
+        if (_faviconCache.TryGetValue(origin, out var originCached) &&
+            FaviconQuality.IsUsablePngFile(originCached))
         {
             _faviconCache[address] = originCached;
             return originCached;
         }
 
         var originPath = Path.Combine(_profile.FaviconsDir, $"{HashOrigin(address)}.png");
-        if (File.Exists(originPath))
+        if (FaviconQuality.IsUsablePngFile(originPath))
         {
             _faviconCache[address] = originPath;
             _faviconCache[origin] = originPath;
@@ -340,16 +344,19 @@ public sealed partial class MainWindow
         {
             var node = nodes[i];
             if (node.Kind != BookmarkKind.Url) continue;
-            if (!string.IsNullOrWhiteSpace(node.IconPath) && File.Exists(node.IconPath)) continue;
+            if (!string.IsNullOrWhiteSpace(node.IconPath) &&
+                FaviconQuality.IsUsablePngFile(node.IconPath)) continue;
 
             // Chercher dans le cache en mémoire d'abord
-            if (_faviconCache.TryGetValue(node.Url, out var cached) && File.Exists(cached))
+            if (_faviconCache.TryGetValue(node.Url, out var cached) &&
+                FaviconQuality.IsUsablePngFile(cached))
             {
                 nodes[i] = node with { IconPath = cached };
                 continue;
             }
             var origin = OriginOf(node.Url);
-            if (_faviconCache.TryGetValue(origin, out var originCached) && File.Exists(originCached))
+            if (_faviconCache.TryGetValue(origin, out var originCached) &&
+                FaviconQuality.IsUsablePngFile(originCached))
             {
                 nodes[i] = node with { IconPath = originCached };
                 continue;
@@ -357,7 +364,7 @@ public sealed partial class MainWindow
 
             // Chercher le fichier hash-origin sur le disque
             var hashPath = Path.Combine(_profile.FaviconsDir, $"{HashOrigin(node.Url)}.png");
-            if (File.Exists(hashPath))
+            if (FaviconQuality.IsUsablePngFile(hashPath))
             {
                 _faviconCache[node.Url] = hashPath;
                 _faviconCache[origin]   = hashPath;
@@ -469,7 +476,9 @@ public sealed partial class MainWindow
 
     private static FrameworkElement BookmarkIconElement(BookmarkNode node, double size)
     {
-        if (node.Kind == BookmarkKind.Url && !string.IsNullOrWhiteSpace(node.IconPath) && File.Exists(node.IconPath))
+        if (node.Kind == BookmarkKind.Url &&
+            !string.IsNullOrWhiteSpace(node.IconPath) &&
+            FaviconQuality.IsUsablePngFile(node.IconPath))
         {
             return new Image
             {
@@ -491,7 +500,8 @@ public sealed partial class MainWindow
 
     private void PreloadBookmarkFavicon(BookmarkNode node)
     {
-        if (string.IsNullOrWhiteSpace(node.IconPath) || !File.Exists(node.IconPath)) return;
+        if (string.IsNullOrWhiteSpace(node.IconPath) ||
+            !FaviconQuality.IsUsablePngFile(node.IconPath)) return;
         var origin = OriginOf(node.Url);
         _faviconCache[node.Url] = node.IconPath;
         _faviconCache[origin] = node.IconPath;

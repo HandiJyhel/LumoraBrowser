@@ -687,7 +687,9 @@ public static class BookmarkTreePresenter
         var detail = node.Kind == BookmarkKind.Folder
             ? $"{nodes.Count(candidate => candidate.ParentId == node.Id)} element(s)"
             : node.Url;
-        var hasIcon = node.Kind == BookmarkKind.Url && !string.IsNullOrWhiteSpace(node.IconPath) && File.Exists(node.IconPath);
+        var hasIcon = node.Kind == BookmarkKind.Url &&
+            !string.IsNullOrWhiteSpace(node.IconPath) &&
+            FaviconQuality.IsUsablePngFile(node.IconPath);
         return new BookmarkListItem(
             icon,
             hasIcon ? node.IconUri : string.Empty,
@@ -785,4 +787,3 @@ public static class BookmarkHtmlExporter
         builder.Append(indent).AppendLine("</DL><p>");
     }
 }
-

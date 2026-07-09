@@ -440,27 +440,6 @@ public sealed partial class MainWindow
         if (AddressBox.Text != address) AddressBox.Text = address;
     }
 
-    private static readonly byte[] PngSignature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-
-    private static bool IsValidPngFile(string path)
-    {
-        try
-        {
-            Span<byte> header = stackalloc byte[8];
-            using var stream = File.OpenRead(path);
-            if (stream.Read(header) != 8) return false;
-            for (var i = 0; i < 8; i++)
-            {
-                if (header[i] != PngSignature[i]) return false;
-            }
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     private async Task CaptureFaviconForTabAsync(BrowserTabState tab)
     {
         var browser = tab.View;
@@ -472,13 +451,12 @@ public sealed partial class MainWindow
 
         var originPath = Path.Combine(_profile.FaviconsDir, $"{HashOrigin(address)}.png");
 
-        // Réutiliser le favicon existant si récent (moins de 24h) ET réellement
-        // un PNG valide : d'anciens caches écrits avant la conversion de format
-        // (ex. un .ico brut enregistré sous un nom .png) ne doivent pas bloquer
-        // une nouvelle tentative correcte pendant 24h.
+        // Réutiliser le favicon existant si récent (moins de 24h) ET utilisable :
+        // d'anciens caches ecrits avant la conversion de format ou un globe
+        // generique WebView2 ne doivent pas bloquer une nouvelle tentative.
         if (File.Exists(originPath) &&
             (DateTimeOffset.Now - File.GetLastWriteTimeUtc(originPath)).TotalHours < 24 &&
-            IsValidPngFile(originPath))
+            FaviconQuality.IsUsablePngFile(originPath))
         {
             _faviconCache[address] = originPath;
             _faviconCache[OriginOf(address)] = originPath;
@@ -493,11 +471,16 @@ public sealed partial class MainWindow
             using var ras = await core.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png);
             if (ras is not null && ras.Size > 0)
             {
-                Directory.CreateDirectory(_profile.FaviconsDir);
                 using var stream = ras.AsStreamForRead();
-                await using var file = File.Create(originPath);
-                await stream.CopyToAsync(file);
-                saved = true;
+                using var memory = new MemoryStream();
+                await stream.CopyToAsync(memory);
+                var png = memory.ToArray();
+                if (FaviconQuality.IsUsablePng(png))
+                {
+                    Directory.CreateDirectory(_profile.FaviconsDir);
+                    await File.WriteAllBytesAsync(originPath, png);
+                    saved = true;
+                }
             }
         }
         catch (Exception ex)
@@ -511,7 +494,7 @@ public sealed partial class MainWindow
             saved = await DownloadFaviconFallbackAsync(core, address, originPath);
         }
 
-        if (!saved || !File.Exists(originPath) || new FileInfo(originPath).Length == 0) return;
+        if (!saved || !FaviconQuality.IsUsablePngFile(originPath)) return;
 
         _faviconCache[address] = originPath;
         _faviconCache[OriginOf(address)] = originPath;
@@ -577,7 +560,7 @@ public sealed partial class MainWindow
                 // réalité des octets ICO que les contrôles Image peuvent refuser
                 // d'afficher (ex. allocine.fr, favicon .ico multi-résolution).
                 var png = await FaviconImageConverter.ToPngAsync(bytes);
-                if (png is null) continue;
+                if (png is null || !FaviconQuality.IsUsablePng(png)) continue;
 
                 Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
                 await File.WriteAllBytesAsync(outputPath, png);
@@ -829,7 +812,7 @@ public sealed partial class MainWindow
 
     private static FrameworkElement TabIconElement(BrowserTabState tab, double size)
     {
-        if (!string.IsNullOrWhiteSpace(tab.IconPath) && File.Exists(tab.IconPath))
+        if (!string.IsNullOrWhiteSpace(tab.IconPath) && FaviconQuality.IsUsablePngFile(tab.IconPath))
         {
             return new Image
             {

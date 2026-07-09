@@ -51,7 +51,7 @@ public sealed partial class MainWindow
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var iconPngPath = Path.Combine(_profile.FaviconsDir, $"{HashOrigin(app.Url)}.png");
-        FrameworkElement icon = File.Exists(iconPngPath)
+        FrameworkElement icon = FaviconQuality.IsUsablePngFile(iconPngPath)
             ? new Image
             {
                 Source = new BitmapImage(new Uri(iconPngPath)),
@@ -272,7 +272,8 @@ public sealed partial class MainWindow
 
         try
         {
-            if (!string.IsNullOrWhiteSpace(tab.IconPath) && File.Exists(tab.IconPath))
+            if (!string.IsNullOrWhiteSpace(tab.IconPath) &&
+                FaviconQuality.IsUsablePngFile(tab.IconPath))
             {
                 Directory.CreateDirectory(_profile.WebAppIconsDir);
                 var pngBytes = await File.ReadAllBytesAsync(tab.IconPath);
@@ -323,9 +324,7 @@ public sealed partial class MainWindow
         app.ShortcutFileName = fileName;
 
         var exePath = Path.Combine(AppContext.BaseDirectory, "PulseBrowser.WinUI.exe");
-        var iconPath = string.IsNullOrWhiteSpace(app.IconFile)
-            ? null
-            : Path.Combine(_profile.WebAppIconsDir, app.IconFile);
+        var iconPath = ResolveShortcutIconPath(app);
         var description = $"{app.Title} (application Pulse)";
 
         var startMenuPath = Path.Combine(ShellShortcut.StartMenuAppsFolder(), fileName);
@@ -339,6 +338,43 @@ public sealed partial class MainWindow
 
         app.HasDesktopShortcut = wantDesktop;
         _webApps.Upsert(app);
+    }
+
+    private void RepairInvalidWebAppIconsAndShortcuts()
+    {
+        foreach (var app in _webApps.All())
+        {
+            if (string.IsNullOrWhiteSpace(app.IconFile)) continue;
+
+            var customIcon = Path.Combine(_profile.WebAppIconsDir, app.IconFile);
+            if (FaviconQuality.IsUsablePngBackedIcoFile(customIcon)) continue;
+
+            try { File.Delete(customIcon); } catch { }
+            app.IconFile = null;
+            _webApps.Upsert(app);
+
+            try
+            {
+                InstallShortcutsForApp(app, app.HasDesktopShortcut);
+                WinUiRuntimeTrace.Write($"Web app generic icon repaired: {app.Id}");
+            }
+            catch (Exception ex)
+            {
+                WinUiRuntimeTrace.Write($"Web app icon repair shortcut skipped: {ex.GetType().Name}");
+            }
+        }
+    }
+
+    private string? ResolveShortcutIconPath(PulseWebApp app)
+    {
+        if (!string.IsNullOrWhiteSpace(app.IconFile))
+        {
+            var custom = Path.Combine(_profile.WebAppIconsDir, app.IconFile);
+            if (FaviconQuality.IsUsablePngBackedIcoFile(custom)) return custom;
+        }
+
+        var fallback = Path.Combine(AppContext.BaseDirectory, "Assets", "PulseBrowser.ico");
+        return File.Exists(fallback) ? fallback : null;
     }
 
     private static string SanitizeShortcutFileName(string title, string id)
