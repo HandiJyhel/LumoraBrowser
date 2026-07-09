@@ -333,6 +333,9 @@ public sealed partial class MainWindow
         }
 
         UpdateTab(tab, title, address, updateHeaderOnly: true);
+        // La barre d'adresse suit l'URL web réelle ; sur la page d'accueil (source
+        // "about:blank"), on garde l'adresse logique de l'onglet (pulse://accueil).
+        SyncActiveAddressBar(tab, BookmarkStore.IsWebUrl(address) ? address : tab.Address);
         _ = CaptureFaviconForTabAsync(tab);
 
         // Réinitialisation AVANT OfferAutoFill : c'est elle qui ré-affiche la barre
@@ -409,8 +412,20 @@ public sealed partial class MainWindow
         var address = tab.View?.Source?.ToString();
         if (!string.IsNullOrWhiteSpace(address) && BookmarkStore.IsWebUrl(address))
         {
-            UpdateTab(tab, DisplayTitle(address), address, updateHeaderOnly: !IsActiveView(tab.View));
+            UpdateTab(tab, DisplayTitle(address), address, updateHeaderOnly: true);
+            SyncActiveAddressBar(tab, address);
         }
+    }
+
+    // Fait suivre la barre d'adresse à l'URL réelle de l'onglet ACTIF. Point de
+    // synchronisation unique appelé à chaque changement de source ou fin de navigation
+    // (redirections et clics compris). Ne réécrit PAS la barre pendant que l'utilisateur
+    // la modifie, pour ne pas écraser sa saisie.
+    private void SyncActiveAddressBar(BrowserTabState tab, string address)
+    {
+        if (!IsActiveView(tab.View) || string.IsNullOrWhiteSpace(address)) return;
+        if (AddressBox.FocusState != FocusState.Unfocused) return;
+        if (AddressBox.Text != address) AddressBox.Text = address;
     }
 
     private async Task CaptureFaviconForTabAsync(BrowserTabState tab)
