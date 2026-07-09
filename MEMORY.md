@@ -1754,3 +1754,23 @@ Troisième demande de la session : un « lecteur vidéo flottant » évoqué en 
 - Session menée en enchaînant les paliers 0.46.0-dev (sessions expliquées), 0.47.0-dev (applications web) et celui-ci sans pause de validation manuelle intermédiaire, à la demande explicite de l'utilisateur — vérification manuelle groupée des trois paliers prévue ensuite par l'utilisateur lui-même.
 
 **Version :** `0.48.0-dev`.
+
+## 2026-07-09 — 0.48.1-dev
+
+Retour utilisateur après vérification manuelle des trois paliers précédents : certains favoris (ex. allocine.fr) n'affichent jamais leur icône même en cliquant dessus, et confirmation demandée que les icônes des applications web (0.47.0-dev) sont bien récupérées.
+
+### Correction favicons
+- Investigation en conditions réelles : `allocine.fr` sert son favicon via un vrai fichier `.ico` (`https://assets.allocine.fr/favicon/allocine.ico`, signature ICO confirmée), pas un PNG.
+- Cause trouvée : `DownloadFaviconFallbackAsync` (repli utilisé quand `GetFaviconAsync` échoue) enregistrait les octets téléchargés tels quels sous un nom `.png`, sans conversion — un fichier `.ico` nommé `.png` pouvant être refusé par les contrôles `Image` WinUI. Le cache « réutiliser si < 24h » aggravait le problème en bloquant toute nouvelle tentative pendant 24h, y compris en recliquant sur le favori.
+- `FaviconImageConverter.cs` (nouveau) : conversion en PNG réel via `Windows.Graphics.Imaging` (WIC, déjà embarqué dans Windows, aucune dépendance ajoutée), garde la plus grande frame d'un `.ico` multi-résolution.
+- `CaptureFaviconForTabAsync` : le cache de réutilisation vérifie maintenant la signature PNG du fichier existant (`IsValidPngFile`) — un fichier corrompu par l'ancien code se corrige dès la prochaine visite/clic, sans attendre 24h.
+- **Effet de bord positif** : ce correctif répare aussi silencieusement la génération d'icône des raccourcis d'application web (`IcoWriter.WrapPngAsIco`, 0.47.0-dev), qui échouait pour ces mêmes sites faute d'un PNG valide en entrée — confirmation à l'utilisateur que « oui, c'était fait », et maintenant plus robuste.
+- Vérification hors application (avant modification du code produit) : téléchargement du vrai `allocine.ico` et conversion via un projet jetable référençant `FaviconImageConverter.cs` — sortie PNG valide, image inspectée visuellement (logo Allociné correctement rendu, pas un fichier corrompu).
+- Ajout de `docs/FAVICON_FORMAT_FIX_0_48_1.md` et `logs/2026-07-09-favicon-format-fix-0-48-1.md`.
+
+### Vérification
+- `dotnet test` : 94/94 verts (pas de nouvelle classe pure testable pour ce correctif — dépendance à l'API WinRT `Windows.Graphics.Imaging`, non compilable dans le projet de tests autonome `net8.0-windows`).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Lancement court : fenêtre `Pulse Browser 0.48.1-dev` répondante.
+
+**Version :** `0.48.1-dev`.
