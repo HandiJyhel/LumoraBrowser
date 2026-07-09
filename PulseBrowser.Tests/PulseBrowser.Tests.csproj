@@ -51,6 +51,8 @@
     <Compile Include="..\PulseBrowser.WinUI\WebApps\WebAppUrlPolicy.cs" Link="Product\WebAppUrlPolicy.cs" />
     <Compile Include="..\PulseBrowser.WinUI\WebApps\IcoWriter.cs" Link="Product\IcoWriter.cs" />
     <Compile Include="..\PulseBrowser.WinUI\FaviconQuality.cs" Link="Product\FaviconQuality.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Credentials\CredentialCsv.cs" Link="Product\CredentialCsv.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\NewTabMarkup.cs" Link="Product\NewTabMarkup.cs" />
     <EmbeddedResource Include="..\PulseBrowser.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 

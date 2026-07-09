@@ -1,4 +1,3 @@
-using System.Net;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using Microsoft.Web.WebView2.Core;
@@ -1021,7 +1020,7 @@ public sealed partial class MainWindow
           <div class="brand">
             <div class="mark">
               <div class="logo-icon">P</div>
-              <div class="logo-name">{{HtmlText(_uiSettings.NewTabTitle)}}</div>
+              <div class="logo-name">{{NewTabMarkup.HtmlText(_uiSettings.NewTabTitle)}}</div>
             </div>
             <div class="accent-line"></div>
           </div>
@@ -1040,7 +1039,7 @@ public sealed partial class MainWindow
           if(!value)return;
           const web=/^https?:\/\//i.test(value);
           const host=/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(value) || /^localhost(:\d+)?(\/.*)?$/i.test(value);
-          const search='{{JsString(SearchUrlTemplate())}}'.replace('%s', encodeURIComponent(value));
+          const search='{{NewTabMarkup.JsString(SearchUrlTemplate())}}'.replace('%s', encodeURIComponent(value));
           location.href=web?value:(host?'https://'+value:search);
         }
         function pulseMessage(payload){
@@ -1079,11 +1078,11 @@ public sealed partial class MainWindow
         for (var i = 0; i < shortcuts.Count; i++)
         {
             var shortcut = shortcuts[i];
-            var title = HtmlText(shortcut.Title);
-            var url = HtmlAttribute(NormalizeShortcutUrl(shortcut.Url));
-            var initial = HtmlText(ShortcutInitial(shortcut.Title));
-            var jsTitle = JsString(shortcut.Title);
-            var jsUrl = JsString(NormalizeShortcutUrl(shortcut.Url));
+            var title = NewTabMarkup.HtmlText(shortcut.Title);
+            var url = NewTabMarkup.HtmlAttribute(NewTabMarkup.NormalizeShortcutUrl(shortcut.Url));
+            var initial = NewTabMarkup.HtmlText(NewTabMarkup.ShortcutInitial(shortcut.Title));
+            var jsTitle = NewTabMarkup.JsString(shortcut.Title);
+            var jsUrl = NewTabMarkup.JsString(NewTabMarkup.NormalizeShortcutUrl(shortcut.Url));
             html.AppendLine($"""
             <div class="shortcut-card">
               <a class="shortcut-link" href="{url}" title="{url}">
@@ -1110,23 +1109,6 @@ public sealed partial class MainWindow
         return html.ToString();
     }
 
-    private static string NormalizeShortcutUrl(string url)
-    {
-        var value = url.Trim();
-        if (value.StartsWith("pulse://", StringComparison.OrdinalIgnoreCase) ||
-            value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            return value;
-
-        return "https://" + value;
-    }
-
-    private static string ShortcutInitial(string title)
-    {
-        var trimmed = title.Trim();
-        return string.IsNullOrWhiteSpace(trimmed) ? "•" : trimmed[..1].ToUpperInvariant();
-    }
-
     private string SearchUrlTemplate() => _uiSettings.SearchEngine switch
     {
         "duckduckgo" => "https://duckduckgo.com/?q=%s",
@@ -1134,15 +1116,6 @@ public sealed partial class MainWindow
         "bing" => "https://www.bing.com/search?q=%s",
         _ => "https://www.google.com/search?q=%s"
     };
-
-    private static string HtmlText(string? value) =>
-        WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(value) ? "Pulse" : value.Trim());
-
-    private static string HtmlAttribute(string value) =>
-        WebUtility.HtmlEncode(value);
-
-    private static string JsString(string value) =>
-        value.Replace("\\", "\\\\").Replace("'", "\\'");
 
     private BrowserTabState? CurrentTab()
     {

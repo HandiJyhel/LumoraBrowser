@@ -182,7 +182,7 @@ public sealed partial class MainWindow
         if (result != ContentDialogResult.Primary) return null;
 
         var cleanTitle = titleBox.Text.Trim();
-        var cleanUrl = NormalizeShortcutUrl(urlBox.Text);
+        var cleanUrl = NewTabMarkup.NormalizeShortcutUrl(urlBox.Text);
         if (string.IsNullOrWhiteSpace(cleanTitle) || string.IsNullOrWhiteSpace(cleanUrl))
         {
             StatusText.Text = "Nom ou adresse manquant.";
@@ -487,8 +487,8 @@ public sealed partial class MainWindow
         sb.AppendLine("name,url,username,password");
         foreach (var c in items)
             sb.AppendLine(string.Join(',',
-                CsvEscape(OriginOf(c.Origin)), CsvEscape(c.Origin),
-                CsvEscape(c.Username), CsvEscape(c.Password)));
+                CredentialCsv.Escape(OriginOf(c.Origin)), CredentialCsv.Escape(c.Origin),
+                CredentialCsv.Escape(c.Username), CredentialCsv.Escape(c.Password)));
 
         await Windows.Storage.FileIO.WriteTextAsync(file, sb.ToString());
         StatusText.Text = $"Export termine : {items.Count} identifiant(s) vers {file.Name}.";
@@ -512,7 +512,7 @@ public sealed partial class MainWindow
         try
         {
             var text = await Windows.Storage.FileIO.ReadTextAsync(file);
-            var items = ParseCredentialCsv(text);
+            var items = CredentialCsv.Parse(text);
             if (items.Count == 0) { StatusText.Text = "Aucun identifiant reconnu dans ce fichier."; return; }
             var n = _passwordManager.ImportClear(items);
             RefreshVaultPanel();
@@ -522,74 +522,6 @@ public sealed partial class MainWindow
         {
             StatusText.Text = $"Erreur d'import : {ex.Message}";
         }
-    }
-
-    // Parse un CSV Chrome/Firefox : repère les colonnes url/username/password par en-tête.
-    private static List<(string origin, string username, string password)> ParseCredentialCsv(string text)
-    {
-        var result = new List<(string, string, string)>();
-        var lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        if (lines.Length < 2) return result;
-
-        var header = SplitCsvLine(lines[0]).Select(h => h.Trim().ToLowerInvariant()).ToList();
-        int urlIdx  = header.FindIndex(h => h is "url" or "login_uri" or "website" or "site");
-        int userIdx = header.FindIndex(h => h is "username" or "login" or "login_username" or "email");
-        int passIdx = header.FindIndex(h => h is "password" or "login_password");
-        if (urlIdx < 0 || passIdx < 0) return result;
-
-        for (var i = 1; i < lines.Length; i++)
-        {
-            if (string.IsNullOrWhiteSpace(lines[i])) continue;
-            var cols = SplitCsvLine(lines[i]);
-            if (cols.Count <= Math.Max(urlIdx, passIdx)) continue;
-            var url  = cols[urlIdx].Trim();
-            var user = userIdx >= 0 && userIdx < cols.Count ? cols[userIdx].Trim() : string.Empty;
-            var pass = cols[passIdx];
-            if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(pass)) continue;
-            result.Add((NormalizeImportOrigin(url), user, pass));
-        }
-        return result;
-    }
-
-    private static string NormalizeImportOrigin(string url)
-    {
-        try { var u = new Uri(url); return $"{u.Scheme}://{u.Host}"; }
-        catch { return url; }
-    }
-
-    private static List<string> SplitCsvLine(string line)
-    {
-        var fields = new List<string>();
-        var sb = new System.Text.StringBuilder();
-        var inQuotes = false;
-        for (var i = 0; i < line.Length; i++)
-        {
-            var ch = line[i];
-            if (inQuotes)
-            {
-                if (ch == '"')
-                {
-                    if (i + 1 < line.Length && line[i + 1] == '"') { sb.Append('"'); i++; }
-                    else inQuotes = false;
-                }
-                else sb.Append(ch);
-            }
-            else
-            {
-                if (ch == '"') inQuotes = true;
-                else if (ch == ',') { fields.Add(sb.ToString()); sb.Clear(); }
-                else sb.Append(ch);
-            }
-        }
-        fields.Add(sb.ToString());
-        return fields;
-    }
-
-    private static string CsvEscape(string value)
-    {
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
-        return value;
     }
 
     private void RefreshVaultPanel()
