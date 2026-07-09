@@ -1774,3 +1774,29 @@ Retour utilisateur après vérification manuelle des trois paliers précédents 
 - Lancement court : fenêtre `Pulse Browser 0.48.1-dev` répondante.
 
 **Version :** `0.48.1-dev`.
+
+## 2026-07-09 — 0.48.2-dev
+
+Retour utilisateur : « j'avais défini une icône propre à l'application, pourquoi elle n'apparaît plus ? ».
+
+### Diagnostic (pas de régression de code)
+- Journal de démarrage (`PULSE_BROWSER_TRACE_STARTUP=1`) : `ApplyAppIcon()` s'exécute sans exception.
+- Icône réellement appliquée à la fenêtre en cours d'exécution, extraite via `WM_GETICON` (Win32) sur le process réel : tache orange floue, méconnaissable.
+- Icône embarquée dans l'exe (`<ApplicationIcon>`), extraite via `System.Drawing.Icon.ExtractAssociatedIcon` sur une copie fraîche du binaire (pour écarter tout cache d'icône Shell Windows) : même tache floue.
+- Le fichier source `Assets/PulseBrowser.ico` à sa taille native (256×256) montre bien le tourbillon Pulse net et reconnaissable. Extrait à 16×16 : la même tache floue.
+- Cause : `scripts/generate-app-icon.ps1` dessinait le même motif détaillé (traits fins, courbes, petit point d'accent) à toutes les tailles, mis à l'échelle linéairement — jamais vérifié visuellement à la taille réelle d'affichage depuis son introduction en 0.44.1-dev. Un motif pensé pour 1024px devient illisible une fois ses traits réduits à moins d'un pixel de large.
+
+### Correction
+- `scripts/generate-app-icon.ps1` : rendu simplifié pour les tailles ≤ 48px (16/24/32/48) — épaisseur des traits grossie proportionnellement (facteur ×3, pas un plancher absolu), bordure/surbrillance/petit point d'accent retirés, point central agrandi. Rendu détaillé inchangé pour 64/128/256px.
+- Choix utilisateur (question posée) : simplifier le tourbillon pour le petit format plutôt que de basculer sur la tuile « P » utilisée ailleurs dans l'app.
+- Itération : un premier essai avec un plancher absolu (« au moins 96px effectifs ») rendait l'épaisseur identique à 16 et 48px, écrasant le petit format — remplacé par un facteur proportionnel qui grossit sans aplatir la progression entre tailles.
+- Ajout de `docs/APP_ICON_LEGIBILITY_FIX_0_48_2.md` et `logs/2026-07-09-app-icon-legibility-0-48-2.md`.
+
+### Vérification
+- Extraction et inspection visuelle de chaque taille générée (16 à 256px) avant et après : 32/48/64/128/256 nets et reconnaissables. 16/24 restent limités par la physique du pixel (anneau + point central + fond carré ne tiennent pas en détail dans 256 pixels) — limite reconnue et documentée, pas corrigible par un simple réglage d'épaisseur.
+- Icône réellement appliquée à la fenêtre en direct et icône embarquée dans l'exe toutes deux re-vérifiées après reconstruction (même méthode qu'au diagnostic) : anneau orange/charcoal net et reconnaissable.
+- `dotnet test` : 94/94 verts (aucun changement de logique C#, uniquement le script de génération d'assets et les fichiers `.ico`/`.png` régénérés).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Lancement court : fenêtre `Pulse Browser 0.48.2-dev` répondante.
+
+**Version :** `0.48.2-dev`.

@@ -10,7 +10,7 @@ $resolvedOutput = Join-Path (Get-Location) $OutputDir
 New-Item -ItemType Directory -Force -Path $resolvedOutput | Out-Null
 
 function New-IconBitmap {
-    param([int]$Size)
+    param([int]$Size, [bool]$Simplified = $false)
 
     $bitmap = New-Object System.Drawing.Bitmap($Size, $Size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
@@ -21,6 +21,14 @@ function New-IconBitmap {
 
     $scale = $Size / 1024.0
     function S([double]$value) { return [single]($value * $scale) }
+
+    # Les traits fins mis à l'échelle linéairement (proportionnels à $Size) deviennent
+    # une tache floue en dessous d'environ 64px (barre des tâches, barre de titre,
+    # Alt+Tab). En rendu simplifié, l'épaisseur des traits est grossie proportionnellement
+    # (facteur fixe, pas un plancher absolu : 16px reste plus fin que 48px) pour rester
+    # lisible, tandis que les détails fins (surbrillance, petit point d'accent) sont retirés.
+    $strokeScale = if ($Simplified) { ($Size * 3.0) / 1024.0 } else { $scale }
+    function Sw([double]$value) { return [single]($value * $strokeScale) }
 
     $rect = New-Object System.Drawing.RectangleF((S 72), (S 72), (S 880), (S 880))
     $radius = S 180
@@ -39,36 +47,45 @@ function New-IconBitmap {
     )
     $graphics.FillPath($tileBrush, $path)
 
-    $borderPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(210, 255, 255, 250), (S 12))
-    $graphics.DrawPath($borderPen, $path)
+    if (-not $Simplified) {
+        $borderPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(210, 255, 255, 250), (S 12))
+        $graphics.DrawPath($borderPen, $path)
+    }
 
     $orangePath = New-Object System.Drawing.Drawing2D.GraphicsPath
     $orangePath.AddBezier((S 330), (S 385), (S 510), (S 195), (S 785), (S 240), (S 808), (S 470))
     $orangePath.AddBezier((S 808), (S 470), (S 830), (S 700), (S 610), (S 720), (S 478), (S 704))
     $orangePath.AddBezier((S 478), (S 704), (S 440), (S 700), (S 435), (S 745), (S 462), (S 770))
 
-    $orangePen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 225, 120, 24), (S 70))
+    $orangePen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 225, 120, 24), (Sw 70))
     $orangePen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
     $orangePen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
     $orangePen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
     $graphics.DrawPath($orangePen, $orangePath)
 
-    $highlightPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(110, 255, 187, 79), (S 22))
-    $highlightPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $highlightPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $graphics.DrawBezier($highlightPen, (S 360), (S 360), (S 520), (S 220), (S 720), (S 245), (S 780), (S 340))
+    if (-not $Simplified) {
+        $highlightPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(110, 255, 187, 79), (S 22))
+        $highlightPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $highlightPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $graphics.DrawBezier($highlightPen, (S 360), (S 360), (S 520), (S 220), (S 720), (S 245), (S 780), (S 340))
+    }
 
     $charcoalPath = New-Object System.Drawing.Drawing2D.GraphicsPath
     $charcoalPath.AddBezier((S 360), (S 398), (S 215), (S 560), (S 295), (S 735), (S 486), (S 792))
     $charcoalPath.AddBezier((S 486), (S 792), (S 620), (S 835), (S 770), (S 745), (S 835), (S 560))
 
-    $charcoalPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 34, 33, 31), (S 38))
+    $charcoalPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 34, 33, 31), (Sw 38))
     $charcoalPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
     $charcoalPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
     $charcoalPen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
     $graphics.DrawPath($charcoalPen, $charcoalPath)
 
-    $dotRect = New-Object System.Drawing.RectangleF((S 456), (S 434), (S 118), (S 118))
+    # En rendu simplifié, le point central est agrandi (via Sw) pour rester un ancrage
+    # visuel net une fois les autres détails fins retirés.
+    $dotSize = if ($Simplified) { Sw 160 } else { S 118 }
+    $dotCenterX = (S 456) + (S 118) / 2
+    $dotCenterY = (S 434) + (S 118) / 2
+    $dotRect = New-Object System.Drawing.RectangleF(($dotCenterX - $dotSize / 2), ($dotCenterY - $dotSize / 2), $dotSize, $dotSize)
     $dotBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
         $dotRect,
         [System.Drawing.Color]::FromArgb(255, 255, 169, 45),
@@ -77,9 +94,11 @@ function New-IconBitmap {
     )
     $graphics.FillEllipse($dotBrush, $dotRect)
 
-    $endpointRect = New-Object System.Drawing.RectangleF((S 760), (S 234), (S 74), (S 74))
-    $endpointBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 238, 119, 18))
-    $graphics.FillEllipse($endpointBrush, $endpointRect)
+    if (-not $Simplified) {
+        $endpointRect = New-Object System.Drawing.RectangleF((S 760), (S 234), (S 74), (S 74))
+        $endpointBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 238, 119, 18))
+        $graphics.FillEllipse($endpointBrush, $endpointRect)
+    }
 
     $graphics.Dispose()
     return $bitmap
@@ -139,9 +158,12 @@ Save-Png -Bitmap $source -Path $sourcePath
 $source.Dispose()
 
 $sizes = @(256, 128, 64, 48, 32, 24, 16)
+# En dessous de 64px, le dessin détaillé devient une tache floue (barre des tâches,
+# barre de titre, Alt+Tab) : rendu simplifié pour ces tailles.
+$simplifiedMaxSize = 48
 $pngImages = New-Object System.Collections.Generic.List[byte[]]
 foreach ($size in $sizes) {
-    $bitmap = New-IconBitmap -Size $size
+    $bitmap = New-IconBitmap -Size $size -Simplified:($size -le $simplifiedMaxSize)
     $memory = New-Object System.IO.MemoryStream
     $bitmap.Save($memory, [System.Drawing.Imaging.ImageFormat]::Png)
     $pngImages.Add($memory.ToArray())
