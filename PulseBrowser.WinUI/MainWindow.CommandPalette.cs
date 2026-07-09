@@ -180,6 +180,8 @@ public sealed partial class MainWindow
             () => WebAppsMenu_Click(this, new RoutedEventArgs())), 81);
         Add(new("Commande", "Installer comme application", "Epingle la page active dans sa propre fenetre", "\uE710",
             () => InstallAppMenu_Click(this, new RoutedEventArgs())), 79);
+        Add(new("Commande", "Detacher la video", "Picture-in-Picture pour la video active de la page", "\uE8B9",
+            () => DetachVideoMenu_Click(this, new RoutedEventArgs())), 77);
         Add(new("Commande", "Cles d'acces", "Ouvre les passkeys locales connues", "\uE8D7",
             () => PasskeysMenu_Click(this, new RoutedEventArgs())), 80);
         Add(new("Commande", "Ajouter aux favoris", "Ajoute la page active a la barre des favoris", "\uE734",

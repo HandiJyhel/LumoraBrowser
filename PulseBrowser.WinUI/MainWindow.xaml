@@ -101,6 +101,7 @@
                         <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
                         <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
                         <MenuFlyoutItem Text="Installer comme application" Click="InstallAppMenu_Click" />
+                        <MenuFlyoutItem Text="Detacher la video (Picture-in-Picture)" Click="DetachVideoMenu_Click" />
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
                         <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />
@@ -138,6 +139,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -235,8 +237,15 @@
                     Click="CompactModeButton_Click">
                 <SymbolIcon Symbol="FullScreen" />
             </Button>
-            <Button x:Name="NavigationMenuButton"
+            <Button x:Name="DetachVideoButton"
                     Grid.Column="10"
+                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Detacher la video (Picture-in-Picture)"
+                    Click="DetachVideoMenu_Click">
+                <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+            </Button>
+            <Button x:Name="NavigationMenuButton"
+                    Grid.Column="11"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Menu Pulse">
                 <SymbolIcon Symbol="More" />
@@ -251,6 +260,7 @@
                         <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
                         <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
                         <MenuFlyoutItem Text="Installer comme application" Click="InstallAppMenu_Click" />
+                        <MenuFlyoutItem Text="Detacher la video (Picture-in-Picture)" Click="DetachVideoMenu_Click" />
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
                         <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />

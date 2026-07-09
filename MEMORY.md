@@ -1735,3 +1735,22 @@ Deuxième demande de la session : reprendre la fonctionnalité « Créer un racc
 - Non vérifié manuellement dans cette session : le parcours complet clic-à-clic (installer une vraie page depuis l'UI, ouvrir depuis un raccourci Menu Démarrer réel) — reste à valider par l'utilisateur, comme convenu pour cette session (vérification groupée en fin de session, palier par palier).
 
 **Version :** `0.47.0-dev`.
+
+## 2026-07-09 — 0.48.0-dev
+
+Troisième demande de la session : un « lecteur vidéo flottant » évoqué en aparté par l'utilisateur. Recherche explicite dans MEMORY.md/docs/logs avant implémentation : aucune trace d'une proposition antérieure précise. Traité comme du Picture-in-Picture standard — interprétation la plus probable, présentée et confirmée avant codage.
+
+### Picture-in-Picture
+- `MainWindow.PictureInPicture.cs` (nouveau) : action strictement à la demande, aucun script en tâche de fond sur les pages visitées. Script JS asynchrone exécuté via `CoreWebView2.ExecuteScriptAsync` : cible la vidéo en lecture en priorité, sinon la plus grande vidéo du document, appelle `requestPictureInPicture()` en attendant la promesse — un rejet du moteur remonte tel quel en barre de statut (pas de faux succès masqué).
+- UI : bouton dédié `DetachVideoButton` dans la barre de navigation (nouvelle 12e colonne du `NavigationToolbar`, `NavigationMenuButton` décalé en conséquence), entrée dans les deux menus Pulse existants, entrée dans la palette `Ctrl+K`.
+- Limite documentée et **non vérifiée interactivement dans cette session** (pas d'outillage d'automatisation UI disponible) : vidéo dans un iframe cross-origin inaccessible au script ; `requestPictureInPicture()` exige normalement un geste utilisateur côté page, dont la propagation depuis un clic WinUI vers le script injecté par WebView2 n'a pas été confirmée sur une vraie page vidéo — à valider par l'utilisateur.
+- Aucune nouvelle classe pure : logique entièrement côté script JS à la demande, dans la continuité des moniteurs identifiants/paiement/passkeys déjà présents (non unitairement testables par nature).
+- Ajout de `docs/PICTURE_IN_PICTURE_0_48.md` et `logs/2026-07-09-picture-in-picture-0-48.md`.
+
+### Vérification
+- `dotnet test` : 94/94 verts (inchangé, aucune nouvelle logique pure pour ce palier).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Lancement court : fenêtre `Pulse Browser 0.48.0-dev` répondante.
+- Session menée en enchaînant les paliers 0.46.0-dev (sessions expliquées), 0.47.0-dev (applications web) et celui-ci sans pause de validation manuelle intermédiaire, à la demande explicite de l'utilisateur — vérification manuelle groupée des trois paliers prévue ensuite par l'utilisateur lui-même.
+
+**Version :** `0.48.0-dev`.
