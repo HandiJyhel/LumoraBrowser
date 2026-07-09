@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
+using PulseBrowser.WinUI.Sessions;
 
 namespace PulseBrowser.WinUI;
 
@@ -41,18 +42,33 @@ public sealed partial class MainWindow
                 await core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.AllSite);
                 StatusText.Text = "Sessions de la visite precedente purgees.";
                 WinUiRuntimeTrace.Write("Startup session purge: all site data cleared");
+                ExplainSessionPurgeOnce();
                 return;
             }
 
             var removed = await DeleteUntrustedCookiesAsync(core);
             StatusText.Text = $"Sessions purgees ({removed} cookie(s)), sites de confiance conserves.";
             WinUiRuntimeTrace.Write($"Startup session purge: {removed} cookies removed");
+            if (removed > 0) ExplainSessionPurgeOnce();
         }
         catch (Exception ex)
         {
             WinUiRuntimeTrace.Write($"Startup session purge skipped: {ex.GetType().Name}");
         }
     }
+
+    // Explique la purge une seule fois dans la vie du profil : InfoBar discrète,
+    // jamais republiée automatiquement une fois vue.
+    private void ExplainSessionPurgeOnce()
+    {
+        if (_uiSettings.SessionPurgeExplained) return;
+        _uiSettings.SessionPurgeExplained = true;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        SessionPurgeInfoBar.IsOpen = true;
+    }
+
+    private void SessionPurgeInfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args) =>
+        SessionPurgeInfoBar.IsOpen = false;
 
     // Supprime les cookies hors sites de confiance. Si onlyRootDomain est fourni,
     // supprime au contraire uniquement les cookies de ce domaine racine (action
@@ -222,6 +238,9 @@ public sealed partial class MainWindow
         {
             if (!IsTrustedSessionSite(rootDomain))
                 _uiSettings.TrustedSessionSites.Add(rootDomain);
+            // L'utilisateur change d'avis : un refus antérieur au login n'a plus lieu d'être.
+            _uiSettings.SessionKeepDeclinedSites.RemoveAll(
+                d => string.Equals(d, rootDomain, StringComparison.OrdinalIgnoreCase));
         }
         else
         {
@@ -233,6 +252,45 @@ public sealed partial class MainWindow
         StatusText.Text = trusted
             ? $"{rootDomain} : session conservee au demarrage."
             : $"{rootDomain} : session purgee au prochain demarrage.";
+    }
+
+    // ── Proposition « Rester connecté ? » au login détecté ────────────────────
+
+    private string? _pendingSessionKeepRoot;
+
+    private void MaybeOfferSessionKeep(string origin)
+    {
+        var root = RootDomainOf(origin);
+        if (!SessionKeepAdvisor.ShouldOfferKeepSession(
+                _uiSettings.SessionPurgeEnabled,
+                _uiSettings.TrustedSessionSites,
+                _uiSettings.SessionKeepDeclinedSites,
+                root))
+        {
+            return;
+        }
+
+        _pendingSessionKeepRoot = root;
+        SessionKeepText.Text = $"Rester connecte a {root} apres la fermeture de Pulse Browser ?";
+        SessionKeepBar.Visibility = Visibility.Visible;
+    }
+
+    private void SessionKeepAccept_Click(object sender, RoutedEventArgs e)
+    {
+        SessionKeepBar.Visibility = Visibility.Collapsed;
+        if (_pendingSessionKeepRoot is not { } root) return;
+        _pendingSessionKeepRoot = null;
+        SetTrustedSessionSite(root, trusted: true);
+    }
+
+    private void SessionKeepDismiss_Click(object sender, RoutedEventArgs e)
+    {
+        SessionKeepBar.Visibility = Visibility.Collapsed;
+        if (_pendingSessionKeepRoot is not { } root) return;
+        _pendingSessionKeepRoot = null;
+        if (!_uiSettings.SessionKeepDeclinedSites.Contains(root, StringComparer.OrdinalIgnoreCase))
+            _uiSettings.SessionKeepDeclinedSites.Add(root);
+        _uiSettings.Save(_profile.UiSettingsFile);
     }
 
     private async Task ForgetSessionSiteAsync(string rootDomain)

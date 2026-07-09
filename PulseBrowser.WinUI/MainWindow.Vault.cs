@@ -19,6 +19,10 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode) return;
 
+        // Un login réussi est le bon moment pour proposer de garder la session,
+        // indépendamment de l'offre d'enregistrement du mot de passe ci-dessous.
+        DispatcherQueue.TryEnqueue(() => MaybeOfferSessionKeep(capture.Origin));
+
         var offer = _passwordManagerInteraction.BuildSaveOffer(capture);
         if (offer is null) return;
 

@@ -1683,5 +1683,30 @@ Deuxième chantier du `Go` utilisateur : le portefeuille numérique local (moyen
 - `dotnet test` : 75/75 verts (61 + 14 nouveaux `WalletTests` : Luhn, réseau, masquage, expiration, round-trip GCM disque, verrouillage, upsert par Id, suppression persistante, rétro-compat sans champ `cards`, récupération par clé de secours, numéro jamais en clair dans le fichier).
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
 - Ajout de `docs/WALLET_0_45.md` et `logs/2026-07-09-wallet-0-45.md`.
+- Reprise finale Codex après le chantier parallèle : vérification que l'icône d'application du palier `0.44.1-dev` reste bien raccordée dans `PulseBrowser.WinUI.csproj` (`ApplicationIcon`, copie de `PulseBrowser.ico`) et dans `MainWindow` (`AppWindow.SetIcon`).
+- `build-winui.cmd` relancé après autorisation réseau NuGet : 0 avertissement, 0 erreur.
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 75/75 verts.
+- `run-winui.cmd` : l'application se lance, le processus `PulseBrowser.WinUI` est vivant et répondant. La session automatisée ne remontait pas le titre de fenêtre ; le processus de test a été fermé ensuite pour éviter de verrouiller l'exécutable.
+- `MEMORY.md` mis à jour uniquement après autorisation explicite utilisateur.
 
 **Version :** `0.45.0-dev`.
+
+## 2026-07-09 — 0.46.0-dev
+
+Retour utilisateur : perte de connexion Google constatée à chaque fermeture de Pulse Browser. Diagnostic : la purge des sessions au démarrage (`SessionPurgeEnabled`, active par défaut depuis `0.10.0-dev`) supprimait les cookies non listés en sites de confiance, y compris Google — fonction que l'utilisateur avait lui-même oublié avoir demandée, faute d'explication au bon moment. Décision utilisateur après discussion : garder la purge active par défaut (différenciateur vie privée), la rendre compréhensible et pilotable plutôt que de l'inverser.
+
+### Sessions éphémères expliquées
+- Nouvelle proposition au moment du login : quand un formulaire de connexion est capturé et que la purge est active, une barre `SessionKeepBar` demande « Rester connecté a `<domaine>` apres la fermeture de Pulse Browser ? ». Accepter ajoute le domaine aux sites de confiance ; refuser le mémorise dans `SessionKeepDeclinedSites` pour ne plus le redemander a chaque connexion. Revenir sur un refus via *Sites connectés* nettoie automatiquement la liste des refus.
+- Logique de décision isolée dans `Sessions/SessionKeepAdvisor.cs` (classe pure, testée) : ne propose jamais si la purge est désactivée, si le site est déjà de confiance, ou déjà refusé.
+- InfoBar `SessionPurgeInfoBar` affichée une seule fois dans la vie du profil, a la première purge réelle (au moins un cookie supprimé), avec lien direct vers *Sites connectés*. Flag `SessionPurgeExplained` empêche toute réapparition automatique ensuite.
+- Libellé du toggle *Sessions éphémères* (`Paramètres > Confidentialité`) mis a jour pour mentionner cette proposition.
+- `Models/UiSettings.cs` : nouveaux champs `SessionPurgeExplained` et `SessionKeepDeclinedSites`, rétro-compatibles avec les profils existants.
+- `MainWindow.xaml` : restructuration des lignes de `BrowserPanel` pour accueillir l'InfoBar et la nouvelle barre, sans changer le comportement des barres existantes (identifiants, auto-remplissage, portefeuille).
+- Ajout de `docs/SESSION_KEEP_PROMPT_0_46.md` et `logs/2026-07-09-session-keep-prompt-0-46.md`.
+
+### Vérification
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` : 80/80 verts (75 existants + 5 nouveaux `SessionKeepAdvisorTests`).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Lancement court de `PulseBrowser.WinUI.exe` : fenêtre `Pulse Browser 0.46.0-dev`, processus vivant et répondant, arrêté ensuite pour ne pas verrouiller l'exécutable.
+
+**Version :** `0.46.0-dev`.

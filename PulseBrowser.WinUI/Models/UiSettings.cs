@@ -63,6 +63,12 @@ internal sealed class UiSettings
     // sauf pour les domaines racines listés comme sites de confiance.
     public bool SessionPurgeEnabled { get; set; } = true;
     public List<string> TrustedSessionSites { get; set; } = new();
+    // Vrai dès qu'une purge réelle a été expliquée une première fois à l'utilisateur
+    // (InfoBar affichée une seule fois, jamais republiée automatiquement ensuite).
+    public bool SessionPurgeExplained { get; set; }
+    // Domaines racines pour lesquels l'utilisateur a refusé la proposition « Rester
+    // connecté ? » au login : on ne le lui repropose plus à chaque connexion.
+    public List<string> SessionKeepDeclinedSites { get; set; } = new();
 
     public static UiSettings Default() => new();
 

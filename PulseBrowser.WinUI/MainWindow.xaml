@@ -361,11 +361,24 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
+                <!-- InfoBar affichée une seule fois, la première fois qu'une purge de
+                     sessions a réellement lieu, pour expliquer le comportement. -->
+                <InfoBar x:Name="SessionPurgeInfoBar" Grid.Row="0" Severity="Informational"
+                         IsOpen="False" Title="Sessions de la visite precedente nettoyees"
+                         Message="Les sites que vous n'avez pas marques comme sites de confiance repartent a zero a chaque demarrage de Pulse Browser."
+                         Closed="SessionPurgeInfoBar_Closed">
+                    <InfoBar.ActionButton>
+                        <Button Content="Gerer les sites connectes" Click="SessionsManageLink_Click" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
                 <!-- Barre de proposition d'enregistrement d'identifiants -->
-                <Border x:Name="CredentialSaveBar" Grid.Row="0" Visibility="Collapsed"
+                <Border x:Name="CredentialSaveBar" Grid.Row="1" Visibility="Collapsed"
                         Background="{ThemeResource LayerFillColorDefaultBrush}"
                         BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
                         Padding="10,6">
@@ -384,7 +397,7 @@
                 </Border>
 
                 <!-- Barre de proposition de remplissage automatique -->
-                <Border x:Name="AutoFillBar" Grid.Row="1" Visibility="Collapsed"
+                <Border x:Name="AutoFillBar" Grid.Row="2" Visibility="Collapsed"
                         Background="{ThemeResource LayerFillColorDefaultBrush}"
                         BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
                         Padding="10,6">
@@ -405,7 +418,7 @@
                 <!-- Barre de proposition de remplissage d'une carte du portefeuille.
                      Remplissage UNIQUEMENT sur clic : jamais de pré-remplissage silencieux
                      (un script de page ne doit pas pouvoir aspirer la carte). -->
-                <Border x:Name="WalletFillBar" Grid.Row="2" Visibility="Collapsed"
+                <Border x:Name="WalletFillBar" Grid.Row="3" Visibility="Collapsed"
                         Background="{ThemeResource LayerFillColorDefaultBrush}"
                         BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
                         Padding="10,6">
@@ -423,7 +436,27 @@
                     </Grid>
                 </Border>
 
-                <Grid x:Name="BrowserHost" Grid.Row="3" />
+                <!-- Barre proposée après un login détecté, quand les sessions éphémères
+                     sont actives et que le site n'est pas déjà connu (confiance ou refus). -->
+                <Border x:Name="SessionKeepBar" Grid.Row="4" Visibility="Collapsed"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <SymbolIcon Grid.Column="0" Symbol="Keyboard" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SessionKeepText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button x:Name="SessionKeepAccept" Grid.Column="2" Content="Conserver la session" Click="SessionKeepAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SessionKeepDismiss" Grid.Column="3" Content="Non merci" Click="SessionKeepDismiss_Click" Style="{StaticResource PulseCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <Grid x:Name="BrowserHost" Grid.Row="5" />
             </Grid>
 
             <Grid x:Name="BookmarksPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
@@ -900,7 +933,7 @@
                             <!-- Sessions éphémères -->
                             <TextBlock Text="Sessions ephemeres" FontWeight="SemiBold" />
                             <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12"
-                                       Text="A chaque demarrage, Pulse Browser purge les cookies et sessions de la visite precedente : les sites ne se souviennent de vous que si vous l'avez decide. Les sites de confiance (geres dans Outils > Sites connectes) conservent leur session. Le coffre de mots de passe n'est jamais concerne et l'auto-remplissage prend le relais sur les pages de connexion." />
+                                       Text="A chaque demarrage, Pulse Browser purge les cookies et sessions de la visite precedente : les sites ne se souviennent de vous que si vous l'avez decide. Quand vous vous connectez a un site pour la premiere fois, Pulse vous propose de le marquer comme site de confiance pour rester connecte apres fermeture. Les sites de confiance (geres dans Outils > Sites connectes) conservent leur session. Le coffre de mots de passe n'est jamais concerne et l'auto-remplissage prend le relais sur les pages de connexion." />
                             <ToggleSwitch x:Name="SessionPurgeSwitch"
                                          Header="Purger les sessions au demarrage"
                                          Toggled="SessionPurgeSwitch_Toggled" />

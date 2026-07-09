@@ -46,6 +46,7 @@
     <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerDecision.cs" Link="Product\PasswordManagerDecision.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerService.cs" Link="Product\PasswordManagerService.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PasswordManager\PasswordManagerInteractionService.cs" Link="Product\PasswordManagerInteractionService.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Sessions\SessionKeepAdvisor.cs" Link="Product\SessionKeepAdvisor.cs" />
     <EmbeddedResource Include="..\PulseBrowser.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 
