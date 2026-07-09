@@ -33,7 +33,7 @@ namespace PulseBrowser.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.42.0-dev";
+    private const string Version = "0.43.0-dev";
     private const double VerticalTabsCompactWidth = 50;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;

@@ -1562,8 +1562,7 @@ Suite au `go` utilisateur, reprise de trois points d'ergonomie inspires de Zen m
 Suite au `Go` utilisateur, mise en place du prochain chantier prioritaire sans empiler de fonctions inutiles : le multi-utilisateur local dans `PulseBrowser.WinUI`.
 
 - Ajout de `ActiveProfileId` dans `PulseConfig`.
-- Ajout de `PulseProfilePaths.ProfilesRoot`, `ForProfileId`, `FromDirectory` et `NormalizeProfileId` pour separer les dossiers de profil locaux.
-- Ajout de `PulseProfileEntry` et `PulseProfileRegistry` pour decouvrir les profils locaux existants, conserver le profil personnalise actif et creer des identifiants de profil propres.
+- Ajentifiants de profil propres.
 - Ajout d'un selecteur de profil dans l'overlay de connexion quand plusieurs profils sont disponibles.
 - Ajout de la creation d'un autre profil depuis le selecteur et depuis `Parametres > Profil`.
 - Les nouveaux profils locaux sont stockes sous `%LOCALAPPDATA%\PulseBrowser\profiles\<id>`.
@@ -1575,3 +1574,50 @@ Suite au `Go` utilisateur, mise en place du prochain chantier prioritaire sans e
 - Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.42.0-dev`, processus repondant, fermeture du processus de test.
 
 **Version :** `0.42.0-dev`.
+
+## 2026-07-09 — 0.43.0-dev
+
+Audit complet demande par l'utilisateur (fonctionnel, securite, proprete du code), suivi d'un durcissement securite, d'une reorganisation, de la mise en place d'une suite de tests automatises, et de corrections issues des tests manuels de l'utilisateur. Travail mene par petits lots, chaque lot valide par build (0/0) et par `dotnet test`, avec commit dedie.
+
+### Filet de securite et audit
+- `git init` : le dossier `.git` existait mais etait VIDE (aucun controle de version avant cette session). Commit initial de l'etat complet.
+- Ajout de `.gitignore` : exclusion de `target/` (8.8 Go d'artefacts Rust), `bin/`, `obj/`, `artifacts/`, logs, profils WebView2. Depot ramene a ~1 Mo.
+- Rapport d'audit livre (inventaire fonctionnel, findings securite, qualite de code) sous forme d'artifact HTML.
+
+### Durcissement crypto
+- `VaultStore` : blob du coffre migre de AES-256-CBC (non authentifie) vers AES-256-GCM authentifie. Lecture des coffres CBC existants conservee via les marqueurs d'en-tete `data_cipher` / `recovery_data_cipher` ; migration automatique en GCM au premier enregistrement.
+- `PulseBackup` : format `.pulsebackup` v2 en Argon2id + AES-256-GCM ; import des sauvegardes v1 (PBKDF2 100k / CBC) conserve.
+- `UserProfile` : gate de connexion PBKDF2 100k -> 600k (recommandation OWASP), avec un compteur d'iterations stocke PAR secret pour ouvrir les profils existants sans re-hachage force (pas de verrouillage).
+- Fallback favicon soumis au moteur de confidentialite (`PrivacyEngine.IsBlocked`, sans effet de bord sur les compteurs).
+
+### Reorganisation (neutre pour le comportement, verifiee par build)
+- Prototype Rust/CEF historique (`src/`, `Cargo.toml`, `Cargo.lock`, `target/`) deplace dans `archive/rust-cef-prototype/`. `.gitignore` ajuste (`target/` non ancre).
+- `PulseModels.cs` (1521 lignes, 27 types) eclate en 9 fichiers par domaine : `Models/{Bookmarks,Profiles,ProfilePaths,UserProfile,UiSettings,Tabs,History,Downloads,Passkeys}.cs`, `Storage/PulseFile.cs`, `VaultCredential.cs`.
+- Classes pures sorties des fichiers UI pour etre testables : `WinUiRuntimeTrace.cs` (hors `App.xaml.cs`), `Models/UserProfile.cs` et `Models/ProfilePaths.cs` (hors `Profiles.cs`). Usings de `VaultCredential.cs` et `PulseFile.cs` reduits au strict necessaire.
+- Code mort supprime (`VaultStore.HasPinUnlock`, `HasRecoveryUnlock`). Normalisation d'origine centralisee sur `PublicSuffixService.OriginOf`. `catch` silencieux du coffre (Load/Save) traces via `WinUiRuntimeTrace`.
+
+### Tests automatises
+- Nouveau projet `PulseBrowser.Tests` en `net8.0` AUTONOME : il ne reference PAS l'application WinUI (le packaging PRI/MSIX de WinUI 3 casse `dotnet test`) mais COMPILE directement les classes pures du produit via `<Compile Include>`. PSL embarquee.
+- 51 tests xUnit executables partout (CLI et CI) via `dotnet test` : `VaultStore` (round-trip GCM, PIN, cle de recuperation, tombstones, plus fixture d'un coffre CBC herite verrouillant la migration CBC->GCM), `UserProfile` (PBKDF2 600k et migration par compteur), `PulseBackup` (v2 + mauvais mot de passe), `PublicSuffixService`, `PasswordGenerator`, `FilterParser`, et la logique de proposition d'enregistrement (`BuildSaveOffer`).
+- IMPORTANT : ne pas remettre de `ProjectReference` du projet de test vers l'app (recasserait `dotnet test`).
+
+### Renforcements alignes marche
+- Verrouillage REEL du coffre a l'expiration de session : `SessionTimer_Tick` appelle `_vault.Lock()` (purge la cle en memoire, avant c'etait un simple ecran de connexion par-dessus). Delai par defaut passe de 0 (jamais) a 10 min pour les nouveaux profils.
+- Presse-papiers : la copie d'un secret est exclue de l'historique et de la synchro cloud (`SetContentWithOptions`) et effacee automatiquement apres 30 s (`CopySecretToClipboard`).
+- `HttpsEnforcerModule.IsLocal` : ajout de la plage privee RFC1918 `172.16.0.0/12`.
+- Generateur de mots de passe crypto-sur (`Credentials/PasswordGenerator.cs`, `RandomNumberGenerator`, sans caracteres ambigus) cable dans le dialogue d'ajout d'identifiant.
+
+### Corrections issues des tests manuels utilisateur
+- Filet HTTPS-Only : quand une promotion http->https echoue (site sans HTTPS), un dialogue propose de continuer en HTTP ; l'hote est alors autorise en HTTP pour la session (`HttpsEnforcerModule.AllowHttp`).
+- Barre d'adresse : elle suit desormais l'URL reelle de l'onglet actif (redirections et clics compris) via un point de synchronisation unique `SyncActiveAddressBar`, avec garde-fou (pas de reecriture pendant que l'utilisateur edite la barre). Bug prealable : elle restait figee sur `pulse://accueil`.
+- Contenu web opaque : suppression de l'alpha applique a TOUTE la fenetre (`SetLayeredWindowAttributes`) qui rendait le contenu web translucide (le bureau transparaissait a travers les pages). La translucidite ne vient plus que du backdrop Mica/Acrylic (chrome uniquement). Curseur d'intensite de transparence retire (devenu sans effet).
+- Badge `Ctrl+K` colle au milieu de l'ecran supprime : desactivation de l'infobulle automatique de l'accelerateur clavier porte par la racine (`KeyboardAcceleratorPlacementMode.Hidden`), qui restait affichee car le WebView2 avale la sortie du pointeur.
+- Bloqueur : `FilterParser` respecte maintenant l'option `$domain=`. Il l'ignorait, transformant une regle site-specifique (ex. `||lh3.googleusercontent.com^$domain=site-pirate`) en blocage GLOBAL du CDN legitime -> avatars Google et autres contenus casses (reponse 200 vide). Les regles `$domain=` sont ignorees plutot qu'appliquees globalement.
+- Coffre : proposition d'enregistrement d'identifiant meme sans nom d'utilisateur capture (Option A, standard du marche), l'utilisateur completant le nom depuis le coffre. Texte de la barre adapte quand l'identifiant est vide.
+
+### Verification
+- Build MSBuild x64 Debug : 0 erreur, 0 avertissement a chaque lot.
+- `dotnet test` : 51/51 verts.
+- Points de controle visuels/comportementaux confirmes par l'utilisateur : contenu opaque, badge Ctrl+K disparu, avatar Google revenu, navigation normale intacte.
+
+**Version :** `0.43.0-dev`.
