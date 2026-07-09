@@ -1830,3 +1830,24 @@ Retour utilisateur : l'icone Pulse validee n'apparaissait plus pour une fenetre 
 - Le raccourci Menu Demarrer `Connexion comptes Google - a8356f11.lnk` pointe maintenant son icone vers `Assets\PulseBrowser.ico`.
 
 **Version :** `0.48.3-dev`.
+
+## 2026-07-09 — audit honnete + corrections doc/tests
+
+Retour utilisateur : demande d'un avis honnete sur le projet, puis « il faut corriger ce qui va pas tout de suite ».
+
+### Constats de l'audit
+- Ecart entre `AGENTS.md` (stack cible Rust+CEF, WebView2 « pont temporaire ») et la realite (tout le developpement actif est en C#/WinUI/WebView2 depuis des dizaines de versions, prototype Rust/CEF archive sans travail en cours).
+- Couverture de tests trompeuse : « 75/98 tests verts » ne couvre que les classes pures liees au projet de test (pas de `ProjectReference` vers l'app, cf. contrainte connue). Toute la logique dans `MainWindow.*.cs` (~8000 lignes, la majorite de la logique produit) etait non testee, y compris du code sensible (parsing CSV d'identifiants, echappement HTML/JS de la page nouvel onglet).
+- Fichiers `MainWindow.*.cs` tres volumineux (`Navigation.cs` 1214 lignes, `Vault.cs` 1113, `Profile.cs` 911, `Bookmarks.cs` 882) : refactor de fond identifie mais volontairement PAS fait dans cette session (risque trop eleve sans filet de tests, choix utilisateur : doc + tests d'abord).
+
+### Corrections appliquees
+- `AGENTS.md` : section stack reecrite pour decrire la realite (C#/WinUI/WebView2 actif), Rust/CEF requalifie en ambition initiale archivee et non planifiee (commit `28575e2`).
+- Extraction de logique pure hors de `MainWindow.Vault.cs` et `MainWindow.Navigation.cs` : `Credentials/CredentialCsv.cs` (parse/export CSV identifiants Chrome/Firefox, jusque-la duplique et non teste) et `NewTabMarkup.cs` (echappement HTML/JS des raccourcis nouvel onglet, surface XSS locale si mal fait). Ajout au projet de test via `<Compile Include>` (meme mecanisme que les autres classes pures), 18 tests ajoutes couvrant les cas limites (CSV avec guillemets/virgules, roundtrip escape/split, injection dans onclick/href).
+- **Tests : 116 verts** (98 + 18). `build-winui.cmd` : 0 avertissement, 0 erreur apres le refactor.
+
+### A faire plus tard (pas dans cette session)
+- Le decoupage des `MainWindow.*.cs` (God Class via partial class) reste identifie comme dette mais n'a pas ete attaque : necessite un filet de tests plus large d'abord, et le fichier `MainWindow.Bookmarks.cs`/`Navigation.cs`/`WebApps.cs`/`xaml.cs` avait un travail non commite (fix favicon 0.48.3) au moment de l'audit — commite en premier avant tout refactor pour ne rien melanger.
+
+**Why:** point de reprise sur l'audit et les corrections doc/tests, sans refaire le diagnostic.
+
+**How to apply:** avant de proposer un gros refactor `MainWindow.*`, relire cette entree et demander explicitement un « Go » (regle `AGENTS.md` #1, modification structurante) ; la stack reelle du projet est desormais C#/WinUI/WebView2, ne plus mentionner Rust/CEF comme travail actif.
