@@ -8,11 +8,15 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
 using Windows.System;
+using PulseBrowser.Privacy.HttpsEnforcer;
 
 namespace PulseBrowser.WinUI;
 
 public sealed partial class MainWindow
 {
+    // Moteur (onglet) → URL http d'origine promue en https. Sert à proposer un repli
+    // en HTTP si la version sécurisée échoue (site sans HTTPS).
+    private readonly Dictionary<WebView2, string> _httpsUpgradeOriginals = new();
 
     // ── Onglets ───────────────────────────────────────────────────────────────
 
@@ -165,6 +169,7 @@ public sealed partial class MainWindow
         }
 
         state.View = null;
+        _httpsUpgradeOriginals.Remove(view);
         var core = view.CoreWebView2;
         if (core is not null)
         {
@@ -273,6 +278,14 @@ public sealed partial class MainWindow
         var cleaned = _privacy.CleanUrl(args.Uri);
         if (cleaned is not null && !string.Equals(cleaned, args.Uri, StringComparison.OrdinalIgnoreCase))
         {
+            // Promotion HTTP→HTTPS : on retient l'URL d'origine pour pouvoir proposer un
+            // repli si la version sécurisée échoue.
+            if (args.Uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                cleaned.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                _httpsUpgradeOriginals[sender] = args.Uri;
+            }
+
             args.Cancel = true;
             DispatcherQueue.TryEnqueue(() => sender.CoreWebView2?.Navigate(cleaned));
             return;
@@ -303,6 +316,15 @@ public sealed partial class MainWindow
         }
 
         var isActive = IsActiveView(sender);
+
+        // Repli HTTPS→HTTP : cette navigation venait d'une promotion http→https. Si elle
+        // échoue, le site ne supporte probablement pas HTTPS → on propose de continuer en HTTP.
+        var wasHttpsUpgrade = _httpsUpgradeOriginals.Remove(sender, out var originalHttpUrl);
+        if (!args.IsSuccess && wasHttpsUpgrade && isActive && originalHttpUrl is not null)
+        {
+            _ = PromptHttpsFallbackAsync(tab, originalHttpUrl);
+        }
+
         var address = sender.Source?.ToString() ?? tab.Address;
         var title = sender.CoreWebView2?.DocumentTitle;
         if (string.IsNullOrWhiteSpace(title))
@@ -342,6 +364,34 @@ public sealed partial class MainWindow
             StatusText.Text = args.IsSuccess ? $"Page chargee: {title}" : $"Navigation echouee: {args.WebErrorStatus}";
         }
         UpdatePrivacyUi();
+    }
+
+    // Le forçage HTTPS a échoué : proposer de charger la version HTTP (non chiffrée).
+    // Sur acceptation, l'hôte est autorisé en HTTP pour la session et rechargé tel quel.
+    private async Task PromptHttpsFallbackAsync(BrowserTabState tab, string httpUrl)
+    {
+        if (!Uri.TryCreate(httpUrl, UriKind.Absolute, out var uri))
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = "Connexion non securisee",
+            Content = $"{uri.Host} ne prend pas en charge HTTPS. Continuer en HTTP ? La connexion ne sera pas chiffree.",
+            PrimaryButtonText = "Continuer en HTTP",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = (Content as FrameworkElement)?.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        _privacy.Get<HttpsEnforcerModule>()?.AllowHttp(uri.Host);
+        NavigateTabView(tab, httpUrl);
     }
 
     private void BrowserCore_SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs args)

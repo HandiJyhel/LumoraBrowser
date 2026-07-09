@@ -8,12 +8,21 @@ internal sealed class HttpsEnforcerModule : IPrivacyModule
     public string DisplayName => "Forçage HTTPS";
     public bool IsEnabled { get; set; } = true;
 
+    // Hôtes pour lesquels l'utilisateur a explicitement accepté de continuer en HTTP
+    // (le site ne supporte pas HTTPS). Valable le temps de la session uniquement.
+    private readonly HashSet<string> _allowedHttpHosts = new(StringComparer.OrdinalIgnoreCase);
+
+    public void AllowHttp(string host)
+    {
+        if (!string.IsNullOrWhiteSpace(host)) _allowedHttpHosts.Add(host);
+    }
+
     public string? CleanUrl(string uri)
     {
         if (!uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) return null;
 
         var host = ExtractHost(uri);
-        if (host is null || IsLocal(host)) return null;
+        if (host is null || IsLocal(host) || _allowedHttpHosts.Contains(host)) return null;
 
         return "https://" + uri[7..];
     }
