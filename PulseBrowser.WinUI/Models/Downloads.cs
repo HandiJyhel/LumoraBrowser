@@ -14,17 +14,21 @@ internal sealed class DownloadEntry
 {
     private long _totalBytes;
     private long _receivedBytes;
-    private string _state = "En cours";
+    private string _state = DownloadHistoryEntry.InProgress;
 
+    public string Id { get; } = DownloadHistoryEntry.NewId();
     public string FileName { get; }
+    public string SourceUri { get; }
     public string SourceDomain { get; }
     public string LocalPath { get; }
-    public string State => _state;
+    public string State => ToHistoryEntry().StateLabel;
     public long TotalBytes => _totalBytes;
     public long ReceivedBytes => _receivedBytes;
-    public bool IsCompleted => _state == "Termine";
-    public bool IsFailed => _state is "Echec" or "Annule";
+    public bool IsCompleted => _state == DownloadHistoryEntry.Completed;
+    public bool IsFailed => _state is DownloadHistoryEntry.Failed or DownloadHistoryEntry.Canceled;
     public double ProgressPercent => _totalBytes > 0 ? (double)_receivedBytes / _totalBytes * 100 : 0;
+    public DateTimeOffset StartedAt { get; } = DateTimeOffset.Now;
+    public DateTimeOffset? CompletedAt { get; private set; }
 
     public event Action? OnChanged;
 
@@ -32,9 +36,8 @@ internal sealed class DownloadEntry
     {
         LocalPath = operation.ResultFilePath;
         FileName = Path.GetFileName(LocalPath);
-        SourceDomain = Uri.TryCreate(operation.Uri, UriKind.Absolute, out var uri)
-            ? uri.Host
-            : operation.Uri;
+        SourceUri = operation.Uri;
+        SourceDomain = DownloadHistoryEntry.SourceDomainFor(operation.Uri);
         _totalBytes = operation.TotalBytesToReceive > 0 ? operation.TotalBytesToReceive : 0;
         _receivedBytes = operation.BytesReceived;
 
@@ -42,10 +45,11 @@ internal sealed class DownloadEntry
         {
             _state = s.State switch
             {
-                CoreWebView2DownloadState.Completed => "Termine",
-                CoreWebView2DownloadState.Interrupted => "Echec",
-                _ => "En cours"
+                CoreWebView2DownloadState.Completed => DownloadHistoryEntry.Completed,
+                CoreWebView2DownloadState.Interrupted => DownloadHistoryEntry.Failed,
+                _ => DownloadHistoryEntry.InProgress
             };
+            CompletedAt = _state == DownloadHistoryEntry.InProgress ? null : DateTimeOffset.Now;
             OnChanged?.Invoke();
         };
         operation.BytesReceivedChanged += (s, _) =>
@@ -55,7 +59,19 @@ internal sealed class DownloadEntry
             OnChanged?.Invoke();
         };
     }
+
+    public DownloadHistoryEntry ToHistoryEntry() =>
+        new(
+            Id,
+            FileName,
+            SourceUri,
+            SourceDomain,
+            LocalPath,
+            _receivedBytes,
+            _totalBytes,
+            _state,
+            StartedAt,
+            CompletedAt);
 }
 
 // ── Coffre local : modèle d'identifiant du coffre vault.pulse ────────────────
-

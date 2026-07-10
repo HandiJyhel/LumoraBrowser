@@ -428,6 +428,54 @@ internal sealed class VaultStore
         return count;
     }
 
+    public int ImportClear(IEnumerable<(string origin, string username, string password, string loginUrl, string label)> items)
+    {
+        if (IsLocked) return 0;
+        var count = 0;
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        foreach (var (origin, username, password, loginUrl, label) in items)
+        {
+            if (string.IsNullOrWhiteSpace(origin) || string.IsNullOrWhiteSpace(password)) continue;
+            if (_header.Deleted.Contains(TombstoneKey(origin, username))) continue;
+
+            var cleanLoginUrl = loginUrl?.Trim() ?? string.Empty;
+            var cleanLabel = label?.Trim() ?? string.Empty;
+            var idx = _credentials.FindIndex(c =>
+                c.Origin.Equals(origin, StringComparison.OrdinalIgnoreCase) &&
+                c.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0)
+            {
+                var old = _credentials[idx];
+                _credentials[idx] = new VaultCredential
+                {
+                    Origin = old.Origin,
+                    Username = old.Username,
+                    Password = password,
+                    Label = string.IsNullOrWhiteSpace(cleanLabel) ? old.Label : cleanLabel,
+                    LoginUrl = string.IsNullOrWhiteSpace(cleanLoginUrl) ? old.LoginUrl : cleanLoginUrl,
+                    CreatedAt = old.CreatedAt,
+                    UpdatedAt = now
+                };
+            }
+            else
+            {
+                _credentials.Add(new VaultCredential
+                {
+                    Origin = origin,
+                    Username = username,
+                    Password = password,
+                    Label = cleanLabel,
+                    LoginUrl = cleanLoginUrl,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+            }
+            count++;
+        }
+        if (count > 0) Save();
+        return count;
+    }
+
     // ── Chargement ────────────────────────────────────────────────────────────
 
     private void Load()

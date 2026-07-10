@@ -115,4 +115,22 @@ public sealed class VaultStoreTests : IDisposable
         Assert.Equal(0, reimported);
         Assert.Empty(vault.ListCredentials());
     }
+
+    [Fact]
+    public void ImportClear_enrichi_conserve_label_et_url_de_connexion()
+    {
+        var vault = new VaultStore(_file);
+        vault.SetMasterPassword("pw");
+
+        var imported = vault.ImportClear(new[]
+        {
+            ("https://account.proton.me", "jyhel@example.com", "secret", "https://account.proton.me/login", "Proton perso")
+        });
+
+        Assert.Equal(1, imported);
+        var cred = Assert.Single(vault.ListCredentials());
+        Assert.Equal("Proton perso", cred.Label);
+        Assert.Equal("https://account.proton.me/login", cred.LoginUrl);
+        Assert.Equal("secret", cred.Password);
+    }
 }

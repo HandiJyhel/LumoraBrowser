@@ -7,19 +7,36 @@
     mc:Ignorable="d"
     Title="Pulse Browser">
 
-    <Grid x:Name="RootShell" Background="#FF22211F">
+    <Grid x:Name="RootShell" Background="#FF1F211F">
         <Grid.Resources>
-            <SolidColorBrush x:Key="PulseAppBackgroundBrush" Color="#FF22211F" />
-            <SolidColorBrush x:Key="PulseChromeSurfaceBrush" Color="#FF262522" />
-            <SolidColorBrush x:Key="PulseChromeSurfaceAltBrush" Color="#FF2D2B28" />
-            <SolidColorBrush x:Key="PulseChromeStrokeBrush" Color="#FF3B3834" />
-            <SolidColorBrush x:Key="PulseChromeStrokeSoftBrush" Color="#FF302E2A" />
-            <SolidColorBrush x:Key="PulseAddressBackgroundBrush" Color="#FF34312D" />
-            <SolidColorBrush x:Key="PulseAddressBorderBrush" Color="#FF514C45" />
-            <SolidColorBrush x:Key="PulseAddressForegroundBrush" Color="#FFF5F1EA" />
-            <SolidColorBrush x:Key="PulseTextMutedBrush" Color="#FFA9A39A" />
+            <SolidColorBrush x:Key="PulseAppBackgroundBrush" Color="#FF1F211F" />
+            <SolidColorBrush x:Key="PulseChromeSurfaceBrush" Color="#FF242521" />
+            <SolidColorBrush x:Key="PulseChromeSurfaceAltBrush" Color="#FF2C2D28" />
+            <SolidColorBrush x:Key="PulseChromeSurfaceRaisedBrush" Color="#FF33342D" />
+            <SolidColorBrush x:Key="PulseChromeStrokeBrush" Color="#FF45453C" />
+            <SolidColorBrush x:Key="PulseChromeStrokeSoftBrush" Color="#FF30322D" />
+            <SolidColorBrush x:Key="PulseAddressBackgroundBrush" Color="#FF36372F" />
+            <SolidColorBrush x:Key="PulseAddressBorderBrush" Color="#FF575648" />
+            <SolidColorBrush x:Key="PulseAddressForegroundBrush" Color="#FFFFF8ED" />
+            <SolidColorBrush x:Key="PulseTextMutedBrush" Color="#FFB5AEA2" />
             <SolidColorBrush x:Key="PulseAccentBrush" Color="#FFE17818" />
             <SolidColorBrush x:Key="PulseAccentSoftBrush" Color="#33E17818" />
+            <SolidColorBrush x:Key="PulseCoolAccentBrush" Color="#FF66D1BE" />
+            <SolidColorBrush x:Key="PulseCoolAccentSoftBrush" Color="#2466D1BE" />
+            <SolidColorBrush x:Key="PulseFocusBrush" Color="#FFFFD95A" />
+            <SolidColorBrush x:Key="PulseFocusInnerBrush" Color="#FF1F211F" />
+            <SolidColorBrush x:Key="PulseInfoSurfaceBrush" Color="#FF2F302A" />
+            <SolidColorBrush x:Key="PulsePanelBackgroundBrush" Color="#FF22231F" />
+            <LinearGradientBrush x:Key="PulseChromeGradientBrush" StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#FF25261F" Offset="0" />
+                <GradientStop Color="#FF2E2D26" Offset="0.62" />
+                <GradientStop Color="#FF24322F" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="PulseIdentityMarkBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FFF08A24" Offset="0" />
+                <GradientStop Color="#FFE17818" Offset="0.58" />
+                <GradientStop Color="#FF66D1BE" Offset="1" />
+            </LinearGradientBrush>
             <Style x:Key="PulseChromeIconButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="32" />
                 <Setter Property="Height" Value="32" />
@@ -27,9 +44,18 @@
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="CornerRadius" Value="7" />
                 <Setter Property="Background" Value="Transparent" />
-                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="{StaticResource PulseChromeStrokeSoftBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Foreground" Value="{StaticResource PulseTextMutedBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource PulseFocusBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource PulseFocusInnerBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
                 <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="PulseChromeAccentIconButtonStyle" TargetType="Button" BasedOn="{StaticResource PulseChromeIconButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource PulseAccentSoftBrush}" />
+                <Setter Property="Foreground" Value="#FFFFF4E2" />
+                <Setter Property="BorderBrush" Value="#55E17818" />
             </Style>
             <Style x:Key="PulseCompactButtonStyle" TargetType="Button">
                 <Setter Property="Height" Value="32" />
@@ -37,6 +63,9 @@
                 <Setter Property="Padding" Value="10,0" />
                 <Setter Property="CornerRadius" Value="7" />
                 <Setter Property="FontSize" Value="12" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource PulseFocusBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource PulseFocusInnerBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
         </Grid.Resources>
@@ -45,7 +74,7 @@
             <RowDefinition Height="0" />
             <RowDefinition x:Name="TopTabsRow" Height="38" />
             <RowDefinition x:Name="NavigationRow" Height="42" />
-            <RowDefinition x:Name="BookmarksRow" Height="28" />
+            <RowDefinition x:Name="BookmarksRow" Height="32" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -76,18 +105,21 @@
             <Button Grid.Column="2"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Nouvel onglet"
+                    AutomationProperties.Name="Nouvel onglet"
                     Click="NewTabMenu_Click">
                 <SymbolIcon Symbol="Add" />
             </Button>
             <Button Grid.Column="3"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Accueil"
+                    AutomationProperties.Name="Accueil"
                     Click="HomeMenu_Click">
                 <SymbolIcon Symbol="Home" />
             </Button>
             <Button x:Name="MainMenuButton"
                     Grid.Column="4"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
+                    AutomationProperties.Name="Menu Pulse"
                     ToolTipService.ToolTip="Menu Pulse">
                 <SymbolIcon Symbol="More" />
                 <Button.Flyout>
@@ -97,6 +129,9 @@
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
                         <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
+                        <MenuFlyoutItem Text="Importer des favoris" Click="ImportMenu_Click" />
+                        <MenuFlyoutItem Text="Mots de passe" Click="VaultMenu_Click" />
+                        <MenuFlyoutItem Text="Importer des mots de passe" Click="ImportPasswordsMenu_Click" />
                         <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
                         <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
                         <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
@@ -120,19 +155,17 @@
             TabCloseRequested="BrowserTabs_TabCloseRequested"
             Tapped="BrowserTabs_Tapped" />
 
-        <Border x:Name="TitleBarDragRegion"
-                Grid.Row="1"
-                Width="180"
-                Height="32"
-                HorizontalAlignment="Right"
+        <Border Grid.Row="1"
+                Height="2"
                 VerticalAlignment="Top"
-                Background="Transparent" />
+                Background="{StaticResource PulseIdentityMarkBrush}"
+                Opacity="0.95" />
 
         <Grid x:Name="NavigationToolbar"
               Grid.Row="2"
               Padding="10,4,10,5"
               ColumnSpacing="4"
-              Background="{StaticResource PulseChromeSurfaceBrush}">
+              Background="{StaticResource PulseChromeGradientBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -148,16 +181,16 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Retour" Click="BackButton_Click">
+            <Button Grid.Column="0" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Retour" AutomationProperties.Name="Retour" Click="BackButton_Click">
                 <SymbolIcon Symbol="Back" />
             </Button>
-            <Button Grid.Column="1" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Avancer" Click="ForwardButton_Click">
+            <Button Grid.Column="1" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Avancer" AutomationProperties.Name="Avancer" Click="ForwardButton_Click">
                 <SymbolIcon Symbol="Forward" />
             </Button>
-            <Button Grid.Column="2" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Recharger" Click="ReloadButton_Click">
+            <Button Grid.Column="2" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Recharger" AutomationProperties.Name="Recharger" Click="ReloadButton_Click">
                 <SymbolIcon Symbol="Refresh" />
             </Button>
-            <Button Grid.Column="3" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Stop" Click="StopButton_Click">
+            <Button Grid.Column="3" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Stop" AutomationProperties.Name="Stop" Click="StopButton_Click">
                 <SymbolIcon Symbol="Cancel" />
             </Button>
             <TextBox
@@ -169,14 +202,19 @@
                 CornerRadius="17"
                 Background="{StaticResource PulseAddressBackgroundBrush}"
                 BorderBrush="{StaticResource PulseAddressBorderBrush}"
+                BorderThickness="1"
                 Foreground="{StaticResource PulseAddressForegroundBrush}"
                 PlaceholderForeground="{StaticResource PulseTextMutedBrush}"
+                FocusVisualPrimaryBrush="{StaticResource PulseFocusBrush}"
+                FocusVisualSecondaryBrush="{StaticResource PulseFocusInnerBrush}"
+                AutomationProperties.Name="Adresse ou recherche"
                 VerticalAlignment="Center"
                 KeyDown="AddressBox_KeyDown"
                 PlaceholderText="Rechercher ou entrer une adresse" />
             <Button Grid.Column="5"
-                    Style="{StaticResource PulseChromeIconButtonStyle}"
+                    Style="{StaticResource PulseChromeAccentIconButtonStyle}"
                     ToolTipService.ToolTip="Ouvrir l'adresse"
+                    AutomationProperties.Name="Ouvrir l'adresse"
                     Click="GoButton_Click">
                 <SymbolIcon Symbol="Forward" />
             </Button>
@@ -185,6 +223,7 @@
             <Button x:Name="ShieldButton"
                     Grid.Column="6"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
+                    AutomationProperties.Name="Confidentialite du site"
                     ToolTipService.ToolTip="Confidentialite">
                 <FontIcon Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
                 <Button.Flyout>
@@ -221,12 +260,13 @@
                 </Button.Flyout>
             </Button>
 
-            <Button Grid.Column="7" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" Click="AddBookmarkButton_Click">
+            <Button Grid.Column="7" Style="{StaticResource PulseChromeIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" AutomationProperties.Name="Ajouter aux favoris" Click="AddBookmarkButton_Click">
                 <SymbolIcon Symbol="Favorite" />
             </Button>
             <Button Grid.Column="8"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Accueil"
+                    AutomationProperties.Name="Accueil"
                     Click="HomeMenu_Click">
                 <SymbolIcon Symbol="Home" />
             </Button>
@@ -234,6 +274,7 @@
                     Grid.Column="9"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Interface compacte"
+                    AutomationProperties.Name="Interface compacte"
                     Click="CompactModeButton_Click">
                 <SymbolIcon Symbol="FullScreen" />
             </Button>
@@ -241,12 +282,14 @@
                     Grid.Column="10"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Detacher la video (Picture-in-Picture)"
+                    AutomationProperties.Name="Detacher la video"
                     Click="DetachVideoMenu_Click">
                 <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
             </Button>
             <Button x:Name="NavigationMenuButton"
                     Grid.Column="11"
                     Style="{StaticResource PulseChromeIconButtonStyle}"
+                    AutomationProperties.Name="Menu Pulse"
                     ToolTipService.ToolTip="Menu Pulse">
                 <SymbolIcon Symbol="More" />
                 <Button.Flyout>
@@ -256,6 +299,9 @@
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
                         <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
+                        <MenuFlyoutItem Text="Importer des favoris" Click="ImportMenu_Click" />
+                        <MenuFlyoutItem Text="Mots de passe" Click="VaultMenu_Click" />
+                        <MenuFlyoutItem Text="Importer des mots de passe" Click="ImportPasswordsMenu_Click" />
                         <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
                         <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
                         <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
@@ -271,9 +317,11 @@
 
         <Grid x:Name="BookmarksBarRow"
               Grid.Row="3"
-              Padding="12,0,10,2"
+              Padding="12,4,10,4"
               ColumnSpacing="6"
-              Background="{StaticResource PulseChromeSurfaceBrush}">
+              BorderThickness="0,1,0,0"
+              BorderBrush="{StaticResource PulseChromeStrokeSoftBrush}"
+              Background="{StaticResource PulseChromeSurfaceAltBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -293,7 +341,7 @@
             <StackPanel x:Name="OtherBookmarksBarHost" Grid.Column="3" Orientation="Horizontal" Spacing="4" />
         </Grid>
 
-        <Grid x:Name="ContentHost" Grid.Row="4">
+        <Grid x:Name="ContentHost" Grid.Row="4" Background="{StaticResource PulseAppBackgroundBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -393,8 +441,8 @@
 
                 <!-- Barre de proposition d'enregistrement d'identifiants -->
                 <Border x:Name="CredentialSaveBar" Grid.Row="1" Visibility="Collapsed"
-                        Background="{ThemeResource LayerFillColorDefaultBrush}"
-                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Background="{StaticResource PulseInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource PulseChromeStrokeBrush}"
                         Padding="10,6">
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
@@ -412,8 +460,8 @@
 
                 <!-- Barre de proposition de remplissage automatique -->
                 <Border x:Name="AutoFillBar" Grid.Row="2" Visibility="Collapsed"
-                        Background="{ThemeResource LayerFillColorDefaultBrush}"
-                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Background="{StaticResource PulseInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource PulseChromeStrokeBrush}"
                         Padding="10,6">
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
@@ -433,8 +481,8 @@
                      Remplissage UNIQUEMENT sur clic : jamais de pré-remplissage silencieux
                      (un script de page ne doit pas pouvoir aspirer la carte). -->
                 <Border x:Name="WalletFillBar" Grid.Row="3" Visibility="Collapsed"
-                        Background="{ThemeResource LayerFillColorDefaultBrush}"
-                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Background="{StaticResource PulseInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource PulseChromeStrokeBrush}"
                         Padding="10,6">
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
@@ -453,8 +501,8 @@
                 <!-- Barre proposée après un login détecté, quand les sessions éphémères
                      sont actives et que le site n'est pas déjà connu (confiance ou refus). -->
                 <Border x:Name="SessionKeepBar" Grid.Row="4" Visibility="Collapsed"
-                        Background="{ThemeResource LayerFillColorDefaultBrush}"
-                        BorderThickness="0,0,0,1" BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Background="{StaticResource PulseInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource PulseChromeStrokeBrush}"
                         Padding="10,6">
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
@@ -592,7 +640,8 @@
             </Grid>
 
             <!-- SettingsPanel : sidebar gauche + contenu à droite -->
-            <Grid x:Name="SettingsPanel" Grid.Column="2" Visibility="Collapsed">
+            <Grid x:Name="SettingsPanel" Grid.Column="2" Visibility="Collapsed"
+                  Background="{StaticResource PulsePanelBackgroundBrush}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="200" />
                     <ColumnDefinition Width="*" />
@@ -601,7 +650,8 @@
                 <!-- Barre de navigation des paramètres -->
                 <Border Grid.Column="0"
                         BorderThickness="0,0,1,0"
-                        BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}">
+                        BorderBrush="{StaticResource PulseChromeStrokeBrush}"
+                        Background="{StaticResource PulseChromeSurfaceBrush}">
                     <StackPanel Padding="12,20,12,12" Spacing="4">
                         <TextBlock Text="Parametres" FontSize="18" FontWeight="SemiBold" Margin="8,0,0,12" />
                         <RadioButton x:Name="SettingsNavNavigation" Content="Navigation"
@@ -669,14 +719,6 @@
                             <ToggleSwitch x:Name="CompactModeHideBookmarksSwitch"
                                           Header="Masquer les favoris en interface compacte"
                                           Toggled="CompactModeHideBookmarksSwitch_Toggled" />
-                            <ComboBox x:Name="WindowBackdropCombo"
-                                      Header="Effet translucide"
-                                      Width="280"
-                                      SelectionChanged="WindowBackdropCombo_SelectionChanged">
-                                <ComboBoxItem Content="Desactive" Tag="solid" />
-                                <ComboBoxItem Content="Mica" Tag="mica" />
-                                <ComboBoxItem Content="Acrylic" Tag="acrylic" />
-                            </ComboBox>
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,8,0,0" />
                             <TextBlock Text="Nouvel onglet" FontSize="18" FontWeight="SemiBold" />
                             <TextBox x:Name="NewTabTitleBox"
@@ -745,6 +787,20 @@
                             </Border>
                             <TextBlock Text="Le mot de passe du coffre se change depuis la section Profil (Changer le mot de passe)."
                                        TextWrapping="Wrap" Opacity="0.6" FontSize="12" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="VaultMenu_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Permissions" />
+                                        <TextBlock Text="Ouvrir les mots de passe" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="ImportPasswordsMenu_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Import" />
+                                        <TextBlock Text="Importer un CSV" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
                                     Margin="0,8,0,0" />
                             <TextBlock Text="Portefeuille" FontWeight="SemiBold" />
@@ -762,12 +818,17 @@
                         <StackPanel x:Name="SettingsSectionProfile" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Profil" FontSize="22" FontWeight="SemiBold" />
                             <TextBlock x:Name="ProfileNameDisplay" Opacity="0.78" />
-                            <Button Content="Changer de profil" Click="OpenProfilePickerFromSettingsButton_Click" />
-                            <Button Content="Creer un autre profil" Click="CreateAnotherProfileFromSettingsButton_Click" />
-                            <Button Content="Changer le nom du profil" Click="ChangeProfileNameButton_Click" />
-                            <Button Content="Changer le mot de passe" Click="ChangeProfilePasswordButton_Click" />
-                            <Button Content="Creer une nouvelle cle de recuperation"
-                                    Click="CreateRecoveryKeyButton_Click" />
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="Changer le nom" Click="ChangeProfileNameButton_Click" />
+                                <Button Grid.Column="1" Content="Changer le mot de passe" Click="ChangeProfilePasswordButton_Click" />
+                                <Button Grid.Column="2" Content="Nouvelle cle de recuperation"
+                                        Click="CreateRecoveryKeyButton_Click" />
+                            </Grid>
                             <ToggleSwitch x:Name="ProfilePinSwitch" Header="Code PIN rapide (6 chiffres)"
                                          Toggled="ProfilePinSwitch_Toggled" />
                             <ComboBox x:Name="SessionTimeoutCombo"
@@ -779,6 +840,22 @@
                                 <ComboBoxItem Content="1 heure" Tag="60" />
                                 <ComboBoxItem Content="5 heures" Tag="300" />
                             </ComboBox>
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                                    Margin="0,8,0,0" />
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Gestion des utilisateurs" FontWeight="SemiBold" />
+                                    <TextBlock Text="Profils utilisateurs locaux detectes sur cet ordinateur." Opacity="0.62" FontSize="12" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Actualiser" Click="RefreshProfilesButton_Click" />
+                                <Button Grid.Column="2" Content="Creer un profil" Click="CreateAnotherProfileFromSettingsButton_Click" />
+                            </Grid>
+                            <StackPanel x:Name="ProfileManagementPanel" Spacing="8" />
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
                                     Margin="0,8,0,0" />
                             <TextBlock Text="Zone de reinitialisation" FontWeight="SemiBold" Opacity="0.72" />
@@ -988,37 +1065,91 @@
                 </ScrollViewer>
             </Grid>
 
-            <Grid x:Name="AboutPanel" Grid.Column="2" Padding="28" Visibility="Collapsed">
-                <ScrollViewer>
-                    <StackPanel Spacing="14" MaxWidth="760">
-                        <TextBlock Text="Pulse Browser" FontSize="30" FontWeight="SemiBold" />
-                        <TextBlock x:Name="AboutVersionText" Opacity="0.72" />
+            <Grid x:Name="AboutPanel" Grid.Column="2" Padding="24" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                        <TextBlock Text="Notre philosophie" FontSize="20" FontWeight="SemiBold" Margin="0,8,0,0" />
-                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
-Internet ne devrait pas être une fenêtre à sens unique. Vous naviguez, mais vous êtes aussi observé, analysé, et monétisé. Pulse Browser part d'un principe différent : vos données vous appartiennent, et elles restent chez vous.
-                        </TextBlock>
-                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
-Pas de synchronisation vers un serveur Pulse. Pas de télémétrie cachée. Pas de profil publicitaire. Vos favoris, votre historique, vos mots de passe : tout reste sur votre machine, chiffré, sous votre contrôle. Si vous éteignez votre ordinateur, vos données ne sont accessibles à personne d'autre.
-                        </TextBlock>
-                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
-Nous pensons qu'un navigateur moderne peut être à la fois simple à utiliser et respectueux de la vie privée. La sécurité ne devrait pas être une contrainte ou un abonnement. Elle devrait être le comportement par défaut.
-                        </TextBlock>
-                        <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22">
-Pulse Browser est en développement actif. Chaque version avance par petits pas solides. Pas de promesses géantes, pas de fonctions à moitié finies. Juste un navigateur construit avec soin, pour durer.
-                        </TextBlock>
+                <StackPanel Grid.Row="0" Spacing="3">
+                    <TextBlock Text="Pulse Browser" FontSize="28" FontWeight="SemiBold" />
+                    <TextBlock x:Name="AboutVersionText" Opacity="0.72" />
+                </StackPanel>
 
-                        <TextBlock Text="Informations techniques" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,0" />
-                        <TextBlock Text="Interface : C# + WinUI 3" />
-                        <TextBlock Text="Moteur web : WebView2 (Chromium)" />
-                        <TextBlock Text="Coeur local : Rust (modules privacy, analyse reseau)" />
-                        <TextBlock Text="Chiffrement : AES-256-CBC / DPAPI (C# pur)" />
-                        <TextBlock Text="Developpeur : H.J." />
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,16,0,14">
+                    <RadioButton x:Name="AboutNavSummary" Content="Résumé" Tag="summary" IsChecked="True" Click="AboutNav_Click" />
+                    <RadioButton x:Name="AboutNavPrivacy" Content="Confidentialité" Tag="privacy" Click="AboutNav_Click" />
+                    <RadioButton x:Name="AboutNavAuthenticity" Content="Authenticité" Tag="authenticity" Click="AboutNav_Click" />
+                    <RadioButton x:Name="AboutNavTechnical" Content="Technique" Tag="technical" Click="AboutNav_Click" />
+                    <RadioButton x:Name="AboutNavProfile" Content="Profil local" Tag="profile" Click="AboutNav_Click" />
+                </StackPanel>
 
-                        <TextBlock Text="Profil local" FontWeight="SemiBold" Margin="0,8,0,0" />
-                        <TextBlock x:Name="AboutProfilePathText" TextWrapping="Wrap" Opacity="0.72" />
-                        <TextBlock Text="Favoris, historique, données de session et informations sensibles sont chiffrés et stockés localement au format .pulse, lisibles uniquement par Pulse Browser." TextWrapping="Wrap" Opacity="0.78" />
-                    </StackPanel>
+                <ScrollViewer Grid.Row="2">
+                    <Grid MaxWidth="820">
+                        <StackPanel x:Name="AboutSectionSummary" Spacing="12">
+                            <TextBlock Text="Résumé" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22"
+                                       Text="Pulse Browser est un navigateur local-first en développement actif. Il vise une navigation simple, moderne et sécurisée, sans envoyer vos données personnelles vers un serveur Pulse." />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.84" LineHeight="22"
+                                       Text="Chaque version avance par petits pas vérifiables : interface, confidentialité, gestion des profils, mots de passe, téléchargements, permissions et maintenant authenticité des builds." />
+                        </StackPanel>
+
+                        <StackPanel x:Name="AboutSectionPrivacy" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Confidentialité" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22"
+                                       Text="Pas de synchronisation vers un serveur Pulse. Pas de télémétrie cachée. Pas de profil publicitaire." />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.84" LineHeight="22"
+                                       Text="Favoris, historique, données de session et informations sensibles restent sur votre machine. La sécurité doit protéger l'utilisateur sans rendre la navigation pénible." />
+                        </StackPanel>
+
+                        <StackPanel x:Name="AboutSectionAuthenticity" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Authenticité du build" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.78" LineHeight="20"
+                                       Text="Pendant le développement, Pulse Browser peut être distribué sans certificat Windows payant. L'authenticité repose alors sur un build propre, une empreinte SHA256 vérifiable et, à terme, une signature open source Sigstore." />
+                            <Grid ColumnSpacing="12" RowSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Canal" Opacity="0.68" />
+                                <TextBlock x:Name="AboutAuthenticityChannelText" Grid.Row="0" Grid.Column="1" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Empreinte SHA256" Opacity="0.68" />
+                                <TextBlock x:Name="AboutAuthenticityShaText" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Signature open source" Opacity="0.68" />
+                                <TextBlock x:Name="AboutAuthenticitySigstoreText" Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Signature Windows" Opacity="0.68" />
+                                <TextBlock x:Name="AboutAuthenticityWindowsText" Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Profil" Opacity="0.68" />
+                                <TextBlock x:Name="AboutAuthenticityProfileText" Grid.Row="4" Grid.Column="1" TextWrapping="Wrap" />
+                            </Grid>
+                            <TextBlock TextWrapping="Wrap" Opacity="0.72" LineHeight="20"
+                                       Text="Si Windows affiche Editeur inconnu, cela signifie que ce build n'a pas encore de signature Authenticode reconnue. Le fichier VERIFICATION.txt fourni avec un build propre permet de comparer l'empreinte du fichier reçu." />
+                        </StackPanel>
+
+                        <StackPanel x:Name="AboutSectionTechnical" Spacing="8" Visibility="Collapsed">
+                            <TextBlock Text="Informations techniques" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="Interface : C# + WinUI 3" />
+                            <TextBlock Text="Moteur web : WebView2 (Chromium)" />
+                            <TextBlock Text="Stockage local : DPAPI + fichiers .pulse" />
+                            <TextBlock Text="Chiffrement : AES-256-GCM + Argon2id" />
+                            <TextBlock Text="Developpeur : H.J." />
+                        </StackPanel>
+
+                        <StackPanel x:Name="AboutSectionProfile" Spacing="10" Visibility="Collapsed">
+                            <TextBlock Text="Profil local" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock x:Name="AboutProfilePathText" TextWrapping="Wrap" Opacity="0.72" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.78" LineHeight="20"
+                                       Text="Ce chemin indique le profil réellement utilisé par l'application. Les installateurs propres doivent démarrer avec un profil vierge dédié, sans reprendre les profils de développement." />
+                        </StackPanel>
+                    </Grid>
                 </ScrollViewer>
             </Grid>
 
@@ -1083,10 +1214,21 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <StackPanel Spacing="4" Margin="0,0,0,16">
-                    <TextBlock Text="Telechargements" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="Fichiers telecharges dans cette session." Opacity="0.68" />
-                </StackPanel>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Telechargements" FontSize="24" FontWeight="SemiBold" />
+                        <TextBlock Text="Historique local des fichiers telecharges." Opacity="0.68" />
+                    </StackPanel>
+                    <Button x:Name="ClearDownloadsButton" Grid.Column="1"
+                            Content="Effacer"
+                            VerticalAlignment="Bottom"
+                            Click="ClearDownloadsButton_Click"
+                            ToolTipService.ToolTip="Effacer l'historique local des telechargements" />
+                </Grid>
                 <ScrollViewer Grid.Row="1">
                     <StackPanel x:Name="DownloadsPanelItems" Spacing="6" />
                 </ScrollViewer>
@@ -1111,7 +1253,7 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                         <TextBlock Text="Comptes locaux stockes dans vault.pulse, chiffre AES-256 avec une cle derivee du mot de passe du profil." Opacity="0.68" />
                     </StackPanel>
                     <Button Grid.Column="1" x:Name="VaultImportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
-                            ToolTipService.ToolTip="Importer depuis un fichier CSV (Chrome, Firefox...)" Click="VaultImportButton_Click">
+                            ToolTipService.ToolTip="Importer des mots de passe : fichier CSV ou navigateur installe (Chrome, Edge, Brave...)" Click="VaultImportButton_Click">
                         <SymbolIcon Symbol="Import" />
                     </Button>
                     <Button Grid.Column="2" x:Name="VaultExportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
@@ -1264,8 +1406,8 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0" Padding="14,12" CornerRadius="8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                                    BorderBrush="{StaticResource PulseChromeStrokeBrush}" BorderThickness="1">
                                 <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
@@ -1276,8 +1418,8 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                             </Border>
 
                             <Border Grid.Column="1" Padding="14,12" CornerRadius="8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                                    BorderBrush="{StaticResource PulseChromeStrokeBrush}" BorderThickness="1">
                                 <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
@@ -1302,8 +1444,8 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0" Padding="14,12" CornerRadius="8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                                    BorderBrush="{StaticResource PulseChromeStrokeBrush}" BorderThickness="1">
                                 <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
@@ -1318,8 +1460,8 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                             </Border>
 
                             <Border Grid.Column="1" Padding="14,12" CornerRadius="8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                                    BorderBrush="{StaticResource PulseChromeStrokeBrush}" BorderThickness="1">
                                 <StackPanel Spacing="10">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <SymbolIcon Symbol="Clock" />
@@ -1333,6 +1475,19 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                                 </StackPanel>
                             </Border>
                         </Grid>
+
+                        <Border Padding="14,12" CornerRadius="8"
+                                Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                                BorderBrush="{StaticResource PulseChromeStrokeBrush}" BorderThickness="1">
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE785;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                                    <TextBlock Text="Permissions" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <TextBlock x:Name="SiteControlPermissionsText" TextWrapping="Wrap" Opacity="0.72" />
+                                <StackPanel x:Name="SiteControlPermissionsPanel" Spacing="8" />
+                            </StackPanel>
+                        </Border>
 
                         <StackPanel x:Name="SiteControlRecentHistoryPanel" Spacing="6" />
                     </StackPanel>
@@ -1373,7 +1528,7 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
             </Grid>
         </Grid>
 
-        <Grid x:Name="StatusBarRow" Grid.Row="5" Visibility="Collapsed" Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <Grid x:Name="StatusBarRow" Grid.Row="5" Visibility="Collapsed" Background="{StaticResource PulseChromeSurfaceAltBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -1382,6 +1537,7 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
             <TextBlock x:Name="StatusText" Grid.Column="0" Padding="10,4"
                        Text="Pulse Browser WinUI 3 initialise." Opacity="0.72"
                        FontSize="12"
+                       AutomationProperties.LiveSetting="Polite"
                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
             <Button x:Name="BackToPageButton" Grid.Column="1" Visibility="Collapsed"
                     Padding="9,1,9,1" Margin="0,2,0,2" FontSize="12"
@@ -1413,8 +1569,8 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                     Margin="0,54,0,0"
                     Padding="14"
                     CornerRadius="8"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                    BorderBrush="{StaticResource PulseChromeStrokeBrush}"
                     BorderThickness="1">
                 <Grid RowSpacing="10">
                     <Grid.RowDefinitions>
@@ -1437,12 +1593,16 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
                         <TextBox x:Name="CommandPaletteSearchBox"
                                  Grid.Column="1"
                                  MinHeight="36"
+                                 FocusVisualPrimaryBrush="{StaticResource PulseFocusBrush}"
+                                 FocusVisualSecondaryBrush="{StaticResource PulseFocusInnerBrush}"
+                                 AutomationProperties.Name="Recherche de commande"
                                  PlaceholderText="Chercher une commande, un onglet, un favori, une page..."
                                  TextChanged="CommandPaletteSearchBox_TextChanged"
                                  KeyDown="CommandPaletteSearchBox_KeyDown" />
                         <Button Grid.Column="2"
                                 Style="{StaticResource PulseChromeIconButtonStyle}"
                                 ToolTipService.ToolTip="Fermer"
+                                AutomationProperties.Name="Fermer la palette de commande"
                                 Click="CommandPaletteCloseButton_Click">
                             <SymbolIcon Symbol="Cancel" />
                         </Button>
@@ -1503,28 +1663,22 @@ Pulse Browser est en développement actif. Chaque version avance par petits pas 
 
         <!-- Overlay de connexion (dernier enfant = au-dessus de tout) -->
         <Grid x:Name="LoginOverlay" Grid.RowSpan="6" Visibility="Collapsed"
-              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+              Background="{StaticResource PulseAppBackgroundBrush}">
             <ScrollViewer HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1" CornerRadius="12"
+                <Border Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                        BorderBrush="{StaticResource PulseChromeStrokeBrush}"
+                        BorderThickness="1" CornerRadius="10"
                         Padding="40,36,40,36" Margin="0,32,0,32">
                     <StackPanel Width="300" Spacing="0">
 
                         <!-- Logo -->
                         <StackPanel Orientation="Horizontal" Spacing="12"
                                     HorizontalAlignment="Center" Margin="0,0,0,28">
-                            <Border Width="40" Height="40" CornerRadius="10">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#E87C1E" Offset="0" />
-                                        <GradientStop Color="#C45A00" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <TextBlock Text="P" FontSize="20" FontWeight="Bold"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
+                            <Border Width="40" Height="40" CornerRadius="10"
+                                    Background="{StaticResource PulseIdentityMarkBrush}">
+                                <Image Source="ms-appx:///Assets/PulseBrowser.png"
+                                       Width="32" Height="32"
+                                       Stretch="Uniform" />
                             </Border>
                             <TextBlock Text="Pulse Browser" FontSize="22" FontWeight="SemiBold"
                                        VerticalAlignment="Center" />
@@ -1741,28 +1895,22 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
 
         <!-- Wizard premier lancement (visible une seule fois apres creation de compte) -->
         <Grid x:Name="SetupWizardOverlay" Grid.RowSpan="6" Visibility="Collapsed"
-              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+              Background="{StaticResource PulseAppBackgroundBrush}">
             <ScrollViewer HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1" CornerRadius="12"
+                <Border Background="{StaticResource PulseChromeSurfaceRaisedBrush}"
+                        BorderBrush="{StaticResource PulseChromeStrokeBrush}"
+                        BorderThickness="1" CornerRadius="10"
                         Padding="40,36,40,36" Margin="0,32,0,32">
                     <StackPanel Width="340" Spacing="0">
 
                         <!-- Logo -->
                         <StackPanel Orientation="Horizontal" Spacing="12"
                                     HorizontalAlignment="Center" Margin="0,0,0,24">
-                            <Border Width="36" Height="36" CornerRadius="9">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#E87C1E" Offset="0" />
-                                        <GradientStop Color="#C45A00" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <TextBlock Text="P" FontSize="18" FontWeight="Bold"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
+                            <Border Width="36" Height="36" CornerRadius="9"
+                                    Background="{StaticResource PulseIdentityMarkBrush}">
+                                <Image Source="ms-appx:///Assets/PulseBrowser.png"
+                                       Width="29" Height="29"
+                                       Stretch="Uniform" />
                             </Border>
                             <TextBlock Text="Pulse Browser" FontSize="20" FontWeight="SemiBold"
                                        VerticalAlignment="Center" />

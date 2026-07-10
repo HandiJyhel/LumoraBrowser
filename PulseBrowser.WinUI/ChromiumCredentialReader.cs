@@ -7,38 +7,50 @@ namespace PulseBrowser.WinUI;
 
 // Pont Chromium → coffre souverain.
 //
-// Le moteur Chromium (WebView2) enregistre les mots de passe de façon fiable dans
-// une base SQLite "Login Data", chiffrés en AES-256-GCM. La clé maître est rangée
-// dans "Local State" (JSON), elle-même protégée par DPAPI (compte Windows courant).
+// Les navigateurs bases sur Chromium (WebView2, mais aussi Chrome, Edge, Brave,
+// Vivaldi, Opera... une fois installes a cote de Pulse) enregistrent les mots de
+// passe dans une base SQLite "Login Data", chiffres en AES-256-GCM. La cle maitre
+// est rangee dans "Local State" (JSON), elle-meme protegee par DPAPI (compte
+// Windows courant) — donc lisible par n'importe quel processus tournant sous ce
+// meme compte, quel que soit le navigateur qui a chiffre a l'origine.
 //
-// Ce lecteur déchiffre ces identifiants pour les importer dans vault.pulse, afin que
-// le coffre de l'utilisateur reflète réellement ses mots de passe.
+// Ce lecteur dechiffre ces identifiants pour les importer dans vault.pulse, afin
+// que le coffre de l'utilisateur reflete reellement ses mots de passe : soit ceux
+// que Chromium aurait enregistres avant la bascule 100% maison (migration interne),
+// soit ceux d'un autre navigateur installe sur la machine (import volontaire,
+// declenche par l'utilisateur depuis le gestionnaire de mots de passe).
 internal static class ChromiumCredentialReader
 {
     // browserDataFolder = valeur de WEBVIEW2_USER_DATA_FOLDER (_profile.BrowserDataDir).
     // Chromium crée un sous-dossier "EBWebView" dedans.
     public static List<(string origin, string username, string password)> Read(string browserDataFolder)
     {
+        var ebDir = Path.Combine(browserDataFolder, "EBWebView");
+        return ReadFrom(Path.Combine(ebDir, "Local State"), Path.Combine(ebDir, "Default", "Login Data"));
+    }
+
+    // Lecture générique : localStatePath porte la clé maître DPAPI, loginDataPath
+    // la base SQLite des identifiants. Utilisé aussi bien pour le magasin interne
+    // (Read ci-dessus) que pour un navigateur externe installé (PasswordImportSource).
+    public static List<(string origin, string username, string password)> ReadFrom(string localStatePath, string loginDataPath)
+    {
         var result = new List<(string, string, string)>();
         try
         {
-            var ebDir      = Path.Combine(browserDataFolder, "EBWebView");
-            var localState = Path.Combine(ebDir, "Local State");
-            var loginData  = Path.Combine(ebDir, "Default", "Login Data");
-            if (!File.Exists(localState) || !File.Exists(loginData)) return result;
+            if (!File.Exists(localStatePath) || !File.Exists(loginDataPath)) return result;
 
-            var key = GetMasterKey(localState);
+            var key = GetMasterKey(localStatePath);
             if (key is null) return result;
 
-            // "Login Data" est ouvert par WebView2 → on travaille sur une copie temporaire.
+            // "Login Data" peut être ouvert par le navigateur → on travaille sur une copie temporaire.
             var tmp = Path.Combine(Path.GetTempPath(), "pulse_login_" + Guid.NewGuid().ToString("N") + ".db");
-            File.Copy(loginData, tmp, true);
+            File.Copy(loginDataPath, tmp, true);
             try
             {
                 using var conn = new SqliteConnection($"Data Source={tmp};Mode=ReadOnly");
                 conn.Open();
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT origin_url, username_value, password_value FROM logins";
+                cmd.CommandText = "SELECT origin_url, username_value, password_value FROM logins WHERE blacklisted_by_user = 0";
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
@@ -55,6 +67,28 @@ internal static class ChromiumCredentialReader
         }
         catch { }
         return result;
+    }
+
+    // Décompte rapide (sans déchiffrement) pour l'affichage de la liste de sources
+    // détectées, avant que l'utilisateur choisisse une source à importer.
+    public static int CountLogins(string loginDataPath)
+    {
+        try
+        {
+            if (!File.Exists(loginDataPath)) return 0;
+            var tmp = Path.Combine(Path.GetTempPath(), "pulse_login_count_" + Guid.NewGuid().ToString("N") + ".db");
+            File.Copy(loginDataPath, tmp, true);
+            try
+            {
+                using var conn = new SqliteConnection($"Data Source={tmp};Mode=ReadOnly");
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM logins WHERE blacklisted_by_user = 0";
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            finally { try { File.Delete(tmp); } catch { } }
+        }
+        catch { return 0; }
     }
 
     private static byte[]? GetMasterKey(string localStatePath)

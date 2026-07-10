@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
@@ -34,7 +35,7 @@ namespace PulseBrowser.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.48.3-dev";
+    private const string Version = "0.55.1-dev";
     private const double VerticalTabsCompactWidth = 50;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -46,6 +47,9 @@ public sealed partial class MainWindow : Window
     private readonly ObservableCollection<BookmarkListItem> _bookmarkItems = new();
     private readonly ObservableCollection<BookmarkListItem> _bookmarkFolderItems = new();
     private readonly List<BrowserTabState> _tabs = new();
+    private readonly List<TabGroup> _tabGroups = new();
+    private int _nextGroupId = 1;
+    private readonly HashSet<int> _collapsedGroupIds = new();
     private readonly List<BrowserImportSource> _importSources = new();
     private readonly Dictionary<string, string> _faviconCache = new(StringComparer.OrdinalIgnoreCase);
     private UiSettings _uiSettings = UiSettings.Default();
@@ -85,6 +89,7 @@ public sealed partial class MainWindow : Window
     private int _pinFailCount;
     private string? _pendingProfileDir;
     private string? _pendingProfileId;
+    private PulseProfilePaths? _profileCreationTarget;
     // Mot de passe de création retenu le temps de finaliser le profil, pour clé
     // le coffre au même mot de passe (couplage session ↔ coffre). Effacé aussitôt.
     private string? _pendingProfilePassword;
@@ -107,6 +112,7 @@ public sealed partial class MainWindow : Window
     private string? _currentPageDomain;
     private bool _suppressShieldToggle;
     private bool _suppressSiteControlTrustToggle;
+    private bool _suppressSitePermissionUi;
     private static readonly System.Net.Http.HttpClient FaviconHttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(5)
@@ -135,9 +141,9 @@ public sealed partial class MainWindow : Window
         _appWindow.Changed += AppWindow_Changed;
         ApplyAppIcon();
         ExtendsContentIntoTitleBar = true;
-        SetTitleBar(TitleBarDragRegion);
         ApplyWindowTitleBarColors();
         ApplyTitleBarSafeArea();
+        RootShell.SizeChanged += (_, _) => UpdateTitleBarDragRegion();
 
         VerticalTabsResizeThumb.PointerEntered += (_, _) => SetCursorSizeWestEast();
         VerticalTabsResizeThumb.PointerExited  += (_, _) => RestoreDefaultCursor();
@@ -170,6 +176,7 @@ public sealed partial class MainWindow : Window
         BookmarkFoldersList.ItemsSource = _bookmarkFolderItems;
         AboutProfilePathText.Text = _profile.ProfileDir;
         AboutVersionText.Text = Version;
+        LoadAboutAuthenticity();
         _uiSettings = UiSettings.Load(_profile.UiSettingsFile, _profile.LegacyUiSettingsFile);
         ApplyUiSettings();
         InitPrivacyEngine();
@@ -178,7 +185,9 @@ public sealed partial class MainWindow : Window
         WinUiRuntimeTrace.Write("Bookmarks loaded");
         ReloadImportSources();
         WinUiRuntimeTrace.Write("Import sources loaded");
-        _historyPanel = new HistoryPanelController(new HistoryStore(_profile.HistoryFile, _profile.LegacyHistoryFile));
+        _historyPanel = new HistoryPanelController(
+            new HistoryStore(_profile.HistoryFile, _profile.LegacyHistoryFile),
+            new DownloadHistoryStore(_profile.DownloadsFile));
         HistoryList.ItemsSource = _historyPanel.Items;
         CommandPaletteList.ItemsSource = _commandPaletteItems;
         WinUiRuntimeTrace.Write("History store loaded");
@@ -233,8 +242,37 @@ public sealed partial class MainWindow : Window
         ShowPanel(BrowserPanel, "Accueil Pulse");
     }
 
-    private void AboutMenu_Click(object sender, RoutedEventArgs e) =>
+    private void AboutMenu_Click(object sender, RoutedEventArgs e)
+    {
+        AboutNavSummary.IsChecked = true;
+        ShowAboutSection("summary");
         ShowPanel(AboutPanel, "A propos de Pulse Browser");
+    }
+
+    private void AboutNav_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton { Tag: string section })
+            ShowAboutSection(section);
+    }
+
+    private void ShowAboutSection(string section)
+    {
+        AboutSectionSummary.Visibility = section == "summary" ? Visibility.Visible : Visibility.Collapsed;
+        AboutSectionPrivacy.Visibility = section == "privacy" ? Visibility.Visible : Visibility.Collapsed;
+        AboutSectionAuthenticity.Visibility = section == "authenticity" ? Visibility.Visible : Visibility.Collapsed;
+        AboutSectionTechnical.Visibility = section == "technical" ? Visibility.Visible : Visibility.Collapsed;
+        AboutSectionProfile.Visibility = section == "profile" ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void LoadAboutAuthenticity()
+    {
+        var info = BuildAuthenticity.Load(AppContext.BaseDirectory, Version);
+        AboutAuthenticityChannelText.Text = info.Channel;
+        AboutAuthenticityShaText.Text = info.Sha256;
+        AboutAuthenticitySigstoreText.Text = info.Sigstore;
+        AboutAuthenticityWindowsText.Text = info.WindowsSignature;
+        AboutAuthenticityProfileText.Text = info.ProfileMode;
+    }
 
     private void SettingsMenu_Click(object sender, RoutedEventArgs e)
     {
@@ -316,6 +354,20 @@ public sealed partial class MainWindow : Window
     private static Windows.UI.Color UiColor(byte r, byte g, byte b, byte a = 255) =>
         new() { A = a, R = r, G = g, B = b };
 
+    private void ApplyPulseControlAccessibility(Control control, string? automationName = null)
+    {
+        control.FocusVisualPrimaryBrush = RootShell.Resources["PulseFocusBrush"] as Brush
+            ?? new SolidColorBrush(UiColor(255, 217, 90));
+        control.FocusVisualSecondaryBrush = RootShell.Resources["PulseFocusInnerBrush"] as Brush
+            ?? new SolidColorBrush(UiColor(31, 33, 31));
+        control.UseSystemFocusVisuals = true;
+
+        if (!string.IsNullOrWhiteSpace(automationName))
+        {
+            AutomationProperties.SetName(control, automationName);
+        }
+    }
+
     private void ApplyAppIcon()
     {
         if (_appWindow is null) return;
@@ -339,8 +391,53 @@ public sealed partial class MainWindow : Window
         var rightInset = _appWindow?.TitleBar.RightInset ?? 138;
         var safeRight = Math.Max(120, rightInset + 12);
         BrowserTabs.Margin = new Thickness(0, 0, safeRight, 0);
-        TitleBarDragRegion.Margin = new Thickness(0, 0, safeRight, 0);
-        TitleBarDragRegion.Width = Math.Max(140, Math.Min(320, safeRight + 36));
+        _titleBarSafeRight = safeRight;
+        UpdateTitleBarDragRegion();
+    }
+
+    private double _titleBarSafeRight = 138;
+
+    // Zone de "drag" du titre : dynamique, calée sur l'espace vide de la barre
+    // d'onglets (après le dernier onglet + un peu de marge pour le bouton "+"),
+    // jusqu'aux boutons système. Sans ça, seule une mince bande fixe était
+    // "draggable" et le double-clic pour maximiser ne marchait presque nulle part
+    // dans la barre d'onglets — contrairement à Chrome/Edge où tout l'espace vide
+    // de la barre d'onglets maximise au double-clic.
+    private void UpdateTitleBarDragRegion()
+    {
+        if (_appWindow?.TitleBar is null || !ExtendsContentIntoTitleBar) return;
+
+        try
+        {
+            var scale = Content?.XamlRoot?.RasterizationScale ?? 1.0;
+            var rowHeight = TopTabsRow.ActualHeight > 0 ? TopTabsRow.ActualHeight : 38;
+            var windowWidth = RootShell.ActualWidth;
+            if (windowWidth <= 0) return;
+
+            double leftEdge = 0;
+            var lastTab = BrowserTabs.TabItems.OfType<TabViewItem>().LastOrDefault();
+            if (lastTab is not null && lastTab.ActualWidth > 0)
+            {
+                var bounds = lastTab.TransformToVisual(RootShell)
+                    .TransformBounds(new Windows.Foundation.Rect(0, 0, lastTab.ActualWidth, lastTab.ActualHeight));
+                leftEdge = bounds.Right;
+            }
+
+            const double addTabButtonReserve = 56; // bouton "+" : jamais recouvert par la zone de drag
+            var dragLeft = Math.Min(leftEdge + addTabButtonReserve, windowWidth - _titleBarSafeRight);
+            var dragRight = Math.Max(dragLeft, windowWidth - _titleBarSafeRight);
+            if (dragRight - dragLeft < 8) return;
+
+            var rect = new RectInt32
+            {
+                X = (int)Math.Round(dragLeft * scale),
+                Y = 0,
+                Width = (int)Math.Round((dragRight - dragLeft) * scale),
+                Height = (int)Math.Round(rowHeight * scale)
+            };
+            _appWindow.TitleBar.SetDragRectangles(new[] { rect });
+        }
+        catch { }
     }
 
     private string NormalizeAddress(string raw)

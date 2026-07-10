@@ -18,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
@@ -32,8 +33,10 @@
     <Compile Include="..\PulseBrowser.WinUI\Wallet\VaultPaymentCard.cs"         Link="Product\VaultPaymentCard.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Wallet\PaymentCardUtil.cs"          Link="Product\PaymentCardUtil.cs" />
     <Compile Include="..\PulseBrowser.WinUI\WinUiRuntimeTrace.cs"               Link="Product\WinUiRuntimeTrace.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\BuildAuthenticity.cs"               Link="Product\BuildAuthenticity.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Models\UserProfile.cs"             Link="Product\UserProfile.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Models\ProfilePaths.cs"            Link="Product\ProfilePaths.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Models\Profiles.cs"                Link="Product\Profiles.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PulseConfig.cs"                    Link="Product\PulseConfig.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Storage\PulseFile.cs"              Link="Product\PulseFile.cs" />
     <Compile Include="..\PulseBrowser.WinUI\PulseBackup.cs"                    Link="Product\PulseBackup.cs" />
@@ -56,6 +59,11 @@
     <Compile Include="..\PulseBrowser.WinUI\Settings\NewTabShortcutText.cs" Link="Product\NewTabShortcutText.cs" />
     <Compile Include="..\PulseBrowser.WinUI\WebApps\ShortcutNaming.cs" Link="Product\ShortcutNaming.cs" />
     <Compile Include="..\PulseBrowser.WinUI\Models\HistoryTimeFormatter.cs" Link="Product\HistoryTimeFormatter.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Tabs\TabGroupOrdering.cs" Link="Product\TabGroupOrdering.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Privacy\SitePermissions\SitePermissionPolicy.cs" Link="Product\SitePermissionPolicy.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Models\DownloadHistory.cs" Link="Product\DownloadHistory.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\ChromiumCredentialReader.cs" Link="Product\ChromiumCredentialReader.cs" />
+    <Compile Include="..\PulseBrowser.WinUI\Models\InstalledBrowsers.cs" Link="Product\InstalledBrowsers.cs" />
     <EmbeddedResource Include="..\PulseBrowser.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 

@@ -276,20 +276,6 @@ public sealed partial class MainWindow
             : "Les favoris restent visibles en interface compacte.";
     }
 
-    private void WindowBackdropCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_suppressUiSettingsSave) return;
-        _uiSettings.WindowBackdrop = SelectedWindowBackdropMode();
-        ApplyWindowBackdrop();
-        SaveUiSettings();
-        StatusText.Text = _uiSettings.WindowBackdrop switch
-        {
-            "mica" => "Effet translucide Mica active.",
-            "acrylic" => "Effet translucide Acrylic active.",
-            _ => "Effet translucide desactive."
-        };
-    }
-
     private void NewTabTitleBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
@@ -421,7 +407,7 @@ public sealed partial class MainWindow
             VerticalTabsSwitch.IsOn = _verticalTabsEnabled;
             CompactModeSwitch.IsOn = _compactModeEnabled;
             CompactModeHideBookmarksSwitch.IsOn = _uiSettings.CompactModeHidesBookmarks;
-            SelectWindowBackdropMode(_uiSettings.WindowBackdrop);
+            _uiSettings.WindowBackdrop = "solid";
             CommandPaletteEnabledSwitch.IsOn = _uiSettings.CommandPaletteEnabled;
             CommandPaletteWebPagesSwitch.IsOn = _uiSettings.CommandPaletteOpenFromWebPages;
             CommandPaletteTextFieldsSwitch.IsOn = _uiSettings.CommandPaletteOpenFromTextFields;
@@ -523,7 +509,7 @@ public sealed partial class MainWindow
         _uiSettings.VerticalTabsCompact = _verticalTabsCompact;
         _uiSettings.CompactModeEnabled = _compactModeEnabled;
         _uiSettings.CompactModeHidesBookmarks = CompactModeHideBookmarksSwitch.IsOn;
-        _uiSettings.WindowBackdrop = SelectedWindowBackdropMode();
+        _uiSettings.WindowBackdrop = "solid";
         _uiSettings.VerticalTabsWidth = Math.Clamp(_verticalTabsExpandedWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
         _uiSettings.CommandPaletteEnabled = CommandPaletteEnabledSwitch.IsOn;
         _uiSettings.CommandPaletteOpenFromWebPages = CommandPaletteWebPagesSwitch.IsOn;
@@ -563,6 +549,13 @@ public sealed partial class MainWindow
         SetBrush("PulseAddressForegroundBrush", highContrast ? UiColor(0, 0, 0) : UiColor(245, 241, 234));
         SetBrush("PulseTextMutedBrush", highContrast ? UiColor(255, 255, 255) : UiColor(169, 163, 154));
         SetBrush("PulseAccentBrush", highContrast ? UiColor(255, 213, 0) : UiColor(225, 120, 24));
+        SetBrush("PulseAccentSoftBrush", highContrast ? UiColor(255, 213, 0, 68) : UiColor(225, 120, 24, 51));
+        SetBrush("PulseCoolAccentBrush", highContrast ? UiColor(0, 255, 226) : UiColor(102, 209, 190));
+        SetBrush("PulseCoolAccentSoftBrush", highContrast ? UiColor(0, 255, 226, 56) : UiColor(102, 209, 190, 36));
+        SetBrush("PulseFocusBrush", highContrast ? UiColor(255, 255, 0) : UiColor(255, 217, 90));
+        SetBrush("PulseFocusInnerBrush", highContrast ? UiColor(0, 0, 0) : UiColor(31, 33, 31));
+        SetBrush("PulseInfoSurfaceBrush", highContrast ? UiColor(0, 0, 0) : UiColor(47, 48, 42, translucent ? (byte)238 : (byte)255));
+        SetBrush("PulsePanelBackgroundBrush", highContrast ? UiColor(0, 0, 0) : UiColor(34, 35, 31));
 
         var mainFontSize = largeText ? 16 : 14;
         var smallFontSize = largeText ? 14 : 12;
@@ -570,10 +563,39 @@ public sealed partial class MainWindow
         CommandPaletteSearchBox.FontSize = mainFontSize;
         CommandPaletteHintText.FontSize = smallFontSize;
         StatusText.FontSize = smallFontSize;
+        ProfileStatusText.FontSize = smallFontSize;
+
+        foreach (var textBlock in new[] { CredentialSaveText, AutoFillText, WalletFillText, SessionKeepText })
+        {
+            textBlock.FontSize = mainFontSize;
+        }
 
         var focusThickness = visibleFocus ? new Thickness(2) : new Thickness(1);
         AddressBox.BorderThickness = focusThickness;
         CommandPaletteSearchBox.BorderThickness = focusThickness;
+
+        foreach (var control in new Control[]
+                 {
+                     AddressBox,
+                     CommandPaletteSearchBox,
+                     CompactModeButton,
+                     DetachVideoButton,
+                     NavigationMenuButton,
+                     MainMenuButton,
+                     ShieldButton,
+                     CredentialSaveAccept,
+                     CredentialSaveDismiss,
+                     AutoFillAccept,
+                     AutoFillDismiss,
+                     WalletFillAccept,
+                     WalletFillDismiss,
+                     SessionKeepAccept,
+                     SessionKeepDismiss,
+                     BackToPageButton
+                 })
+        {
+            ApplyPulseControlAccessibility(control);
+        }
     }
 
     private void SetBrush(string key, Windows.UI.Color color)
@@ -621,46 +643,16 @@ public sealed partial class MainWindow
         BookmarksBarRow.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private bool IsTranslucentChromeEnabled() =>
-        !_uiSettings.AccessibilityHighContrast && (_uiSettings.WindowBackdrop is "mica" or "acrylic");
-
-    private string SelectedWindowBackdropMode()
-    {
-        return WindowBackdropCombo.SelectedItem is ComboBoxItem item
-            ? item.Tag?.ToString() ?? "solid"
-            : "solid";
-    }
-
-    private void SelectWindowBackdropMode(string? mode)
-    {
-        var normalized = mode is "mica" or "acrylic" ? mode : "solid";
-        foreach (var item in WindowBackdropCombo.Items.OfType<ComboBoxItem>())
-        {
-            if (item.Tag?.ToString() == normalized)
-            {
-                WindowBackdropCombo.SelectedItem = item;
-                return;
-            }
-        }
-
-        WindowBackdropCombo.SelectedIndex = 0;
-    }
+    private bool IsTranslucentChromeEnabled() => false;
 
     private void ApplyWindowBackdrop()
     {
         try
         {
-            SystemBackdrop = IsTranslucentChromeEnabled()
-                ? _uiSettings.WindowBackdrop switch
-                {
-                    "mica" => new MicaBackdrop(),
-                    "acrylic" => new DesktopAcrylicBackdrop(),
-                    _ => null
-                }
-                : null;
-            // Le contenu web doit rester 100 % opaque : on ne teinte JAMAIS toute la
-            // fenêtre. La translucidité vient du seul backdrop Mica/Acrylic, qui n'affecte
-            // que le chrome (le WebView2 dessine par-dessus, opaque).
+            _uiSettings.WindowBackdrop = "solid";
+            SystemBackdrop = null;
+            // Le contenu web doit rester 100 % opaque : on ne teinte jamais la
+            // fenetre. L'ancien effet translucide est retire de l'UI utilisateur.
             RemoveWindowLayeredAlpha();
         }
         catch (Exception error)

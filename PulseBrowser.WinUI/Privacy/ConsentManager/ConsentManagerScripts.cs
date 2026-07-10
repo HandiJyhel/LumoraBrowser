@@ -50,7 +50,8 @@ internal static class ConsentManagerScripts
         [
             '[class*="cookie"]', '[class*="consent"]', '[class*="gdpr"]',
             '[class*="rgpd"]', '[id*="cookie"]', '[id*="consent"]',
-            '[role="dialog"][aria-modal="true"]', '#sp-cc', '.sp_choice_type_REJECT_ALL'
+            '[role="dialog"][aria-modal="true"]', '#sp-cc', '.sp_choice_type_REJECT_ALL',
+            '[id^="sp_message"]', '[class*="sp_message"]', '[id*="sp_message"]'
         ]
         """;
 
@@ -128,6 +129,17 @@ internal static class ConsentManagerScripts
                         }
                     } catch(e) {}
                 }
+                // 3. Repli : bandeaux maison sans classe/id reconnaissable (ex. conteneurs
+                // Sourcepoint à id généré dynamiquement, comme sur amazon.fr). Recherche sur
+                // TOUTE la page, mais texte EXACT uniquement (pas de préfixe) pour limiter
+                // les faux positifs sur un bouton ordinaire qui contiendrait ces mots.
+                try {
+                    var allBtns = document.querySelectorAll('button, a[role="button"]');
+                    for (var i2 = 0; i2 < allBtns.length; i2++) {
+                        var t2 = (allBtns[i2].textContent || '').trim().toLowerCase();
+                        if (TXT.indexOf(t2) !== -1 && vis(allBtns[i2])) { allBtns[i2].click(); return true; }
+                    }
+                } catch(e) {}
                 return false;
             }
 
@@ -177,6 +189,13 @@ internal static class ConsentManagerScripts
                     }
                 } catch(e) {}
             }
+            try {
+                var allBtns = document.querySelectorAll('button, a[role="button"]');
+                for (var i2 = 0; i2 < allBtns.length; i2++) {
+                    var t2 = (allBtns[i2].textContent || '').trim().toLowerCase();
+                    if (TXT.indexOf(t2) !== -1 && vis(allBtns[i2])) { allBtns[i2].click(); return; }
+                }
+            } catch(e) {}
         })();
         """;
 }

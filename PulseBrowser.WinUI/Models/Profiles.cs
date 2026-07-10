@@ -1,12 +1,4 @@
-using System.Net;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
-using Microsoft.UI.Xaml;
-using Microsoft.Web.WebView2.Core;
 
 namespace PulseBrowser.WinUI;
 
@@ -22,10 +14,37 @@ internal sealed record PulseProfileEntry(
 
 internal static class PulseProfileRegistry
 {
-    public static List<PulseProfileEntry> Discover(PulseConfig config)
+    public static string QuarantineProfile(PulseProfileEntry entry)
+    {
+        if (entry.IsActive)
+            throw new InvalidOperationException("Le profil actif ne peut pas etre mis en quarantaine.");
+
+        if (string.IsNullOrWhiteSpace(entry.ProfileDir) || !Directory.Exists(entry.ProfileDir))
+            throw new DirectoryNotFoundException("Dossier de profil introuvable.");
+
+        var parent = Directory.GetParent(entry.ProfileDir)?.FullName
+            ?? throw new InvalidOperationException("Dossier parent du profil introuvable.");
+        var quarantineRoot = Path.Combine(parent, ".pulsebrowser-profile-quarantine");
+        Directory.CreateDirectory(quarantineRoot);
+
+        var safeName = PulseProfilePaths.NormalizeProfileId(entry.Name);
+        var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var target = Path.Combine(quarantineRoot, $"{safeName}-{timestamp}");
+        var suffix = 2;
+        while (Directory.Exists(target))
+        {
+            target = Path.Combine(quarantineRoot, $"{safeName}-{timestamp}-{suffix++}");
+        }
+
+        Directory.Move(entry.ProfileDir, target);
+        return target;
+    }
+
+    public static List<PulseProfileEntry> Discover(PulseConfig config, string? activeProfileDir = null)
     {
         var entries = new List<PulseProfileEntry>();
         var activeId = PulseProfilePaths.NormalizeProfileId(config.ActiveProfileId);
+        activeProfileDir ??= ResolveActiveProfileDir(config);
 
         if (!string.IsNullOrWhiteSpace(config.CustomProfilePath) && Directory.Exists(config.CustomProfilePath))
         {
@@ -37,7 +56,7 @@ internal static class PulseProfileRegistry
                     "custom",
                     customProfile.Name,
                     customPaths.ProfileDir,
-                    true,
+                    IsSameDirectory(customPaths.ProfileDir, activeProfileDir),
                     true));
             }
         }
@@ -55,7 +74,10 @@ internal static class PulseProfileRegistry
                     id,
                     profile.Name,
                     paths.ProfileDir,
-                    string.Equals(id, activeId, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(config.CustomProfilePath),
+                    IsSameDirectory(paths.ProfileDir, activeProfileDir)
+                        || (string.Equals(id, activeId, StringComparison.OrdinalIgnoreCase)
+                            && string.IsNullOrWhiteSpace(config.CustomProfilePath)
+                            && string.IsNullOrWhiteSpace(activeProfileDir)),
                     false));
             }
         }
@@ -66,6 +88,39 @@ internal static class PulseProfileRegistry
             .OrderByDescending(entry => entry.IsActive)
             .ThenBy(entry => entry.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+    }
+
+    private static string? ResolveActiveProfileDir(PulseConfig config)
+    {
+        try
+        {
+            return PulseProfilePaths.Default().ProfileDir;
+        }
+        catch
+        {
+            if (!string.IsNullOrWhiteSpace(config.CustomProfilePath))
+                return config.CustomProfilePath;
+
+            return null;
+        }
+    }
+
+    private static bool IsSameDirectory(string? first, string? second)
+    {
+        if (string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(second))
+            return false;
+
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     public static string CreateProfileId(string name)

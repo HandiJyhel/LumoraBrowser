@@ -385,6 +385,129 @@ public sealed partial class MainWindow
         RefreshVaultPanel();
     }
 
+    private async void ImportPasswordsMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isGuestMode)
+        {
+            StatusText.Text = "Import des mots de passe indisponible en mode invité.";
+            return;
+        }
+
+        if (!await RequireVaultAccessAsync())
+        {
+            StatusText.Text = "Acces au coffre refuse : import annule.";
+            return;
+        }
+
+        ShowPanel(VaultPanel, "Importer des mots de passe");
+        SyncFromBrowserStore();
+        RefreshVaultPanel();
+        await ImportPasswordsAsync();
+    }
+
+    // Point d'entree unique pour l'import de mots de passe : propose une source
+    // CSV ou, si des navigateurs Chromium tiers (Chrome, Edge, Brave...) sont
+    // detectes sur la machine avec des identifiants enregistres, propose de les
+    // importer directement (dechiffrement local DPAPI, aucun reseau, aucune extension).
+    private async Task ImportPasswordsAsync()
+    {
+        var sources = PasswordImportSource.Discover();
+        if (sources.Count == 0)
+        {
+            await ImportPasswordsCsvAsync();
+            return;
+        }
+
+        var choice = await PromptPasswordImportSourceAsync(sources);
+        if (choice < 0)
+        {
+            StatusText.Text = "Import annule.";
+            return;
+        }
+
+        if (choice == 0)
+        {
+            await ImportPasswordsCsvAsync();
+            return;
+        }
+
+        await ImportPasswordsFromBrowserAsync(sources[choice - 1]);
+    }
+
+    // Retourne -1 (annule), 0 (fichier CSV) ou l'index+1 dans `sources`.
+    private async Task<int> PromptPasswordImportSourceAsync(IReadOnlyList<PasswordImportSource> sources)
+    {
+        var list = new ListView { SelectionMode = ListViewSelectionMode.Single, MaxHeight = 260 };
+        list.Items.Add("Fichier CSV (Proton Pass, Bitwarden, 1Password, export...)");
+        foreach (var source in sources) list.Items.Add(source.Label);
+        list.SelectedIndex = 1;
+
+        var panel = new StackPanel { Spacing = 10 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Depuis quelle source importer les mots de passe ?",
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(list);
+        panel.Children.Add(new TextBlock
+        {
+            Text = "L'import depuis un navigateur lit son magasin local et le dechiffre sur cette machine (DPAPI), sans extension ni reseau.",
+            Opacity = 0.6,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        var dialog = new ContentDialog
+        {
+            Title = "Importer des mots de passe",
+            Content = panel,
+            PrimaryButtonText = "Continuer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return -1;
+        return list.SelectedIndex < 0 ? -1 : list.SelectedIndex;
+    }
+
+    private async Task ImportPasswordsFromBrowserAsync(PasswordImportSource source)
+    {
+        try
+        {
+            var creds = source.ReadCredentials();
+            if (creds.Count == 0)
+            {
+                StatusText.Text = $"Aucun identifiant lisible depuis {source.Browser}.";
+                return;
+            }
+
+            var confirm = new ContentDialog
+            {
+                Title = "Importer ces identifiants ?",
+                Content = $"{creds.Count} identifiant(s) detecte(s) dans {source.Browser} ({source.Profile}).\n\n" +
+                          "Ils seront dechiffres localement puis stockes dans vault.pulse.",
+                PrimaryButtonText = "Importer",
+                CloseButtonText = "Annuler",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot
+            };
+            if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+            {
+                StatusText.Text = "Import navigateur annule.";
+                return;
+            }
+
+            var n = _passwordManager.ImportClear(creds);
+            RefreshVaultPanel();
+            StatusText.Text = $"Import termine : {n} identifiant(s) ajoute(s) ou mis a jour depuis {source.Browser}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Erreur d'import navigateur : {ex.Message}";
+        }
+    }
+
     // Importe dans vault.pulse les mots de passe éventuellement présents dans le magasin
     // Chromium (legacy / migration). En mode 100% maison, Chromium ne stocke plus rien de
     // neuf, mais cette lecture récupère ce qui aurait été enregistré avant la bascule.
@@ -487,7 +610,8 @@ public sealed partial class MainWindow
         sb.AppendLine("name,url,username,password");
         foreach (var c in items)
             sb.AppendLine(string.Join(',',
-                CredentialCsv.Escape(OriginOf(c.Origin)), CredentialCsv.Escape(c.Origin),
+                CredentialCsv.Escape(PasswordManagerService.DisplayName(c)),
+                CredentialCsv.Escape(string.IsNullOrWhiteSpace(c.LoginUrl) ? c.Origin : c.LoginUrl),
                 CredentialCsv.Escape(c.Username), CredentialCsv.Escape(c.Password)));
 
         await Windows.Storage.FileIO.WriteTextAsync(file, sb.ToString());
@@ -497,7 +621,11 @@ public sealed partial class MainWindow
     private async void VaultImportButton_Click(object sender, RoutedEventArgs e)
     {
         if (_vault.IsLocked && !await UnlockVaultIfNeededAsync()) return;
+        await ImportPasswordsAsync();
+    }
 
+    private async Task ImportPasswordsCsvAsync()
+    {
         var picker = new Windows.Storage.Pickers.FileOpenPicker
         {
             SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop
@@ -514,6 +642,23 @@ public sealed partial class MainWindow
             var text = await Windows.Storage.FileIO.ReadTextAsync(file);
             var items = CredentialCsv.Parse(text);
             if (items.Count == 0) { StatusText.Text = "Aucun identifiant reconnu dans ce fichier."; return; }
+
+            var confirm = new ContentDialog
+            {
+                Title = "Importer ce fichier CSV ?",
+                Content = $"{items.Count} identifiant(s) reconnu(s) dans {file.Name}.\n\n" +
+                          "Le CSV contient des mots de passe en clair. Apres import, ils seront stockes dans vault.pulse.",
+                PrimaryButtonText = "Importer",
+                CloseButtonText = "Annuler",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot
+            };
+            if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+            {
+                StatusText.Text = "Import CSV annule.";
+                return;
+            }
+
             var n = _passwordManager.ImportClear(items);
             RefreshVaultPanel();
             StatusText.Text = $"Import termine : {n} identifiant(s) ajoute(s) ou mis a jour.";

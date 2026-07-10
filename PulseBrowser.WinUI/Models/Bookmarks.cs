@@ -543,28 +543,15 @@ public sealed record BrowserImportSource(string Browser, string Profile, string 
 
     public static List<BrowserImportSource> Discover()
     {
-        var local   = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var roots = new (string Browser, string UserData)[]
-        {
-            ("Google Chrome", System.IO.Path.Combine(local,   "Google", "Chrome", "User Data")),
-            ("Microsoft Edge", System.IO.Path.Combine(local,   "Microsoft", "Edge", "User Data")),
-            ("Brave",          System.IO.Path.Combine(local,   "BraveSoftware", "Brave-Browser", "User Data")),
-            ("Chromium",       System.IO.Path.Combine(local,   "Chromium", "User Data")),
-            ("Vivaldi",        System.IO.Path.Combine(local,   "Vivaldi", "User Data")),
-            ("Opera",          System.IO.Path.Combine(roaming, "Opera Software", "Opera Stable", "User Data")),
-            ("Opera GX",       System.IO.Path.Combine(roaming, "Opera Software", "Opera GX Stable", "User Data")),
-        };
-
         var sources = new List<BrowserImportSource>();
-        foreach (var (browser, userData) in roots)
+        foreach (var (browser, userData) in InstalledChromiumBrowsers.Roots())
         {
             if (!Directory.Exists(userData))
             {
                 continue;
             }
 
-            foreach (var profileDir in Directory.EnumerateDirectories(userData).Where(IsChromiumProfileDir))
+            foreach (var profileDir in Directory.EnumerateDirectories(userData).Where(InstalledChromiumBrowsers.IsProfileDir))
             {
                 var bookmarks = System.IO.Path.Combine(profileDir, "Bookmarks");
                 if (!File.Exists(bookmarks))
@@ -608,13 +595,6 @@ public sealed record BrowserImportSource(string Browser, string Profile, string 
         return new BookmarkImportTree(
             ReadChildren(roots?["bookmark_bar"]?["children"]),
             ReadChildren(roots?["other"]?["children"]));
-    }
-
-    private static bool IsChromiumProfileDir(string path)
-    {
-        var name = System.IO.Path.GetFileName(path);
-        return name.Equals("Default", StringComparison.OrdinalIgnoreCase) ||
-               name.StartsWith("Profile ", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int CountUrls(string bookmarksFile)

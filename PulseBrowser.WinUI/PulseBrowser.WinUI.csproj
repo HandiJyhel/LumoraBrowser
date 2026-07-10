@@ -28,7 +28,7 @@
     <Content Include="Credentials\*.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Credentials\TestPages\*.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\PulseBrowser.ico" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="Assets\PulseBrowser.png" />
+    <Content Include="Assets\PulseBrowser.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- Public Suffix List (Mozilla, licence MPL 2.0) — https://publicsuffix.org -->
     <EmbeddedResource Include="Credentials\public_suffix_list.dat" />
   </ItemGroup>

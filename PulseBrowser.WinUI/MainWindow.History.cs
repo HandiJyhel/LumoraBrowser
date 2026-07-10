@@ -101,11 +101,22 @@ public sealed partial class MainWindow
         StatusText.Text = "Historique efface.";
     }
 
+    private void ClearDownloadsButton_Click(object sender, RoutedEventArgs e)
+    {
+        _historyPanel.Downloads.Clear();
+        RenderDownloads();
+        StatusText.Text = "Historique des telechargements efface.";
+    }
+
     private void CoreWebView2_DownloadStarting(CoreWebView2 sender, CoreWebView2DownloadStartingEventArgs args)
     {
         var entry = new DownloadEntry(args.DownloadOperation);
-        entry.OnChanged += () => DispatcherQueue.TryEnqueue(RenderDownloads);
-        _historyPanel.Downloads.Insert(0, entry);
+        entry.OnChanged += () => DispatcherQueue.TryEnqueue(() =>
+        {
+            _historyPanel.Downloads.Upsert(entry.ToHistoryEntry());
+            RenderDownloads();
+        });
+        _historyPanel.Downloads.Upsert(entry.ToHistoryEntry());
         DispatcherQueue.TryEnqueue(() =>
         {
             RenderDownloads();
@@ -155,24 +166,26 @@ public sealed partial class MainWindow
     private void RenderDownloads()
     {
         DownloadsPanelItems.Children.Clear();
-        if (_historyPanel.Downloads.Count == 0)
+        var downloads = _historyPanel.Downloads.AllEntries();
+        ClearDownloadsButton.IsEnabled = downloads.Count > 0;
+        if (downloads.Count == 0)
         {
             DownloadsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Aucun telechargement dans cette session.",
+                Text = "Aucun telechargement local.",
                 Opacity = 0.65,
                 Margin = new Thickness(0, 8, 0, 0)
             });
             return;
         }
 
-        foreach (var dl in _historyPanel.Downloads)
+        foreach (var dl in downloads)
         {
             DownloadsPanelItems.Children.Add(BuildDownloadCard(dl));
         }
     }
 
-    private UIElement BuildDownloadCard(DownloadEntry dl)
+    private UIElement BuildDownloadCard(DownloadHistoryEntry dl)
     {
         var headerRow = new Grid();
         headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -201,10 +214,11 @@ public sealed partial class MainWindow
             Value = dl.ProgressPercent,
             Maximum = 100,
             Margin = new Thickness(0, 8, 0, 4),
-            IsIndeterminate = dl.TotalBytes == 0 && !dl.IsCompleted && !dl.IsFailed,
+            IsIndeterminate = !dl.HasKnownSize && dl.IsActive,
             Visibility = dl.IsCompleted || dl.IsFailed ? Visibility.Collapsed : Visibility.Visible
         };
 
+        var fileExists = !string.IsNullOrWhiteSpace(dl.LocalPath) && File.Exists(dl.LocalPath);
         var footerPanel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -213,12 +227,12 @@ public sealed partial class MainWindow
         };
         footerPanel.Children.Add(new TextBlock
         {
-            Text = dl.State,
+            Text = fileExists || !dl.IsCompleted ? dl.StateLabel : "Fichier absent",
             Opacity = 0.68,
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center
         });
-        if (dl.IsCompleted)
+        if (dl.IsCompleted && fileExists)
         {
             var openBtn = new Button { Content = "Ouvrir", Padding = new Thickness(12, 4, 12, 4) };
             openBtn.Click += (_, _) => OpenDownloadFile(dl.LocalPath);
@@ -227,6 +241,14 @@ public sealed partial class MainWindow
             folderBtn.Click += (_, _) => OpenDownloadFolder(dl.LocalPath);
             footerPanel.Children.Add(folderBtn);
         }
+        var removeBtn = new Button { Content = "Retirer", Padding = new Thickness(12, 4, 12, 4) };
+        removeBtn.Click += (_, _) =>
+        {
+            _historyPanel.Downloads.Remove(dl.Id);
+            RenderDownloads();
+            StatusText.Text = "Telechargement retire de l'historique.";
+        };
+        footerPanel.Children.Add(removeBtn);
 
         var body = new StackPanel { Spacing = 0 };
         body.Children.Add(headerRow);

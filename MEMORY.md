@@ -1859,3 +1859,407 @@ Apres le « Go » explicite de l'utilisateur, poursuite du meme principe (extrai
 - Code mort supprime : `HostOf`/`PrettyHost` dans `MainWindow.Vault.cs` (jamais appeles ; `HostOf` dupliquait en plus `PublicSuffixService.HostOf` deja teste).
 - **129 tests verts** (etait 116). `build-winui.cmd` : 0 avertissement, 0 erreur. Commit `443780f`.
 - **Constat honnete** : la taille des fichiers `MainWindow.*.cs` ne baisse que marginalement (`Navigation.cs` 1214→1187, `Vault.cs` 1113→1031, `Settings.cs` 727→710, `WebApps.cs` 388→380) car l'essentiel de leur volume est du cablage UI/WebView2, pas de la logique pure. L'extraction ameliore la testabilite et enleve la duplication/code mort, mais ne resout PAS le probleme de fond (God Class via partial class) — ca reste a faire dans une session dediee, avec un vrai plan et un Go explicite sur le decoupage architectural lui-meme.
+
+## 2026-07-09 — 0.49.0-dev
+
+Retour utilisateur : maintenant que l'icone applicative est identifiable, l'interface de Pulse Browser reste trop generique et doit recevoir une vraie identite graphique. `Go` donne pour un palier visuel coherent.
+
+### Identite graphique Pulse v1
+- `App.xaml` : accent global WinUI aligne sur l'orange Pulse, pour que les boutons accentues et etats selectionnes ne dependent plus de l'accent Windows generique.
+- `MainWindow.xaml` : palette Pulse renforcee (charcoal, orange, accent secondaire menthe), barre d'identite au-dessus des onglets, barre de navigation en degrade discret, barre de favoris et barre de statut harmonisees.
+- Bouton d'ouverture de l'adresse rendu plus distinctif via un style d'icone accentue.
+- `pulse://accueil` : page d'accueil retravaillee avec une marque CSS inspiree de l'icone, un fond plus signe, une recherche plus lumineuse, des raccourcis moins arrondis et moins generiques.
+- Overlays de connexion et d'assistant premier lancement : remplacement des tuiles "P" par `Assets/PulseBrowser.png`, surfaces et bordures alignees sur la nouvelle palette.
+- `PulseBrowser.WinUI.csproj` : `Assets/PulseBrowser.png` declare comme contenu copie au build pour garantir son affichage depuis le XAML.
+- `PulseAppWindow.xaml` : barre de sortie de domaine harmonisee avec la nouvelle identite Pulse.
+- Page A propos : correction de l'information technique, suppression de l'ancienne mention Rust actif et alignement sur la stack reelle actuelle (`DPAPI + fichiers .pulse`, `AES-256-GCM + Argon2id`).
+- Ajout de `docs/IDENTITE_GRAPHIQUE_0_49.md` et `logs/2026-07-09-identite-graphique-0-49.md`.
+
+### Verification
+- Premier essai de `dotnet test` et `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), sans rapport avec le code.
+- Relance avec acces autorise : `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` reussi, 129/129.
+- `build-winui.cmd` reussi, 0 avertissement, 0 erreur.
+- Lancement court de `PulseBrowser.WinUI.exe` apres build : processus vivant apres 5 secondes, puis fermeture du processus lance pour verification.
+
+**Version :** `0.49.0-dev`.
+
+## 2026-07-10 — 0.50.0-dev
+
+Suite au `Go` utilisateur, mise en place d'un palier centre sur l'accessibilite visible et la coherence graphique de `PulseBrowser.WinUI`, sans changer le moteur WebView2 ni les flux de donnees sensibles.
+
+### Accessibilite et coherence graphique
+- `App.xaml` : ajout de ressources globales Pulse pour le focus clavier, les surfaces, les traits et les controles.
+- `MainWindow.xaml` : styles du chrome renforces (bordures discretes, focus systeme visible, focus jaune Pulse), action d'ouverture d'adresse accentuee, noms accessibles sur les boutons iconiques principaux, barre d'adresse et palette `Ctrl+K`.
+- `MainWindow.Settings.cs` : `ApplyAccessibilitySettings()` met maintenant a jour davantage de ressources selon contraste renforce, texte plus lisible et focus visible ; les barres contextuelles sensibles adaptent aussi leur taille de texte.
+- `MainWindow.xaml.cs` : ajout d'un helper runtime pour appliquer focus Pulse et noms accessibles aux controles generes par code.
+- `MainWindow.Bookmarks.cs` : les favoris et dossiers de la barre de favoris generes dynamiquement recoivent un libelle accessible explicite.
+- Barres identifiants/autofill/portefeuille/session, panneau Parametres, barre d'etat, palette de commande et `PulseAppWindow` harmonises avec les surfaces Pulse.
+- Barre d'etat exposee comme region live polie pour les changements de statut.
+- `AGENTS.md` et la constante d'application passent a `0.50.0-dev`.
+
+### Documentation
+- Ajout de `docs/ACCESSIBILITE_COHERENCE_0_50.md`.
+- Ajout de `logs/2026-07-10-accessibilite-coherence-0-50.md`.
+
+### Verification
+- Premier `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie : 136/136 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
+- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.50.0-dev`, processus repondant, fermeture propre du processus de test.
+
+**Version :** `0.50.0-dev`.
+
+## 2026-07-10 — 0.50.1-dev
+
+Suite au retour utilisateur estimant que le rendu translucide n'etait pas forcement utile, retrait volontaire de l'option visible dans `PulseBrowser.WinUI`.
+
+### Chrome solide
+- `Parametres > Apparence` ne propose plus le reglage `Effet translucide`, ni les choix `Mica` / `Acrylic`.
+- Les anciens reglages `WindowBackdrop` sont normalises en `solid` au chargement et a la sauvegarde des reglages UI.
+- `ApplyWindowBackdrop()` force maintenant `SystemBackdrop = null` et conserve le retrait de l'eventuel style layered Win32 pour eviter toute transparence residuelle du contenu WebView2.
+- `PulseBrowser.WinUI/README.md` documente que `0.50.1-dev` retire l'option utilisateur d'effet translucide.
+- `AGENTS.md` et la constante d'application passent a `0.50.1-dev`.
+
+### Documentation
+- Ajout de `docs/SOLID_CHROME_0_50_1.md`.
+- Ajout de `logs/2026-07-10-solid-chrome-0-50-1.md`.
+
+### Verification
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 136/136 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
+- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.50.1-dev`, processus repondant, fermeture propre du processus de test.
+
+**Version :** `0.50.1-dev`.
+
+## 2026-07-10 — 0.51.0-dev
+
+Suite a la demande utilisateur de continuer le plan pour rendre l'application plus utilisable au quotidien, ajout d'un premier centre de permissions par site dans `PulseBrowser.WinUI`.
+
+### Permissions par site
+- Ajout de `Privacy/SitePermissions/SitePermissionPolicy.cs`, modele pur testable qui normalise les permissions WebView2 et stocke les decisions `ask` / `allow` / `block`.
+- `UiSettings` gagne `SitePermissions`, liste locale persistante par domaine racine et type de permission.
+- `Centre du site` affiche maintenant une carte `Permissions` avec Camera, Microphone, Localisation, Notifications, Presse-papiers, Telechargements multiples et Fichiers locaux.
+- Chaque permission expose les choix `Demander`, `Autoriser` et `Bloquer`.
+- `CoreWebView2.PermissionRequested` est branche sur cette politique locale : `Autoriser` force `CoreWebView2PermissionState.Allow`, `Bloquer` force `CoreWebView2PermissionState.Deny`, et `Demander` laisse le comportement normal du moteur.
+- Les cartes existantes du centre du site (confidentialite, session, mots de passe, historique) restent en place.
+- `AGENTS.md` et la constante d'application passent a `0.51.0-dev`.
+
+### Tests et documentation
+- Ajout de `PulseBrowser.Tests/SitePermissionPolicyTests.cs`.
+- `PulseBrowser.Tests.csproj` compile maintenant `Privacy/SitePermissions/SitePermissionPolicy.cs`.
+- Ajout de `docs/SITE_PERMISSIONS_0_51.md`.
+- Ajout de `logs/2026-07-10-site-permissions-0-51.md`.
+
+### Verification
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 145/145 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
+- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.51.0-dev`, processus repondant, fermeture propre du processus de test.
+
+**Version :** `0.51.0-dev`.
+
+## 2026-07-10 — 0.52.0-dev
+
+Suite au `go` utilisateur pour continuer le plan d'utilisabilite quotidienne, transformation du panneau `Telechargements` en historique local persistant dans `PulseBrowser.WinUI`.
+
+### Telechargements persistants
+- Ajout de `Models/DownloadHistory.cs` avec `DownloadHistoryEntry` et `DownloadHistoryStore`.
+- `PulseProfilePaths` gagne `DownloadsFile`, stocke dans `navigation/downloads.pulse`.
+- `HistoryPanelController` porte maintenant un store de telechargements distinct de l'historique de navigation.
+- `CoreWebView2.DownloadStarting` enregistre le telechargement au demarrage, puis met a jour la meme entree pendant la progression et au changement d'etat.
+- Le panneau `Telechargements` affiche maintenant un historique local par profil, avec bouton `Effacer` et action `Retirer` par entree.
+- Les actions `Ouvrir` et `Dossier` ne sont affichees que si le fichier termine existe encore sur disque.
+- Le mode invite vide les telechargements en memoire et n'ecrit pas de nouvel historique de telechargements.
+- `AGENTS.md` et la constante d'application passent a `0.52.0-dev`.
+
+### Tests et documentation
+- Ajout de `PulseBrowser.Tests/DownloadHistoryTests.cs`.
+- `PulseBrowser.Tests.csproj` compile maintenant `Models/DownloadHistory.cs`.
+- Ajout de `docs/DOWNLOAD_HISTORY_0_52.md`.
+- Ajout de `logs/2026-07-10-download-history-0-52.md`.
+
+### Verification
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 149/149 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
+- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.52.0-dev`, processus repondant, fermeture propre du processus de test.
+
+**Version :** `0.52.0-dev`.
+
+## 2026-07-10 — authenticite des builds
+
+Suite a la demande utilisateur de preparer les "certificats d'authenticite open source", ajout d'une premiere brique de gouvernance pour les futurs artifacts Pulse Browser.
+
+### Authenticite et signatures
+
+- Ajout de `docs/AUTHENTICITE_RELEASES.md` pour documenter les niveaux de confiance: manifeste SHA256, signature Sigstore/cosign, future signature Windows Authenticode, badges OpenSSF.
+- Ajout de `scripts/generate-release-checksums.ps1`, script PowerShell qui produit un manifeste SHA256 pour un fichier ou un dossier d'artifacts.
+- Ajout du dossier `artifacts/signatures/` avec `.gitkeep`, tout en gardant les artifacts generes ignores par Git.
+- Ajustement de `.gitignore` pour ne versionner que la structure minimale des signatures.
+- Ajout de `logs/2026-07-10-authenticite-releases.md`.
+
+### Decision
+
+- Pas de changement de version: cette etape prepare la chaine de distribution et de verification, sans ajouter de fonctionnalite produit visible.
+- Sigstore/cosign devient la piste open source principale pour les signatures de provenance.
+- Authenticode/Trusted Signing reste une piste Windows future pour les installateurs et executables publics.
+
+## 2026-07-10 — build propre de test et confiance utilisateur
+
+Suite au `go` utilisateur, ajout d'une brique concrete pour rassurer l'utilisateur sans certificat Microsoft payant et sans pretendre a une signature officielle inexistante.
+
+### Authenticite visible
+
+- Ajout d'une section `Authenticite du build` dans `A propos`.
+- Cette section affiche le canal, l'empreinte SHA256 quand elle est disponible, le statut Sigstore, le statut Windows Authenticode et le mode de profil.
+- Ajout de `BuildAuthenticity`, qui lit `VERIFICATION.txt` a cote de l'executable quand un build propre en fournit un.
+- En build local sans fichier de verification, l'interface affiche explicitement que l'empreinte n'est pas generee et que les signatures ne sont pas presentes.
+
+### Build propre de test
+
+- Ajout du support `PULSE_BROWSER_PROFILE_DIR` dans `PulseProfilePaths.Default()` pour lancer Pulse Browser avec un profil isole sans modifier le profil normal de l'utilisateur.
+- Ajout de `scripts/build-clean-test-artifact.ps1` et `build-clean-test-artifact.cmd`.
+- Le script cree un artifact horodate sous `artifacts/clean-test/`, place l'application dans `app/`, genere `app/VERIFICATION.txt`, ajoute `run-clean-profile.cmd` et produit un manifeste SHA256.
+- Ajout de `docs/CLEAN_TEST_BUILD_AUTHENTICITY.md` et `logs/2026-07-10-clean-test-authenticity.md`.
+
+### Decision
+
+- Pas de certificat Authenticode payant a ce stade.
+- Pas de faux certificat ou certificat auto-signe presente comme officiel.
+- La solution de confiance pour le stade actuel est: build propre, profil vierge isole, hash SHA256, explication claire de l'alerte Windows et piste Sigstore future.
+
+### Verification
+
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 152/152 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
+- Premier `build-clean-test-artifact.cmd` bloque par le sandbox reseau NuGet, puis relance autorisee compile en Release mais echoue apres build car `Get-FileHash` n'etait pas disponible dans la session PowerShell.
+- Correction de `scripts/generate-release-checksums.ps1` et `scripts/build-clean-test-artifact.ps1` pour calculer les SHA256 avec `System.Security.Cryptography.SHA256`.
+- Relance autorisee de `build-clean-test-artifact.cmd` reussie avec 0 avertissement et 0 erreur.
+- Artifact propre cree : `artifacts\clean-test\PulseBrowser-0.52.0-dev-win-x64-clean-20260710-162845`.
+- SHA256 de `PulseBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
+- `VERIFICATION.txt` present dans `app/`, manifeste SHA256 genere dans `artifacts\signatures\PulseBrowser-0.52.0-dev-clean-20260710-162858.sha256`.
+- `run-clean-profile.cmd` pointe vers `_clean-profile`, et `_clean-profile` n'existe pas encore dans l'artifact: aucun profil de test n'est embarque avant lancement.
+
+## 2026-07-10 — installateur propre 0.52.0-dev
+
+Suite a la clarification utilisateur, l'objectif devient un vrai installateur Windows local, pas seulement un dossier executable propre.
+
+### Installateur
+
+- Ajout de `scripts/build-installer.ps1`.
+- Ajout de `build-installer.cmd`.
+- Ajout de `docs/INSTALLER_0_52.md`.
+- Ajout de `logs/2026-07-10-installer-clean-0-52.md`.
+
+### Design retenu
+
+- Utiliser un installateur .NET WinForms autonome genere par `scripts/build-installer.ps1`.
+- Emballer le build propre existant en `app.zip` comme ressource de l'installateur.
+- Installer par utilisateur sous `%LOCALAPPDATA%\Programs\PulseBrowser`.
+- Creer un raccourci Bureau et un raccourci Menu Demarrer.
+- Ajouter une entree de desinstallation sous `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\PulseBrowser`.
+- Ne copier aucun profil utilisateur.
+- Lancer l'application installee via un petit launcher VBS qui definit `PULSE_BROWSER_PROFILE_DIR=%LOCALAPPDATA%\PulseBrowser\installed-profile`, afin de tester une installation vierge sans reprendre les profils de developpement.
+- Conserver `VERIFICATION.txt`, generer un fichier de verification de l'installateur et un manifeste SHA256.
+- Apres retour utilisateur, ajout d'options visibles dans l'installateur: installation propre du profil installe precedent, raccourci Bureau, raccourci Menu Demarrer, lancement apres installation.
+- Apres nouveau retour utilisateur, ajout du dossier d'installation visible et modifiable via `Parcourir...`; le chemin par defaut reste `%LOCALAPPDATA%\Programs\PulseBrowser` pour fonctionner sans administrateur, mais un autre dossier peut etre choisi si les droits Windows le permettent.
+- L'option propre ne touche que `%LOCALAPPDATA%\PulseBrowser\installed-profile`, pas les profils de developpement ni l'ancien dossier `Desktop\bob`.
+
+### Verification
+
+- Premiere tentative avec `IExpress` abandonnee: `makecab` generait bien le CAB, mais IExpress echouait sans code exploitable.
+- Remplacement par un installateur .NET WinForms genere par `scripts/build-installer.ps1`, avec `app.zip` embarque comme ressource.
+- Premiere publication .NET bloquee par le sandbox reseau NuGet (`NU1301` sur `Microsoft.NET.ILLink.Tasks`), puis relance autorisee.
+- Correction de la publication: retrait de `EnableCompressionInSingleFile`, reserve aux applications self-contained.
+- Generation reussie de `artifacts\installer\PulseBrowserSetup-0.52.0-dev-win-x64.exe`.
+- Regeneration reussie apres ajout des options utilisateur visibles et du choix explicite du dossier d'installation.
+- Nettoyage automatique du dossier `staging-dotnet` apres generation reussie.
+- Taille de l'installateur : 35 865 226 octets.
+- SHA256 installateur : `f8c41c4eef38fa2af123995f41f8eb69ab224893130c6b075c9bcba3e35ae1b5`.
+- Fichier de verification : `artifacts\installer\PulseBrowserSetup-0.52.0-dev-win-x64.VERIFICATION.txt`.
+- Manifeste SHA256 : `artifacts\signatures\PulseBrowserSetup-0.52.0-dev-20260710-174414.sha256`.
+- Verification que `%LOCALAPPDATA%\PulseBrowser\installed-profile` n'existe pas encore apres generation: l'installateur n'a pas cree de profil avant lancement.
+
+### Correction du poste de test
+
+- Retrait du `CustomProfilePath` local qui pointait vers `C:\Users\Handi-Jyhel\Desktop\bob`.
+- Reecriture de `%LOCALAPPDATA%\PulseBrowser\config.json` avec `ActiveProfileId=default`.
+- Deplacement sans suppression definitive de `Desktop\bob` et `%LOCALAPPDATA%\PulseBrowser\installed-profile` vers `%LOCALAPPDATA%\PulseBrowser\profile-quarantine\`.
+- Verification finale: `%LOCALAPPDATA%\PulseBrowser\installed-profile` est absent et Pulse Browser repartira sur le profil local `default` ou sur le profil dedie de l'installateur au premier lancement installe.
+
+## 2026-07-10 — 0.53.0-dev
+
+Suite a l'interruption utilisateur, arret du chantier installateur pour traiter une fonction de base manquante: importer des mots de passe depuis un CSV, notamment depuis Proton Pass, puisque Pulse Browser ne depend pas d'extensions navigateur.
+
+### Import CSV des mots de passe
+
+- `CredentialCsv` reconnait maintenant des formats d'export plus larges: Proton Pass, Chrome, Firefox, Bitwarden, 1Password et variantes proches.
+- Les colonnes `type`, `name`, `url`, `username` et `password` sont prises en charge pour Proton Pass.
+- Les entrees non-login sont ignorees quand une colonne `type` est presente.
+- Le libelle et l'URL de connexion sont conserves quand le CSV les fournit.
+- Le coffre `vault.pulse` sait fusionner un import enrichi sans perdre inutilement un libelle existant.
+- Le gestionnaire de mots de passe demande confirmation apres lecture du CSV avant d'ecrire dans le coffre.
+- L'infobulle du bouton d'import mentionne explicitement Proton Pass.
+- `AGENTS.md` et la constante d'application passent a `0.53.0-dev`.
+
+### Verification
+
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 155/155 tests verts.
+- Aucun build d'installateur ni artifact executable regenere pendant cette etape.
+
+**Version :** `0.53.0-dev`.
+
+## 2026-07-10 — 0.54.0-dev
+
+Suite au `go` utilisateur sur la question de la vraie gestion des utilisateurs, ajout d'une surface de gestion plus complete dans `Parametres > Profil`.
+
+### Gestion des utilisateurs/profils
+
+- Ajout d'une section `Gestion des utilisateurs` dans le panneau Profil.
+- La section liste les profils utilisateurs locaux detectes sur l'ordinateur.
+- Chaque carte affiche le nom, l'etat actif/non actif, le type d'emplacement et le chemin exact du profil.
+- Les profils non actifs peuvent etre actives via `Basculer`, ce qui ecrit la configuration puis redemarre l'application pour eviter de melanger coffre, favoris, historique et autres stores deja charges.
+- Chaque profil expose `Ouvrir le dossier`.
+- Les profils non actifs peuvent etre mis en quarantaine apres confirmation par saisie du nom du profil.
+- La quarantaine deplace le dossier vers `.pulsebrowser-profile-quarantine` a cote des profils au lieu d'une suppression definitive immediate.
+- Le profil actif ne peut pas etre mis en quarantaine depuis cette surface.
+- Ajout de `ProfileRegistryTests` pour verrouiller la quarantaine et le refus du profil actif.
+- `AGENTS.md` et la constante d'application passent a `0.54.0-dev`.
+
+### Verification
+
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 157/157 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee.
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Aucun build d'installateur ni artifact executable de distribution regenere pendant cette etape.
+
+**Version :** `0.54.0-dev`.
+
+## 2026-07-10 — installateur propre 0.54.0-dev
+
+Suite au `go` utilisateur, generation d'un nouvel installateur Windows propre incluant les fonctions applicatives jusqu'a `0.54.0-dev`.
+
+### Installateur
+
+- `scripts/build-clean-test-artifact.ps1` et `scripts/build-installer.ps1` passent par defaut a `0.54.0-dev`.
+- `scripts/build-installer.ps1` nettoie les anciens installeurs Pulse Browser dans `artifacts\installer` avant de produire le nouvel exe.
+- L'installateur conserve le dossier d'installation visible et modifiable via `Parcourir...`.
+- L'installation par defaut reste sans administrateur sous `%LOCALAPPDATA%\Programs\PulseBrowser`, avec choix possible d'un autre dossier si les droits Windows le permettent.
+- Aucun profil utilisateur n'est embarque.
+- Ajout de `docs/INSTALLER_0_54.md` et `logs/2026-07-10-installer-clean-0-54.md`.
+
+### Verification
+
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 157/157 tests verts.
+- Build propre Release autorise apres blocage sandbox NuGet, reussi avec 0 avertissement et 0 erreur.
+- Artifact propre : `artifacts\clean-test\PulseBrowser-0.54.0-dev-win-x64-clean-20260710-180138`.
+- SHA256 de `PulseBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
+- Manifeste du build propre : `artifacts\signatures\PulseBrowser-0.54.0-dev-clean-20260710-180202.sha256`.
+- Installateur genere : `artifacts\installer\PulseBrowserSetup-0.54.0-dev-win-x64.exe`.
+- SHA256 installateur : `672f0da6a9c09f3fbe10589e3fb5c92eb66b711a70d8789e7054c10af88480d3`.
+- Manifeste installateur : `artifacts\signatures\PulseBrowserSetup-0.54.0-dev-20260710-180303.sha256`.
+- `artifacts\installer` ne contient plus que l'exe final et son fichier `.VERIFICATION.txt`.
+
+## 2026-07-10 — 0.54.1-dev
+
+Suite au pre-test utilisateur de l'application installee, correction d'un blocage a l'ouverture d'un profil cree dans un emplacement personnalise : l'ecran affichait `Profil actif illisible` apres creation du profil et import de favoris.
+
+### Profil personnalise installe
+
+- Cause identifiee : l'installateur `0.54.0-dev` creait un `PulseBrowserLauncher.vbs` qui forcait `PULSE_BROWSER_PROFILE_DIR=%LOCALAPPDATA%\PulseBrowser\installed-profile`. Ce choix isolait bien un artifact de test, mais cassait l'installation normale des qu'un profil personnalise etait choisi dans l'application.
+- `MainWindow.Profile.cs` : le selecteur de profils recharge maintenant le profil depuis le chemin reel de l'entree choisie, et redemarre si l'entree selectionnee ne correspond pas au profil charge par le runtime.
+- `MainWindow.Profile.cs` : le dossier cible de creation est conserve dans `_profileCreationTarget`, afin que l'import de favoris d'onboarding ecrive dans le bon profil quand un redemarrage est necessaire.
+- `Models/Profiles.cs` : `PulseProfileRegistry.Discover` ne marque plus un profil custom actif seulement parce que `config.json` pointe dessus ; il compare aussi le dossier actif reel.
+- `ProfileRegistryTests` : ajout de deux tests pour verrouiller le marquage actif/non actif d'un profil custom selon le dossier runtime.
+- `scripts/build-installer.ps1` : l'installateur supprime l'ancien launcher VBS s'il existe, cree des raccourcis directs vers `PulseBrowser.WinUI.exe`, et ne force plus `PULSE_BROWSER_PROFILE_DIR`.
+- `AGENTS.md`, `MainWindow.xaml.cs`, `scripts/build-clean-test-artifact.ps1`, `scripts/build-installer.ps1` et `PulseBrowser.WinUI/README.md` passent a `0.54.1-dev`.
+- Ajout de `docs/INSTALLER_0_54_1.md` et `logs/2026-07-10-profile-custom-installer-0-54-1.md`.
+
+### Verification
+
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 159/159 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee.
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- `build-clean-test-artifact.cmd` autorise apres blocage sandbox NuGet, build Release propre reussi avec 0 avertissement et 0 erreur.
+- Artifact propre : `artifacts\clean-test\PulseBrowser-0.54.1-dev-win-x64-clean-20260710-183017`.
+- SHA256 de `PulseBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
+- Manifeste du build propre : `artifacts\signatures\PulseBrowser-0.54.1-dev-clean-20260710-183042.sha256`.
+- Premier `build-installer.cmd` bloque par le sandbox reseau NuGet (`Microsoft.NET.ILLink.Tasks`), puis relance autorisee.
+- Installateur genere : `artifacts\installer\PulseBrowserSetup-0.54.1-dev-win-x64.exe`.
+- SHA256 installateur : `9bc6666ae6e2757915f2e1785ade3312636c47484a045650867fd74d0f4aded5`.
+- Manifeste installateur : `artifacts\signatures\PulseBrowserSetup-0.54.1-dev-20260710-183135.sha256`.
+- `artifacts\installer` contient uniquement l'exe final et son fichier `.VERIFICATION.txt`.
+- Le fichier de verification indique : `Profil: Aucun profil embarque ; aucun dossier de profil force au lancement`.
+
+**Version :** `0.54.1-dev`.
+
+## 2026-07-10 — 0.54.2-dev
+
+Suite au retour utilisateur apres installation de `0.54.1-dev`, correction d'une regression d'accessibilite fonctionnelle : une fois connecte au profil, les imports de favoris et de mots de passe existaient dans le code mais n'etaient pas assez visibles dans l'interface normale.
+
+### Acces visibles aux imports
+
+- `MainWindow.xaml` : ajout dans les deux menus Pulse des entrees `Importer des favoris`, `Mots de passe` et `Importer des mots de passe`.
+- `MainWindow.xaml` : ajout dans `Parametres > Coffre` de boutons explicites pour ouvrir les mots de passe et importer un CSV.
+- `MainWindow.CommandPalette.cs` : ajout des commandes `Importer des favoris` et `Importer des mots de passe`.
+- `MainWindow.Vault.cs` : ajout de `ImportPasswordsMenu_Click` et factorisation de l'import CSV dans `ImportPasswordsCsvAsync`, afin que le meme import fonctionne depuis le bouton du coffre, les parametres ou le menu.
+- `AGENTS.md`, `MainWindow.xaml.cs`, `scripts/build-clean-test-artifact.ps1`, `scripts/build-installer.ps1` et `PulseBrowser.WinUI/README.md` passent a `0.54.2-dev`.
+- Ajout de `logs/2026-07-10-import-access-0-54-2.md`.
+
+### Verification
+
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 159/159 tests verts.
+- Premier `build-winui.cmd` bloque par le sandbox reseau NuGet.
+- Relance reseau refusee par la limite d'usage de l'environnement.
+- Build WinUI via MSBuild Visual Studio sans restore : 0 avertissement, 0 erreur.
+
+### Blocage
+
+- `build-clean-test-artifact.cmd` reste bloque par le restore NuGet sans acces reseau complet.
+- Le nouvel installateur `0.54.2-dev` n'a pas pu etre genere pendant cette session.
+- Il faudra relancer `build-clean-test-artifact.cmd`, puis `build-installer.cmd`, lorsque l'acces reseau/usage Codex sera de nouveau disponible.
+
+**Version :** `0.54.2-dev`.
+
+## 2026-07-10 — 0.55.0-dev
+
+Retour utilisateur : apres avoir installe le vrai installateur, l'import des mots de passe d'un AUTRE navigateur (Chrome, Edge, Brave...) deja installe sur la machine n'existait pas — seul un CSV etait accepte. `ChromiumCredentialReader` existait deja mais ne lisait que le magasin interne WebView2 de Pulse (migration), jamais le dossier `User Data` d'un navigateur tiers.
+
+### Import de mots de passe depuis un navigateur installe
+
+- `ChromiumCredentialReader.cs` : extraction de `ReadFrom(localStatePath, loginDataPath)` generique (cle DPAPI dans `Local State`, mots de passe AES-256-GCM `v10`/`v11` dans `Login Data`) ; `Read` (magasin interne) devient un simple appel a `ReadFrom`. Ajout de `CountLogins` (comptage rapide sans dechiffrement). Les deux requetes filtrent desormais `blacklisted_by_user = 0`.
+- `Models/InstalledBrowsers.cs` (nouveau) : `InstalledChromiumBrowsers` factorise la liste des dossiers `User Data` (Chrome, Edge, Brave, Chromium, Vivaldi, Opera, Opera GX), partagee avec `BrowserImportSource` (favoris, `Models/Bookmarks.cs`, qui dupliquait cette liste avant). `PasswordImportSource` detecte les profils tiers avec identifiants et expose `ReadCredentials()`.
+- `MainWindow.Vault.cs` : `ImportPasswordsAsync` propose desormais un choix (CSV ou navigateur detecte, avec le nombre d'identifiants trouves) avant d'importer ; `ImportPasswordsMenu_Click` et `VaultImportButton_Click` passent par ce nouveau point d'entree.
+- Portee volontairement limitee a la famille Chromium (Chrome/Edge/Brave/Vivaldi/Opera). Firefox exclu : dechiffrement `key4.db`/NSS (PBKDF2 + 3DES/AES-CBC) bien plus complexe et risque a implementer en C# pur sans `libnss3`. Decision utilisateur explicite (2026-07-10).
+- Passage de version source a `0.55.0-dev`.
+- Ajout de `logs/2026-07-10-password-browser-import-0-55.md`.
+
+### Verification
+
+- `PulseBrowser.Tests/ChromiumCredentialReaderTests.cs` (nouveau, 4 tests) : fabrique un `Local State` (cle DPAPI) + `Login Data` (SQLite, mots de passe AES-GCM `v10`) et verifie le dechiffrement, l'exclusion des lignes blacklistees, et `CountLogins`. Ajout de `Microsoft.Data.Sqlite` a `PulseBrowser.Tests.csproj`.
+- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` : 163/163 tests verts.
+- `build-winui.cmd` (MSBuild, avec restore reseau) : 0 avertissement, 0 erreur.
+- `scripts/build-clean-test-artifact.ps1 -Version 0.55.0-dev` : build Release propre reussi.
+- `scripts/build-installer.ps1 -Version 0.55.0-dev` : installateur genere avec succes, `artifacts\installer` ne contient que l'exe final et son `.VERIFICATION.txt`.
+- Installateur : `artifacts\installer\PulseBrowserSetup-0.55.0-dev-win-x64.exe`, SHA256 `1735beab9ef4c33d133524e2393f859611383a85867217292f78a5eff01cdb71`.
+
+**Version :** `0.55.0-dev`.
+
+## 2026-07-10 — 0.55.1-dev
+
+Apres installation du vrai installateur `0.55.0-dev`, l'utilisateur a remonte 4 regressions de confort (capture d'ecran a l'appui pour la barre de favoris). Diagnostic fait dans le code AVANT toute correction, plan valide explicitement par l'utilisateur avant d'agir (`GO`).
+
+### 4 correctifs UI/WinUI
+
+1. **Molette muette avant un premier clic** : aucun `Focus()` n'etait jamais pose sur le WebView2 actif (la molette Windows suit le focus clavier, pas le curseur). Ajout de `tab.View.Focus(FocusState.Programmatic)` dans `ActivateTab` et `EnsureTabView` (`MainWindow.Navigation.cs`).
+2. **Barre de favoris "collee"** : `BookmarksBarRow` avait `Padding="12,0,10,2"` (0 en haut) dans une rangee de 28px. Passage a 32px + `Padding="12,4,10,4"` + bordure superieure fine (`MainWindow.xaml`), boutons ajustes a 24px (`MainWindow.Bookmarks.cs`).
+3. **Cookies non refuses sur amazon.fr** : `ConsentManagerScripts` ne cherchait un bouton par texte QUE dans un conteneur "cookie/consent/gdpr/rgpd/#sp-cc" — Amazon (Sourcepoint) utilise un id de conteneur genere dynamiquement (`sp_message_container_XXXXXX`) qui ne matchait rien. Ajout de motifs `sp_message` + repli 3e niveau : recherche EXACTE (pas de prefixe, pour limiter les faux positifs) sur TOUTE la page si aucun conteneur connu.
+4. **Double-clic dans la barre d'onglets ne maximise pas** : `TitleBarDragRegion` etait une boite FIXE 180x32px collee aux boutons systeme, pas la zone vide de la barre d'onglets. Remplace par `UpdateTitleBarDragRegion()` (`AppWindow.TitleBar.SetDragRectangles`, dynamique, calee sur l'espace apres le dernier onglet + reserve 56px pour le bouton "+"), recalculee sur resize et sur ajout/fermeture/selection d'onglet.
+
+Passage de version source a `0.55.1-dev`. Log : `logs/2026-07-10-chrome-fixes-0-55-1.md`.
+
+### Verification
+
+- `dotnet test` : 163/163 tests verts (ce sont des changements de cablage UI natif WinUI, non couvrables par le projet de tests purs).
+- `build-winui.cmd`, `scripts/build-clean-test-artifact.ps1 -Version 0.55.1-dev`, `scripts/build-installer.ps1 -Version 0.55.1-dev` : tous reussis, 0 avertissement/erreur.
+- Test de fumee : lancement de l'exe Debug + capture d'ecran (fenetre s'ouvre, selecteur de profil visible). **Verification interactive volontairement arretee la** : le selecteur de profil affichait le profil REEL de l'utilisateur (`H.J. - emplacement personnalise`) — simuler des clics/frappes au-dela risquait de toucher ses vraies donnees. Molette/double-clic/bandeau Amazon a confirmer par l'utilisateur apres installation.
+- Installateur : `artifacts\installer\PulseBrowserSetup-0.55.1-dev-win-x64.exe`, SHA256 `add0f826bbacc04fbbaadc74c5707031021d34b1a81ab5ed80aea276fa593ed1`.
+
+**Version :** `0.55.1-dev`.

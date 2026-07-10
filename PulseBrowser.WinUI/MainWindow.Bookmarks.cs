@@ -399,12 +399,13 @@ public sealed partial class MainWindow
                 Content = BookmarkButtonContent(node),
                 Tag = node,
                 ContextFlyout = CreateBookmarkContextFlyout(node),
-                Height = 26,
-                MinHeight = 26,
+                Height = 24,
+                MinHeight = 24,
                 Padding = new Thickness(8, 1, 8, 1),
                 CornerRadius = new CornerRadius(7),
                 FontSize = 12
             };
+            ApplyPulseControlAccessibility(button, AccessibleBookmarkLabel(node));
             if (node.Kind == BookmarkKind.Folder)
             {
                 button.Flyout = CreateBookmarkFolderFlyout(node.Id);
@@ -431,19 +432,29 @@ public sealed partial class MainWindow
         var otherRoot = _allBookmarkNodes.FirstOrDefault(node => node.Id == BookmarkStore.OtherRootId);
         if (otherRoot is not null)
         {
-            OtherBookmarksBarHost.Children.Add(new Button
+            var otherButton = new Button
             {
                 Content = BookmarkButtonContent(otherRoot),
                 Tag = otherRoot,
                 Flyout = CreateBookmarkFolderFlyout(otherRoot.Id),
                 ContextFlyout = CreateBookmarkContextFlyout(otherRoot),
-                Height = 26,
-                MinHeight = 26,
+                Height = 24,
+                MinHeight = 24,
                 Padding = new Thickness(8, 1, 8, 1),
                 CornerRadius = new CornerRadius(7),
                 FontSize = 12
-            });
+            };
+            ApplyPulseControlAccessibility(otherButton, AccessibleBookmarkLabel(otherRoot));
+            OtherBookmarksBarHost.Children.Add(otherButton);
         }
+    }
+
+    private static string AccessibleBookmarkLabel(BookmarkNode node)
+    {
+        var title = string.IsNullOrWhiteSpace(node.Title) ? "sans nom" : node.Title.Trim();
+        return node.Kind == BookmarkKind.Folder
+            ? $"Ouvrir le dossier de favoris {title}"
+            : $"Ouvrir le favori {title}";
     }
 
     private void BookmarkBarButton_Click(object sender, RoutedEventArgs e)

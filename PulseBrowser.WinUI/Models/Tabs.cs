@@ -16,6 +16,7 @@ internal sealed record BrowserTabState(int Id, string Title, string Address)
     public string Address { get; set; } = Address;
     public string IconPath { get; set; } = string.Empty;
     public string IconUri => string.IsNullOrWhiteSpace(IconPath) ? string.Empty : new Uri(IconPath).AbsoluteUri;
+    public int? GroupId { get; set; }
 
     // Un WebView2 par onglet : chaque onglet garde son moteur (créé paresseusement
     // à la première activation) et l'adresse à charger dès que le moteur est prêt.
@@ -24,13 +25,19 @@ internal sealed record BrowserTabState(int Id, string Title, string Address)
 }
 
 
-internal sealed record SavedTab(string Title, string Address, string IconPath);
+internal sealed record SavedTab(string Title, string Address, string IconPath, int? GroupId = null);
+
+internal sealed record TabGroup(int Id, string Name, int ColorIndex)
+{
+    public string Name { get; set; } = Name;
+}
 
 internal sealed class TabSession
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     public List<SavedTab> Tabs { get; set; } = new();
+    public List<TabGroup> Groups { get; set; } = new();
     public int ActiveIndex { get; set; }
 
     public static TabSession Load(string path, string? legacyPath = null)

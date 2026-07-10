@@ -4,6 +4,8 @@ namespace PulseBrowser.WinUI;
 
 internal sealed class PulseProfilePaths
 {
+    public const string ProfileDirectoryEnvironmentVariable = "PULSE_BROWSER_PROFILE_DIR";
+
     private PulseProfilePaths(string profileDir)
     {
         ProfileDir          = profileDir;
@@ -18,6 +20,7 @@ internal sealed class PulseProfilePaths
         LegacyTabsFile      = Path.Combine(NavigationDir, "tabs.json");
         HistoryFile         = Path.Combine(NavigationDir, "history.pulse");
         LegacyHistoryFile   = Path.Combine(NavigationDir, "history.json");
+        DownloadsFile       = Path.Combine(NavigationDir, "downloads.pulse");
         PasskeysFile        = Path.Combine(NavigationDir, "passkeys.pulse");
         VaultFile           = Path.Combine(profileDir, "vault.pulse");
         ProfileFile         = Path.Combine(profileDir, "profile.pulse");
@@ -39,6 +42,7 @@ internal sealed class PulseProfilePaths
     public string LegacyTabsFile       { get; }
     public string HistoryFile          { get; }
     public string LegacyHistoryFile    { get; }
+    public string DownloadsFile        { get; }
     public string PasskeysFile         { get; }
     public string VaultFile            { get; }
     public string ProfileFile          { get; }
@@ -58,6 +62,12 @@ internal sealed class PulseProfilePaths
 
     public static PulseProfilePaths Default()
     {
+        var environmentProfileDir = Environment.GetEnvironmentVariable(ProfileDirectoryEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(environmentProfileDir))
+        {
+            return FromDirectory(Path.GetFullPath(environmentProfileDir));
+        }
+
         var config = PulseConfig.Load();
         if (!string.IsNullOrWhiteSpace(config.CustomProfilePath)
             && Directory.Exists(config.CustomProfilePath))

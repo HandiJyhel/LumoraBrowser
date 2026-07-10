@@ -71,10 +71,16 @@ public sealed partial class MainWindow
         else
         {
             OfferAutoFill(tab.Address);
+            // Sans focus explicite, la molette ne route vers aucune fenêtre tant que
+            // l'utilisateur n'a pas cliqué dans la page (le focus OS suit le focus
+            // clavier, pas le curseur) : le WebView2 doit recevoir le focus dès qu'il
+            // devient l'onglet actif, pas seulement au premier clic.
+            tab.View.Focus(FocusState.Programmatic);
         }
 
         RenderVerticalTabs();
         SaveTabSession();
+        UpdateTitleBarDragRegion();
     }
 
     // Création paresseuse du moteur d'un onglet. Ne fait rien tant que la fenêtre
@@ -111,6 +117,14 @@ public sealed partial class MainWindow
         try
         {
             await view.EnsureCoreWebView2Async();
+            // Le focus doit être (re)posé après l'attente async : l'onglet actif a pu
+            // changer entre-temps, et un WebView2 fraîchement créé n'a jamais le focus
+            // OS par défaut (cf. ActivateTab : sans ça, la molette reste muette tant
+            // qu'on n'a pas cliqué dans la page).
+            if (CurrentTab()?.Id == tab.Id)
+            {
+                view.Focus(FocusState.Programmatic);
+            }
         }
         catch (Exception error)
         {
@@ -151,6 +165,7 @@ public sealed partial class MainWindow
         sender.TabItems.Remove(args.Tab);
         RenderVerticalTabs();
         SaveTabSession();
+        UpdateTitleBarDragRegion();
 
         if (sender.TabItems.Count == 0)
         {
@@ -211,6 +226,7 @@ public sealed partial class MainWindow
         sender.CoreWebView2.SourceChanged += BrowserCore_SourceChanged;
         sender.CoreWebView2.FaviconChanged += BrowserCore_FaviconChanged;
         sender.CoreWebView2.DownloadStarting += CoreWebView2_DownloadStarting;
+        sender.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
         sender.CoreWebView2.WebMessageReceived += BrowserCore_WebMessageReceived;
 
         // Interception réseau pour le bloqueur de pubs/trackers
@@ -640,11 +656,12 @@ public sealed partial class MainWindow
         }
     }
 
-    private void AddTab(string title, string address, bool select)
+    private void AddTab(string title, string address, bool select, int? groupId = null)
     {
         var state = new BrowserTabState(_nextTabId++, title, address)
         {
-            IconPath = CachedFaviconPathFor(address) ?? string.Empty
+            IconPath = CachedFaviconPathFor(address) ?? string.Empty,
+            GroupId = groupId
         };
         _tabs.Add(state);
 
@@ -658,6 +675,7 @@ public sealed partial class MainWindow
         BrowserTabs.TabItems.Add(tab);
         RenderVerticalTabs();
         SaveTabSession();
+        UpdateTitleBarDragRegion();
         if (select)
         {
             // SelectionChanged active l'onglet ; filet direct si l'événement est
@@ -724,6 +742,21 @@ public sealed partial class MainWindow
         }
     }
 
+    // Palette de couleurs de groupe : reprend les teintes de l'identité visuelle
+    // (orange/teal de l'accueil) complétées par des teintes distinguables.
+    private static readonly Windows.UI.Color[] TabGroupPalette =
+    {
+        UiColor(225, 120, 24),
+        UiColor(102, 209, 190),
+        UiColor(94, 156, 235),
+        UiColor(219, 112, 147),
+        UiColor(154, 140, 226),
+        UiColor(226, 187, 60)
+    };
+
+    private static Windows.UI.Color TabGroupColor(TabGroup group) =>
+        TabGroupPalette[((group.ColorIndex % TabGroupPalette.Length) + TabGroupPalette.Length) % TabGroupPalette.Length];
+
     private void RenderVerticalTabs()
     {
         if (!_verticalTabsEnabled)
@@ -734,13 +767,32 @@ public sealed partial class MainWindow
 
         VerticalTabsPanelItems.Children.Clear();
         var current = CurrentTab();
+        int? lastGroupId = null;
+
         foreach (var tab in _tabs)
         {
+            if (tab.GroupId != lastGroupId && tab.GroupId is int headerGroupId)
+            {
+                var headerGroup = _tabGroups.FirstOrDefault(g => g.Id == headerGroupId);
+                if (headerGroup is not null)
+                {
+                    VerticalTabsPanelItems.Children.Add(GroupHeaderElement(headerGroup));
+                }
+            }
+            lastGroupId = tab.GroupId;
+
+            if (tab.GroupId is int collapsedGroupId && _collapsedGroupIds.Contains(collapsedGroupId))
+            {
+                continue;
+            }
+
             var isActive = current?.Id == tab.Id;
             Button button;
+            FrameworkElement content;
 
             if (_verticalTabsCompact)
             {
+                content = TabIconElement(tab, 20);
                 button = new Button
                 {
                     Width = 36,
@@ -749,7 +801,6 @@ public sealed partial class MainWindow
                     HorizontalAlignment = HorizontalAlignment.Center,
                     HorizontalContentAlignment = HorizontalAlignment.Center,
                     VerticalContentAlignment = VerticalAlignment.Center,
-                    Content = TabIconElement(tab, 20),
                     Tag = tab.Id,
                     Margin = new Thickness(0, 1, 0, 1)
                 };
@@ -765,15 +816,33 @@ public sealed partial class MainWindow
                     TextTrimming = TextTrimming.CharacterEllipsis,
                     VerticalAlignment = VerticalAlignment.Center
                 });
+                content = row;
                 button = new Button
                 {
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     HorizontalContentAlignment = HorizontalAlignment.Left,
                     Padding = new Thickness(8, 5, 8, 5),
-                    Content = row,
                     Tag = tab.Id,
                     Margin = new Thickness(0, 1, 0, 1)
                 };
+            }
+
+            if (tab.GroupId is int tabGroupId && _tabGroups.FirstOrDefault(g => g.Id == tabGroupId) is { } tabGroup)
+            {
+                var wrapper = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+                wrapper.Children.Add(new Border
+                {
+                    Width = 3,
+                    CornerRadius = new CornerRadius(1.5),
+                    Background = new SolidColorBrush(TabGroupColor(tabGroup)),
+                    VerticalAlignment = VerticalAlignment.Stretch
+                });
+                wrapper.Children.Add(content);
+                button.Content = wrapper;
+            }
+            else
+            {
+                button.Content = content;
             }
 
             if (isActive)
@@ -783,8 +852,192 @@ public sealed partial class MainWindow
 
             ToolTipService.SetToolTip(button, tab.Title);
             button.Click += VerticalTabButton_Click;
+            button.ContextFlyout = CreateTabContextFlyout(tab);
             VerticalTabsPanelItems.Children.Add(button);
         }
+    }
+
+    private FrameworkElement GroupHeaderElement(TabGroup group)
+    {
+        var collapsed = _collapsedGroupIds.Contains(group.Id);
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        row.Children.Add(new FontIcon
+        {
+            Glyph = collapsed ? "\uE76C" : "\uE70D",
+            FontFamily = new FontFamily("Segoe MDL2 Assets"),
+            FontSize = 10
+        });
+        row.Children.Add(new Border
+        {
+            Width = 8,
+            Height = 8,
+            CornerRadius = new CornerRadius(4),
+            Background = new SolidColorBrush(TabGroupColor(group)),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        row.Children.Add(new TextBlock
+        {
+            Text = group.Name,
+            FontSize = 12,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            MaxWidth = 130,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var header = new Button
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(8, 3, 8, 3),
+            Margin = new Thickness(0, 4, 0, 1),
+            Content = row,
+            Tag = group.Id
+        };
+        header.Click += (_, _) => ToggleGroupCollapsed(group.Id);
+        header.ContextFlyout = CreateGroupHeaderFlyout(group);
+        ToolTipService.SetToolTip(header, group.Name);
+        return header;
+    }
+
+    private MenuFlyout CreateTabContextFlyout(BrowserTabState tab)
+    {
+        var flyout = new MenuFlyout();
+
+        var addToGroup = new MenuFlyoutSubItem { Text = "Ajouter au groupe" };
+        foreach (var group in _tabGroups)
+        {
+            var groupItem = new MenuFlyoutItem { Text = group.Name, Tag = (tab, group) };
+            groupItem.Click += AddTabToGroup_Click;
+            addToGroup.Items.Add(groupItem);
+        }
+        if (_tabGroups.Count > 0)
+        {
+            addToGroup.Items.Add(new MenuFlyoutSeparator());
+        }
+        var newGroupItem = new MenuFlyoutItem { Text = "Nouveau groupe...", Tag = tab };
+        newGroupItem.Click += CreateGroupWithTab_Click;
+        addToGroup.Items.Add(newGroupItem);
+        flyout.Items.Add(addToGroup);
+
+        if (tab.GroupId is not null)
+        {
+            var removeItem = new MenuFlyoutItem { Text = "Retirer du groupe", Tag = tab };
+            removeItem.Click += RemoveTabFromGroup_Click;
+            flyout.Items.Add(removeItem);
+        }
+
+        return flyout;
+    }
+
+    private MenuFlyout CreateGroupHeaderFlyout(TabGroup group)
+    {
+        var flyout = new MenuFlyout();
+
+        var renameItem = new MenuFlyoutItem { Text = "Renommer le groupe", Tag = group };
+        renameItem.Click += RenameGroup_Click;
+        flyout.Items.Add(renameItem);
+
+        var dissolveItem = new MenuFlyoutItem { Text = "Dissoudre le groupe", Tag = group };
+        dissolveItem.Click += DissolveGroup_Click;
+        flyout.Items.Add(dissolveItem);
+
+        return flyout;
+    }
+
+    private void AddTabToGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: (BrowserTabState tab, TabGroup group) })
+        {
+            AssignTabToGroup(tab, group.Id);
+        }
+    }
+
+    private void RemoveTabFromGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: BrowserTabState tab })
+        {
+            AssignTabToGroup(tab, null);
+        }
+    }
+
+    private async void CreateGroupWithTab_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: BrowserTabState tab })
+        {
+            return;
+        }
+
+        var name = await PromptTextAsync("Nouveau groupe", "Nom du groupe", "");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        var group = new TabGroup(_nextGroupId++, name.Trim(), TabGroupOrdering.NextColorIndex(_tabGroups.Count));
+        _tabGroups.Add(group);
+        AssignTabToGroup(tab, group.Id);
+    }
+
+    private async void RenameGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: TabGroup group })
+        {
+            return;
+        }
+
+        var name = await PromptTextAsync("Renommer le groupe", "Nom du groupe", group.Name);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        group.Name = name.Trim();
+        RenderVerticalTabs();
+        SaveTabSession();
+    }
+
+    private void DissolveGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: TabGroup group })
+        {
+            return;
+        }
+
+        foreach (var tab in _tabs.Where(t => t.GroupId == group.Id))
+        {
+            tab.GroupId = null;
+        }
+        _tabGroups.Remove(group);
+        _collapsedGroupIds.Remove(group.Id);
+        RenderVerticalTabs();
+        SaveTabSession();
+    }
+
+    private void ToggleGroupCollapsed(int groupId)
+    {
+        if (!_collapsedGroupIds.Remove(groupId))
+        {
+            _collapsedGroupIds.Add(groupId);
+        }
+        RenderVerticalTabs();
+    }
+
+    private void AssignTabToGroup(BrowserTabState tab, int? groupId)
+    {
+        var order = TabGroupOrdering.ReorderForGroup(
+            _tabs.Select(t => t.Id).ToList(),
+            tab.Id,
+            groupId,
+            _tabs.ToDictionary(t => t.Id, t => t.GroupId));
+
+        var byId = _tabs.ToDictionary(t => t.Id);
+        _tabs.Clear();
+        _tabs.AddRange(order.Select(id => byId[id]));
+
+        tab.GroupId = groupId;
+        RenderVerticalTabs();
+        SaveTabSession();
     }
 
     private static StackPanel TabHeaderContent(BrowserTabState tab, bool compact)
@@ -945,7 +1198,8 @@ public sealed partial class MainWindow
         new TabSession
         {
             ActiveIndex = activeIndex,
-            Tabs = _tabs.Select(t => new SavedTab(t.Title, t.Address, t.IconPath)).ToList()
+            Tabs = _tabs.Select(t => new SavedTab(t.Title, t.Address, t.IconPath, t.GroupId)).ToList(),
+            Groups = _tabGroups.ToList()
         }.Save(_profile.TabsFile);
     }
 
@@ -957,9 +1211,13 @@ public sealed partial class MainWindow
             return false;
         }
 
+        _tabGroups.Clear();
+        _tabGroups.AddRange(session.Groups);
+        _nextGroupId = _tabGroups.Count == 0 ? 1 : _tabGroups.Max(g => g.Id) + 1;
+
         foreach (var saved in session.Tabs)
         {
-            AddTab(saved.Title, saved.Address, select: false);
+            AddTab(saved.Title, saved.Address, select: false, groupId: saved.GroupId);
         }
 
         var safeIndex = Math.Clamp(session.ActiveIndex, 0, BrowserTabs.TabItems.Count - 1);
@@ -985,33 +1243,36 @@ public sealed partial class MainWindow
         <title>Accueil Pulse</title>
         <style>
         *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Segoe UI',system-ui,sans-serif;background:{{(_uiSettings.AccessibilityHighContrast ? "#000" : "#292725")}};color:{{(_uiSettings.AccessibilityHighContrast ? "#fff" : "#f3eee7")}};min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:12vh 32px 32px;font-size:{{(_uiSettings.AccessibilityLargeText ? "17px" : "15px")}}}
-        main{width:min(820px,100%);display:flex;flex-direction:column;align-items:center;gap:30px}
-        .brand{display:flex;flex-direction:column;align-items:center;gap:12px}
-        .mark{display:flex;align-items:center;gap:13px}
-        .logo-icon{width:44px;height:44px;border-radius:13px;background:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : "#e17818")}};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:{{(_uiSettings.AccessibilityHighContrast ? "#000" : "#fff")}};flex-shrink:0;box-shadow:0 10px 24px rgba(0,0,0,.22)}
-        .logo-name{font-size:42px;font-weight:600;line-height:1;letter-spacing:0;color:#fff8ef}
-        .accent-line{width:92px;height:3px;border-radius:999px;background:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : "#e17818")}};opacity:.9}
-        .search{width:min(650px,100%);height:{{(_uiSettings.AccessibilityLargeText ? "52px" : "48px")}};border-radius:24px;background:{{(_uiSettings.AccessibilityHighContrast ? "#fff" : "#f6f1ea")}};display:flex;align-items:center;gap:12px;padding:0 19px;border:{{(_uiSettings.AccessibilityVisibleFocus ? "2px" : "1px")}} solid {{(_uiSettings.AccessibilityHighContrast ? "#fff" : "rgba(255,255,255,.18)")}};box-shadow:0 12px 34px rgba(0,0,0,.22)}
-        .search:focus-within{border-color:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : "rgba(225,120,24,.8)")}};box-shadow:0 12px 34px rgba(0,0,0,.24),0 0 0 3px rgba(225,120,24,.22)}
-        .search svg{width:18px;height:18px;color:#7a7168;flex-shrink:0}
-        .search input{width:100%;height:100%;border:0;outline:0;background:transparent;color:#201e1b;font-size:{{(_uiSettings.AccessibilityLargeText ? "17px" : "15px")}}}
-        .search input::placeholder{color:#7d756d}
-        .shortcuts{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:760px}
-        .shortcut-card{position:relative;width:92px;min-height:88px;border-radius:18px;padding:8px 6px 7px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#e8dfd4;text-decoration:none;font-size:12px;border:1px solid transparent}
-        .shortcut-card:hover,.shortcut-card:focus-within{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.08)}
+        body{font-family:'Segoe UI',system-ui,sans-serif;background:{{(_uiSettings.AccessibilityHighContrast ? "#000" : "#1f211f")}};color:{{(_uiSettings.AccessibilityHighContrast ? "#fff" : "#fff7eb")}};min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:11vh 32px 32px;font-size:{{(_uiSettings.AccessibilityLargeText ? "17px" : "15px")}};position:relative;overflow-x:hidden}
+        body::before{content:"";position:fixed;inset:0;background:{{(_uiSettings.AccessibilityHighContrast ? "none" : "linear-gradient(135deg,rgba(225,120,24,.18),transparent 34%),linear-gradient(225deg,rgba(102,209,190,.14),transparent 42%),linear-gradient(180deg,#242520 0%,#1f211f 46%,#181a19 100%)")}};pointer-events:none}
+        main{width:min(820px,100%);display:flex;flex-direction:column;align-items:center;gap:28px;position:relative}
+        .brand{display:flex;flex-direction:column;align-items:center;gap:13px}
+        .mark{display:flex;align-items:center;gap:14px}
+        .logo-icon{width:48px;height:48px;border-radius:8px;background:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : "linear-gradient(135deg,#f08a24 0%,#e17818 58%,#66d1be 100%)")}};display:flex;align-items:center;justify-content:center;color:{{(_uiSettings.AccessibilityHighContrast ? "#000" : "#fff")}};flex-shrink:0;box-shadow:0 13px 30px rgba(0,0,0,.26);position:relative;overflow:hidden}
+        .logo-icon::before{content:"";width:30px;height:30px;border:5px solid currentColor;border-left-color:transparent;border-radius:50%;transform:rotate(-24deg);opacity:.96}
+        .logo-icon::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:currentColor;right:13px;bottom:13px}
+        .logo-name{font-size:42px;font-weight:650;line-height:1;letter-spacing:0;color:#fff8ef}
+        .accent-line{width:132px;height:2px;border-radius:999px;background:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : "linear-gradient(90deg,#e17818,#66d1be)")}};opacity:.95}
+        .search{width:min(660px,100%);height:{{(_uiSettings.AccessibilityLargeText ? "54px" : "50px")}};border-radius:25px;background:{{(_uiSettings.AccessibilityHighContrast ? "#fff" : "#fbf4e8")}};display:flex;align-items:center;gap:12px;padding:0 20px;border:{{(_uiSettings.AccessibilityVisibleFocus ? "2px" : "1px")}} solid {{(_uiSettings.AccessibilityHighContrast ? "#fff" : "rgba(255,248,235,.24)")}};box-shadow:0 14px 38px rgba(0,0,0,.24)}
+        .search:focus-within{border-color:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : "rgba(102,209,190,.82)")}};box-shadow:0 14px 38px rgba(0,0,0,.27),0 0 0 3px rgba(102,209,190,.18)}
+        .search svg{width:18px;height:18px;color:#796f63;flex-shrink:0}
+        .search input{width:100%;height:100%;border:0;outline:0;background:transparent;color:#201f1b;font-size:{{(_uiSettings.AccessibilityLargeText ? "17px" : "15px")}}}
+        .search input::placeholder{color:#81786d}
+        .shortcuts{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;max-width:760px}
+        .shortcut-card{position:relative;width:92px;min-height:88px;border-radius:8px;padding:8px 6px 7px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#eee2d4;text-decoration:none;font-size:12px;border:1px solid transparent}
+        .shortcut-card:hover,.shortcut-card:focus-within{background:rgba(255,255,255,.06);border-color:rgba(102,209,190,.24)}
         .shortcut-link{display:flex;flex-direction:column;align-items:center;gap:8px;color:inherit;text-decoration:none;width:100%;min-width:0}
         .shortcut-title{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
-        .shortcut-dot{width:46px;height:46px;border-radius:14px;background:#34312d;border:1px solid #423d37;display:flex;align-items:center;justify-content:center;color:#fff1df;font-size:17px;font-weight:600}
-        .shortcut-card:hover .shortcut-dot{background:#3d3933;border-color:#6d5640;color:#fff}
+        .shortcut-dot{width:46px;height:46px;border-radius:8px;background:#31342d;border:1px solid #48483c;display:flex;align-items:center;justify-content:center;color:#fff1df;font-size:17px;font-weight:600}
+        .shortcut-card:hover .shortcut-dot{background:#373a32;border-color:#6d8e82;color:#fff}
         .shortcut-actions{position:absolute;top:3px;right:3px;display:flex;gap:2px;opacity:0;pointer-events:none}
         .shortcut-card:hover .shortcut-actions,.shortcut-card:focus-within .shortcut-actions{opacity:1;pointer-events:auto}
-        .shortcut-action{width:24px;height:24px;border:0;border-radius:12px;background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:13px;line-height:1}
+        .shortcut-action{width:24px;height:24px;border:0;border-radius:8px;background:rgba(0,0,0,.42);color:#fff;cursor:pointer;font-size:13px;line-height:1}
         .shortcut-action:hover{background:rgba(225,120,24,.9)}
-        .add-shortcut{border:1px dashed #5a5149;background:rgba(255,255,255,.03);cursor:pointer}
+        .add-shortcut{border:1px dashed #5b675f;background:rgba(255,255,255,.035);cursor:pointer}
         .add-shortcut .shortcut-dot{background:transparent;border-style:dashed;color:#cfc5ba}
-        .add-shortcut:hover .shortcut-dot{border-color:#e17818;color:#fff}
-        .hint{font-size:12px;color:#8f877e;margin-top:2px}
+        .add-shortcut:hover .shortcut-dot{border-color:#66d1be;color:#fff}
+        .hint{font-size:12px;color:#a7a096;margin-top:2px}
         {{(_uiSettings.AccessibilityReduceMotion ? ".search,.shortcut-card,.shortcut-dot,.shortcut-actions{transition:none}" : ".search,.shortcut-card,.shortcut-dot,.shortcut-actions{transition:background .12s ease,border-color .12s ease,box-shadow .12s ease,color .12s ease,opacity .12s ease}")}}
         </style>
         </head>
@@ -1019,7 +1280,7 @@ public sealed partial class MainWindow
         <main>
           <div class="brand">
             <div class="mark">
-              <div class="logo-icon">P</div>
+              <div class="logo-icon" aria-hidden="true"></div>
               <div class="logo-name">{{NewTabMarkup.HtmlText(_uiSettings.NewTabTitle)}}</div>
             </div>
             <div class="accent-line"></div>

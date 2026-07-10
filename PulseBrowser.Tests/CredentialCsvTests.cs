@@ -33,6 +33,31 @@ public sealed class CredentialCsvTests
     }
 
     [Fact]
+    public void Parse_reconnait_un_export_proton_pass()
+    {
+        var csv = "type,name,url,username,password,note,totp\n" +
+                  "login,Proton perso,https://account.proton.me/login,jyhel@example.com,secret,,\n";
+        var item = Assert.Single(CredentialCsv.Parse(csv));
+
+        Assert.Equal("https://account.proton.me", item.Origin);
+        Assert.Equal("https://account.proton.me/login", item.LoginUrl);
+        Assert.Equal("Proton perso", item.Label);
+        Assert.Equal("jyhel@example.com", item.Username);
+        Assert.Equal("secret", item.Password);
+    }
+
+    [Fact]
+    public void Parse_ignore_les_lignes_proton_pass_qui_ne_sont_pas_des_logins()
+    {
+        var csv = "type,name,url,username,password,note\n" +
+                  "note,Note privee,https://example.com,,pasunmotdepasse,texte\n" +
+                  "login,Compte,https://example.com,bob,secret,\n";
+
+        var item = Assert.Single(CredentialCsv.Parse(csv));
+        Assert.Equal("bob", item.Username);
+    }
+
+    [Fact]
     public void Parse_ignore_les_lignes_sans_url_ou_mot_de_passe()
     {
         var csv = "url,username,password\n,bob,secret\nhttps://site.test,carol,\n";

@@ -41,6 +41,24 @@ La navigation WebView2 attend `CoreWebView2Initialized` avant de charger la prem
 
 `0.42.0-dev` met en place le multi-utilisateur local : Pulse Browser decouvre les profils presents sur l'ordinateur, permet d'en creer un autre, separe les donnees par dossier de profil, et redemarre proprement quand l'utilisateur change de profil afin que les favoris, l'historique, le coffre et les reglages pointent sur le bon stockage.
 
+`0.50.1-dev` retire l'option utilisateur d'effet translucide. Le chrome revient volontairement a un rendu solide pour garder une identite Pulse plus lisible, plus stable et plus compatible avec les choix d'accessibilite.
+
+`0.51.0-dev` ajoute une premiere gestion locale des permissions par site dans le Centre du site : camera, micro, localisation, notifications, presse-papiers, telechargements multiples et fichiers locaux peuvent etre demandes, autorises ou bloques par domaine.
+
+`0.52.0-dev` rend les telechargements plus utilisables au quotidien : l'historique devient local et persistant par profil, le panneau permet d'effacer ou de retirer des entrees, et les actions d'ouverture sont masquees si le fichier n'existe plus.
+
+`0.53.0-dev` renforce l'import des mots de passe CSV dans le coffre local : Proton Pass, Chrome, Firefox, Bitwarden et formats proches sont reconnus, avec conservation du nom/libelle et de l'URL de connexion quand ils sont presents. L'import demande confirmation apres lecture du CSV avant d'ecrire dans `vault.pulse`.
+
+`0.54.0-dev` ajoute une vraie surface de gestion des utilisateurs/profils dans `Parametres > Profil` : liste des profils locaux, profil actif visible, bascule vers un autre profil, ouverture du dossier de profil, creation de profil et mise en quarantaine securisee des profils non actifs.
+
+`0.54.1-dev` corrige l'ouverture des profils avec emplacement personnalise apres installation : le selecteur recharge le chemin reel du profil choisi, l'import de favoris d'onboarding ecrit dans le dossier cible, et l'installateur ne force plus `PULSE_BROWSER_PROFILE_DIR`.
+
+`0.54.2-dev` rend les imports visibles apres connexion : le menu Pulse expose l'import de favoris, l'ouverture du gestionnaire de mots de passe et l'import CSV des mots de passe, avec les memes acces dans la palette de commande et la section Coffre des parametres.
+
+`0.55.0-dev` ajoute l'import de mots de passe depuis un navigateur Chromium tiers installe sur la machine (Chrome, Edge, Brave, Vivaldi, Opera, Opera GX) : detection automatique des profils, dechiffrement local DPAPI/AES-GCM (comme pour le magasin interne), et un choix CSV/navigateur avant chaque import.
+
+`0.55.1-dev` corrige 4 regressions signalees apres installation du vrai installateur : le WebView2 actif recoit maintenant le focus programmatique (la molette fonctionnait uniquement apres un premier clic) ; la barre de favoris a une vraie respiration verticale et un separateur visuel (elle etait collee a la barre d'adresse) ; le refus automatique des cookies couvre desormais les bandeaux maison sans classe/id reconnaissable (repli par texte exact sur toute la page, corrige amazon.fr) ; la zone de "drag" du titre est recalculee dynamiquement sur l'espace vide de la barre d'onglets, pour que le double-clic maximise la fenetre comme dans les autres navigateurs.
+
 ## Commandes
 
 - `build-winui.cmd`: restaure et compile la coque WinUI 3 avec MSBuild Visual Studio.

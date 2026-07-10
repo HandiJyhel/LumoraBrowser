@@ -59,6 +59,7 @@ internal sealed class UiSettings
     public bool AccessibilityVisibleFocus { get; set; } = true;
     public bool SetupWizardCompleted    { get; set; }
     public List<string> PrivacyWhitelist { get; set; } = new();
+    public List<SitePermissionRule> SitePermissions { get; set; } = new();
     // Sessions éphémères : au démarrage, purge des cookies de la session précédente,
     // sauf pour les domaines racines listés comme sites de confiance.
     public bool SessionPurgeEnabled { get; set; } = true;
@@ -115,4 +116,3 @@ internal sealed class UiSettings
 }
 
 internal sealed record NewTabShortcut(string Title, string Url);
-

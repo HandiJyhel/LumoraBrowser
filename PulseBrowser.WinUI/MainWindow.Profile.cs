@@ -92,22 +92,28 @@ public sealed partial class MainWindow
         if (index < 0 || index >= _profileEntries.Count) return;
 
         var entry = _profileEntries[index];
-        if (entry.IsActive)
+        var entryPaths = PulseProfilePaths.FromDirectory(entry.ProfileDir);
+        if (!entry.IsActive || !SameProfileDirectory(entryPaths.ProfileDir, _profile.ProfileDir))
         {
-            _userProfile = UserProfile.Load(_profile.ProfileFile, _profile.LegacyProfileFile);
-            if (_userProfile is null)
-            {
-                LoginStatusText.Text = "Profil actif illisible.";
-                return;
-            }
-
-            LoginWelcomeText.Text = $"Bonjour, {_userProfile.Name}";
-            PinWelcomeText.Text = $"Bonjour, {_userProfile.Name}";
-            ShowPinButton.Visibility = _userProfile.HasPinLogin ? Visibility.Visible : Visibility.Collapsed;
-            ShowLoginPanel(_userProfile.HasPinLogin ? "pin" : "password");
+            SaveSelectedProfileAndRestart(entry);
             return;
         }
 
+        _userProfile = UserProfile.Load(entryPaths.ProfileFile, entryPaths.LegacyProfileFile);
+        if (_userProfile is null)
+        {
+            LoginStatusText.Text = "Profil actif illisible.";
+            return;
+        }
+
+        LoginWelcomeText.Text = $"Bonjour, {_userProfile.Name}";
+        PinWelcomeText.Text = $"Bonjour, {_userProfile.Name}";
+        ShowPinButton.Visibility = _userProfile.HasPinLogin ? Visibility.Visible : Visibility.Collapsed;
+        ShowLoginPanel(_userProfile.HasPinLogin ? "pin" : "password");
+    }
+
+    private void SaveSelectedProfileAndRestart(PulseProfileEntry entry)
+    {
         var config = PulseConfig.Load();
         if (entry.IsCustom)
         {
@@ -123,6 +129,21 @@ public sealed partial class MainWindow
         RestartApp();
     }
 
+    private static bool SameProfileDirectory(string first, string second)
+    {
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     private void CreateAnotherProfileButton_Click(object sender, RoutedEventArgs e)
     {
         _pendingUserProfile = null;
@@ -131,6 +152,7 @@ public sealed partial class MainWindow
         _pendingRecoveryKey = null;
         _pendingProfileDir = null;
         _pendingProfileId = null;
+        _profileCreationTarget = null;
         ProfileNameBox.Text = string.Empty;
         CreatePasswordBox.Password = string.Empty;
         ConfirmPasswordBox.Password = string.Empty;
@@ -250,6 +272,204 @@ public sealed partial class MainWindow
             ProfilePinSwitch.IsOn = _userProfile.HasPinLogin;
             _suppressUiSettingsSave = false;
         }
+
+        RefreshProfileManagementPanel();
+    }
+
+    private void RefreshProfilesButton_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshProfileManagementPanel();
+        StatusText.Text = "Liste des profils actualisee.";
+    }
+
+    private void RefreshProfileManagementPanel()
+    {
+        ProfileManagementPanel.Children.Clear();
+        _profileEntries = PulseProfileRegistry.Discover(PulseConfig.Load());
+
+        if (_profileEntries.Count == 0)
+        {
+            ProfileManagementPanel.Children.Add(new TextBlock
+            {
+                Text = "Aucun profil local detecte.",
+                Opacity = 0.65
+            });
+            return;
+        }
+
+        foreach (var entry in _profileEntries)
+        {
+            ProfileManagementPanel.Children.Add(BuildProfileManagementCard(entry));
+        }
+    }
+
+    private UIElement BuildProfileManagementCard(PulseProfileEntry entry)
+    {
+        var header = new Grid { ColumnSpacing = 8 };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var title = new TextBlock
+        {
+            Text = entry.IsActive ? $"{entry.Name} (actif)" : entry.Name,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(title, 0);
+        header.Children.Add(title);
+
+        var type = new TextBlock
+        {
+            Text = entry.IsCustom ? "Emplacement personnalise" : "Profil local",
+            Opacity = 0.62,
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(type, 1);
+        header.Children.Add(type);
+
+        var path = new TextBlock
+        {
+            Text = entry.ProfileDir,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.62,
+            FontSize = 12,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+
+        var actions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+
+        var switchButton = new Button
+        {
+            Content = "Basculer",
+            IsEnabled = !entry.IsActive
+        };
+        switchButton.Click += (_, _) => SwitchToProfile(entry);
+        actions.Children.Add(switchButton);
+
+        var openButton = new Button { Content = "Ouvrir le dossier" };
+        openButton.Click += (_, _) => OpenProfileDirectory(entry);
+        actions.Children.Add(openButton);
+
+        var quarantineButton = new Button
+        {
+            Content = "Mettre en quarantaine",
+            IsEnabled = !entry.IsActive,
+            Foreground = new SolidColorBrush(new Windows.UI.Color { A = 255, R = 220, G = 70, B = 70 })
+        };
+        quarantineButton.Click += async (_, _) => await QuarantineProfileAsync(entry);
+        actions.Children.Add(quarantineButton);
+
+        var body = new StackPanel();
+        body.Children.Add(header);
+        body.Children.Add(path);
+        body.Children.Add(actions);
+
+        return new Border
+        {
+            BorderThickness = new Thickness(1),
+            BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14, 10, 14, 10),
+            Child = body
+        };
+    }
+
+    private void SwitchToProfile(PulseProfileEntry entry)
+    {
+        if (entry.IsActive) return;
+        SaveSelectedProfileAndRestart(entry);
+    }
+
+    private void OpenProfileDirectory(PulseProfileEntry entry)
+    {
+        try
+        {
+            if (!Directory.Exists(entry.ProfileDir))
+            {
+                StatusText.Text = "Dossier de profil introuvable.";
+                RefreshProfileManagementPanel();
+                return;
+            }
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = entry.ProfileDir,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Ouverture du dossier impossible : {ex.Message}";
+        }
+    }
+
+    private async Task QuarantineProfileAsync(PulseProfileEntry entry)
+    {
+        if (entry.IsActive)
+        {
+            StatusText.Text = "Le profil actif ne peut pas etre mis en quarantaine.";
+            return;
+        }
+
+        var nameBox = new TextBox
+        {
+            PlaceholderText = entry.Name,
+            MinWidth = 320
+        };
+        var panel = new StackPanel { Spacing = 10 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Le profil sera deplace dans un dossier de quarantaine. Il ne sera pas detruit immediatement.",
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = entry.ProfileDir,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.62,
+            FontSize = 12
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Tapez le nom du profil pour confirmer : {entry.Name}",
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(nameBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Mettre ce profil en quarantaine ?",
+            Content = panel,
+            PrimaryButtonText = "Mettre en quarantaine",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = Content.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        if (!string.Equals(nameBox.Text.Trim(), entry.Name, StringComparison.CurrentCultureIgnoreCase))
+        {
+            StatusText.Text = "Confirmation incorrecte : profil conserve.";
+            return;
+        }
+
+        try
+        {
+            var target = PulseProfileRegistry.QuarantineProfile(entry);
+            RefreshProfileManagementPanel();
+            StatusText.Text = $"Profil mis en quarantaine : {target}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Mise en quarantaine impossible : {ex.Message}";
+        }
     }
 
     private void EnablePinSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -264,6 +484,7 @@ public sealed partial class MainWindow
         _isGuestMode = true;
         _bookmarks.SetGuestMode(true);
         _historyPanel.Store.SetGuestMode(true);
+        _historyPanel.Downloads.SetGuestMode(true);
         _webApps.SetGuestMode(true);
         DismissLoginOverlay();
         // Reconstruire l'UI avec les stores vides
@@ -313,6 +534,7 @@ public sealed partial class MainWindow
         _pendingProfileId = _profileEntries.Count == 0 && UserProfile.Load(_profile.ProfileFile, _profile.LegacyProfileFile) is null
             ? "default"
             : PulseProfileRegistry.CreateProfileId(name);
+        _profileCreationTarget = null;
         ProfileLocationPathText.Text = PulseProfilePaths.ForProfileId(_pendingProfileId).ProfileDir;
         ShowLoginPanel("location");
     }
@@ -338,6 +560,7 @@ public sealed partial class MainWindow
         var targetProfile = _pendingProfileDir is not null
             ? PulseProfilePaths.FromDirectory(_pendingProfileDir)
             : PulseProfilePaths.ForProfileId(_pendingProfileId);
+        _profileCreationTarget = targetProfile;
         _userProfile = _pendingUserProfile;
         _pendingUserProfile = null;
         _userProfile.Save(targetProfile.ProfileFile);
@@ -373,6 +596,7 @@ public sealed partial class MainWindow
         _pendingProfilePin = null;
         _pendingRecoveryKey = null;
         _pendingProfileId = null;
+        _pendingProfileDir = null;
 
         ReloadBookmarks();
         _historyPanel.Items.Clear();
@@ -450,7 +674,7 @@ public sealed partial class MainWindow
         if (_restartRequired)
         {
             // _bookmarks pointe vers l'ancien chemin → écrire dans le nouveau dossier cible
-            var targetPaths = PulseProfilePaths.Default();
+            var targetPaths = _profileCreationTarget ?? PulseProfilePaths.Default();
             var tempStore = new BookmarkStore(targetPaths.BookmarksFile, null, null);
             tempStore.MergeImport(tree);
             RestartApp();

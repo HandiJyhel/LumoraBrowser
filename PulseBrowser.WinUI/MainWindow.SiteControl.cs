@@ -13,6 +13,7 @@ public sealed partial class MainWindow
     // session/cookies, identifiants du coffre et historique.
 
     private sealed record CurrentSiteInfo(string Address, string Host, string RootDomain);
+    private sealed record SitePermissionSelection(string RootDomain, string Kind);
 
     private void SiteControlMenu_Click(object sender, RoutedEventArgs e) =>
         ShowSiteControlForCurrentPage();
@@ -136,8 +137,136 @@ public sealed partial class MainWindow
             ? "Aucune page de ce domaine dans l'historique local."
             : $"{historyEntries.Count} visite(s) locale(s) retrouvee(s).";
 
+        RenderSitePermissions(site.RootDomain);
         RenderSiteRecentHistory(historyEntries.Take(5).ToList());
         StatusText.Text = $"Centre du site: {site.RootDomain}";
+    }
+
+    private void RenderSitePermissions(string rootDomain)
+    {
+        var allowed = 0;
+        var blocked = 0;
+        foreach (var descriptor in SitePermissionPolicy.KnownPermissions)
+        {
+            var state = SitePermissionPolicy.StateFor(_uiSettings.SitePermissions, rootDomain, descriptor.Key);
+            if (state == SitePermissionPolicy.Allow) allowed++;
+            if (state == SitePermissionPolicy.Block) blocked++;
+        }
+
+        SiteControlPermissionsText.Text = allowed == 0 && blocked == 0
+            ? "Pulse demandera confirmation quand ce site réclame une permission sensible."
+            : $"{allowed} permission(s) autorisee(s), {blocked} permission(s) bloquee(s) pour ce site.";
+
+        _suppressSitePermissionUi = true;
+        try
+        {
+            SiteControlPermissionsPanel.Children.Clear();
+            foreach (var descriptor in SitePermissionPolicy.KnownPermissions)
+            {
+                SiteControlPermissionsPanel.Children.Add(BuildSitePermissionRow(rootDomain, descriptor));
+            }
+        }
+        finally
+        {
+            _suppressSitePermissionUi = false;
+        }
+    }
+
+    private UIElement BuildSitePermissionRow(string rootDomain, SitePermissionDescriptor descriptor)
+    {
+        var row = new Grid { ColumnSpacing = 12 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var labels = new StackPanel { Spacing = 1 };
+        labels.Children.Add(new TextBlock
+        {
+            Text = descriptor.Label,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        });
+        labels.Children.Add(new TextBlock
+        {
+            Text = descriptor.Detail,
+            FontSize = 12,
+            Opacity = 0.66,
+            TextWrapping = TextWrapping.Wrap
+        });
+        Grid.SetColumn(labels, 0);
+        row.Children.Add(labels);
+
+        var combo = new ComboBox
+        {
+            Width = 150,
+            Tag = new SitePermissionSelection(rootDomain, descriptor.Key),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        combo.Items.Add(new ComboBoxItem { Content = "Demander", Tag = SitePermissionPolicy.Ask });
+        combo.Items.Add(new ComboBoxItem { Content = "Autoriser", Tag = SitePermissionPolicy.Allow });
+        combo.Items.Add(new ComboBoxItem { Content = "Bloquer", Tag = SitePermissionPolicy.Block });
+        combo.SelectionChanged += SitePermissionCombo_SelectionChanged;
+
+        var state = SitePermissionPolicy.StateFor(_uiSettings.SitePermissions, rootDomain, descriptor.Key);
+        foreach (var item in combo.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), state, StringComparison.OrdinalIgnoreCase))
+            {
+                combo.SelectedItem = item;
+                break;
+            }
+        }
+
+        Grid.SetColumn(combo, 1);
+        row.Children.Add(combo);
+
+        return row;
+    }
+
+    private void SitePermissionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressSitePermissionUi) return;
+        if (sender is not ComboBox combo ||
+            combo.Tag is not SitePermissionSelection selection ||
+            combo.SelectedItem is not ComboBoxItem item)
+        {
+            return;
+        }
+
+        var state = item.Tag?.ToString() ?? SitePermissionPolicy.Ask;
+        SitePermissionPolicy.SetState(_uiSettings.SitePermissions, selection.RootDomain, selection.Kind, state);
+        SaveUiSettings();
+        RenderSitePermissions(selection.RootDomain);
+        StatusText.Text = $"{SitePermissionPolicy.StateLabel(state)} : {selection.Kind} pour {selection.RootDomain}.";
+    }
+
+    private void CoreWebView2_PermissionRequested(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)
+    {
+        if (!Uri.TryCreate(args.Uri, UriKind.Absolute, out var uri) ||
+            string.IsNullOrWhiteSpace(uri.Host))
+        {
+            return;
+        }
+
+        var rootDomain = RootDomainOf(uri.Host);
+        var permissionKey = SitePermissionPolicy.NormalizeKind(args.PermissionKind.ToString());
+        var state = SitePermissionPolicy.StateFor(_uiSettings.SitePermissions, rootDomain, permissionKey);
+
+        if (state == SitePermissionPolicy.Allow)
+        {
+            args.State = CoreWebView2PermissionState.Allow;
+        }
+        else if (state == SitePermissionPolicy.Block)
+        {
+            args.State = CoreWebView2PermissionState.Deny;
+        }
+        else
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            StatusText.Text = $"{SitePermissionPolicy.StateLabel(state)} : {permissionKey} pour {rootDomain}.";
+        });
     }
 
     private string BuildShieldSiteSummary(string domain)

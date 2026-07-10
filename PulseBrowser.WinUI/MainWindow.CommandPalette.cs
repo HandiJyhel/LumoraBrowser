@@ -168,6 +168,8 @@ public sealed partial class MainWindow
             () => SettingsMenu_Click(this, new RoutedEventArgs())), 90);
         Add(new("Commande", "Gestionnaire de mots de passe", "Ouvre le coffre local vault.pulse", "\uE72E",
             () => VaultMenu_Click(this, new RoutedEventArgs())), 88);
+        Add(new("Commande", "Importer des mots de passe", "Depuis un CSV (Proton Pass, Bitwarden...) ou un navigateur installe (Chrome, Edge, Brave...)", "\uE8B5",
+            () => ImportPasswordsMenu_Click(this, new RoutedEventArgs())), 88);
         Add(new("Commande", "Portefeuille", "Cartes de paiement locales (vault.pulse)", "\uE8C7",
             () => WalletMenu_Click(this, new RoutedEventArgs())), 87);
         Add(new("Commande", "Historique", "Ouvre l'historique local", "\uE81C",
@@ -186,6 +188,8 @@ public sealed partial class MainWindow
             () => PasskeysMenu_Click(this, new RoutedEventArgs())), 80);
         Add(new("Commande", "Ajouter aux favoris", "Ajoute la page active a la barre des favoris", "\uE734",
             () => AddBookmarkButton_Click(this, new RoutedEventArgs())), 78);
+        Add(new("Commande", "Importer des favoris", "Importe des favoris depuis un navigateur ou un fichier HTML", "\uE8B5",
+            () => ImportMenu_Click(this, new RoutedEventArgs())), 76);
         Add(new("Commande", "A propos", "Informations sur Pulse Browser", "\uE946",
             () => AboutMenu_Click(this, new RoutedEventArgs())), 60);
 

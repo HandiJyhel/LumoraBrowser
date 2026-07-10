@@ -121,6 +121,18 @@ internal sealed class PasswordManagerService
             item.username,
             item.password)));
 
+    public int ImportClear(IEnumerable<CredentialImportItem> items) =>
+        _vault.ImportClear(items.Select(item =>
+        {
+            var origin = NormalizeOrigin(item.Origin);
+            return (
+                origin,
+                item.Username.Trim(),
+                item.Password,
+                NormalizeLoginUrl(item.LoginUrl, origin),
+                item.Label.Trim());
+        }));
+
     public static string NormalizeOrigin(string value)
     {
         var trimmed = value.Trim();
