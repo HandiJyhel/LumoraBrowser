@@ -141,17 +141,37 @@ internal sealed class PasswordManagerInteractionService
             return null;
         }
 
+        // Aucun compte pour CE domaine, mais peut-etre le meme compte (identifiant +
+        // mot de passe) sous un autre domaine : le site a change de nom de domaine.
+        // On reprend son nom personnalise pour garder les deux entrees coherentes.
+        string? linkedFromDomain = null;
+        var label = string.Empty;
+        if (existing is null && !string.IsNullOrWhiteSpace(username))
+        {
+            var crossDomain = _passwordManager.FindSameLoginOnOtherDomain(origin, username, capture.Password);
+            if (crossDomain is not null)
+            {
+                var otherRoot = PublicSuffixService.RootDomainOf(crossDomain.Origin);
+                linkedFromDomain = string.IsNullOrWhiteSpace(otherRoot)
+                    ? PublicSuffixService.HostOf(crossDomain.Origin)
+                    : otherRoot;
+                label = crossDomain.Label;
+            }
+        }
+
         var draft = new PasswordManagerEntryDraft(
             origin,
             username,
             capture.Password,
-            loginUrl);
+            loginUrl,
+            label);
 
         return new PasswordManagerSaveOffer(
             draft,
             PublicSuffixService.OriginOf(origin),
             username,
-            existing is not null);
+            existing is not null,
+            linkedFromDomain);
     }
 
     private void RememberPageState(CredentialPageState pageState)

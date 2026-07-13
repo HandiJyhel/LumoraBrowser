@@ -59,13 +59,17 @@ public sealed partial class MainWindow
             OriginOf(existing.Origin) == OriginOf(draft.Origin))
             return;
 
-        _pendingCredential = (draft.Origin, draft.Username, draft.Password, draft.LoginUrl);
+        _pendingCredential = (draft.Origin, draft.Username, draft.Password, draft.LoginUrl, draft.Label);
         var forWhom = string.IsNullOrWhiteSpace(offer.Username)
             ? offer.DisplayOrigin
             : $"{offer.Username} sur {offer.DisplayOrigin}";
-        CredentialSaveText.Text = offer.IsUpdate
-            ? $"Mettre a jour le mot de passe pour {forWhom} ?"
-            : $"Enregistrer le mot de passe pour {forWhom} ?";
+        // Cas "changement de domaine" : le meme compte existe deja sous un autre
+        // domaine. On propose de rattacher le nouveau, pas juste d'"enregistrer".
+        CredentialSaveText.Text = offer.LinkedFromDomain is { } linkedFrom
+            ? $"Ce compte est deja enregistre pour {linkedFrom}. Ajouter aussi {offer.DisplayOrigin} ?"
+            : offer.IsUpdate
+                ? $"Mettre a jour le mot de passe pour {forWhom} ?"
+                : $"Enregistrer le mot de passe pour {forWhom} ?";
         CredentialSaveBar.Visibility = Visibility.Visible;
     }
 
@@ -261,7 +265,8 @@ public sealed partial class MainWindow
                 cred.Origin,
                 cred.Username,
                 cred.Password,
-                cred.LoginUrl));
+                cred.LoginUrl,
+                cred.Label));
         StatusText.Text = $"Identifiants enregistres pour {cred.Origin}.";
     }
 

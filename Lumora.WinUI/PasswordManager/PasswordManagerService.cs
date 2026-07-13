@@ -56,6 +56,41 @@ internal sealed class PasswordManagerService
             .ToList();
     }
 
+    // Detection "changement de domaine". Cherche un compte identique — meme
+    // identifiant ET meme mot de passe — enregistre sous un AUTRE domaine racine que
+    // celui de la page courante. On ne se fie JAMAIS a une ressemblance de nom : la
+    // preuve que c'est le meme compte, c'est que l'utilisateur vient de se connecter
+    // avec succes avec ces identifiants exacts. Aucun risque de phishing (on ne
+    // propose rien sur un domaine inconnu tant qu'un login reussi ne l'a pas prouve),
+    // aucune donnee ne sort de la machine (comparaison au coffre local uniquement).
+    public VaultCredential? FindSameLoginOnOtherDomain(string origin, string username, string password)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            return null;
+        }
+
+        var root = PublicSuffixService.RootDomainOf(origin);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return null;
+        }
+
+        var trimmedUser = username.Trim();
+        return _vault.ListCredentials()
+            .Where(c =>
+                c.Username.Equals(trimmedUser, StringComparison.OrdinalIgnoreCase) &&
+                c.Password.Equals(password, StringComparison.Ordinal))
+            .Where(c =>
+            {
+                var otherRoot = PublicSuffixService.RootDomainOf(c.Origin);
+                return !string.IsNullOrWhiteSpace(otherRoot) &&
+                       !otherRoot.Equals(root, StringComparison.OrdinalIgnoreCase);
+            })
+            .OrderByDescending(c => c.UpdatedAt)
+            .FirstOrDefault();
+    }
+
     public VaultCredential? FindExistingLogin(string origin, string username, string loginUrl = "")
     {
         if (string.IsNullOrWhiteSpace(username))

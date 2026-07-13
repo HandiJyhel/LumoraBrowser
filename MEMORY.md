@@ -4876,3 +4876,35 @@ site (pas un bug Lumora dans ce cas).
 Details : `logs/2026-07-13-focus-retour-page-coffre-0-71-2.md`.
 
 **Version :** `0.71.2-dev`.
+
+## 2026-07-13 (suite) - Coffre : detection d'un changement de domaine (0.72.0-dev)
+
+Diagnostic holy.com (captures) : compte enregistre sous `fr.weareholy.com`, site
+migre vers `fr.holy.com` -> racines differentes -> aucune offre. Demande
+utilisateur : detecter automatiquement les changements de nom de domaine.
+
+Conception : detection 100% auto + sure + locale = impossible (Google = cloud,
+Bitwarden = liste maintenue ; deviner sur une ressemblance = phishing). Solution
+retenue : detecter au moment ou l'utilisateur PROUVE le lien, i.e. une connexion
+reussie sur le nouveau domaine avec identifiant + mot de passe deja au coffre
+sous un autre domaine -> proposer de rattacher. Aucune devinette, aucun reseau.
+
+**Changements** : `PasswordManagerService.FindSameLoginOnOtherDomain` (meme
+identifiant + meme mot de passe, domaine racine different, correspondance
+stricte) ; `BuildSaveOffer` renseigne `PasswordManagerSaveOffer.LinkedFromDomain`
+et reprend le nom personnalise ; barre d'enregistrement avec message dedie
+« Ce compte est deja enregistre pour X. Ajouter aussi Y ? » ; `_pendingCredential`
+porte le nom. Sur acceptation : nouvelle entree pour le nouveau domaine (l'ancienne
+est conservee). Cree 2 entrees plutot qu'un multi-domaines par entree (plus simple
+pour cette version).
+
+PROCHAINE VERSION prevue : edition complete d'une entree (site, URL login,
+identifiant, nom) — filet manuel.
+
+**Verification** : build OK ; 289/289 tests verts dont 6 nouveaux
+(`CrossDomainLoginDetectionTests`). Installateur :
+`artifacts\installer\LumoraSetup-0.72.0-dev-win-x64.exe`, SHA256
+`ca62a2ddcf3069874d3dbc2387689d39ee05b53ca27a909fe70d172403411284`.
+Details : `logs/2026-07-13-coffre-detection-changement-domaine-0-72-0.md`.
+
+**Version :** `0.72.0-dev`.

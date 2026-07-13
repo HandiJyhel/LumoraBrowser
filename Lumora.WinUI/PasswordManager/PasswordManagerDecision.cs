@@ -29,4 +29,9 @@ internal sealed record PasswordManagerSaveOffer(
     PasswordManagerEntryDraft Draft,
     string DisplayOrigin,
     string Username,
-    bool IsUpdate);
+    bool IsUpdate,
+    // Non nul quand ce meme compte (identifiant + mot de passe) est deja enregistre
+    // sous un AUTRE domaine : le site a probablement change de nom de domaine, on
+    // propose de rattacher le nouveau domaine au compte existant. Contient le domaine
+    // d'affichage ou le compte vit deja (ex. "weareholy.com").
+    string? LinkedFromDomain = null);

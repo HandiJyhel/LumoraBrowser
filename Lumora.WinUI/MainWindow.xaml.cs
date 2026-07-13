@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.71.2-dev";
+    private const string Version = "0.72.0-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -92,7 +92,7 @@ public sealed partial class MainWindow : Window
     private readonly PasswordManagerService _passwordManager;
     private readonly PasswordManagerInteractionService _passwordManagerInteraction;
     private readonly CredentialService _credentialService = new();
-    private (string Origin, string Username, string Password, string LoginUrl)? _pendingCredential;
+    private (string Origin, string Username, string Password, string LoginUrl, string Label)? _pendingCredential;
     private IReadOnlyList<VaultCredential> _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
     private string? _pendingGeneratedPassword;
     private readonly List<PasskeyEntry> _passkeys = new();
