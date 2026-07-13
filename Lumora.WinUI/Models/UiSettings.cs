@@ -63,10 +63,12 @@ internal sealed class UiSettings
     // intégré des versions 0.65.x a été retiré : retranscription trop mauvaise).
     public bool AccessibilityVoiceDictationEnabled { get; set; }
     // Lecture a voix haute : synthese vocale 100% locale (Windows), aucun
-    // texte de page envoye a un serveur externe. Pas de permission sensible
-    // requise (contrairement au micro) : activee par defaut, comme la
-    // traduction.
-    public bool ReadAloudEnabled { get; set; } = true;
+    // texte de page envoye a un serveur externe. Fonction de confort, pas une
+    // protection : opt-in comme le micro et l'assistant IA, pour ne pas encombrer
+    // la barre d'adresse d'un bouton que l'utilisateur n'a pas demande. Les
+    // protections (bloqueur pub/traqueurs, HTTPS, cookies...) restent, elles,
+    // actives par defaut. L'utilisateur active la lecture dans les Reglages.
+    public bool ReadAloudEnabled { get; set; }
     // Traduction neuronale locale des pages (modele telecharge une fois puis
     // traduction 100% hors ligne). Activee par defaut : simple telechargement
     // generique, pas de donnee personnelle envoyee, sur le meme principe que

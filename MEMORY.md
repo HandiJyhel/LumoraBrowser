@@ -4829,3 +4829,24 @@ SHA256 `ae929b7eed6e5c9ac484505bf07229b8bade98f1481d3e34b678dc54957a5644`.
 Details : `logs/2026-07-13-coffre-verrouillage-veille-lock-0-71-0.md`.
 
 **Version :** `0.71.0-dev`.
+
+## 2026-07-13 (suite) - Lecture a voix haute en opt-in (0.71.1-dev)
+
+Retour utilisateur : les fonctions accessoires ne devraient pas s'afficher pres
+de la barre d'adresse par defaut ; l'utilisateur les active lui-meme, SAUF les
+protections. Diagnostic : parmi les boutons de fonction, seule la lecture a voix
+haute etait ON par defaut (`ReadAloudEnabled = true`) ; micro et assistant IA
+etaient deja opt-in. Traduction laissee proactive (aucun bouton permanent, barre
+contextuelle sur pages etrangeres) apres arbitrage utilisateur.
+
+**Changement** : `UiSettings.ReadAloudEnabled` defaut true -> false. N'affecte
+que les profils NEUFS (un profil existant garde sa valeur enregistree ; pas
+d'ecrasement). Protections toujours ON par defaut (bloqueur pub/traqueurs,
+HTTPS, cookies, parametres, CNAME, cosmetique, purge session).
+
+**Verification** : build OK ; 283/283 tests verts. Installateur :
+`artifacts\installer\LumoraSetup-0.71.1-dev-win-x64.exe`, SHA256
+`3dc1b96e5002beecad9d06c6565c9c94881b62c8dd348f67717e92432590e01f`.
+Details : `logs/2026-07-13-lecture-voix-haute-opt-in-0-71-1.md`.
+
+**Version :** `0.71.1-dev`.
