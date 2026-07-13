@@ -204,6 +204,7 @@ public sealed partial class MainWindow
     {
         _sessionTimer?.Stop();
         _sessionTimer = null;
+        UnhookSystemLockEvents();
         if (_isGuestMode || _uiSettings.SessionTimeoutMinutes <= 0) return;
         _sessionTimer = new DispatcherTimer
         {
@@ -211,6 +212,9 @@ public sealed partial class MainWindow
         };
         _sessionTimer.Tick += SessionTimer_Tick;
         _sessionTimer.Start();
+        // Meme interrupteur "Jamais" (0 min) : quand l'utilisateur desactive le
+        // verrouillage auto, on ne verrouille pas non plus a la veille/au lock.
+        HookSystemLockEvents();
     }
 
     private void ResetSessionTimer()
@@ -236,11 +240,24 @@ public sealed partial class MainWindow
             return;
         }
 
+        LockSessionNow("Session verrouillee automatiquement.");
+    }
+
+    // Verrouillage effectif du coffre + ecran de re-login. Point d'entree commun au
+    // timer d'inactivite ET aux evenements systeme (veille, verrouillage Windows).
+    // Contrairement au tick d'inactivite, ceci ne tient PAS compte de l'audio : si
+    // Windows se verrouille ou s'endort, l'utilisateur a quitte son poste, une video
+    // qui continue de jouer derriere l'ecran de verrouillage ne doit rien empecher.
+    private void LockSessionNow(string statusMessage)
+    {
+        if (_isGuestMode || _userProfile is null) return;
+        if (LoginOverlay.Visibility == Visibility.Visible) return; // deja verrouille
+
         // Verrouillage réel : on purge la clé du coffre de la mémoire, pas seulement
         // l'écran. Le ré-login (mot de passe ou PIN) la reconstruit.
         _vault.Lock();
         ShowLoginPanel(_userProfile.HasPinLogin ? "pin" : "password");
-        LoginStatusText.Text = "Session verrouillee automatiquement.";
+        LoginStatusText.Text = statusMessage;
         BrowserHost.IsHitTestVisible = false;
         LoginOverlay.Visibility = Visibility.Visible;
         LoginOverlay.Focus(FocusState.Programmatic);
@@ -248,6 +265,43 @@ public sealed partial class MainWindow
 
     private bool IsAnyTabPlayingAudio() =>
         _tabs.Any(tab => tab.View?.CoreWebView2?.IsDocumentPlayingAudio == true);
+
+    // ── Verrouillage immediat a la veille et au verrouillage de session Windows ──
+    //
+    // SystemEvents leve ses evenements sur un thread hors UI et conserve une
+    // reference forte statique vers ses abonnes : on marshale vers le thread UI et
+    // on se desabonne imperativement a la fermeture (sinon fuite de la fenetre et
+    // crash au prochain evenement).
+
+    private void HookSystemLockEvents()
+    {
+        if (_systemLockHooked || _isGuestMode) return;
+        Microsoft.Win32.SystemEvents.SessionSwitch += OnSystemSessionSwitch;
+        Microsoft.Win32.SystemEvents.PowerModeChanged += OnSystemPowerModeChanged;
+        _systemLockHooked = true;
+    }
+
+    private void UnhookSystemLockEvents()
+    {
+        if (!_systemLockHooked) return;
+        Microsoft.Win32.SystemEvents.SessionSwitch -= OnSystemSessionSwitch;
+        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnSystemPowerModeChanged;
+        _systemLockHooked = false;
+    }
+
+    private void OnSystemSessionSwitch(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
+    {
+        if (e.Reason != Microsoft.Win32.SessionSwitchReason.SessionLock) return;
+        DispatcherQueue.TryEnqueue(() =>
+            LockSessionNow("Coffre verrouille : session Windows verrouillee."));
+    }
+
+    private void OnSystemPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+    {
+        if (e.Mode != Microsoft.Win32.PowerModes.Suspend) return;
+        DispatcherQueue.TryEnqueue(() =>
+            LockSessionNow("Coffre verrouille : mise en veille."));
+    }
 
     private void SessionTimeoutCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

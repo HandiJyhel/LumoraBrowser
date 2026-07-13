@@ -4791,3 +4791,41 @@ SHA256 `cf7d7f4263c37eafa35d705e481c10918d6d0316ed8775ea1b5fe63273f21cdd`.
 Details : `logs/2026-07-13-coffre-doublons-https-repli-0-70-3.md`.
 
 **Version :** `0.70.3-dev`.
+
+## 2026-07-13 (suite) - Coffre : verrouillage veille/lock Windows (0.71.0-dev)
+
+Consolidation du coffre (brique choisie par l'utilisateur : « verrouillage
+auto »). Constat : le verrouillage auto par INACTIVITE existait deja
+(`SessionTimer_Tick`, `SessionTimeoutMinutes` defaut 10 min, gate par l'audio
+`IsAnyTabPlayingAudio` -> une video n'est jamais coupee). Manque comble : le
+verrouillage IMMEDIAT quand l'utilisateur quitte son poste.
+
+**Ajout** :
+- `LockSessionNow(message)` : logique de verrouillage extraite, partagee entre
+  le timer d'inactivite et les evenements systeme ;
+- `Microsoft.Win32.SystemEvents.SessionSwitch` (SessionLock) +
+  `PowerModeChanged` (Suspend) -> verrouillage immediat, SANS gate audio (poste
+  quitte). Handlers marshales via `DispatcherQueue.TryEnqueue` ;
+- meme interrupteur que le timer : `SessionTimeoutMinutes <= 0` (« Jamais »)
+  desactive aussi veille/lock ;
+- desabonnement des `SystemEvents` a la fermeture (`Closed`) — reference
+  statique forte, sinon fuite + crash ;
+- nouveau paquet Microsoft first-party `Microsoft.Win32.SystemEvents` 8.0.0
+  (assembly present dans le runtime mais non reference ; aucune donnee, purement
+  local).
+
+Point connu : detection video basee sur l'audio uniquement (seul signal fiable
+WebView2) ; le verrouillage reste un verrouillage de SESSION complet (ecran de
+re-login), comportement historique conserve. Un mode « soft » (navigation qui
+continue, seul le coffre se reverrouille) serait un design distinct a discuter.
+
+**Verification** : build Debug OK (MSBuild vswhere, restore du paquet) ;
+283/283 tests verts. Artefact :
+`artifacts\clean-test\Lumora-0.71.0-dev-win-x64-clean-20260713-172611`
+(`Microsoft.Win32.SystemEvents.dll` present), SHA256 exe
+`4e33a6be6f14c86213f6b5cb99fb7e285b633d6cb7c0af30dc2dfa60aad9908f`.
+Installateur : `artifacts\installer\LumoraSetup-0.71.0-dev-win-x64.exe`,
+SHA256 `ae929b7eed6e5c9ac484505bf07229b8bade98f1481d3e34b678dc54957a5644`.
+Details : `logs/2026-07-13-coffre-verrouillage-veille-lock-0-71-0.md`.
+
+**Version :** `0.71.0-dev`.

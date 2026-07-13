@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.70.3-dev";
+    private const string Version = "0.71.0-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -113,6 +113,7 @@ public sealed partial class MainWindow : Window
     private List<MigrationBrowserEntry> _migrationEntries = new();
     private bool _restartRequired;
     private DispatcherTimer? _sessionTimer;
+    private bool _systemLockHooked;
     private readonly PrivacyEngine _privacy = new();
     private NetworkBlockerModule? _networkBlocker;
     private TelemetryBlockerModule? _telemetryBlocker;
@@ -188,6 +189,10 @@ public sealed partial class MainWindow : Window
         // Saisie clavier PIN + reset du timer de session
         Content.KeyDown      += RootKeyDown;
         Content.PointerMoved += (_, _) => ResetSessionTimer();
+        // SystemEvents garde une reference statique forte vers ses abonnes : se
+        // desabonner a la fermeture, sinon fuite de la fenetre + crash au prochain
+        // verrouillage/veille Windows.
+        Closed += (_, _) => UnhookSystemLockEvents();
         var commandPaletteAccelerator = new KeyboardAccelerator
         {
             Key = VirtualKey.K,
