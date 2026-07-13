@@ -4,7 +4,7 @@ param(
 
     [string]$OutputDirectory = "artifacts/signatures",
 
-    [string]$ProductName = "PulseBrowser"
+    [string]$ProductName = "Lumora"
 )
 
 $ErrorActionPreference = "Stop"

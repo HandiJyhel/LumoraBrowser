@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Projet de test autonome : il ne référence PAS l'application WinUI (dont le
+    packaging PRI/MSIX empêche « dotnet test »). Il compile directement les classes
+    PURES du produit, qui n'ont aucune dépendance UI. Résultat : les tests tournent
+    partout — CLI locale et intégration continue — via un simple « dotnet test ».
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Lumora.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- Classes pures du produit, compilées dans l'assembly de test (aucune UI). -->
+  <ItemGroup>
+    <Compile Include="..\Lumora.WinUI\Credentials\PasswordGenerator.cs"  Link="Product\PasswordGenerator.cs" />
+    <Compile Include="..\Lumora.WinUI\Credentials\PublicSuffixService.cs" Link="Product\PublicSuffixService.cs" />
+    <Compile Include="..\Lumora.WinUI\VaultStore.cs"                      Link="Product\VaultStore.cs" />
+    <Compile Include="..\Lumora.WinUI\VaultCredential.cs"                 Link="Product\VaultCredential.cs" />
+    <Compile Include="..\Lumora.WinUI\Wallet\VaultPaymentCard.cs"         Link="Product\VaultPaymentCard.cs" />
+    <Compile Include="..\Lumora.WinUI\Wallet\PaymentCardUtil.cs"          Link="Product\PaymentCardUtil.cs" />
+    <Compile Include="..\Lumora.WinUI\WinUiRuntimeTrace.cs"               Link="Product\WinUiRuntimeTrace.cs" />
+    <Compile Include="..\Lumora.WinUI\BuildAuthenticity.cs"               Link="Product\BuildAuthenticity.cs" />
+    <Compile Include="..\Lumora.WinUI\BrandingText.cs"                    Link="Product\BrandingText.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\UserProfile.cs"             Link="Product\UserProfile.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\ProfilePaths.cs"            Link="Product\ProfilePaths.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\Profiles.cs"                Link="Product\Profiles.cs" />
+    <Compile Include="..\Lumora.WinUI\LumoraConfig.cs"                    Link="Product\LumoraConfig.cs" />
+    <Compile Include="..\Lumora.WinUI\Storage\LumoraFile.cs"              Link="Product\LumoraFile.cs" />
+    <Compile Include="..\Lumora.WinUI\LumoraBackup.cs"                    Link="Product\LumoraBackup.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\FilterParser.cs" Link="Product\FilterParser.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\IPrivacyModule.cs" Link="Product\IPrivacyModule.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\PrivacyEngine.cs" Link="Product\PrivacyEngine.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\TelemetryBlocker\TelemetryBlockerModule.cs" Link="Product\TelemetryBlockerModule.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\TelemetryBlocker\TelemetrySeedList.cs" Link="Product\TelemetrySeedList.cs" />
+    <Compile Include="..\Lumora.WinUI\Credentials\CredentialModels.cs" Link="Product\CredentialModels.cs" />
+    <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordManagerEntryDraft.cs" Link="Product\PasswordManagerEntryDraft.cs" />
+    <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordManagerDecision.cs" Link="Product\PasswordManagerDecision.cs" />
+    <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordManagerService.cs" Link="Product\PasswordManagerService.cs" />
+    <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordManagerInteractionService.cs" Link="Product\PasswordManagerInteractionService.cs" />
+    <Compile Include="..\Lumora.WinUI\Sessions\SessionKeepAdvisor.cs" Link="Product\SessionKeepAdvisor.cs" />
+    <Compile Include="..\Lumora.WinUI\WebApps\WebAppLaunchArgs.cs" Link="Product\WebAppLaunchArgs.cs" />
+    <Compile Include="..\Lumora.WinUI\WebApps\WebAppUrlPolicy.cs" Link="Product\WebAppUrlPolicy.cs" />
+    <Compile Include="..\Lumora.WinUI\WebApps\IcoWriter.cs" Link="Product\IcoWriter.cs" />
+    <Compile Include="..\Lumora.WinUI\FaviconQuality.cs" Link="Product\FaviconQuality.cs" />
+    <Compile Include="..\Lumora.WinUI\Credentials\CredentialCsv.cs" Link="Product\CredentialCsv.cs" />
+    <Compile Include="..\Lumora.WinUI\NewTabMarkup.cs" Link="Product\NewTabMarkup.cs" />
+    <Compile Include="..\Lumora.WinUI\Settings\NewTabShortcutText.cs" Link="Product\NewTabShortcutText.cs" />
+    <Compile Include="..\Lumora.WinUI\WebApps\ShortcutNaming.cs" Link="Product\ShortcutNaming.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\HistoryTimeFormatter.cs" Link="Product\HistoryTimeFormatter.cs" />
+    <Compile Include="..\Lumora.WinUI\Tabs\TabGroupOrdering.cs" Link="Product\TabGroupOrdering.cs" />
+    <Compile Include="..\Lumora.WinUI\Tabs\ClosedTabHistory.cs" Link="Product\ClosedTabHistory.cs" />
+    <Compile Include="..\Lumora.WinUI\AddressNormalizer.cs" Link="Product\AddressNormalizer.cs" />
+    <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordHealthAnalyzer.cs" Link="Product\PasswordHealthAnalyzer.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\SitePermissions\SitePermissionPolicy.cs" Link="Product\SitePermissionPolicy.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\DownloadHistory.cs" Link="Product\DownloadHistory.cs" />
+    <Compile Include="..\Lumora.WinUI\ChromiumCredentialReader.cs" Link="Product\ChromiumCredentialReader.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\InstalledBrowsers.cs" Link="Product\InstalledBrowsers.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\ParameterCleaner\ParameterCleanerModule.cs" Link="Product\ParameterCleanerModule.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\HttpsEnforcer\HttpsEnforcerModule.cs" Link="Product\HttpsEnforcerModule.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\CosmeticFilter\CosmeticFilterModule.cs" Link="Product\CosmeticFilterModule.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\CosmeticFilter\CosmeticFilterParser.cs" Link="Product\CosmeticFilterParser.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\CosmeticFilter\CosmeticSeedSelectors.cs" Link="Product\CosmeticSeedSelectors.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\NetworkBlockerModule.cs" Link="Product\NetworkBlockerModule.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\SeedList.cs" Link="Product\SeedList.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\FilterListManager.cs" Link="Product\FilterListManager.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameUncloakerModule.cs" Link="Product\CnameUncloakerModule.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameResolver.cs" Link="Product\CnameResolver.cs" />
+    <EmbeddedResource Include="..\Lumora.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
+  </ItemGroup>
+
+</Project>

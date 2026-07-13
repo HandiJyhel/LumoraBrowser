@@ -31,12 +31,12 @@ $outputRoot = Join-Path $repoRoot $OutputDirectory
 $stagingRoot = Join-Path $outputRoot "staging-dotnet"
 $sourceDir = Join-Path $stagingRoot "src"
 $publishDir = Join-Path $stagingRoot "publish"
-$setupName = "PulseBrowserSetup-$Version-win-x64.exe"
+$setupName = "LumoraSetup-$Version-win-x64.exe"
 $setupPath = Join-Path $outputRoot $setupName
 
 if ([string]::IsNullOrWhiteSpace($CleanArtifactDir)) {
     $cleanRoot = Join-Path $repoRoot "artifacts\clean-test"
-    $latest = Get-ChildItem -LiteralPath $cleanRoot -Directory -Filter "PulseBrowser-$Version-win-x64-clean-*" |
+    $latest = Get-ChildItem -LiteralPath $cleanRoot -Directory -Filter "Lumora-$Version-win-x64-clean-*" |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
 
@@ -53,8 +53,8 @@ elseif (-not [System.IO.Path]::IsPathRooted($CleanArtifactDir)) {
 $cleanArtifact = Get-Item -LiteralPath $CleanArtifactDir
 $appSourceDir = Join-Path $cleanArtifact.FullName "app"
 $verificationSource = Join-Path $appSourceDir "VERIFICATION.txt"
-$appExe = Join-Path $appSourceDir "PulseBrowser.WinUI.exe"
-$iconSource = Join-Path $appSourceDir "Assets\PulseBrowser.ico"
+$appExe = Join-Path $appSourceDir "Lumora.WinUI.exe"
+$iconSource = Join-Path $appSourceDir "Assets\LumoraApp.ico"
 
 if (-not (Test-Path $appSourceDir)) {
     throw "Dossier app introuvable dans l'artifact propre: $appSourceDir"
@@ -70,11 +70,11 @@ if (-not (Test-Path $verificationSource)) {
 
 New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
 
-$currentSummaryName = "PulseBrowserSetup-$Version-win-x64.VERIFICATION.txt"
-Get-ChildItem -LiteralPath $outputRoot -File -Filter "PulseBrowserSetup-*-win-x64.exe" |
+$currentSummaryName = "LumoraSetup-$Version-win-x64.VERIFICATION.txt"
+Get-ChildItem -LiteralPath $outputRoot -File -Filter "LumoraSetup-*-win-x64.exe" |
     Where-Object { $_.Name -ne $setupName } |
     Remove-Item -Force
-Get-ChildItem -LiteralPath $outputRoot -File -Filter "PulseBrowserSetup-*-win-x64.VERIFICATION.txt" |
+Get-ChildItem -LiteralPath $outputRoot -File -Filter "LumoraSetup-*-win-x64.VERIFICATION.txt" |
     Where-Object { $_.Name -ne $currentSummaryName } |
     Remove-Item -Force
 
@@ -83,7 +83,7 @@ if (Test-Path $legacyIExpressStaging) {
     Remove-Item -LiteralPath $legacyIExpressStaging -Recurse -Force
 }
 
-Get-ChildItem -LiteralPath $outputRoot -File -Filter "~PulseBrowserSetup-$Version-win-x64*" |
+Get-ChildItem -LiteralPath $outputRoot -File -Filter "~LumoraSetup-$Version-win-x64*" |
     Remove-Item -Force
 
 if (Test-Path $stagingRoot) {
@@ -96,10 +96,10 @@ $payloadZip = Join-Path $sourceDir "app.zip"
 Compress-Archive -Path (Join-Path $appSourceDir "*") -DestinationPath $payloadZip -CompressionLevel Optimal -Force
 
 if (Test-Path $iconSource) {
-    Copy-Item -LiteralPath $iconSource -Destination (Join-Path $sourceDir "PulseBrowser.ico") -Force
+    Copy-Item -LiteralPath $iconSource -Destination (Join-Path $sourceDir "LumoraApp.ico") -Force
 }
 
-$projectPath = Join-Path $sourceDir "PulseBrowser.Setup.csproj"
+$projectPath = Join-Path $sourceDir "Lumora.Setup.csproj"
 $project = @'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -108,8 +108,8 @@ $project = @'
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>PulseBrowser.ico</ApplicationIcon>
-    <AssemblyName>PulseBrowserSetup</AssemblyName>
+    <ApplicationIcon>LumoraApp.ico</ApplicationIcon>
+    <AssemblyName>LumoraSetup</AssemblyName>
     <Version>__VERSION__</Version>
   </PropertyGroup>
   <ItemGroup>
@@ -127,7 +127,7 @@ using System.IO.Compression;
 using System.Reflection;
 using Microsoft.Win32;
 
-namespace PulseBrowser.Setup;
+namespace Lumora.Setup;
 
 internal sealed record InstallerOptions(
     string InstallRoot,
@@ -161,7 +161,7 @@ internal sealed class InstallerForm : Form
 
     public InstallerForm()
     {
-        Text = "Pulse Browser Setup";
+        Text = "Lumora Setup";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -174,11 +174,11 @@ internal sealed class InstallerForm : Form
         var defaultInstallRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Programs",
-            "PulseBrowser");
+            "Lumora");
 
         var title = new Label
         {
-            Text = "Installer Pulse Browser",
+            Text = "Installer Lumora",
             Font = new Font("Segoe UI", 18, FontStyle.Bold),
             AutoSize = false,
             Location = new Point(28, 24),
@@ -277,7 +277,7 @@ internal sealed class InstallerForm : Form
 
         _launchCheckBox = new CheckBox
         {
-            Text = "Lancer Pulse Browser apres l'installation",
+            Text = "Lancer Lumora apres l'installation",
             Checked = true,
             AutoSize = false,
             Location = new Point(32, 388),
@@ -336,7 +336,7 @@ internal sealed class InstallerForm : Form
     {
         using var dialog = new FolderBrowserDialog
         {
-            Description = "Choisir le dossier d'installation de Pulse Browser",
+            Description = "Choisir le dossier d'installation de Lumora",
             UseDescriptionForTitle = true,
             SelectedPath = Directory.Exists(_installPathTextBox.Text)
                 ? _installPathTextBox.Text
@@ -382,8 +382,8 @@ internal sealed class InstallerForm : Form
 
             MessageBox.Show(
                 this,
-                "Pulse Browser est installe.\n\nAucun profil n'a ete copie. Pulse Browser utilisera le profil choisi dans l'application.",
-                "Pulse Browser",
+                "Lumora est installe.\n\nAucun profil n'a ete copie. Lumora utilisera le profil choisi dans l'application.",
+                "Lumora",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
             Close();
@@ -393,7 +393,7 @@ internal sealed class InstallerForm : Form
             _installButton.Enabled = true;
             _cancelButton.Enabled = true;
             SetStatus("Installation echouee.");
-            MessageBox.Show(this, ex.Message, "Pulse Browser Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, "Lumora Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -405,15 +405,16 @@ internal sealed class InstallerForm : Form
         var installRoot = Path.GetFullPath(options.InstallRoot);
         var appDir = Path.Combine(installRoot, "app");
         var newAppDir = Path.Combine(installRoot, "_new_app");
-        var profileDir = Path.Combine(localAppData, "PulseBrowser", "installed-profile");
-        var startMenuDir = Path.Combine(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Pulse Browser");
-        var startMenuShortcut = Path.Combine(startMenuDir, "Pulse Browser.lnk");
-        var desktopShortcut = Path.Combine(desktopDir, "Pulse Browser.lnk");
-        var launcherVbs = Path.Combine(installRoot, "PulseBrowserLauncher.vbs");
+        var profileDir = Path.Combine(localAppData, "Lumora", "installed-profile");
+        var startMenuDir = Path.Combine(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Lumora");
+        var startMenuShortcut = Path.Combine(startMenuDir, "Lumora.lnk");
+        var desktopShortcut = Path.Combine(desktopDir, "Lumora.lnk");
+        var launcherVbs = Path.Combine(installRoot, "LumoraLauncher.vbs");
+        var traceLauncherCmd = Path.Combine(installRoot, "Lancer avec journal de diagnostic.cmd");
         var uninstallPs1 = Path.Combine(installRoot, "uninstall.ps1");
-        var uninstallCmd = Path.Combine(installRoot, "Uninstall Pulse Browser.cmd");
+        var uninstallCmd = Path.Combine(installRoot, "Uninstall Lumora.cmd");
         var installInfo = Path.Combine(installRoot, "INSTALLATION.txt");
-        var uninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\PulseBrowser";
+        var uninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\Lumora";
 
         SetStatus("Preparation du dossier d'installation...");
         Directory.CreateDirectory(installRoot);
@@ -421,7 +422,7 @@ internal sealed class InstallerForm : Form
             Directory.Delete(newAppDir, recursive: true);
         Directory.CreateDirectory(newAppDir);
 
-        SetStatus("Extraction de Pulse Browser...");
+        SetStatus("Extraction de Lumora...");
         using (var payload = Assembly.GetExecutingAssembly().GetManifestResourceStream("app.zip")
                ?? throw new InvalidOperationException("Payload app.zip introuvable dans l'installateur."))
         using (var archive = new ZipArchive(payload, ZipArchiveMode.Read))
@@ -440,12 +441,21 @@ internal sealed class InstallerForm : Form
             Directory.Delete(profileDir, recursive: true);
         }
 
-        var appExe = Path.Combine(appDir, "PulseBrowser.WinUI.exe");
-        var iconPath = Path.Combine(appDir, "Assets", "PulseBrowser.ico");
+        var appExe = Path.Combine(appDir, "Lumora.WinUI.exe");
+        var iconPath = Path.Combine(appDir, "Assets", "LumoraApp.ico");
         SetStatus("Nettoyage de l'ancien lanceur isole...");
         if (File.Exists(launcherVbs))
             File.Delete(launcherVbs);
         _installedAppExe = appExe;
+
+        SetStatus("Creation du lanceur diagnostic...");
+        File.WriteAllLines(traceLauncherCmd, new[]
+        {
+            "@echo off",
+            "setlocal",
+            "set \"LUMORA_TRACE_STARTUP=1\"",
+            "start \"\" \"%~dp0app\\Lumora.WinUI.exe\""
+        });
 
         SetStatus("Creation de la desinstallation...");
         File.WriteAllLines(uninstallPs1, new[]
@@ -456,7 +466,7 @@ internal sealed class InstallerForm : Form
             "$profileDir = " + PsQuote(profileDir),
             "$startMenuShortcut = " + PsQuote(startMenuShortcut),
             "$desktopShortcut = " + PsQuote(desktopShortcut),
-            "$uninstallKey = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\PulseBrowser\"",
+            "$uninstallKey = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Lumora\"",
             "Remove-Item -LiteralPath $startMenuShortcut -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $desktopShortcut -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue",
@@ -490,17 +500,17 @@ internal sealed class InstallerForm : Form
         }
 
         File.WriteAllText(installInfo,
-            "Pulse Browser installe localement" + Environment.NewLine + Environment.NewLine +
+            "Lumora installe localement" + Environment.NewLine + Environment.NewLine +
             "Emplacement: " + installRoot + Environment.NewLine +
             "Executable: " + appExe + Environment.NewLine +
-            "Profil: aucun profil impose au lancement ; le choix se fait dans Pulse Browser." + Environment.NewLine +
+            "Profil: aucun profil impose au lancement ; le choix se fait dans Lumora." + Environment.NewLine +
             "Verification: " + Path.Combine(appDir, "VERIFICATION.txt") + Environment.NewLine + Environment.NewLine +
             "Ce programme d'installation ne copie aucun profil utilisateur." + Environment.NewLine +
             "Les raccourcis lancent directement l'application, sans variable de profil forcee." + Environment.NewLine);
 
         SetStatus("Enregistrement dans Windows...");
         using var key = Registry.CurrentUser.CreateSubKey(uninstallKey);
-        key?.SetValue("DisplayName", "Pulse Browser");
+        key?.SetValue("DisplayName", "Lumora");
         key?.SetValue("DisplayVersion", "__VERSION__");
         key?.SetValue("Publisher", "H.J.");
         key?.SetValue("InstallLocation", installRoot);
@@ -520,7 +530,7 @@ internal sealed class InstallerForm : Form
         shortcut.Arguments = arguments;
         shortcut.WorkingDirectory = workingDirectory;
         shortcut.IconLocation = iconLocation;
-        shortcut.Description = "Pulse Browser";
+        shortcut.Description = "Lumora";
         shortcut.Save();
     }
 
@@ -556,7 +566,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Publication de l'installateur echouee avec le code $LASTEXITCODE."
 }
 
-$publishedSetup = Join-Path $publishDir "PulseBrowserSetup.exe"
+$publishedSetup = Join-Path $publishDir "LumoraSetup.exe"
 if (-not (Test-Path $publishedSetup)) {
     throw "Installateur publie introuvable: $publishedSetup"
 }
@@ -564,9 +574,9 @@ if (-not (Test-Path $publishedSetup)) {
 Copy-Item -LiteralPath $publishedSetup -Destination $setupPath -Force
 
 $setupHash = Get-Sha256Hex -FilePath $setupPath
-$summaryPath = Join-Path $outputRoot "PulseBrowserSetup-$Version-win-x64.VERIFICATION.txt"
+$summaryPath = Join-Path $outputRoot "LumoraSetup-$Version-win-x64.VERIFICATION.txt"
 $summary = @"
-Pulse Browser - verification installateur
+Lumora - verification installateur
 
 Version: $Version
 Installateur: $setupName
@@ -581,7 +591,7 @@ Windows peut afficher "Editeur inconnu" car cet installateur n'a pas encore de c
 "@
 $summary | Set-Content -LiteralPath $summaryPath -Encoding UTF8
 
-& (Join-Path $repoRoot "scripts\generate-release-checksums.ps1") -ArtifactPath $setupPath -OutputDirectory (Join-Path $repoRoot "artifacts\signatures") -ProductName "PulseBrowserSetup-$Version"
+& (Join-Path $repoRoot "scripts\generate-release-checksums.ps1") -ArtifactPath $setupPath -OutputDirectory (Join-Path $repoRoot "artifacts\signatures") -ProductName "LumoraSetup-$Version"
 if ($LASTEXITCODE -ne 0) {
     throw "Generation du manifeste SHA256 installateur echouee avec le code $LASTEXITCODE."
 }

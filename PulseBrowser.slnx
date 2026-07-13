@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="PulseBrowser.WinUI/PulseBrowser.WinUI.csproj" />
-  <Project Path="PulseBrowser.Tests/PulseBrowser.Tests.csproj" />
-</Solution>

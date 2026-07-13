@@ -1,10 +1,10 @@
-# Pulse Browser - Memoire du projet
+# Nova Browser - Memoire du projet
 
-Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Browser. Il ne remplace pas `AGENTS.md` et ne doit pas recopier les regles permanentes du projet.
+Ce fichier garde l'historique chronologique des etapes effectuees sur Nova Browser. Il ne remplace pas `AGENTS.md` et ne doit pas recopier les regles permanentes du projet.
 
 ## 2026-07-03
 
-- Creation du projet a partir de `ProjetPulseBrowser.md`.
+- Creation du projet a partir de `ProjetNovaBrowser.md`.
 - Validation du cadre initial: navigateur web simple, moderne, securise, local-first, avec stockage des donnees utilisateur sur l'ordinateur.
 - Decision technique: remplacement du moteur Gecko initialement envisage par Chromium via CEF (Chromium Embedded Framework), car CEF est plus adapte a un navigateur desktop personnalisable et solide.
 - Version initiale du projet: `0.0.0-dev`.
@@ -24,74 +24,74 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 - Ajout d'un acces Internet temporaire: la barre d'adresse accepte une adresse simple, ajoute `https://` si le schema est absent, puis le bouton `Ouvrir` demande a Windows d'ouvrir l'adresse dans le navigateur par defaut.
 - Ajout de tests unitaires pour la normalisation d'adresse.
 - Verification avec `cargo fmt --check`, `cargo test` et `cargo build`.
-- Retour utilisateur: `google.com` fonctionnait mais ouvrait Google Chrome, ce qui n'est pas acceptable pour Pulse Browser.
+- Retour utilisateur: `google.com` fonctionnait mais ouvrait Google Chrome, ce qui n'est pas acceptable pour Nova Browser.
 - Passage de la version projet a `0.1.1-dev` pour corriger ce comportement.
 - Suppression de l'ouverture externe via Windows: le bouton `Ouvrir` ne lance plus le navigateur par defaut et affiche une demande de navigation interne dans la zone de rendu temporaire.
 - Ajout de `docs/CEF_INTEGRATION.md` pour consigner la route technique Chromium via CEF reperee avec le crate Rust `cef = "149.3.0+149.0.6"`.
 - Verification avec `cargo fmt --check`, `cargo test`, `cargo build` et lancement visible de `target\debug\pulse-browser.exe`.
-- Ajout d'une regle projet dans `AGENTS.md`: Codex peut creer autant de fichiers/dossiers que necessaire et utiliser ou ajouter les technologies utiles sans redemander une autorisation projet a chaque fois, tout en restant transparent et coherent avec Pulse Browser.
+- Ajout d'une regle projet dans `AGENTS.md`: Codex peut creer autant de fichiers/dossiers que necessaire et utiliser ou ajouter les technologies utiles sans redemander une autorisation projet a chaque fois, tout en restant transparent et coherent avec Nova Browser.
 - Installation de Ninja via WinGet pour permettre la compilation du runtime CEF.
 - Passage de la version projet a `0.2.0-dev` pour marquer la premiere integration Chromium embarquee.
 - Ajout de la dependance Rust `cef = "149.3.0"` et creation de `src/cef_runtime.rs` pour isoler l'initialisation CEF, la gestion des sous-processus, le client CEF minimal et la creation de la vue navigateur.
-- Remplacement de la fausse zone de rendu par une premiere vue Chromium enfant de la fenetre Pulse Browser.
+- Remplacement de la fausse zone de rendu par une premiere vue Chromium enfant de la fenetre Nova Browser.
 - Passage a une pompe de messages integree: la boucle Win32 appelle aussi `CefDoMessageLoopWork`, afin que la creation du navigateur se fasse correctement dans le prototype natif.
 - Mise a jour de `scripts/run-dev.ps1` pour preparer Rust et Ninja dans le `PATH` avant `cargo run`.
 - Verification avec `cargo fmt --check`, `cargo test`, `cargo build`, lancement visible de `target\debug\pulse-browser.exe` et test UI automatise chargeant `https://example.com`.
-- Le test UI confirme que Pulse Browser cree des fenetres enfants `CefBrowserWindow`, `Chrome_WidgetWin_1` et `Chrome_RenderWidgetHostHWND`, sans ouvrir Google Chrome ni le navigateur par defaut.
+- Le test UI confirme que Nova Browser cree des fenetres enfants `CefBrowserWindow`, `Chrome_WidgetWin_1` et `Chrome_RenderWidgetHostHWND`, sans ouvrir Google Chrome ni le navigateur par defaut.
 - Passage de la version projet a `0.2.1-dev` pour rendre la premiere vue Chromium plus utilisable.
 - Ajout d'un layout Win32 reactif: la barre d'adresse, le bouton `Ouvrir`, le statut, la zone de rendu temporaire et la fenetre enfant CEF suivent la taille de la fenetre principale.
 - Ajout du redimensionnement de la vue CEF via le handle natif `CefBrowserWindow`, avec notification `was_resized` au moteur.
 - Verification avec `cargo fmt --check`, `cargo test`, `cargo build`, lancement visible et test UI automatise: apres chargement de `https://example.com`, la vue CEF passe de `607x204` a `1173x571` apres agrandissement de la fenetre.
-- Retour utilisateur: `tintin.fr` et `google.com` semblaient ne rien faire dans Pulse Browser.
+- Retour utilisateur: `tintin.fr` et `google.com` semblaient ne rien faire dans Nova Browser.
 - Diagnostic: le log CEF montrait que Google arrivait bien jusqu'au moteur, mais que le processus GPU Chromium plantait en boucle, ce qui pouvait donner une page blanche ou un rendu silencieux.
 - Passage de la version projet a `0.2.2-dev` pour corriger cette stabilite de rendu.
-- Ajout d'une `PulseBrowserApp` CEF qui force les switches `disable-gpu`, `disable-gpu-compositing`, `disable-gpu-rasterization` et `disable-gpu-watchdog`.
+- Ajout d'une `NovaBrowserApp` CEF qui force les switches `disable-gpu`, `disable-gpu-compositing`, `disable-gpu-rasterization` et `disable-gpu-watchdog`.
 - Ajout de la navigation avec la touche Entree quand la barre d'adresse est active.
 - Verification avec `cargo fmt --check`, `cargo test`, `cargo build`, lancement visible et test UI automatise: `google.com` via Entree puis `tintin.fr` via le bouton creent une vue CEF et mettent a jour le statut de navigation.
 - Verification du log CEF apres correction: plus de crash GPU observe sur le demarrage `0.2.2-dev`.
-- Retour utilisateur: `google.com` donnait encore l'impression de ne rien faire dans Pulse Browser.
+- Retour utilisateur: `google.com` donnait encore l'impression de ne rien faire dans Nova Browser.
 - Diagnostic complementaire: le log CEF a montre un `Timeout of new browser info response`, signe que la pompe de messages CEF et le retour d'etat UI devaient etre renforces.
 - Passage de la version projet a `0.2.3-dev`.
 - Activation de `external_message_pump` dans les settings CEF et ajout de retours CEF dans l'interface via les handlers de chargement et d'affichage.
-- Le statut de Pulse Browser affiche maintenant les etapes CEF: debut de chargement, chargement termine, erreurs reseau, changement d'adresse et titre de page.
+- Le statut de Nova Browser affiche maintenant les etapes CEF: debut de chargement, chargement termine, erreurs reseau, changement d'adresse et titre de page.
 - Passage de la version projet a `0.2.4-dev` pour corriger l'affichage silencieux de la vue Chromium.
 - Remplacement du repositionnement de la fenetre CEF par `SetWindowPos` avec affichage force, notification `was_resized` et focus explicite du navigateur embarque.
 - Verification avec `cargo fmt --check`, `cargo test`, `cargo build`, lancement visible et test UI automatise: `google.com` charge dans CEF, le statut devient `Statut CEF: Page chargee: Google` et les fenetres enfants `CefBrowserWindow`, `Chrome_WidgetWin_1` et `Chrome_RenderWidgetHostHWND` sont presentes.
 - Verification du log CEF apres correction: Google emet une ligne console depuis `https://www.google.com/`, ce qui confirme que la page arrive jusqu'au moteur embarque.
-- Retour utilisateur: correction d'une formulation dans `AGENTS.md` pour rappeler que Pulse Browser est un navigateur web en developpement, pas un outil de developpement.
-- Ajout d'une regle permanente dans `AGENTS.md`: a chaque nouvelle ouverture de session ou de chat sur Pulse Browser, Codex doit lire `MEMORY.md` pour reprendre le contexte historique du projet avant d'agir.
+- Retour utilisateur: correction d'une formulation dans `AGENTS.md` pour rappeler que Nova Browser est un navigateur web en developpement, pas un outil de developpement.
+- Ajout d'une regle permanente dans `AGENTS.md`: a chaque nouvelle ouverture de session ou de chat sur Nova Browser, Codex doit lire `MEMORY.md` pour reprendre le contexte historique du projet avant d'agir.
 
 ## 2026-07-04
 
 - Clarification produit: l'etat `0.2.4-dev` permet d'acceder a Internet dans une vue Chromium embarquee, mais ce n'est pas encore un navigateur complet.
 - Validation du prochain objectif: transformer la vue web fonctionnelle en base de navigateur local-first, pratique et securisee.
 - Precision utilisateur: les cookies essentiels ne doivent pas etre un choix demande a l'utilisateur; ils doivent etre acceptes par defaut pour permettre la navigation normale et les sessions.
-- Precision utilisateur: Pulse Browser doit eviter la dispersion inter-sites des donnees. Les donnees Google/YouTube doivent servir au fonctionnement de Google/YouTube, mais ne doivent pas etre recuperees silencieusement par un site tiers.
+- Precision utilisateur: Nova Browser doit eviter la dispersion inter-sites des donnees. Les donnees Google/YouTube doivent servir au fonctionnement de Google/YouTube, mais ne doivent pas etre recuperees silencieusement par un site tiers.
 - Precision utilisateur: la securite ne doit pas rendre la navigation infame. Les sessions, identifiants et preferences doivent pouvoir rester disponibles localement sans forcer des reconnexions inutiles.
 - Precision utilisateur: le coffre local doit etre transparent. L'utilisateur ne doit presque pas avoir a connaitre son existence; il ne doit devenir visible que dans des cas utiles comme les parametres avances, suppression, export/import futur ou recuperation.
-- Confirmation du choix Rust: Rust est coherent avec Pulse Browser car le projet manipule des donnees sensibles, du stockage local, des fichiers chiffres, CEF et des integrations Windows avec un besoin de fiabilite et de securite memoire.
+- Confirmation du choix Rust: Rust est coherent avec Nova Browser car le projet manipule des donnees sensibles, du stockage local, des fichiers chiffres, CEF et des integrations Windows avec un besoin de fiabilite et de securite memoire.
 - Passage de la version projet a `0.3.0-dev`.
-- Ajout de `src/profile.rs` pour creer un profil local `default` sous `%LOCALAPPDATA%\PulseBrowser\profiles\default`.
-- Raccordement de CEF a un `root_cache_path` Pulse Browser et a un `cache_path` de profil persistant.
+- Ajout de `src/profile.rs` pour creer un profil local `default` sous `%LOCALAPPDATA%\NovaBrowser\profiles\default`.
+- Raccordement de CEF a un `root_cache_path` Nova Browser et a un `cache_path` de profil persistant.
 - Activation de `persist_session_cookies` et du switch CEF `persist-session-cookies` pour eviter les reconnexions inutiles.
 - Ajout de `src/privacy.rs` avec une decision de cookies qui autorise les contextes first-party/same-site et bloque les contextes tiers ou first-party inconnus.
 - Ajout d'un `CookieAccessFilter` CEF pour bloquer l'envoi et l'enregistrement de cookies tiers sans bloquer toute la requete reseau.
-- Ajout de `src/vault.rs` pour initialiser le coffre transparent `default.pbvault`, avec signature de format Pulse Browser et marqueur chiffre par Windows DPAPI pour l'utilisateur Windows courant.
+- Ajout de `src/vault.rs` pour initialiser le coffre transparent `default.pbvault`, avec signature de format Nova Browser et marqueur chiffre par Windows DPAPI pour l'utilisateur Windows courant.
 - Ajout de `docs/LOCAL_PROFILE_AND_PRIVACY.md` pour documenter le profil local, la politique cookies/sessions, le coffre transparent et les limites actuelles.
 - Reduction des nouveaux statuts de navigation: affichage du domaine plutot que de l'URL complete, afin d'eviter d'exposer inutilement des donnees dans l'interface ou les traces.
 - Verification avec `cargo fmt`, `cargo test` et `cargo build`: 10 tests unitaires passes et compilation dev reussie.
 - Lancement temporaire de `target\debug\pulse-browser.exe`: reussi, fermeture propre.
-- Verification dans `%LOCALAPPDATA%\PulseBrowser\profiles\default`: profil present, dossier `cef-profile` present et coffre `vault\default.pbvault` present.
+- Verification dans `%LOCALAPPDATA%\NovaBrowser\profiles\default`: profil present, dossier `cef-profile` present et coffre `vault\default.pbvault` present.
 - Retour utilisateur: il faut mettre en place ce qui n'a pas encore ete mis en place, avec autorisation d'agir dans le dossier projet et d'installer les outils manquants si necessaire.
 - Passage de la version projet a `0.3.1-dev`.
 - Transformation de `src/vault.rs`: le coffre `default.pbvault` devient un conteneur local d'identifiants chiffre, avec payload interne versionne.
 - Ajout du dechiffrement DPAPI Windows via `CryptUnprotectData`.
 - Ajout d'une API interne pour charger/sauvegarder le coffre, ajouter ou remplacer un identifiant par origine/nom d'utilisateur, et rechercher les identifiants d'une origine.
 - Ajout d'une migration automatique: l'ancien marqueur chiffre cree en `0.3.0-dev` est converti en coffre structure vide au prochain demarrage.
-- Raccordement au demarrage CEF: Pulse Browser cree et relit le coffre pour verifier que le conteneur chiffre local est exploitable.
+- Raccordement au demarrage CEF: Nova Browser cree et relit le coffre pour verifier que le conteneur chiffre local est exploitable.
 - Verification avec `cargo fmt`, `cargo fmt --check`, `cargo test` et `cargo build`: 14 tests unitaires passes et compilation dev reussie.
 - Lancement temporaire de `target\debug\pulse-browser.exe`: reussi, fermeture propre.
-- Verification non sensible dans `%LOCALAPPDATA%\PulseBrowser\profiles\default\vault`: `default.pbvault` present.
+- Verification non sensible dans `%LOCALAPPDATA%\NovaBrowser\profiles\default\vault`: `default.pbvault` present.
 - Passage de la version projet a `0.3.2-dev`.
 - Ajout des commandes de navigation de base dans la coque Win32 provisoire: `Retour`, `Avancer`, `Recharger` et `Stop`.
 - Raccordement des boutons aux commandes CEF `go_back`, `go_forward`, `reload` et `stop_load`.
@@ -107,11 +107,11 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 - Correction des noms vides : dossiers/favoris sans titre affichent "(sans nom)" en italique grise au lieu d'un champ vide.
 - Ajout de la page d'import dédiée (`local_pages::import_page_data_url`) : section "depuis un navigateur installé" (Fusionner/Remplacer par navigateur) + section "depuis un fichier HTML".
 - Le sous-menu import dans le menu principal est remplacé par un item unique "Importer des favoris..." qui ouvre la page dédiée.
-- Ajout de `PulseInternalAction::ReplaceFromBrowser(usize)` et `RenameBookmark(String,String)` dans `cef_runtime.rs`.
+- Ajout de `NovaInternalAction::ReplaceFromBrowser(usize)` et `RenameBookmark(String,String)` dans `cef_runtime.rs`.
 - `import_from_source` ne dépend plus du static menu : appelle `discover_import_sources()` directement.
 - Etat courant : 41 tests unitaires passes, compilation 0.6.2-dev reussie.
 - Refactorisation suite session contexte précédent : page paramètres réelle (moteur de recherche, page de démarrage) dans `src/settings.rs` + `src/local_pages.rs::settings_page_data_url`.
-- Ajout bouton "Nouveau dossier" dans le gestionnaire de favoris : `PulseInternalAction::AddFolder` dans `cef_runtime.rs`, handler dans `main.rs`.
+- Ajout bouton "Nouveau dossier" dans le gestionnaire de favoris : `NovaInternalAction::AddFolder` dans `cef_runtime.rs`, handler dans `main.rs`.
 - Correction icône de dossier dans BOOKMARKS_PAGE : `fill="var(--folder)"` sur SVG créé via `createElementNS` ne résout pas les CSS custom properties dans CEF. Corrigé en enveloppant le SVG dans un `<span style="color:var(--folder)">` et en utilisant `fill="currentColor"`.
 - Correction menu contextuel clic droit : `showFMenu` et `hideFMenu` étaient appelées mais jamais définies (ReferenceError silencieuse). Fonctions ajoutées dans `local_pages.rs`. Ajout de `document.addEventListener('contextmenu', e => e.preventDefault())` pour supprimer le menu natif CEF.
 - Etat courant : 45 tests unitaires passes, compilation 0.6.2-dev reussie.
@@ -119,7 +119,7 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 - Ajout de l'icone dossier dans la barre de favoris : les dossiers affichent desormais le prefixe Unicode `📁` suivi du titre. Un dossier sans titre affiche uniquement `📁` sans texte supplementaire.
 - Ajout du menu contextuel clic droit natif Win32 sur les items de la barre de favoris : `WM_CONTEXTMENU` gere dans `window_proc`, options "Ouvrir" / "Ouvrir le dossier" et "Supprimer de la barre". La suppression appelle `store.remove_node()` et rafraichit la barre.
 - Ajout de `WM_CONTEXTMENU` et `GetDlgCtrlID` dans `win32.rs`, `node_id_for_control()` et `action_for_control()` dans `ui_bookmarks_bar.rs`, `show_bar_item_context_menu()` et `MenuCommand::RemoveBookmark(String)` dans `ui_menu.rs`.
-- Enrichissement de la page "A propos de Pulse Browser" : tableau avec Langage (Rust), Moteur web (Chromium via CEF), Developpeur (H.J.).
+- Enrichissement de la page "A propos de Nova Browser" : tableau avec Langage (Rust), Moteur web (Chromium via CEF), Developpeur (H.J.).
 - Etat courant : 45 tests unitaires passes, compilation 0.6.3-dev reussie.
 - Passage de la version projet a `0.6.4-dev`.
 - Correction definitive du menu contextuel clic droit sur la barre de favoris : l'interception se fait sur `WM_RBUTTONUP` dans la boucle de messages (`PeekMessageW`), avant `DispatchMessageW`. `WM_RBUTTONUP` est un message poste dans la file (contrairement a `WM_CONTEXTMENU` qui est envoye par `DefWindowProc` pendant le dispatch et n'est donc jamais visible dans la file). On recupere le control ID via `GetDlgCtrlID(msg.hwnd)` et la position ecran via `msg.pt`. Le menu affiche "Ouvrir" / "Ouvrir le dossier" et "Supprimer de la barre".
@@ -132,29 +132,29 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 - Verification avec `cargo fmt --check`, `cargo test` et `cargo build`: formatage reussi, 49 tests unitaires passes et compilation `0.7.0-dev` reussie.
 - Limites restantes: la barre d'onglets reste provisoire en Win32, les onglets ne sont pas encore persistants entre lancements, le deplacement/reordonnancement n'est pas encore disponible, et une verification visuelle longue reste a faire.
 - Tentative de verification visuelle automatisee apres nouveau `go`: lancement de `target\debug\pulse-browser.exe`, mais la session a produit des processus CEF sans fenetre top-level detectable. Les processus lances pendant ce test ont ete arretes; une verification visuelle interactive reste necessaire.
-- Diagnostic dans `target\debug\debug.log`: CEF refusait le profil persistant car `cache_path` (`%LOCALAPPDATA%\PulseBrowser\profiles\default\cef-profile`) n'etait pas enfant de `root_cache_path` (`%LOCALAPPDATA%\PulseBrowser\cef-user-data`). CEF indiquait donc un retour au stockage memoire.
+- Diagnostic dans `target\debug\debug.log`: CEF refusait le profil persistant car `cache_path` (`%LOCALAPPDATA%\NovaBrowser\profiles\default\cef-profile`) n'etait pas enfant de `root_cache_path` (`%LOCALAPPDATA%\NovaBrowser\cef-user-data`). CEF indiquait donc un retour au stockage memoire.
 - Passage de la version projet a `0.7.1-dev` pour corriger ce bug de profil local persistant.
-- Correction de `src/profile.rs`: `root_cache_dir` pointe maintenant vers la racine locale `%LOCALAPPDATA%\PulseBrowser`, tandis que `cef_cache_dir` reste dans `profiles\default\cef-profile`.
+- Correction de `src/profile.rs`: `root_cache_dir` pointe maintenant vers la racine locale `%LOCALAPPDATA%\NovaBrowser`, tandis que `cef_cache_dir` reste dans `profiles\default\cef-profile`.
 - Mise a jour de `docs/LOCAL_PROFILE_AND_PRIVACY.md` et ajout de `logs/2026-07-05-cef-cache-path-0-7-1.md`.
 - Ajout du test `profile::tests::cef_cache_path_is_inside_root_cache_path` pour empecher le retour d'un `cache_path` hors de `root_cache_path`.
 - Verification avec `cargo fmt --check`, `cargo test` et `cargo build`: formatage reussi, 50 tests unitaires passes et compilation `0.7.1-dev` reussie.
 - Recadrage utilisateur: l'interface cible etait WinUI 3 depuis le depart; la coque Win32 ne doit plus devenir l'interface produit.
 - Passage de la version projet a `0.8.0-dev` pour demarrer la migration interface WinUI 3.
-- Ajout de `PulseBrowser.WinUI`, premiere coque WinUI 3 C# separee du prototype Rust/Win32, avec accueil, centre local et parametres.
+- Ajout de `NovaBrowser.WinUI`, premiere coque WinUI 3 C# separee du prototype Rust/Win32, avec accueil, centre local et parametres.
 - Ajout de `run-winui.cmd`, `build-winui.cmd`, `scripts/run-winui.ps1`, `scripts/build-winui.ps1`, `docs/WINUI3_MIGRATION_0_8.md` et `logs/2026-07-05-winui3-shell-0-8.md`.
 - Mise a jour de `AGENTS.md`: Win32 est marque comme prototype historique; WinUI 3 devient la direction produit courante; Rust reste le coeur local.
-- Creation de `PulseBrowser.slnx` et ajout du projet `PulseBrowser.WinUI`.
+- Creation de `NovaBrowser.slnx` et ajout du projet `NovaBrowser.WinUI`.
 - Restore NuGet Windows App SDK reussi apres autorisation reseau; build WinUI 3 reussi avec MSBuild Visual Studio x64.
 - Correction du projet WinUI: les fichiers XAML sont inclus automatiquement par le SDK; les inclusions explicites `ApplicationDefinition`/`Page` ont ete retirees pour eviter les doublons.
 - Verification Rust maintenue: `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.0-dev`.
-- Lancement automatise de `PulseBrowser.WinUI.exe` tente: le processus demarre, mais aucune fenetre top-level n'est detectable dans cette session. Le processus de test a ete arrete; verification visuelle interactive encore necessaire.
+- Lancement automatise de `NovaBrowser.WinUI.exe` tente: le processus demarre, mais aucune fenetre top-level n'est detectable dans cette session. Le processus de test a ete arrete; verification visuelle interactive encore necessaire.
 - Retour utilisateur: la coque WinUI 3 `0.8.0-dev` etait plus jolie, mais elle avait perdu des fonctions deja presentes dans le prototype Win32: onglets, favoris, menu, page A propos et import/export de favoris.
 - Passage de la version projet a `0.8.1-dev` pour restaurer une parite visible minimale dans la nouvelle interface.
-- Remplacement de `PulseBrowser.WinUI/MainWindow.xaml` par une surface navigateur plus complete: menu principal, onglets WinUI, barre de navigation, barre de favoris, gestionnaire de favoris, panneau import/export, centre local, parametres et page A propos.
-- Ajout dans `PulseBrowser.WinUI/MainWindow.xaml.cs` d'un `BookmarkStore` C# compatible avec le fichier local `%LOCALAPPDATA%\PulseBrowser\profiles\default\navigation\bookmarks.tsv`, afin que la coque WinUI lise/ecrive les memes favoris que le prototype Rust.
+- Remplacement de `NovaBrowser.WinUI/MainWindow.xaml` par une surface navigateur plus complete: menu principal, onglets WinUI, barre de navigation, barre de favoris, gestionnaire de favoris, panneau import/export, centre local, parametres et page A propos.
+- Ajout dans `NovaBrowser.WinUI/MainWindow.xaml.cs` d'un `BookmarkStore` C# compatible avec le fichier local `%LOCALAPPDATA%\NovaBrowser\profiles\default\navigation\bookmarks.tsv`, afin que la coque WinUI lise/ecrive les memes favoris que le prototype Rust.
 - Ajout de l'import HTML de favoris, de l'export HTML et de l'import depuis les profils Chromium locaux detectes (Chrome, Edge, Brave, Chromium, Vivaldi).
 - Mise a jour de `AGENTS.md`: la migration WinUI 3 ne doit pas provoquer de regression fonctionnelle visible et doit reprendre les onglets, favoris, menus, import/export, parametres et A propos deja acquis.
-- Mise a jour de `PulseBrowser.WinUI/README.md`, `docs/WINUI3_MIGRATION_0_8.md` et ajout de `logs/2026-07-05-winui3-parity-0-8-1.md`.
+- Mise a jour de `NovaBrowser.WinUI/README.md`, `docs/WINUI3_MIGRATION_0_8.md` et ajout de `logs/2026-07-05-winui3-parity-0-8-1.md`.
 - Verification WinUI: `build-winui.cmd` reussi avec MSBuild Visual Studio x64, 0 avertissement et 0 erreur.
 - Verification Rust maintenue: `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.1-dev`.
 - Nouveau recadrage utilisateur: le gestionnaire de favoris WinUI restait trop pauvre par rapport au gestionnaire precedent, qui avait une vraie logique de dossiers.
@@ -166,46 +166,46 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 - Raccordement de la barre d'adresse, des boutons retour/avancer/recharger/stop, des clics sur favoris et des onglets a la zone web WinUI.
 - Correction de la barre de favoris: les dossiers ouvrent maintenant un menu deroulant avec liens et sous-dossiers; le gestionnaire reste accessible via `Gerer`.
 - Documentation explicite: WebView2 est un pont temporaire de migration pour restaurer l'usage navigateur; la cible moteur finale reste Chromium via CEF raccorde au coeur Rust local.
-- Ajout de `logs/2026-07-05-winui3-navigation-0-8-2.md` et mise a jour de `AGENTS.md`, `PulseBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
+- Ajout de `logs/2026-07-05-winui3-navigation-0-8-2.md` et mise a jour de `AGENTS.md`, `NovaBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
 - Correction du crash WinUI au demarrage avec WebView2 actif: la trace montrait que le controle WebView2 etait cree puis que l'application tombait a la premiere navigation avant `CoreWebView2Initialized`.
 - La surface WebView2 est maintenant creee dynamiquement apres activation de la fenetre, force `EnsureCoreWebView2Async`, met la premiere navigation en attente, puis navigue via `CoreWebView2` une fois initialise.
 - Ajout de la reference NuGet explicite `Microsoft.Web.WebView2` dans le projet WinUI.
-- Verification: `build-winui.cmd` reussi avec 0 avertissement et 0 erreur; lancement visible court et lancement cache court de `PulseBrowser.WinUI.exe` reussis, processus vivant avec fenetre `Pulse Browser 0.8.2-dev`.
-- Recadrage utilisateur: l'organisation de la coque WinUI restait incoherente par rapport a l'ancienne version, avec `A propos` dans `Pulse`, une page separee `Donnees locales`, et pas d'acces direct assez clair a `Autres favoris`.
+- Verification: `build-winui.cmd` reussi avec 0 avertissement et 0 erreur; lancement visible court et lancement cache court de `NovaBrowser.WinUI.exe` reussis, processus vivant avec fenetre `Nova Browser 0.8.2-dev`.
+- Recadrage utilisateur: l'organisation de la coque WinUI restait incoherente par rapport a l'ancienne version, avec `A propos` dans `Nova`, une page separee `Donnees locales`, et pas d'acces direct assez clair a `Autres favoris`.
 - Passage de la version projet a `0.8.3-dev`.
-- Correction du menu WinUI: `A propos de Pulse Browser` est deplace dans `Outils`, la page separee `Donnees locales` est retiree, les informations de profil local sont integrees dans `A propos`, et `Autres favoris` dispose d'un acces direct dans le menu `Favoris`.
-- Verification: `build-winui.cmd` reussi avec 0 avertissement et 0 erreur; lancement cache court de `PulseBrowser.WinUI.exe` reussi avec fenetre `Pulse Browser 0.8.3-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.3-dev`.
+- Correction du menu WinUI: `A propos de Nova Browser` est deplace dans `Outils`, la page separee `Donnees locales` est retiree, les informations de profil local sont integrees dans `A propos`, et `Autres favoris` dispose d'un acces direct dans le menu `Favoris`.
+- Verification: `build-winui.cmd` reussi avec 0 avertissement et 0 erreur; lancement cache court de `NovaBrowser.WinUI.exe` reussi avec fenetre `Nova Browser 0.8.3-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.3-dev`.
 - Nouveau recadrage utilisateur: la gestion des favoris WinUI restait encore trop pauvre par rapport a l'ancienne version, notamment sans vrais icones de dossiers, sans bouton visible `Autres favoris` dans la barre, sans menu contextuel, et avec un import navigateur trop peu explicite.
 - Passage de la version projet a `0.8.4-dev`.
 - Correction de la parite favoris WinUI: glyphes WinUI pour dossiers/liens, bouton permanent `Autres favoris` dans la barre de favoris, ouverture normale des dossiers dans le gestionnaire, navigation des liens favoris vers la zone web WinUI, menus contextuels sur les listes de favoris et de dossiers.
 - Correction de l'import navigateur WinUI: panneau separe pour les navigateurs installes, statut des sources detectees, bouton de fusion et bouton de remplacement. Le remplacement sauvegarde d'abord le fichier local de favoris avant reecriture.
-- Ajout de `logs/2026-07-05-winui3-bookmarks-parity-0-8-4.md` et mise a jour de `PulseBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
-- Verification: `build-winui.cmd` reussi apres restore NuGet autorise, avec 0 erreur et 5 avertissements de copie dus a un ancien processus `PulseBrowser.WinUI.exe` qui verrouillait temporairement l'executable; lancement cache court reussi avec fenetre `Pulse Browser 0.8.4-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.4-dev`.
+- Ajout de `logs/2026-07-05-winui3-bookmarks-parity-0-8-4.md` et mise a jour de `NovaBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
+- Verification: `build-winui.cmd` reussi apres restore NuGet autorise, avec 0 erreur et 5 avertissements de copie dus a un ancien processus `NovaBrowser.WinUI.exe` qui verrouillait temporairement l'executable; lancement cache court reussi avec fenetre `Nova Browser 0.8.4-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.4-dev`.
 - Nouveau cadrage utilisateur: pour eviter qu'un autre assistant modifie l'ancien prototype Win32/CEF par erreur, la seule surface produit active doit etre WinUI 3.
 - Passage de la version projet a `0.8.5-dev`.
 - Correction de l'organisation favoris WinUI: la gestion des favoris est exposee dans `Parametres`, le bouton `Gerer` est retire de la barre, `Autres favoris` est separe a droite de la barre, et l'import/export reste accessible depuis les parametres.
 - Correction du toggle d'onglets verticaux: il active maintenant un rail lateral d'onglets, masque la barre horizontale et permet la selection d'onglets depuis la colonne.
 - Ajout d'un cache local de favicons WinUI: WebView2 fournit les icones quand elles existent, elles sont stockees dans le profil local puis rattachees aux signets via une colonne optionnelle de `bookmarks.tsv`.
 - Desactivation des lanceurs ambigus du prototype Win32/CEF: `run-dev.cmd` et `scripts/run-dev.ps1` refusent le lancement, tandis que `archive/win32-cef-prototype/` documente un lanceur legacy explicite reserve au diagnostic technique.
-- Mise a jour de `AGENTS.md`: `PulseBrowser.WinUI` est la seule interface produit active; aucune nouvelle fonction visible ne doit etre ajoutee au prototype Win32 archive sans demande explicite.
-- Ajout de `logs/2026-07-05-winui3-product-direction-0-8-5.md` et mise a jour de `PulseBrowser.WinUI/README.md`, `docs/WINUI3_MIGRATION_0_8.md` et `docs/BOOKMARKS_0_6.md`.
-- Verification: `build-winui.cmd` reussi avec 0 avertissement et 0 erreur; lancement cache court reussi avec fenetre `Pulse Browser 0.8.5-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.5-dev`; `run-dev.cmd` sort bien avec le message de desactivation du prototype.
+- Mise a jour de `AGENTS.md`: `NovaBrowser.WinUI` est la seule interface produit active; aucune nouvelle fonction visible ne doit etre ajoutee au prototype Win32 archive sans demande explicite.
+- Ajout de `logs/2026-07-05-winui3-product-direction-0-8-5.md` et mise a jour de `NovaBrowser.WinUI/README.md`, `docs/WINUI3_MIGRATION_0_8.md` et `docs/BOOKMARKS_0_6.md`.
+- Verification: `build-winui.cmd` reussi avec 0 avertissement et 0 erreur; lancement cache court reussi avec fenetre `Nova Browser 0.8.5-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.5-dev`; `run-dev.cmd` sort bien avec le message de desactivation du prototype.
 - Nouveau cadrage utilisateur: les onglets verticaux doivent etre redimensionnables et reductibles, la gestion des favoris doit quitter `Parametres` pour etre placee sous `Outils`, et les dossiers dans `Autres favoris` doivent rester actionnables depuis leur menu.
 - Passage de la version projet a `0.8.6-dev`.
 - Correction de l'organisation WinUI: suppression du menu principal `Favoris`, ajout de `Outils > Favoris` avec acces a la barre des favoris, `Autres favoris`, gestionnaire, import, export et affichage/masquage de la barre.
 - Nettoyage des parametres WinUI: la section de gestion des favoris est retiree de `Parametres`, qui reste centree sur les options de navigation visibles.
 - Correction du rail d'onglets verticaux: ajout d'une poignee de redimensionnement, ajout d'un mode compact en icones, et reutilisation des favicons locales dans les onglets horizontaux et verticaux.
 - Correction des menus de dossiers de favoris: les sous-menus exposent `Ouvrir le dossier`, `Renommer`, `Supprimer` puis le contenu du dossier, afin de garder une action directe meme depuis `Autres favoris`.
-- Ajout de `logs/2026-07-05-winui3-vertical-tabs-favorites-tools-0-8-6.md` et mise a jour de `PulseBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
-- Verification: `build-winui.cmd` reussi apres restore NuGet autorise avec 0 avertissement et 0 erreur; lancement cache court reussi avec fenetre `Pulse Browser 0.8.6-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.6-dev`; `run-dev.cmd` reste desactive et renvoie vers `run-winui.cmd`.
+- Ajout de `logs/2026-07-05-winui3-vertical-tabs-favorites-tools-0-8-6.md` et mise a jour de `NovaBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
+- Verification: `build-winui.cmd` reussi apres restore NuGet autorise avec 0 avertissement et 0 erreur; lancement cache court reussi avec fenetre `Nova Browser 0.8.6-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.6-dev`; `run-dev.cmd` reste desactive et renvoie vers `run-winui.cmd`.
 - Nouveau cadrage utilisateur: les parametres visibles, notamment les onglets verticaux, doivent rester actifs apres fermeture et relance; les favicons deja recuperees doivent aussi rester disponibles.
 - Passage de la version projet a `0.8.7-dev`.
-- Ajout d'un fichier local `ui-settings.json` dans le dossier `navigation/` du profil Pulse Browser pour conserver les reglages UI.
+- Ajout d'un fichier local `ui-settings.json` dans le dossier `navigation/` du profil Nova Browser pour conserver les reglages UI.
 - Persistance WinUI ajoutee pour la barre de favoris visible ou masquee, l'activation des onglets verticaux, le mode compact du rail vertical et la largeur du rail vertical.
 - Application des reglages UI au demarrage avec protection contre les sauvegardes intempestives pendant l'initialisation WinUI.
 - Amelioration du cache de favicons WinUI: reconstruction du cache depuis les favoris charges et recherche deterministe de l'icone locale par hash d'URL avant d'afficher l'icone generique d'un onglet.
-- Ajout de `logs/2026-07-05-winui3-persistent-ui-settings-0-8-7.md` et mise a jour de `PulseBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
-- Verification: `build-winui.cmd` reussi apres restore NuGet autorise avec 0 avertissement et 0 erreur; lancement cache court reussi avec fenetre `Pulse Browser 0.8.7-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.7-dev`; `run-dev.cmd` reste desactive et renvoie vers `run-winui.cmd`.
+- Ajout de `logs/2026-07-05-winui3-persistent-ui-settings-0-8-7.md` et mise a jour de `NovaBrowser.WinUI/README.md` et `docs/WINUI3_MIGRATION_0_8.md`.
+- Verification: `build-winui.cmd` reussi apres restore NuGet autorise avec 0 avertissement et 0 erreur; lancement cache court reussi avec fenetre `Nova Browser 0.8.7-dev`; `cargo fmt --check`, `cargo test` (50 tests) et `cargo build` reussis en `0.8.7-dev`; `run-dev.cmd` reste desactive et renvoie vers `run-winui.cmd`.
 
 ## 2026-07-05 (suite) — 0.9.0-dev
 
@@ -219,10 +219,10 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 
 - Passage de la version projet a `0.9.1-dev` pour marquer l'ajout du pont IPC Rust→WinUI et de l'interface coffre.
 - Ajout de `serde = { version = "1", features = ["derive"] }` et `serde_json = "1"` dans `Cargo.toml` pour le protocole IPC.
-- Ajout de `src/ipc_server.rs`: serveur a pipe nomme Windows `\\.\pipe\PulseBrowserCore` en pur Win32 (kernel32.dll, aucune dependance supplementaire). Protocole JSON ligne par ligne. Methodes supportees: `ping`, `get_profile`, `list_credentials`, `delete_credential`, `upsert_credential`, `shutdown`. Le serveur s'initialise avec le vault DPAPI de l'utilisateur courant, puis accepte un client a la fois en boucle.
+- Ajout de `src/ipc_server.rs`: serveur a pipe nomme Windows `\\.\pipe\NovaBrowserCore` en pur Win32 (kernel32.dll, aucune dependance supplementaire). Protocole JSON ligne par ligne. Methodes supportees: `ping`, `get_profile`, `list_credentials`, `delete_credential`, `upsert_credential`, `shutdown`. Le serveur s'initialise avec le vault DPAPI de l'utilisateur courant, puis accepte un client a la fois en boucle.
 - Ajout de `LocalVault::remove_credential` et de la fonction publique `vault::remove_credential` dans `src/vault.rs` pour la suppression d'un identifiant par origine+nom d'utilisateur.
 - Modification de `src/main.rs`: si l'argument `--serve` est present, le processus s'oriente vers `ipc_server::run()` sans initialiser Win32/CEF. En mode normal, le comportement est inchange.
-- Ajout de `PulseCoreClient` (classe interne C#): cherche `pulse-browser.exe` en remontant jusqu'a 9 niveaux depuis le dossier de l'exe WinUI (debug/release) ou via `PULSE_BROWSER_CORE_PATH`. Demarre le process avec `CreateNoWindow`, se connecte via `NamedPipeClientStream`, expose `ListCredentialsAsync`, `DeleteCredentialAsync`, `UpsertCredentialAsync`.
+- Ajout de `NovaCoreClient` (classe interne C#): cherche `pulse-browser.exe` en remontant jusqu'a 9 niveaux depuis le dossier de l'exe WinUI (debug/release) ou via `PULSE_BROWSER_CORE_PATH`. Demarre le process avec `CreateNoWindow`, se connecte via `NamedPipeClientStream`, expose `ListCredentialsAsync`, `DeleteCredentialAsync`, `UpsertCredentialAsync`.
 - Ajout de `VaultCredential` (record public C# avec attributs `[JsonPropertyName]` pour le snake_case Rust).
 - Ajout du panel `Coffre de mots de passe` accessible via `Outils > Coffre de mots de passe`: liste des identifiants avec origine, nom d'utilisateur, date de mise a jour, bouton supprimer par entree, bouton ajouter (dialogue avec TextBox + PasswordBox). Le panel affiche un message clair si le coeur Rust est indisponible.
 - Verification: Rust compile sans erreur (`cargo build`, 5 avertissements pre-existants); WinUI compile sans erreur (MSBuild VS18, 0 avertissement, 0 erreur) en `0.9.1-dev`.
@@ -259,7 +259,7 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 - **`src/vault_lock.rs`** (nouveau) : gestionnaire de verrou par mot de passe maitre. Derive une cle PBKDF2-SHA256 (100 000 iterations) avec sel aleatoire 32 octets (via `RtlGenRandom`). Stocke `sel + hash` dans un fichier `vault-master.lock` protege par DPAPI. Expose `has_master_password`, `set_master_password`, `verify_master_password`, `clear_master_password`.
 - **`sha2 = "0.10"`** : ajout dans `Cargo.toml` pour le HMAC-SHA256 interne de PBKDF2.
 - **`src/ipc_server.rs`** : ajout de l'etat serveur `ServerState { vault_locked, lock_path }`. Les commandes `list_credentials`, `upsert_credential`, `delete_credential` retournent `{"ok":false,"error":"vault_locked"}` si le coffre est verrouille. Nouvelles commandes : `lock_status`, `unlock_vault`, `set_master_password`, `verify_master_password`, `clear_master_password`.
-- **`PulseCoreClient`** (C#) : nouvelles methodes `LockStatusAsync`, `SetMasterPasswordAsync`, `VerifyMasterPasswordAsync`, `UnlockVaultAsync`, `ClearMasterPasswordAsync`.
+- **`NovaCoreClient`** (C#) : nouvelles methodes `LockStatusAsync`, `SetMasterPasswordAsync`, `VerifyMasterPasswordAsync`, `UnlockVaultAsync`, `ClearMasterPasswordAsync`.
 - **Panel Parametres** : section `Coffre de mots de passe` avec `ToggleSwitch` (activer/desactiver le mot de passe maitre) et bouton `Definir / modifier`. Activation demande un nouveau mot de passe (avec confirmation), desactivation verifie l'ancien.
 - **Acces coffre** : `VaultMenu_Click` appelle `UnlockVaultIfNeededAsync` avant `RefreshVaultPanelAsync`. Si le coffre est verrouille, une boite de dialogue `PromptMasterPasswordAsync` est affichee.
 - **`UiSettings`** : ajout de `StartupMode`, `StartupUrl`, `MasterPasswordEnabled`.
@@ -275,14 +275,14 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 ## 2026-07-05 (suite) — 0.10.0-dev
 
 - Passage de la version projet a `0.10.0-dev`.
-- Adoption de l'extension `.pulse` et du chiffrement DPAPI pour tous les fichiers de donnees : `bookmarks.pulse`, `history.pulse`, `ui-settings.pulse`, `tabs.pulse`, `profile.pulse`. Classe statique `PulseFile` (`ReadAllText`, `WriteAllText`, `TryReadAllText`) avec `ProtectedData` et entropie fixe `PulseBrowser.WinUI.v1`. Migration automatique des anciens fichiers `.tsv` / `.json` au premier lancement.
-- Ajout du mode invite (Option A — profil vide) : bouton "Continuer sans profil (mode invite)" sur tous les panneaux de login. `BookmarkStore.SetGuestMode` et `HistoryStore.SetGuestMode` bloquent toute ecriture. Gardes sur `AddHistoryEntry`, `SaveTabSession`, `CredentialSaveBar`, `VaultMenu_Click`. Le coffre renvoie "indisponible en mode invite" sans exception. Titre fenetre : "Pulse Browser 0.10.0-dev — Mode invite". Indicateur `ProfileStatusText` en barre de statut bas droite : "Mode invite" en orange, "Connecte : [Nom]" sinon.
+- Adoption de l'extension `.pulse` et du chiffrement DPAPI pour tous les fichiers de donnees : `bookmarks.pulse`, `history.pulse`, `ui-settings.pulse`, `tabs.pulse`, `profile.pulse`. Classe statique `NovaFile` (`ReadAllText`, `WriteAllText`, `TryReadAllText`) avec `ProtectedData` et entropie fixe `NovaBrowser.WinUI.v1`. Migration automatique des anciens fichiers `.tsv` / `.json` au premier lancement.
+- Ajout du mode invite (Option A — profil vide) : bouton "Continuer sans profil (mode invite)" sur tous les panneaux de login. `BookmarkStore.SetGuestMode` et `HistoryStore.SetGuestMode` bloquent toute ecriture. Gardes sur `AddHistoryEntry`, `SaveTabSession`, `CredentialSaveBar`, `VaultMenu_Click`. Le coffre renvoie "indisponible en mode invite" sans exception. Titre fenetre : "Nova Browser 0.10.0-dev — Mode invite". Indicateur `ProfileStatusText` en barre de statut bas droite : "Mode invite" en orange, "Connecte : [Nom]" sinon.
 - Restructuration des parametres en sidebar : colonne gauche 200 px (RadioButtons de navigation) + colonne droite (ScrollViewer avec sections Navigation · Demarrage · Coffre · Profil). Handler `SettingsNav_Click` affiche/masque les sections par `Tag`. Structure extensible sans refactoring.
 - Favicons sur la barre de favoris : methode `EnrichNodesWithFaviconCache` appelee dans `ReloadBookmarks()` juste apres `AllNodes()`, cache memoire + fichiers `favicons/hash-origin.png` sur disque.
 - Contrainte de largeur minimale fenetre avec onglets verticaux : `_appWindow` via `WindowNative.GetWindowHandle` + `AppWindow.GetFromWindowId`, handler `AppWindow_Changed` → `EnforceMinWindowWidth()`, largeur min = rail + 620 px.
 - InfoBar avertissement mode invite sur les panneaux `CreateProfilePanel`, `LoginPasswordPanel` et `LoginPinPanel`.
 - Correction de `AGENTS.md` : la version courante etait restee a `0.9.7-dev`; mise a jour a `0.10.0-dev`.
-- Etat courant : interface active `PulseBrowser.WinUI`, `MainWindow.xaml.cs` environ 4100 lignes, coeur Rust (`src/`) inchange.
+- Etat courant : interface active `NovaBrowser.WinUI`, `MainWindow.xaml.cs` environ 4100 lignes, coeur Rust (`src/`) inchange.
 
 ## 2026-07-06 — 0.11.0-dev
 
@@ -295,11 +295,11 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 
 ### Stockage des donnees (section "Stockage" dans Parametres)
 
-- Nouveau fichier `PulseConfig.cs` : config bootstrap `%LOCALAPPDATA%\PulseBrowser\config.json` (JSON plain, hors profil). Stocke `CustomProfilePath`. Ce fichier est toujours au meme endroit ; c'est lui qui indique ou chercher le profil.
-- `PulseProfilePaths.Default()` lit `PulseConfig` au demarrage. Si le chemin custom existe, il est utilise comme racine du profil ; sinon, le chemin par defaut est maintenu.
-- Nouveau fichier `PulseBackup.cs` : export/import chiffre. Format `.pulsebackup` : magic "PULSEBAK" + version + sel 16 octets + IV 16 octets + AES-256-CBC(PBKDF2-SHA256 100 000 iterations). Le payload chiffre est un ZIP contenant les fichiers de navigation decryptes (bookmarks, history, tabs, ui-settings, profile en texte brut). Le coffre Rust n'est pas inclus (DPAPI lie au compte Windows).
-- Bouton "Changer de dossier" : FolderPicker, copie recursive du profil vers le nouvel emplacement, mise a jour de `PulseConfig`, InfoBar "Redemarrage requis" avec bouton "Fermer Pulse Browser".
-- Boutons "Exporter une sauvegarde" et "Importer une sauvegarde" : dialogue mot de passe (avec confirmation a l'export), `FileSavePicker` / `FileOpenPicker`, appel `PulseBackup.Export` / `PulseBackup.Import`. Apres import, les favoris sont recharges immediatement ; les autres changements sont appliques au redemarrage.
+- Nouveau fichier `NovaConfig.cs` : config bootstrap `%LOCALAPPDATA%\NovaBrowser\config.json` (JSON plain, hors profil). Stocke `CustomProfilePath`. Ce fichier est toujours au meme endroit ; c'est lui qui indique ou chercher le profil.
+- `NovaProfilePaths.Default()` lit `NovaConfig` au demarrage. Si le chemin custom existe, il est utilise comme racine du profil ; sinon, le chemin par defaut est maintenu.
+- Nouveau fichier `NovaBackup.cs` : export/import chiffre. Format `.pulsebackup` : magic "PULSEBAK" + version + sel 16 octets + IV 16 octets + AES-256-CBC(PBKDF2-SHA256 100 000 iterations). Le payload chiffre est un ZIP contenant les fichiers de navigation decryptes (bookmarks, history, tabs, ui-settings, profile en texte brut). Le coffre Rust n'est pas inclus (DPAPI lie au compte Windows).
+- Bouton "Changer de dossier" : FolderPicker, copie recursive du profil vers le nouvel emplacement, mise a jour de `NovaConfig`, InfoBar "Redemarrage requis" avec bouton "Fermer Nova Browser".
+- Boutons "Exporter une sauvegarde" et "Importer une sauvegarde" : dialogue mot de passe (avec confirmation a l'export), `FileSavePicker` / `FileOpenPicker`, appel `NovaBackup.Export` / `NovaBackup.Import`. Apres import, les favoris sont recharges immediatement ; les autres changements sont appliques au redemarrage.
 - Mode invite : les trois operations sont bloquees.
 - Nouvelle section "Stockage" dans le panel Parametres (RadioButton + `SettingsSectionStorage`).
 
@@ -308,20 +308,20 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 - **Moteur de recherche fonctionnel** : le `ComboBox` dans Parametres → Navigation est maintenant branche. Options : Google, DuckDuckGo, Brave Search, Bing. Propriete `SearchEngine` ajoutee dans `UiSettings` (defaut `"google"`). Sauvegarde immediate au changement, restauration au demarrage via `ApplyUiSettings`.
 - **Barre d'adresse corrigee** : `NormalizeAddress` devient une methode d'instance. Nouvelles regles : texte avec espace → recherche (avant : traite comme URL potentielle) ; `localhost` / `localhost:port` → `http://localhost` sans TLS ; prefixe `file://` reconnu. Nouvelle methode `SearchUrl(query)` qui route vers le moteur selectionne.
 - **Page d'accueil** : remplacement du texte placeholder "Interface WinUI avec navigation web active..." et de la version figee "0.9.2-dev". Nouvelle page avec logo "P" gradient orange, version dynamique `Version`, et trois cartes : "Prive par defaut", "Coffre local", "Votre profil".
-- Etat courant : `MainWindow.xaml.cs` environ 4300 lignes, deux nouveaux fichiers (`PulseConfig.cs`, `PulseBackup.cs`), coeur Rust (`src/`) inchange.
+- Etat courant : `MainWindow.xaml.cs` environ 4300 lignes, deux nouveaux fichiers (`NovaConfig.cs`, `NovaBackup.cs`), coeur Rust (`src/`) inchange.
 
 ### Redesign de la page de connexion
 
 - **Card layout** : l'overlay de login passe d'un StackPanel flottant a une `Border` avec `CardBackgroundFillColorDefaultBrush` + `CornerRadius="12"`, centre dans un `ScrollViewer`. Largeur reduite a 300 px.
-- **Logo unifie** : en-tete remplace par une `Border` gradient orange (40x40 px, `CornerRadius="10"`) avec "P" blanc + TextBlock "Pulse Browser" sur une ligne, coherent avec la page d'accueil.
+- **Logo unifie** : en-tete remplace par une `Border` gradient orange (40x40 px, `CornerRadius="10"`) avec "P" blanc + TextBlock "Nova Browser" sur une ligne, coherent avec la page d'accueil.
 - **InfoBars supprimees** : les deux `InfoBar IsOpen="True"` Warning toujours ouvertes dans `LoginPasswordPanel` et `LoginPinPanel` sont retirees. Remplacees par un separateur + `HyperlinkButton` semi-transparent "Continuer sans profil (mode invite)".
 - **PIN pad compact** : boutons reduits de 80x56 a 72x46, espacement de 10 a 8 px.
 
 ### Corrections — profil et onboarding
 
 - **Favoris herites a la creation de profil** : `CreateProfileButton_Click` efface maintenant tous les fichiers `.pulse` du `NavigationDir` avant de valider. Plus de donnees residuelles d'une session precedente.
-- **Choix du dossier de stockage a l'onboarding** : ajout d'un selecteur "Dossier de stockage" + bouton "Choisir" dans `CreateProfilePanel`. Si un dossier custom est choisi, `PulseConfig` est mis a jour, le profil est cree dans le nouveau dossier, et l'app redemarre (car `_profile` et `_bookmarks` sont `readonly`). Sinon, pas de redemarrage.
-- **Bouton "Reinitialiser le profil"** dans Parametres > Profil : confirmation obligatoire, supprime tout le dossier de profil recursif (nav, vault, favicons, profile.pulse), remet `PulseConfig.CustomProfilePath = null`, redemarre l'app.
+- **Choix du dossier de stockage a l'onboarding** : ajout d'un selecteur "Dossier de stockage" + bouton "Choisir" dans `CreateProfilePanel`. Si un dossier custom est choisi, `NovaConfig` est mis a jour, le profil est cree dans le nouveau dossier, et l'app redemarre (car `_profile` et `_bookmarks` sont `readonly`). Sinon, pas de redemarrage.
+- **Bouton "Reinitialiser le profil"** dans Parametres > Profil : confirmation obligatoire, supprime tout le dossier de profil recursif (nav, vault, favicons, profile.pulse), remet `NovaConfig.CustomProfilePath = null`, redemarre l'app.
 
 ### Migration depuis un autre navigateur (onboarding)
 
@@ -349,7 +349,7 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 ### Corrections onboarding et UX
 
 - **Lien "Continuer sans profil" supprime de `CreateProfilePanel`** : n'avait aucun sens pendant la creation d'un profil. Reste uniquement sur `LoginPasswordPanel` et `LoginPinPanel`.
-- **Suppression profil via PowerShell** : profil de test (`E:\Documents\PulseBrowser`) supprime, `PulseConfig` remis a zero pour repartir du premier lancement.
+- **Suppression profil via PowerShell** : profil de test (`E:\Documents\NovaBrowser`) supprime, `NovaConfig` remis a zero pour repartir du premier lancement.
 
 ### Saisie PIN au clavier physique
 
@@ -370,7 +370,7 @@ Ce fichier garde l'historique chronologique des etapes effectuees sur Pulse Brow
 
 - Passage de la version projet a `0.13.0-dev`.
 
-### Architecture modules privacy — `PulseBrowser.WinUI/Privacy/`
+### Architecture modules privacy — `NovaBrowser.WinUI/Privacy/`
 
 Nouvelle architecture modulaire : interface `IPrivacyModule` (Id, DisplayName, IsEnabled, ShouldBlock, CleanUrl) + `PrivacyEngine` qui orchestre tous les modules. Chaque module est independant et activable/desactivable par l'utilisateur.
 
@@ -378,7 +378,7 @@ Nouvelle architecture modulaire : interface `IPrivacyModule` (Id, DisplayName, I
 
 - `SeedList.cs` : ~140 domaines tracker bloqués d'emblée (Google Ads, Meta, Criteo, Taboola, Outbrain, Hotjar, Mixpanel, Amplitude, FullStory, Adobe Analytics, etc.). Protection active dès le premier lancement, sans téléchargement.
 - `FilterParser.cs` : parseur du format Adblock Plus / uBlock Origin. Gère `||domain^`, exceptions `@@||domain^`, option `$third-party`, cosmetics `##` (ignorés, réservés v0.15+), commentaires `!`. Sépare règles de domaine (HashSet O(1)) et règles sous-chaîne (List).
-- `FilterListManager.cs` : télécharge et met en cache 4 listes officielles dans `%LOCALAPPDATA%\PulseBrowser\privacy\lists\` — EasyList, EasyPrivacy, uBlock Origin filters, AdGuard Base. Mise à jour automatique si ancienneté > 7 jours, forcée depuis les paramètres. Métadonnées dans `meta.json` (timestamp par liste). Aucune donnée utilisateur envoyée : GET pur vers sources open source publiques.
+- `FilterListManager.cs` : télécharge et met en cache 4 listes officielles dans `%LOCALAPPDATA%\NovaBrowser\privacy\lists\` — EasyList, EasyPrivacy, uBlock Origin filters, AdGuard Base. Mise à jour automatique si ancienneté > 7 jours, forcée depuis les paramètres. Métadonnées dans `meta.json` (timestamp par liste). Aucune donnée utilisateur envoyée : GET pur vers sources open source publiques.
 - `NetworkBlockerModule.cs` : HashSet<string> domaines bloqués + HashSet<string> exceptions. Support sous-domaines par remontée des labels (cdn.ads.com → ads.com → com). Détection third-party par eTLD+1 (couvre co.uk, com.au, co.jp, etc.). Whitelist utilisateur (jamais bloqué). Événement `StatusChanged` pour affichage de l'état dans l'UI.
 - Interception : `CoreWebView2.AddWebResourceRequestedFilter("*", All)` + `WebResourceRequested` enregistré dans `BrowserView_CoreWebView2Initialized`. Réponse 200 vide pour les requêtes bloquées (pas d'erreur visible dans la page).
 
@@ -418,7 +418,7 @@ Quatrième module privacy : détecte et bloque les trackers cachés derrière un
 
 **`CnameResolver.cs`**
 
-- P/Invoke `DnsQuery_W` (dnsapi.dll) + `DnsRecordListFree`. Pas de dépendance externe, aucune donnée envoyée à un serveur Pulse ou à un tiers : la résolution utilise le DNS configuré sur le PC de l'utilisateur.
+- P/Invoke `DnsQuery_W` (dnsapi.dll) + `DnsRecordListFree`. Pas de dépendance externe, aucune donnée envoyée à un serveur Nova ou à un tiers : la résolution utilise le DNS configuré sur le PC de l'utilisateur.
 - Layout struct x64 calculé manuellement : `pNext` (+0), `pName` (+8), `wType` (+16), `wDataLength` (+18), `Flags` (+20), `dwTtl` (+24), `dwReserved` (+28), `pNameHost` (+32 pour CNAME). Lecture via `Marshal.ReadIntPtr`.
 - Parcours de la liste chaînée DNS_RECORD pour trouver le premier enregistrement CNAME.
 - Cache par hostname, TTL 1h (`ConcurrentDictionary`).
@@ -466,7 +466,7 @@ Cinquième module privacy : masquage visuel des emplacements publicitaires par i
 
 - `HashSet<string> _genericSelectors` : sélecteurs pour toutes pages.
 - `Dictionary<string, HashSet<string>> _siteSelectors` : sélecteurs par domaine.
-- `LoadAsync()` : lit les mêmes fichiers que `FilterListManager` depuis `%LOCALAPPDATA%\PulseBrowser\privacy\lists\` (easylist.txt, easyprivacy.txt, ublock-filters.txt, adguard-base.txt). Aucun téléchargement — le NetworkBlocker s'en charge.
+- `LoadAsync()` : lit les mêmes fichiers que `FilterListManager` depuis `%LOCALAPPDATA%\NovaBrowser\privacy\lists\` (easylist.txt, easyprivacy.txt, ublock-filters.txt, adguard-base.txt). Aucun téléchargement — le NetworkBlocker s'en charge.
 - `BuildGenericInjectionScript()` : JS mis en cache, crée `<style id="__pulse_cf_generic">` dans `document.documentElement`. Enregistré via `AddScriptToExecuteOnDocumentCreatedAsync` (actif sur toutes les pages dès la création du document).
 - `BuildSiteInjectionScript(pageUri)` : injecte via `ExecuteScriptAsync` après `NavigationCompleted`. Retourne null si aucune règle ne correspond au host.
 - `BuildRemovalScript()` : statique, retire `__pulse_cf_generic` et `__pulse_cf_site` (utilisé quand le module est désactivé à chaud).
@@ -592,7 +592,7 @@ Sixième module privacy : gestion automatique des bandeaux cookies RGPD/CCPA. Re
 
 ## 2026-07-06 — 0.18.0-dev
 
-- Refactoring MainWindow : `MainWindow.xaml.cs` (5153 lignes) éclaté en 8 fichiers partial class + `PulseModels.cs`
+- Refactoring MainWindow : `MainWindow.xaml.cs` (5153 lignes) éclaté en 8 fichiers partial class + `NovaModels.cs`
   - `MainWindow.Privacy.cs` — moteur confidentialité, bouclier, whitelist
   - `MainWindow.Profile.cs` — session, profil, PIN, migration
   - `MainWindow.Vault.cs` — capture identifiants, autofill, coffre
@@ -600,7 +600,7 @@ Sixième module privacy : gestion automatique des bandeaux cookies RGPD/CCPA. Re
   - `MainWindow.Bookmarks.cs` — favoris, barre, import/export
   - `MainWindow.Navigation.cs` — onglets, navigation, favicons
   - `MainWindow.Settings.cs` — stockage, démarrage, UI, onglets verticaux
-  - `PulseModels.cs` — toutes les classes de données (hors MainWindow)
+  - `NovaModels.cs` — toutes les classes de données (hors MainWindow)
 
 ## 2026-07-06 — 0.19.0-dev
 
@@ -616,7 +616,7 @@ Assistant de configuration affiché une seule fois, après la création d'un nou
 **Fichiers créés/modifiés :**
 - `MainWindow.SetupWizard.cs` (nouveau) — partial class : `ShowSetupWizard()`, `UpdateWizardStep()`, `WizardPrevButton_Click`, `WizardNextButton_Click`, `WizardSearch_Checked`, `FinishWizard()`
 - `MainWindow.xaml` — overlay `SetupWizardOverlay` ajouté après `LoginOverlay` (même pattern `Grid.RowSpan="6"`, `Visibility="Collapsed"`)
-- `PulseModels.cs` — `UiSettings.SetupWizardCompleted` (bool, défaut false)
+- `NovaModels.cs` — `UiSettings.SetupWizardCompleted` (bool, défaut false)
 - `MainWindow.Profile.cs` — `DismissLoginOverlay()` : appel conditionnel `ShowSetupWizard()` si wizard non complété et non-invité
 
 **Design :** card WinUI centrée 340px, même style que LoginOverlay, navigation Précédent/Suivant/Terminer. Le wizard ne bloque pas le navigateur (WebView2 déjà initialisé par `App.OnLaunched`) — il ajoute seulement un overlay sur le dessus. Le choix du moteur de recherche est sauvegardé à la fermeture via `_uiSettings.Save()`.
@@ -645,11 +645,11 @@ Le script JS précédent écoutait uniquement l'événement natif `submit`, que 
 
 ### Passkeys (clés d'accès FIDO2 / WebAuthn)
 
-Nouvelle fonctionnalité : suivi local des sites utilisant des clés d'accès (passkeys). WebView2/Chromium gère nativement le protocole WebAuthn via Windows Hello — Pulse Browser n'implémente pas son propre authenticateur FIDO2. Il enregistre uniquement les métadonnées (site + dates) dans un fichier `.pulse` chiffré.
+Nouvelle fonctionnalité : suivi local des sites utilisant des clés d'accès (passkeys). WebView2/Chromium gère nativement le protocole WebAuthn via Windows Hello — Nova Browser n'implémente pas son propre authenticateur FIDO2. Il enregistre uniquement les métadonnées (site + dates) dans un fichier `.pulse` chiffré.
 
-**Modèle de données (`PulseModels.cs`)**
+**Modèle de données (`NovaModels.cs`)**
 - `PasskeyEntry(Origin, CreatedAt, LastUsedAt)` : record sérialisable en TSV URL-encodé.
-- `PulseProfilePaths.PasskeysFile` : `navigation/passkeys.pulse` chiffré DPAPI.
+- `NovaProfilePaths.PasskeysFile` : `navigation/passkeys.pulse` chiffré DPAPI.
 
 **Détection JS (`MainWindow.Navigation.cs` — `RegisterPasskeyMonitorAsync`)**
 - Injecté via `AddScriptToExecuteOnDocumentCreatedAsync` (avant le JS du site).
@@ -660,8 +660,8 @@ Nouvelle fonctionnalité : suivi local des sites utilisant des clés d'accès (p
 - `BrowserCore_WebMessageReceived` : route les types `passkey_created` et `passkey_used` vers `RecordPasskeyCreated()` / `RecordPasskeyUsed()`.
 - `RecordPasskeyCreated(origin)` : crée ou met à jour l'entrée dans `_passkeys`, persiste.
 - `RecordPasskeyUsed(origin)` : met à jour `LastUsedAt`, persiste.
-- `LoadPasskeys()` : lecture depuis `passkeys.pulse` via `PulseFile.TryReadAllText`. Appelé dans le constructeur de `MainWindow`.
-- `SavePasskeys()` : écriture via `PulseFile.WriteAllText`.
+- `LoadPasskeys()` : lecture depuis `passkeys.pulse` via `NovaFile.TryReadAllText`. Appelé dans le constructeur de `MainWindow`.
+- `SavePasskeys()` : écriture via `NovaFile.WriteAllText`.
 
 **Panneau de gestion (`MainWindow.xaml` + `MainWindow.Vault.cs`)**
 - Accessible via `Outils > Clés d'accès (Passkeys)`.
@@ -704,13 +704,13 @@ Série de corrections sur le gestionnaire de mots de passe suite aux tests utili
 
 ## 2026-07-06 — 0.20.1-dev — VaultStore : suppression de la dépendance Rust IPC
 
-Refactoring architectural majeur du coffre de mots de passe. L'ancien code passait par `PulseCoreClient` (IPC named pipe → `pulse-browser.exe --serve`) pour toutes les opérations de coffre. Depuis cette version :
+Refactoring architectural majeur du coffre de mots de passe. L'ancien code passait par `NovaCoreClient` (IPC named pipe → `pulse-browser.exe --serve`) pour toutes les opérations de coffre. Depuis cette version :
 
 **Nouveau fichier : `VaultStore.cs`**
 
 Coffre C# pur — zéro IPC, zéro Rust, zéro processus externe.
 - Fichier `vault.pulse` stocké directement dans le dossier profil (suit le chemin custom défini par l'utilisateur).
-- **Sans mot de passe maître** : chiffrement DPAPI via `ProtectedData.Protect` (entropie `PulseBrowser.Vault.v1`).
+- **Sans mot de passe maître** : chiffrement DPAPI via `ProtectedData.Protect` (entropie `NovaBrowser.Vault.v1`).
 - **Avec mot de passe maître** : PBKDF2-SHA256 (100 000 itérations) + AES-256-CBC. Le sel est stocké dans l'entête du fichier ; la clé n'est jamais persistée. Si l'utilisateur formate Windows et reinstalle, il pointe vers le même dossier profil et entre son mot de passe maître — toutes ses données sont récupérées.
 - Format du fichier : JSON plaintext `{ version, mode, salt?, data }` où `data` est le payload chiffré en base64.
 - Méthodes : `ListCredentials()`, `Upsert()`, `Delete()`, `Unlock()`, `Lock()`, `SetMasterPassword()`, `VerifyMasterPassword()`, `ClearMasterPassword()`.
@@ -718,14 +718,14 @@ Coffre C# pur — zéro IPC, zéro Rust, zéro processus externe.
 - Zeroisation mémoire de la clé AES via `CryptographicOperations.ZeroMemory`.
 
 **Fichiers modifiés :**
-- `PulseModels.cs` : ajout de `VaultFile` dans `PulseProfilePaths` (`vault.pulse` à la racine du profil).
-- `MainWindow.xaml.cs` : `private PulseCoreClient? _core` → `private readonly VaultStore _vault` ; initialisation `new VaultStore(_profile.VaultFile)` dans le constructeur.
+- `NovaModels.cs` : ajout de `VaultFile` dans `NovaProfilePaths` (`vault.pulse` à la racine du profil).
+- `MainWindow.xaml.cs` : `private NovaCoreClient? _core` → `private readonly VaultStore _vault` ; initialisation `new VaultStore(_profile.VaultFile)` dans le constructeur.
 - `MainWindow.Vault.cs` : toutes les méthodes `_core.*Async()` remplacées par des appels synchrones à `_vault.*()`. `RefreshVaultPanelAsync` → `RefreshVaultPanel` (sync). `OfferAutoFillAsync` → `OfferAutoFill` (sync). `CredentialSaveAccept_Click` n'est plus `async`. `VaultMenu_Click`, `MasterPasswordSwitch_Toggled`, `ChangeMasterPasswordButton_Click`, `UnlockVaultIfNeededAsync` : réécrits sans IPC.
 - `MainWindow.Navigation.cs` : `_ = OfferAutoFillAsync(address)` → `OfferAutoFill(address)`.
 
 **Build : 0 erreur, 0 avertissement nouveau.**
 
-**Philosophie :** le coffre survit à un formatage Windows. L'utilisateur qui choisit de stocker son profil sur `E:\Documents\PulseBrowser\` peut réinstaller Windows, remonter Pulse Browser, pointer vers `E:\Documents\PulseBrowser\`, entrer son mot de passe maître — et retrouver tous ses identifiants intacts. Contrairement à Chrome qui cache le profil dans un chemin AppData obscur lié à un compte Windows spécifique.
+**Philosophie :** le coffre survit à un formatage Windows. L'utilisateur qui choisit de stocker son profil sur `E:\Documents\NovaBrowser\` peut réinstaller Windows, remonter Nova Browser, pointer vers `E:\Documents\NovaBrowser\`, entrer son mot de passe maître — et retrouver tous ses identifiants intacts. Contrairement à Chrome qui cache le profil dans un chemin AppData obscur lié à un compte Windows spécifique.
 
 ## 2026-07-07 — 0.21.0-dev
 
@@ -756,7 +756,7 @@ Nouvelle page insérée entre `CreateProfilePanel` et `MigrationPanel` dans le w
 **Flux modifié :**
 1. `CreateProfileButton_Click` (async void) : valide le formulaire, crée `_pendingUserProfile` en mémoire (sans écriture disque), met à jour `ProfileLocationPathText`, appelle `ShowLoginPanel("location")`.
 2. `ProfileLocationPanel` affiché : liste le contenu du profil (favoris, historique, mots de passe/coffre, paramètres, onglets), chemin actuel, bouton "Changer" (`ChooseProfileLocationButton_Click`), bouton "Continuer" (`ProfileLocationContinueButton_Click`).
-3. `ProfileLocationContinueButton_Click` : applique le dossier custom dans `PulseConfig`, résout les chemins, sauvegarde `_userProfile` sur disque, appelle `ShowMigrationOrDismiss()`.
+3. `ProfileLocationContinueButton_Click` : applique le dossier custom dans `NovaConfig`, résout les chemins, sauvegarde `_userProfile` sur disque, appelle `ShowMigrationOrDismiss()`.
 
 **Ancien sélecteur de dossier** (`ProfileDirText` + `ChooseProfileDirButton_Click`) retiré de `CreateProfilePanel`.
 
@@ -766,15 +766,15 @@ Nouvelle page insérée entre `CreateProfilePanel` et `MigrationPanel` dans le w
 
 ### Purge des données WebView2 + bouton "Vider les données de navigation"
 
-**Cause identifiée :** les cookies et sessions WebView2 sont stockés dans `%LOCALAPPDATA%\PulseBrowser\Default\` (chemin par défaut WebView2), totalement séparé des fichiers profil Pulse (`profiles/default/`). Supprimer le profil Pulse ne supprime pas les sessions WebView2 — l'utilisateur restait connecté sur Amazon après suppression/recréation du profil.
+**Cause identifiée :** les cookies et sessions WebView2 sont stockés dans `%LOCALAPPDATA%\NovaBrowser\Default\` (chemin par défaut WebView2), totalement séparé des fichiers profil Nova (`profiles/default/`). Supprimer le profil Nova ne supprime pas les sessions WebView2 — l'utilisateur restait connecté sur Amazon après suppression/recréation du profil.
 
 **Actions :**
-- Suppression manuelle de `%LOCALAPPDATA%\PulseBrowser\Default\`, `cef-user-data\Default\`, `cef-root-cache\Default\` (navigateur fermé).
+- Suppression manuelle de `%LOCALAPPDATA%\NovaBrowser\Default\`, `cef-user-data\Default\`, `cef-root-cache\Default\` (navigateur fermé).
 - Ajout du bouton "Vider les données de navigation" dans `Paramètres → Stockage` : appelle `core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.AllSite)` — méthode sur `CoreWebView2Profile` (pas sur `CoreWebView2`).
 
 **Limite WinRT :** `CoreWebView2Environment.CreateAsync` dans le binding WinRT ne prend pas de dossier utilisateur en paramètre (différent du binding .NET) — isolation WebView2 par profil non réalisable via l'API. `EnsureCoreWebView2Async()` sans argument conservé.
 
-**Fichiers modifiés :** `MainWindow.Settings.cs`, `MainWindow.xaml`, `PulseModels.cs` (ajout de `BrowserDataDir` dans `PulseProfilePaths`).
+**Fichiers modifiés :** `MainWindow.Settings.cs`, `MainWindow.xaml`, `NovaModels.cs` (ajout de `BrowserDataDir` dans `NovaProfilePaths`).
 
 ---
 
@@ -795,7 +795,7 @@ Version mise à jour : `0.20.1-dev` → `0.21.0-dev` dans `MainWindow.xaml.cs` e
 
 ### Coffre souverain (chantier 1) : Argon2id + couplage au mot de passe du profil + export/import
 
-**Constat de départ :** le gestionnaire de mots de passe « ne fonctionnait pas ». Diagnostic disque : aucun fichier `vault.pulse` nulle part (ni dans `%LOCALAPPDATA%\PulseBrowser\`, ni dans le profil custom `E:\Documents\Navtest\test`) → le coffre n'avait jamais rien enregistré. Ce qui « retenait » les identifiants = les cookies de session du profil Chromium WebView2 (`%LOCALAPPDATA%\PulseBrowser\` racine), pas un coffre. Décision produit (utilisateur) : coffre souverain, fichier appartenant à l'utilisateur, portable, aucune récupération, pas de stockage douteux.
+**Constat de départ :** le gestionnaire de mots de passe « ne fonctionnait pas ». Diagnostic disque : aucun fichier `vault.pulse` nulle part (ni dans `%LOCALAPPDATA%\NovaBrowser\`, ni dans le profil custom `E:\Documents\Navtest\test`) → le coffre n'avait jamais rien enregistré. Ce qui « retenait » les identifiants = les cookies de session du profil Chromium WebView2 (`%LOCALAPPDATA%\NovaBrowser\` racine), pas un coffre. Décision produit (utilisateur) : coffre souverain, fichier appartenant à l'utilisateur, portable, aucune récupération, pas de stockage douteux.
 
 **`VaultStore.cs` réécrit :**
 - KDF **Argon2id** (package `Konscious.Security.Cryptography.Argon2` 1.3.1) : mémoire 64 Mio, 3 itérations, parallélisme 4. Remplace PBKDF2-100k.
@@ -830,7 +830,7 @@ Retour test utilisateur sur 0.22 : login Amazon → rien de proposé, coffre vid
 3. Fenêtres/recherche qui s'ouvrent seules = **aucun handler `NewWindowRequested`** (popups/target=_blank non contrôlés) + Google sans param de langue.
 
 **Corrigé en 0.23.0-dev :**
-- **`CoreWebView2_NewWindowRequested`** (`MainWindow.Navigation.cs`) : `args.Handled=true`, ouvre l'URL dans un onglet Pulse au lieu d'une fenêtre parasite.
+- **`CoreWebView2_NewWindowRequested`** (`MainWindow.Navigation.cs`) : `args.Handled=true`, ouvre l'URL dans un onglet Nova au lieu d'une fenêtre parasite.
 - **`RegisterCredentialMonitorAsync()`** : script injecté via `AddScriptToExecuteOnDocumentCreatedAsync` — écoute `submit` + clic sur bouton dans un form avec `input[type=password]`, extrait login+mdp, envoie `{t:"cred"}`. Gère les logins 2 étapes via `sessionStorage.__pulse_last_user` (même origine). Indépendant du framework du site. Complète le sniff réseau POST existant.
 - **Bug barre de sauvegarde** (`NavigationCompleted`) : ne se masque plus sur redirection cross-origine ; reste visible tant que `_pendingCredential` est défini (fermée seulement par Enregistrer/Ignorer).
 - **`SearchUrl`** (`MainWindow.xaml.cs`) : ajout de la langue système (`hl`/`setlang`/`kl`) pour Google/Bing/DuckDuckGo → résultats dans la langue de l'OS.
@@ -845,11 +845,11 @@ Retour test utilisateur sur 0.22 : login Amazon → rien de proposé, coffre vid
 
 Test 0.23.0 : profil purgé + recréé (« bob »), mais sur Amazon → « Bonjour Jeremy » déjà connecté sans saisie → aucun login soumis → rien à capturer → coffre vide. **La capture n'était pas en cause.**
 
-**Cause racine :** WebView2 (appli non packagée) stocke ses cookies/sessions dans un dossier **collé à l'exe** : `bin\x64\Debug\...\win-x64\PulseBrowser.WinUI.exe.WebView2\EBWebView\Default\Network\Cookies`. Confirmé en lisant `--user-data-dir` du process `msedgewebview2` enfant de `PulseBrowser.WinUI.exe`. Ce dossier est **hors du profil Pulse** → supprimer/changer de profil ne déconnecte pas des sites, et la purge du profil ne le touche pas.
+**Cause racine :** WebView2 (appli non packagée) stocke ses cookies/sessions dans un dossier **collé à l'exe** : `bin\x64\Debug\...\win-x64\NovaBrowser.WinUI.exe.WebView2\EBWebView\Default\Network\Cookies`. Confirmé en lisant `--user-data-dir` du process `msedgewebview2` enfant de `NovaBrowser.WinUI.exe`. Ce dossier est **hors du profil Nova** → supprimer/changer de profil ne déconnecte pas des sites, et la purge du profil ne le touche pas.
 
-**Fix :** dans le constructeur `MainWindow` (AVANT toute création WebView2), `Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", _profile.BrowserDataDir)` → WebView2 range désormais ses données dans `profil/webview2`. Conséquences : changer/supprimer un profil déconnecte réellement, la purge est complète, « Vider les données » cohérent. (Corrige la note antérieure fausse qui situait les cookies dans `%LOCALAPPDATA%\PulseBrowser\Default`.)
+**Fix :** dans le constructeur `MainWindow` (AVANT toute création WebView2), `Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", _profile.BrowserDataDir)` → WebView2 range désormais ses données dans `profil/webview2`. Conséquences : changer/supprimer un profil déconnecte réellement, la purge est complète, « Vider les données » cohérent. (Corrige la note antérieure fausse qui situait les cookies dans `%LOCALAPPDATA%\NovaBrowser\Default`.)
 
-**Purge de test effectuée :** suppression de `E:\Documents\Navtest\test`, `%LOCALAPPDATA%\PulseBrowser`, et du `PulseBrowser.WinUI.exe.WebView2` obsolète. Process `PulseBrowser.WinUI` (PID verrouillant l'exe) fermé pour rebuild.
+**Purge de test effectuée :** suppression de `E:\Documents\Navtest\test`, `%LOCALAPPDATA%\NovaBrowser`, et du `NovaBrowser.WinUI.exe.WebView2` obsolète. Process `NovaBrowser.WinUI` (PID verrouillant l'exe) fermé pour rebuild.
 
 **Build :** MSBuild VS18 x64, 0 erreur. Version → `0.23.1-dev`. À retester : nouveau profil → Amazon doit redemander le login (2FA) → barre de sauvegarde → coffre.
 
@@ -861,7 +861,7 @@ Après le fix session (0.23.1), re-login Amazon → **toujours aucune propositio
 
 **Décision produit :** activer le **gestionnaire de mots de passe natif Chromium** (même moteur que Chrome, détection fiable) au lieu de réécrire la détection à la main.
 - `MainWindow.Navigation.cs` : `IsPasswordAutosaveEnabled = true` + `IsGeneralAutofillEnabled = true` (étaient `false`).
-- Stockage : magasin Chromium chiffré DPAPI, **dans le profil Pulse** (grâce à `WEBVIEW2_USER_DATA_FOLDER` de 0.23.1) → local, dans le dossier de l'utilisateur.
+- Stockage : magasin Chromium chiffré DPAPI, **dans le profil Nova** (grâce à `WEBVIEW2_USER_DATA_FOLDER` de 0.23.1) → local, dans le dossier de l'utilisateur.
 - Capture maison **désactivée** pour éviter un double message : appel `RegisterCredentialMonitorAsync()` commenté + branche POST de `CoreWebView2_WebResourceRequested` neutralisée (`await Task.CompletedTask`). Méthodes `TryCapturePostCredentialAsync`/`ParseFormBody`/`ParseJsonBody`/`FindJsonString`/`ExtractPostOrigin`/`RegisterCredentialMonitorAsync` devenues dead-code (à nettoyer plus tard).
 - **Coffre `vault.pulse` conservé** (Argon2id, ajout manuel, export/import CSV, autofill si entrée présente) mais n'est plus alimenté automatiquement par le web.
 
@@ -1032,7 +1032,7 @@ Constat utilisateur : les gestionnaires (Bitwarden, Chrome, KeePassXC) stockent 
 Suite au constat que les tentatives successives rendaient le gestionnaire de mots de passe trop fragile, decision de repartir proprement sur la partie capture/remplissage sans jeter le coffre existant.
 
 **Architecture :**
-- Creation de `PulseBrowser.WinUI/Credentials/`.
+- Creation de `NovaBrowser.WinUI/Credentials/`.
 - `CredentialService.cs` devient le point d'entree navigateur: injection du script de capture, reception des messages WebView2 et execution de l'autofill.
 - `CredentialCaptureScript.js` remplace le script inline historique: il suit les saisies d'identifiant, les champs mot de passe, les clics, `submit`, touche Entree, `pagehide`, `visibilitychange` et les formulaires sans `<form>`.
 - `CredentialAutofillScript.js` remplit avec le setter natif `HTMLInputElement.value` et declenche `input`/`change`, pour mieux fonctionner avec React/Vue/SPA.
@@ -1050,7 +1050,7 @@ Suite au constat que les tentatives successives rendaient le gestionnaire de mot
 **Verification :**
 - `node --check` passe sur `CredentialCaptureScript.js` et `CredentialAutofillScript.js`.
 - `build-winui.cmd` passe avec 0 erreur. Il reste 4 warnings nullable preexistants dans `MainWindow.Profile.cs`.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
 
 **Version :** `0.27.1-dev`.
 
@@ -1061,8 +1061,8 @@ Suite au constat que les tentatives successives rendaient le gestionnaire de mot
 Apres retour utilisateur et comparaison avec l'approche type Proton Pass, changement d'axe: construire d'abord un vrai gestionnaire de mots de passe local simple, puis seulement ensuite continuer l'implantation fine dans les pages web.
 
 **Architecture :**
-- Creation de `PulseBrowser.WinUI/PasswordManager/PasswordManagerService.cs`.
-- Creation de `PulseBrowser.WinUI/PasswordManager/PasswordManagerEntryDraft.cs`.
+- Creation de `NovaBrowser.WinUI/PasswordManager/PasswordManagerService.cs`.
+- Creation de `NovaBrowser.WinUI/PasswordManager/PasswordManagerEntryDraft.cs`.
 - Le module encapsule les operations metier autour de `vault.pulse`: lister, rechercher, ajouter/mettre a jour, renommer, supprimer, importer/exporter et retrouver le meilleur identifiant pour une URL.
 - Le module ne depend pas de WebView2 ni de `MainWindow`: le navigateur devient client du gestionnaire au lieu de porter la logique lui-meme.
 
@@ -1081,7 +1081,7 @@ Apres retour utilisateur et comparaison avec l'approche type Proton Pass, change
 **Verification :**
 - `node --check` passe sur `CredentialCaptureScript.js` et `CredentialAutofillScript.js`.
 - `build-winui.cmd` passe avec 0 erreur. Il reste 4 warnings nullable preexistants dans `MainWindow.Profile.cs`.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
 
 **Version :** `0.28.0-dev`.
 
@@ -1117,7 +1117,7 @@ Suite au retour utilisateur indiquant que `0.28.0-dev` allait dans le bon sens m
 - `node --check` passe sur `CredentialCaptureScript.js` et `CredentialAutofillScript.js`.
 - Premier `build-winui.cmd` bloque sous sandbox réseau sur NuGet (`NU1301`), puis relance hors sandbox reussie.
 - `build-winui.cmd` passe avec 0 erreur. Il reste 4 warnings nullable preexistants dans `MainWindow.Profile.cs`.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
 
 **Version :** `0.29.0-dev`.
 
@@ -1125,7 +1125,7 @@ Suite au retour utilisateur indiquant que `0.28.0-dev` allait dans le bon sens m
 
 ### Proposition d'identifiant des la page de connexion
 
-Retour utilisateur apres test Micromania: le gestionnaire possedait bien l'identifiant, mais Pulse ne le proposait toujours pas au moment de la connexion, et reproposait ensuite d'enregistrer un identifiant deja present. Correction ciblee du flux essentiel.
+Retour utilisateur apres test Micromania: le gestionnaire possedait bien l'identifiant, mais Nova ne le proposait toujours pas au moment de la connexion, et reproposait ensuite d'enregistrer un identifiant deja present. Correction ciblee du flux essentiel.
 
 **Comportement corrige :**
 - Ajout de `PasswordManagerPromptKind.UsernameFillAvailable`.
@@ -1150,7 +1150,7 @@ Retour utilisateur apres test Micromania: le gestionnaire possedait bien l'ident
 - `node --check` passe sur `CredentialCaptureScript.js` et `CredentialAutofillScript.js`.
 - Premier `build-winui.cmd` bloque sous sandbox réseau sur NuGet (`NU1301`), puis relance hors sandbox reussie.
 - `build-winui.cmd` passe avec 0 erreur. Il reste 4 warnings nullable preexistants dans `MainWindow.Profile.cs`.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
 
 **Version :** `0.29.1-dev`.
 
@@ -1158,7 +1158,7 @@ Retour utilisateur apres test Micromania: le gestionnaire possedait bien l'ident
 
 ### Correction du faux succes de remplissage
 
-Retour utilisateur avec capture Micromania: Pulse affichait `Identifiant rempli. Mot de passe attendu.`, mais le champ e-mail du panneau de connexion restait vide. La capture montrait que l'e-mail avait probablement ete ecrit dans un champ newsletter/footer de la page de fond.
+Retour utilisateur avec capture Micromania: Nova affichait `Identifiant rempli. Mot de passe attendu.`, mais le champ e-mail du panneau de connexion restait vide. La capture montrait que l'e-mail avait probablement ete ecrit dans un champ newsletter/footer de la page de fond.
 
 **Cause :**
 - Le script choisissait le meilleur champ e-mail visible, sans verifier qu'il etait au premier plan ni dans un contexte de connexion.
@@ -1170,7 +1170,7 @@ Retour utilisateur avec capture Micromania: Pulse affichait `Identifiant rempli.
 - Les contextes newsletter, offres, marketing, footer, presse, recrutement, paiement, promo, code et recherche sont fortement penalises.
 - Les contextes connexion, compte, auth, login, continuer et mot de passe sont favorises.
 - Apres `setValue`, le script verifie que `el.value` correspond a la valeur attendue avant d'annoncer le succes.
-- Si le site refuse l'ecriture, Pulse doit afficher un echec au lieu d'un faux succes.
+- Si le site refuse l'ecriture, Nova doit afficher un echec au lieu d'un faux succes.
 - `CredentialCaptureScript.js` applique aussi la logique topmost/contexte pour eviter de declencher la barre sur des champs newsletter couverts.
 
 **Documentation :**
@@ -1182,7 +1182,7 @@ Retour utilisateur avec capture Micromania: Pulse affichait `Identifiant rempli.
 - `node --check` passe sur `CredentialCaptureScript.js` et `CredentialAutofillScript.js`.
 - Premier `build-winui.cmd` bloque sous sandbox réseau sur NuGet (`NU1301`), puis relance hors sandbox reussie.
 - `build-winui.cmd` passe avec 0 erreur. Il reste 4 warnings nullable preexistants dans `MainWindow.Profile.cs`.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: l'application s'ouvre puis se ferme proprement.
 
 **Version :** `0.29.2-dev`.
 
@@ -1207,7 +1207,7 @@ Plan valide par l'utilisateur : tout faire (nettoyage, Public Suffix List, impor
 **Supprime (plus aucun appelant) :**
 - `MainWindow.Privacy.cs` : tout l'ancien sniff POST gele (`TryCapturePostCredentialAsync`, `ParseFormBody`, `ParseJsonBody`, `FindJsonString`, `ExtractPostOrigin`) + usings devenus inutiles. `CoreWebView2_WebResourceRequested` redevient `void` simple (plus d'await).
 - `MainWindow.Vault.cs` : `OfferCredentialSave` (n'etait plus appele que par le sniff mort ; le chemin vivant est `CredentialService_CredentialCaptured` → `ShowCredentialSaveOffer`).
-- `PulseModels.cs` : classe `PulseCoreClient` entiere (IPC named pipe vers le Rust, abandonne depuis 0.20.1), `using System.IO.Pipes`, propriete vestigiale `UiSettings.MasterPasswordEnabled` (morte depuis 0.22).
+- `NovaModels.cs` : classe `NovaCoreClient` entiere (IPC named pipe vers le Rust, abandonne depuis 0.20.1), `using System.IO.Pipes`, propriete vestigiale `UiSettings.MasterPasswordEnabled` (morte depuis 0.22).
 - `MainWindow.xaml.cs` : `using System.IO.Pipes` inutile.
 
 **Conserve volontairement :** `ChromiumCredentialReader` + `SyncFromBrowserStore` + `MigrateAndClearBrowserPasswordsAsync` — garde-fou actif du principe souverain (rapatrie puis purge tout mot de passe que Chromium aurait capte), appele au login et a l'init WebView2.
@@ -1276,7 +1276,7 @@ Fin du WebView2 unique partage : changer d'onglet ne recharge plus la page. Chaq
 
 **Limites connues :** compteur du bouclier « sur cette page » peut compter des requetes d'onglets d'arriere-plan (compteur PrivacyEngine global) ; memoire par onglet actif (standard navigateurs, mitige par creation paresseuse).
 
-**Verification :** build 0 erreur / 0 avertissement ; lancement 12 s : fenetre `Pulse Browser 0.32.0-dev`, moteur `msedgewebview2.exe` cree par l'onglet actif, arret propre. **A tester interactivement : fluidite du changement d'onglet, etat conserve, login Micromania/Amazon (capture + remplissage), fermeture d'onglets, onglets verticaux.**
+**Verification :** build 0 erreur / 0 avertissement ; lancement 12 s : fenetre `Nova Browser 0.32.0-dev`, moteur `msedgewebview2.exe` cree par l'onglet actif, arret propre. **A tester interactivement : fluidite du changement d'onglet, etat conserve, login Micromania/Amazon (capture + remplissage), fermeture d'onglets, onglets verticaux.**
 
 **Version :** `0.32.0-dev`.
 
@@ -1284,7 +1284,7 @@ Fin du WebView2 unique partage : changer d'onglet ne recharge plus la page. Chaq
 
 ### Centre du site actuel
 
-Ajout d'une premiere version du centre de controle par site dans la surface active `PulseBrowser.WinUI`, apres validation utilisateur du chantier.
+Ajout d'une premiere version du centre de controle par site dans la surface active `NovaBrowser.WinUI`, apres validation utilisateur du chantier.
 
 **Acces :**
 - `Outils > Site actuel`.
@@ -1304,7 +1304,7 @@ Ajout d'une premiere version du centre de controle par site dans la surface acti
 - Ouvrir l'historique filtre sur le domaine.
 - Rouvrir une page recente du site depuis le panneau.
 
-**Principe :** aucune donnee envoyee a un serveur. Le panneau lit seulement les informations locales deja gerees par Pulse Browser : cookies WebView2 du profil local, `vault.pulse`, `history.pulse` et `ui-settings.pulse`.
+**Principe :** aucune donnee envoyee a un serveur. Le panneau lit seulement les informations locales deja gerees par Nova Browser : cookies WebView2 du profil local, `vault.pulse`, `history.pulse` et `ui-settings.pulse`.
 
 **Documentation :**
 - Ajout de `docs/SITE_CONTROL_CENTER_0_33.md`.
@@ -1312,7 +1312,7 @@ Ajout d'une premiere version du centre de controle par site dans la surface acti
 
 **Verification :**
 - `build-winui.cmd` bloque d'abord sous sandbox reseau sur NuGet (`NU1301`), puis restore reussi apres relance avec reseau autorise.
-- Le build standard echoue ensuite uniquement a la copie finale car une instance existante `PulseBrowser.WinUI (26164)` verrouille l'executable Debug.
+- Le build standard echoue ensuite uniquement a la copie finale car une instance existante `NovaBrowser.WinUI (26164)` verrouille l'executable Debug.
 - Build de verification vers `artifacts/winui-sitecontrol-build/` reussi avec 0 erreur et 0 avertissement.
 - Pas de lancement interactif supplementaire dans cette passe, l'application etant deja ouverte.
 
@@ -1322,7 +1322,7 @@ Ajout d'une premiere version du centre de controle par site dans la surface acti
 
 ### Palette de commande Ctrl+K
 
-Suite au chantier `0.33.0-dev`, ajout d'une palette de commande moderne pour acceder rapidement aux actions et donnees locales de Pulse Browser.
+Suite au chantier `0.33.0-dev`, ajout d'une palette de commande moderne pour acceder rapidement aux actions et donnees locales de Nova Browser.
 
 **Acces :**
 - Raccourci `Ctrl+K`.
@@ -1342,7 +1342,7 @@ Suite au chantier `0.33.0-dev`, ajout d'une palette de commande moderne pour acc
 - Historique local.
 - Adresse ou recherche web saisie directement dans la palette.
 
-**Principe :** aucun service externe. La palette lit uniquement les donnees locales deja presentes en memoire ou dans les stores Pulse Browser. Les mots de passe ne sont pas inclus dans cette premiere version pour eviter d'exposer du contenu sensible dans une recherche globale.
+**Principe :** aucun service externe. La palette lit uniquement les donnees locales deja presentes en memoire ou dans les stores Nova Browser. Les mots de passe ne sont pas inclus dans cette premiere version pour eviter d'exposer du contenu sensible dans une recherche globale.
 
 **Documentation :**
 - Ajout de `docs/COMMAND_PALETTE_0_34.md`.
@@ -1358,10 +1358,10 @@ Suite au chantier `0.33.0-dev`, ajout d'une palette de commande moderne pour acc
 
 ### Premiere passe visuelle legere
 
-Suite au retour utilisateur indiquant que Pulse Browser semblait trop lourd visuellement par rapport a Chrome, Opera ou Zen, lancement d'un chantier volontairement plus leger centre sur l'aspect de la surface active `PulseBrowser.WinUI`.
+Suite au retour utilisateur indiquant que Nova Browser semblait trop lourd visuellement par rapport a Chrome, Opera ou Zen, lancement d'un chantier volontairement plus leger centre sur l'aspect de la surface active `NovaBrowser.WinUI`.
 
 **Changements visuels :**
-- Remplacement de la barre de menus permanente par une barre superieure compacte avec marque Pulse, acces nouvel onglet, accueil et bouton menu.
+- Remplacement de la barre de menus permanente par une barre superieure compacte avec marque Nova, acces nouvel onglet, accueil et bouton menu.
 - Reduction des hauteurs principales: onglets horizontaux, barre d'adresse, barre de favoris et pied de statut.
 - Remplacement du bouton texte `Ouvrir` par un bouton icone pour alleger le chrome navigateur.
 - Boutons de navigation, favoris, confidentialite et palette rendus plus compacts.
@@ -1377,7 +1377,7 @@ Suite au retour utilisateur indiquant que Pulse Browser semblait trop lourd visu
 - Premier `build-winui.cmd` bloque sous sandbox reseau sur NuGet (`NU1301`), puis relance hors sandbox reussie.
 - Correction d'une erreur XAML: `Window.Resources` n'est pas accepte sur cette fenetre WinUI; les styles locaux ont ete deplaces dans `Grid.Resources`.
 - `build-winui.cmd` reussi avec 0 erreur et 0 avertissement.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: fenetre `Pulse Browser 0.35.0-dev`, processus repondant, fermeture propre.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: fenetre `Nova Browser 0.35.0-dev`, processus repondant, fermeture propre.
 
 **Version :** `0.35.0-dev`.
 
@@ -1385,16 +1385,16 @@ Suite au retour utilisateur indiquant que Pulse Browser semblait trop lourd visu
 
 ### Chrome navigateur allege apres comparaison visuelle
 
-Suite a la comparaison entre les captures de Pulse Browser et Google Chrome, nouveau palier visuel dans `PulseBrowser.WinUI` pour attaquer les causes principales de lourdeur: bandes empilees, title bar orange, statut permanent et accueil trop proche d'une page produit.
+Suite a la comparaison entre les captures de Nova Browser et Google Chrome, nouveau palier visuel dans `NovaBrowser.WinUI` pour attaquer les causes principales de lourdeur: bandes empilees, title bar orange, statut permanent et accueil trop proche d'une page produit.
 
 **Changements visuels :**
-- La bande superieure `Pulse` separee n'est plus affichee.
-- Les acces `Accueil` et `Menu Pulse` sont replaces dans la barre de navigation.
+- La bande superieure `Nova` separee n'est plus affichee.
+- Les acces `Accueil` et `Menu Nova` sont replaces dans la barre de navigation.
 - La title bar Windows est neutralisee en sombre via `AppWindow.TitleBar`.
 - La barre d'adresse est rendue plus arrondie, avec fond et bordure plus doux.
 - Le pied de statut permanent disparait quand la page web est visible.
 - Le pied de fenetre reste disponible uniquement dans les panneaux internes pour garder le bouton `Retour au site`.
-- L'accueil `pulse://accueil` est refondu en surface de nouvel onglet: marque Pulse, recherche centrale et raccourcis legers.
+- L'accueil `pulse://accueil` est refondu en surface de nouvel onglet: marque Nova, recherche centrale et raccourcis legers.
 - Les cartes explicatives `Prive par defaut`, `Coffre local` et `Votre profil` sont retirees de l'accueil quotidien.
 
 **Documentation :**
@@ -1404,7 +1404,7 @@ Suite a la comparaison entre les captures de Pulse Browser et Google Chrome, nou
 **Verification :**
 - Premier `build-winui.cmd` bloque sous sandbox reseau sur NuGet (`NU1301`), puis relance hors sandbox reussie.
 - `build-winui.cmd` reussi avec 0 erreur et 0 avertissement.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: fenetre `Pulse Browser 0.36.0-dev`, processus repondant, fermeture propre.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: fenetre `Nova Browser 0.36.0-dev`, processus repondant, fermeture propre.
 
 **Version :** `0.36.0-dev`.
 
@@ -1412,7 +1412,7 @@ Suite a la comparaison entre les captures de Pulse Browser et Google Chrome, nou
 
 ### Chrome integre et inspiration Zen
 
-Suite au retour utilisateur sur l'effet de double barre et apres consultation de Zen Browser, nouvelle passe visuelle dans `PulseBrowser.WinUI` pour mieux integrer la title bar, ajouter un mode compact et commencer la personnalisation locale du nouvel onglet.
+Suite au retour utilisateur sur l'effet de double barre et apres consultation de Zen Browser, nouvelle passe visuelle dans `NovaBrowser.WinUI` pour mieux integrer la title bar, ajouter un mode compact et commencer la personnalisation locale du nouvel onglet.
 
 **Changements visuels et UX :**
 - Activation de `ExtendsContentIntoTitleBar` pour integrer le contenu dans la title bar Windows.
@@ -1431,21 +1431,21 @@ Suite au retour utilisateur sur l'effet de double barre et apres consultation de
 **Verification :**
 - Premier `build-winui.cmd` bloque sous sandbox reseau sur NuGet (`NU1301`), puis relance hors sandbox reussie.
 - `build-winui.cmd` reussi avec 0 erreur et 0 avertissement.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: fenetre `Pulse Browser 0.37.0-dev`, processus repondant, fermeture propre.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: fenetre `Nova Browser 0.37.0-dev`, processus repondant, fermeture propre.
 
 **Version :** `0.37.0-dev`.
 
 ## 2026-07-08 — 0.38.0-dev
 
-### Direction visuelle Pulse
+### Direction visuelle Nova
 
-Suite a la validation utilisateur pour aller plus loin sur l'identite du navigateur, nouvelle passe visuelle dans `PulseBrowser.WinUI`.
+Suite a la validation utilisateur pour aller plus loin sur l'identite du navigateur, nouvelle passe visuelle dans `NovaBrowser.WinUI`.
 
 **Changements visuels :**
 - Nouvelle palette d'interface: charbon chaud, surfaces plus coherentes et accent orange plus ponctuel.
-- Ajout de ressources visuelles Pulse dans `MainWindow.xaml`.
+- Ajout de ressources visuelles Nova dans `MainWindow.xaml`.
 - Boutons du chrome legerement reduits et moins presents.
-- Barre d'adresse harmonisee avec la palette Pulse.
+- Barre d'adresse harmonisee avec la palette Nova.
 - Title bar Windows raccordee a la nouvelle couleur du chrome.
 - Barre des favoris et rail d'onglets verticaux harmonises avec la surface haute.
 - Espacements du mode compact ajustes.
@@ -1458,7 +1458,7 @@ Suite a la validation utilisateur pour aller plus loin sur l'identite du navigat
 **Verification :**
 - Premier `build-winui.cmd` bloque sous sandbox reseau sur NuGet (`NU1301`), puis relance hors sandbox reussie.
 - `build-winui.cmd` reussi avec 0 erreur et 0 avertissement.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi: fenetre `Pulse Browser 0.38.0-dev`, processus repondant, fermeture propre.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi: fenetre `Nova Browser 0.38.0-dev`, processus repondant, fermeture propre.
 
 **Version :** `0.38.0-dev`.
 
@@ -1466,7 +1466,7 @@ Suite a la validation utilisateur pour aller plus loin sur l'identite du navigat
 
 ### Parametres, personnalisation et accessibilite
 
-Suite a la demande utilisateur sur les parametres du navigateur, la personnalisation et les options pour les personnes en situation de handicap, nouvelle passe dans `PulseBrowser.WinUI`.
+Suite a la demande utilisateur sur les parametres du navigateur, la personnalisation et les options pour les personnes en situation de handicap, nouvelle passe dans `NovaBrowser.WinUI`.
 
 **Changements produit :**
 - Ajout de champs persistants dans `UiSettings` pour cadrer la palette `Ctrl+K` et stocker les options d'accessibilite.
@@ -1475,7 +1475,7 @@ Suite a la demande utilisateur sur les parametres du navigateur, la personnalisa
 - Ajout d'options pour activer/desactiver `Ctrl+K`, autoriser son ouverture depuis les pages web, et autoriser son ouverture pendant la saisie dans un champ texte.
 - `Ctrl+K` ne vole plus le focus par defaut dans la barre d'adresse, les champs texte ou les pages web.
 - Ajout des options contraste renforce, texte plus lisible, reduction des transitions et focus clavier plus visible.
-- Application immediate des options d'accessibilite au chrome Pulse et a `pulse://accueil`.
+- Application immediate des options d'accessibilite au chrome Nova et a `pulse://accueil`.
 
 **Documentation :**
 - Ajout de `docs/SETTINGS_ACCESSIBILITY_0_39.md`.
@@ -1483,15 +1483,15 @@ Suite a la demande utilisateur sur les parametres du navigateur, la personnalisa
 
 **Verification :**
 - Premier `build-winui.cmd` bloque sous sandbox reseau sur NuGet (`NU1301`), puis relance hors sandbox.
-- Compilation du code reussie, mais la copie vers le dossier Debug normal a echoue car une instance utilisateur `PulseBrowser.WinUI.exe` verrouillait l'executable.
+- Compilation du code reussie, mais la copie vers le dossier Debug normal a echoue car une instance utilisateur `NovaBrowser.WinUI.exe` verrouillait l'executable.
 - Build de verification vers `artifacts/winui-settings-accessibility-build/` reussi avec 0 erreur et 0 avertissement.
-- Lancement court de `artifacts/winui-settings-accessibility-build/PulseBrowser.WinUI.exe` reussi: fenetre `Pulse Browser 0.39.0-dev`, processus repondant, fermeture propre.
+- Lancement court de `artifacts/winui-settings-accessibility-build/NovaBrowser.WinUI.exe` reussi: fenetre `Nova Browser 0.39.0-dev`, processus repondant, fermeture propre.
 
 **Version :** `0.39.0-dev`.
 
 ## 2026-07-08 — 0.39.1-dev
 
-Suite au retour utilisateur signalant que les priorites produit de la session precedente n'avaient pas ete realisees, premier correctif cible dans `PulseBrowser.WinUI` apres validation `Go`.
+Suite au retour utilisateur signalant que les priorites produit de la session precedente n'avaient pas ete realisees, premier correctif cible dans `NovaBrowser.WinUI` apres validation `Go`.
 
 - Correction du bouton etoile : l'ajout aux favoris n'est plus un ajout silencieux dans la barre.
 - Ajout d'un dialogue de favori avec nom modifiable, choix du dossier cible et rappel de l'URL courante.
@@ -1500,7 +1500,7 @@ Suite au retour utilisateur signalant que les priorites produit de la session pr
 - Ajout de `BookmarkStore.AddOrUpdateUrl` pour mettre a jour le titre, l'URL, le dossier et l'icone locale d'un favori existant, ou creer un nouveau favori si necessaire.
 - Ajout de `docs/BOOKMARK_STAR_0_39_1.md` et `logs/2026-07-08-bookmark-star-0-39-1.md`.
 - Verification : tentative `build-winui.cmd` bloquee par l'acces NuGet du bac a sable (`NU1301`), puis relance autorisee avec acces reseau ; restore et build WinUI reussis avec 0 avertissement et 0 erreur. Apres alignement version/documentation, meme blocage sandbox puis relance autorisee reussie avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.39.1-dev`, processus repondant, fermeture du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.39.1-dev`, processus repondant, fermeture du processus de test.
 
 **Version :** `0.39.1-dev`.
 
@@ -1510,7 +1510,7 @@ Suite au `go` utilisateur, deuxieme chantier prioritaire : permettre une recuper
 
 - Ajout d'une cle de recuperation locale `PULSE-...` generee a la creation d'un profil.
 - `UserProfile` stocke uniquement un hash PBKDF2-SHA256 de cette cle avec sel aleatoire, jamais la cle en clair.
-- Affichage d'un dialogue de cle de recuperation avec bouton de copie ; l'utilisateur doit la noter, sinon Pulse Browser ne peut pas la retrouver.
+- Affichage d'un dialogue de cle de recuperation avec bouton de copie ; l'utilisateur doit la noter, sinon Nova Browser ne peut pas la retrouver.
 - Ajout d'un bouton `Creer une nouvelle cle de recuperation` dans `Parametres > Profil`.
 - Ajout du lien `Mot de passe oublie ?` sur l'ecran de connexion.
 - `VaultStore` maintient maintenant une copie de recuperation chiffree du coffre, protegee par une cle de donnees de secours emballee par la cle de recuperation.
@@ -1518,7 +1518,7 @@ Suite au `go` utilisateur, deuxieme chantier prioritaire : permettre une recuper
 - En cas de recuperation reussie, l'utilisateur definit un nouveau mot de passe, le coffre est rechiffre avec ce nouveau mot de passe et le PIN est desactive pour eviter un emballage obsolete.
 - Ajout de `docs/RECOVERY_KEY_0_40.md` et `logs/2026-07-08-recovery-key-0-40.md`.
 - Verification : tentative `build-winui.cmd` bloquee par l'acces NuGet du bac a sable (`NU1301`), puis relance autorisee avec acces reseau ; restore et build WinUI reussis avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.40.0-dev`, processus repondant, fermeture du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.40.0-dev`, processus repondant, fermeture du processus de test.
 
 **Version :** `0.40.0-dev`.
 
@@ -1535,43 +1535,43 @@ Suite au retour utilisateur, correction prioritaire du mode compact : il masquai
 - Branchement des backdrops WinUI `MicaBackdrop` et `DesktopAcrylicBackdrop` avec retour au rendu solide en cas d'erreur.
 - Ajout de `docs/COMPACT_TRANSLUCENT_0_40_1.md` et `logs/2026-07-08-compact-translucent-0-40-1.md`.
 - Verification : tentative `build-winui.cmd` bloquee par l'acces NuGet du bac a sable (`NU1301`), puis relance autorisee avec acces reseau ; restore et build WinUI reussis avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.40.1-dev`, processus repondant, fermeture du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.40.1-dev`, processus repondant, fermeture du processus de test.
 
 **Version :** `0.40.1-dev`.
 
 ## 2026-07-08 — 0.41.0-dev
 
-Suite au `go` utilisateur, reprise de trois points d'ergonomie inspires de Zen mais adaptes a Pulse Browser.
+Suite au `go` utilisateur, reprise de trois points d'ergonomie inspires de Zen mais adaptes a Nova Browser.
 
-- Le rendu translucide repart de l'approche Pulse Explorer : `MicaBackdrop` / `DesktopAcrylicBackdrop` plus fenetre Win32 `WS_EX_LAYERED`.
+- Le rendu translucide repart de l'approche Nova Explorer : `MicaBackdrop` / `DesktopAcrylicBackdrop` plus fenetre Win32 `WS_EX_LAYERED`.
 - Ajout de `WindowTransparency` dans `UiSettings`.
 - Ajout du curseur `Intensite de transparence` dans `Parametres > Apparence`.
-- En contraste renforce, Pulse Browser revient au rendu solide.
+- En contraste renforce, Nova Browser revient au rendu solide.
 - Le menu des trois points est allege : il garde les actions rapides et retire les entrees de gestion avancee comme coffre, sites connectes et passkeys.
 - Les raccourcis de `pulse://accueil` deviennent editables directement depuis la page : ajout, modification et suppression.
 - Ajout des messages WebView2 `newtab_add_shortcut`, `newtab_edit_shortcut`, `newtab_delete_shortcut`.
 - Les modifications de raccourcis sont persistees dans `UiSettings.NewTabShortcuts` et les pages d'accueil ouvertes sont rechargees.
 - Ajout de `docs/ZEN_UI_REWORK_0_41.md` et `logs/2026-07-08-zen-ui-rework-0-41.md`.
 - Verification : tentative `build-winui.cmd` bloquee par l'acces NuGet du bac a sable (`NU1301`), puis relance autorisee avec acces reseau ; restore et build WinUI reussis avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.41.0-dev`, processus repondant, fermeture du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.41.0-dev`, processus repondant, fermeture du processus de test.
 
 **Version :** `0.41.0-dev`.
 
 ## 2026-07-08 — 0.42.0-dev
 
-Suite au `Go` utilisateur, mise en place du prochain chantier prioritaire sans empiler de fonctions inutiles : le multi-utilisateur local dans `PulseBrowser.WinUI`.
+Suite au `Go` utilisateur, mise en place du prochain chantier prioritaire sans empiler de fonctions inutiles : le multi-utilisateur local dans `NovaBrowser.WinUI`.
 
-- Ajout de `ActiveProfileId` dans `PulseConfig`.
+- Ajout de `ActiveProfileId` dans `NovaConfig`.
 - Ajentifiants de profil propres.
 - Ajout d'un selecteur de profil dans l'overlay de connexion quand plusieurs profils sont disponibles.
 - Ajout de la creation d'un autre profil depuis le selecteur et depuis `Parametres > Profil`.
-- Les nouveaux profils locaux sont stockes sous `%LOCALAPPDATA%\PulseBrowser\profiles\<id>`.
+- Les nouveaux profils locaux sont stockes sous `%LOCALAPPDATA%\NovaBrowser\profiles\<id>`.
 - Les emplacements personnalises restent supportes, mais le changement vers un dossier different redemarre l'application pour eviter un melange de favoris, historique, coffre et reglages deja charges en memoire.
 - `Parametres > Profil` affiche maintenant le dossier actif et expose `Changer de profil` / `Creer un autre profil`.
 - La reinitialisation du profil nettoie aussi la configuration d'emplacement personnalise quand le profil actif etait un profil custom.
 - Ajout de `docs/MULTI_USER_0_42.md` et `logs/2026-07-08-multi-user-0-42.md`.
 - Verification : tentative `build-winui.cmd` bloquee par l'acces NuGet du bac a sable (`NU1301`), puis relance autorisee avec acces reseau ; restore et build WinUI reussis avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.42.0-dev`, processus repondant, fermeture du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.42.0-dev`, processus repondant, fermeture du processus de test.
 
 **Version :** `0.42.0-dev`.
 
@@ -1586,19 +1586,19 @@ Audit complet demande par l'utilisateur (fonctionnel, securite, proprete du code
 
 ### Durcissement crypto
 - `VaultStore` : blob du coffre migre de AES-256-CBC (non authentifie) vers AES-256-GCM authentifie. Lecture des coffres CBC existants conservee via les marqueurs d'en-tete `data_cipher` / `recovery_data_cipher` ; migration automatique en GCM au premier enregistrement.
-- `PulseBackup` : format `.pulsebackup` v2 en Argon2id + AES-256-GCM ; import des sauvegardes v1 (PBKDF2 100k / CBC) conserve.
+- `NovaBackup` : format `.pulsebackup` v2 en Argon2id + AES-256-GCM ; import des sauvegardes v1 (PBKDF2 100k / CBC) conserve.
 - `UserProfile` : gate de connexion PBKDF2 100k -> 600k (recommandation OWASP), avec un compteur d'iterations stocke PAR secret pour ouvrir les profils existants sans re-hachage force (pas de verrouillage).
 - Fallback favicon soumis au moteur de confidentialite (`PrivacyEngine.IsBlocked`, sans effet de bord sur les compteurs).
 
 ### Reorganisation (neutre pour le comportement, verifiee par build)
 - Prototype Rust/CEF historique (`src/`, `Cargo.toml`, `Cargo.lock`, `target/`) deplace dans `archive/rust-cef-prototype/`. `.gitignore` ajuste (`target/` non ancre).
-- `PulseModels.cs` (1521 lignes, 27 types) eclate en 9 fichiers par domaine : `Models/{Bookmarks,Profiles,ProfilePaths,UserProfile,UiSettings,Tabs,History,Downloads,Passkeys}.cs`, `Storage/PulseFile.cs`, `VaultCredential.cs`.
-- Classes pures sorties des fichiers UI pour etre testables : `WinUiRuntimeTrace.cs` (hors `App.xaml.cs`), `Models/UserProfile.cs` et `Models/ProfilePaths.cs` (hors `Profiles.cs`). Usings de `VaultCredential.cs` et `PulseFile.cs` reduits au strict necessaire.
+- `NovaModels.cs` (1521 lignes, 27 types) eclate en 9 fichiers par domaine : `Models/{Bookmarks,Profiles,ProfilePaths,UserProfile,UiSettings,Tabs,History,Downloads,Passkeys}.cs`, `Storage/NovaFile.cs`, `VaultCredential.cs`.
+- Classes pures sorties des fichiers UI pour etre testables : `WinUiRuntimeTrace.cs` (hors `App.xaml.cs`), `Models/UserProfile.cs` et `Models/ProfilePaths.cs` (hors `Profiles.cs`). Usings de `VaultCredential.cs` et `NovaFile.cs` reduits au strict necessaire.
 - Code mort supprime (`VaultStore.HasPinUnlock`, `HasRecoveryUnlock`). Normalisation d'origine centralisee sur `PublicSuffixService.OriginOf`. `catch` silencieux du coffre (Load/Save) traces via `WinUiRuntimeTrace`.
 
 ### Tests automatises
-- Nouveau projet `PulseBrowser.Tests` en `net8.0` AUTONOME : il ne reference PAS l'application WinUI (le packaging PRI/MSIX de WinUI 3 casse `dotnet test`) mais COMPILE directement les classes pures du produit via `<Compile Include>`. PSL embarquee.
-- 51 tests xUnit executables partout (CLI et CI) via `dotnet test` : `VaultStore` (round-trip GCM, PIN, cle de recuperation, tombstones, plus fixture d'un coffre CBC herite verrouillant la migration CBC->GCM), `UserProfile` (PBKDF2 600k et migration par compteur), `PulseBackup` (v2 + mauvais mot de passe), `PublicSuffixService`, `PasswordGenerator`, `FilterParser`, et la logique de proposition d'enregistrement (`BuildSaveOffer`).
+- Nouveau projet `NovaBrowser.Tests` en `net8.0` AUTONOME : il ne reference PAS l'application WinUI (le packaging PRI/MSIX de WinUI 3 casse `dotnet test`) mais COMPILE directement les classes pures du produit via `<Compile Include>`. PSL embarquee.
+- 51 tests xUnit executables partout (CLI et CI) via `dotnet test` : `VaultStore` (round-trip GCM, PIN, cle de recuperation, tombstones, plus fixture d'un coffre CBC herite verrouillant la migration CBC->GCM), `UserProfile` (PBKDF2 600k et migration par compteur), `NovaBackup` (v2 + mauvais mot de passe), `PublicSuffixService`, `PasswordGenerator`, `FilterParser`, et la logique de proposition d'enregistrement (`BuildSaveOffer`).
 - IMPORTANT : ne pas remettre de `ProjectReference` du projet de test vers l'app (recasserait `dotnet test`).
 
 ### Renforcements alignes marche
@@ -1645,10 +1645,10 @@ Suite au `Go` utilisateur sur le plan anti-télémétrie + portefeuille numériq
 
 ## 2026-07-09 — 0.44.1-dev
 
-Palier livré dans une session parallèle : icône d'application Pulse.
+Palier livré dans une session parallèle : icône d'application Nova.
 
-- Ajout de `PulseBrowser.WinUI/Assets/PulseBrowser.ico` et `PulseBrowser.png`, générés par le nouveau script `scripts/generate-app-icon.ps1`.
-- `PulseBrowser.WinUI.csproj` : `<ApplicationIcon>` (icône de l'exe) + copie de l'`.ico` en sortie.
+- Ajout de `NovaBrowser.WinUI/Assets/NovaBrowser.ico` et `NovaBrowser.png`, générés par le nouveau script `scripts/generate-app-icon.ps1`.
+- `NovaBrowser.WinUI.csproj` : `<ApplicationIcon>` (icône de l'exe) + copie de l'`.ico` en sortie.
 - `ApplyAppIcon()` appelé dans le constructeur `MainWindow` (icône de la fenêtre/barre des tâches via `AppWindow`).
 - Version passée à `0.44.1-dev`.
 - Note : ces fichiers, non commités par la session parallèle, ont été embarqués dans le commit du palier `0.45.0-dev` (`bb1dd99`).
@@ -1683,20 +1683,20 @@ Deuxième chantier du `Go` utilisateur : le portefeuille numérique local (moyen
 - `dotnet test` : 75/75 verts (61 + 14 nouveaux `WalletTests` : Luhn, réseau, masquage, expiration, round-trip GCM disque, verrouillage, upsert par Id, suppression persistante, rétro-compat sans champ `cards`, récupération par clé de secours, numéro jamais en clair dans le fichier).
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
 - Ajout de `docs/WALLET_0_45.md` et `logs/2026-07-09-wallet-0-45.md`.
-- Reprise finale Codex après le chantier parallèle : vérification que l'icône d'application du palier `0.44.1-dev` reste bien raccordée dans `PulseBrowser.WinUI.csproj` (`ApplicationIcon`, copie de `PulseBrowser.ico`) et dans `MainWindow` (`AppWindow.SetIcon`).
+- Reprise finale Codex après le chantier parallèle : vérification que l'icône d'application du palier `0.44.1-dev` reste bien raccordée dans `NovaBrowser.WinUI.csproj` (`ApplicationIcon`, copie de `NovaBrowser.ico`) et dans `MainWindow` (`AppWindow.SetIcon`).
 - `build-winui.cmd` relancé après autorisation réseau NuGet : 0 avertissement, 0 erreur.
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 75/75 verts.
-- `run-winui.cmd` : l'application se lance, le processus `PulseBrowser.WinUI` est vivant et répondant. La session automatisée ne remontait pas le titre de fenêtre ; le processus de test a été fermé ensuite pour éviter de verrouiller l'exécutable.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 75/75 verts.
+- `run-winui.cmd` : l'application se lance, le processus `NovaBrowser.WinUI` est vivant et répondant. La session automatisée ne remontait pas le titre de fenêtre ; le processus de test a été fermé ensuite pour éviter de verrouiller l'exécutable.
 - `MEMORY.md` mis à jour uniquement après autorisation explicite utilisateur.
 
 **Version :** `0.45.0-dev`.
 
 ## 2026-07-09 — 0.46.0-dev
 
-Retour utilisateur : perte de connexion Google constatée à chaque fermeture de Pulse Browser. Diagnostic : la purge des sessions au démarrage (`SessionPurgeEnabled`, active par défaut depuis `0.10.0-dev`) supprimait les cookies non listés en sites de confiance, y compris Google — fonction que l'utilisateur avait lui-même oublié avoir demandée, faute d'explication au bon moment. Décision utilisateur après discussion : garder la purge active par défaut (différenciateur vie privée), la rendre compréhensible et pilotable plutôt que de l'inverser.
+Retour utilisateur : perte de connexion Google constatée à chaque fermeture de Nova Browser. Diagnostic : la purge des sessions au démarrage (`SessionPurgeEnabled`, active par défaut depuis `0.10.0-dev`) supprimait les cookies non listés en sites de confiance, y compris Google — fonction que l'utilisateur avait lui-même oublié avoir demandée, faute d'explication au bon moment. Décision utilisateur après discussion : garder la purge active par défaut (différenciateur vie privée), la rendre compréhensible et pilotable plutôt que de l'inverser.
 
 ### Sessions éphémères expliquées
-- Nouvelle proposition au moment du login : quand un formulaire de connexion est capturé et que la purge est active, une barre `SessionKeepBar` demande « Rester connecté a `<domaine>` apres la fermeture de Pulse Browser ? ». Accepter ajoute le domaine aux sites de confiance ; refuser le mémorise dans `SessionKeepDeclinedSites` pour ne plus le redemander a chaque connexion. Revenir sur un refus via *Sites connectés* nettoie automatiquement la liste des refus.
+- Nouvelle proposition au moment du login : quand un formulaire de connexion est capturé et que la purge est active, une barre `SessionKeepBar` demande « Rester connecté a `<domaine>` apres la fermeture de Nova Browser ? ». Accepter ajoute le domaine aux sites de confiance ; refuser le mémorise dans `SessionKeepDeclinedSites` pour ne plus le redemander a chaque connexion. Revenir sur un refus via *Sites connectés* nettoie automatiquement la liste des refus.
 - Logique de décision isolée dans `Sessions/SessionKeepAdvisor.cs` (classe pure, testée) : ne propose jamais si la purge est désactivée, si le site est déjà de confiance, ou déjà refusé.
 - InfoBar `SessionPurgeInfoBar` affichée une seule fois dans la vie du profil, a la première purge réelle (au moins un cookie supprimé), avec lien direct vers *Sites connectés*. Flag `SessionPurgeExplained` empêche toute réapparition automatique ensuite.
 - Libellé du toggle *Sessions éphémères* (`Paramètres > Confidentialité`) mis a jour pour mentionner cette proposition.
@@ -1705,9 +1705,9 @@ Retour utilisateur : perte de connexion Google constatée à chaque fermeture de
 - Ajout de `docs/SESSION_KEEP_PROMPT_0_46.md` et `logs/2026-07-09-session-keep-prompt-0-46.md`.
 
 ### Vérification
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` : 80/80 verts (75 existants + 5 nouveaux `SessionKeepAdvisorTests`).
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 80/80 verts (75 existants + 5 nouveaux `SessionKeepAdvisorTests`).
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` : fenêtre `Pulse Browser 0.46.0-dev`, processus vivant et répondant, arrêté ensuite pour ne pas verrouiller l'exécutable.
+- Lancement court de `NovaBrowser.WinUI.exe` : fenêtre `Nova Browser 0.46.0-dev`, processus vivant et répondant, arrêté ensuite pour ne pas verrouiller l'exécutable.
 
 **Version :** `0.46.0-dev`.
 
@@ -1715,22 +1715,22 @@ Retour utilisateur : perte de connexion Google constatée à chaque fermeture de
 
 Deuxième demande de la session : reprendre la fonctionnalité « Créer un raccourci / Installer comme application » de Chrome, en mieux (synergie avec les sessions éphémères, protections actives dans la fenêtre d'application, confinement de domaine). Rappel utilisateur en aparté : le « lecteur vidéo flottant » évoqué ne figurait dans aucune mémoire projet — supposé être du Picture-in-Picture, traité séparément au palier suivant (0.48.0-dev).
 
-### Applications web Pulse
+### Applications web Nova
 - `Models/WebApps.cs` + `WebApps/WebAppStore.cs` : registre local `webapps.pulse`, chiffré DPAPI comme les autres fichiers de navigation (pas de données sensibles, même tier que les favoris), gate mode invité.
 - `WebApps/WebAppLaunchArgs.cs`, `WebApps/WebAppUrlPolicy.cs`, `WebApps/IcoWriter.cs` : logique pure testée — parsing `--app=<id>`, confinement de domaine « doux » (jamais de blocage de navigation, pour ne pas casser les redirections OAuth Google/Microsoft), encapsulation d'un PNG existant en `.ico` minimal.
 - `WebApps/ShellShortcut.cs` : création/suppression de raccourcis `.lnk` via COM `IShellLinkW`/`IPersistFile`, sans dépendance NuGet.
 - `WebView2Bootstrap.cs` : configuration process-wide (dossier profil WebView2 + anti-télémétrie moteur) extraite de `MainWindow`, réutilisée par `App.xaml.cs` pour les fenêtres d'application lancées en processus séparé — garantit le partage des cookies/sessions avec la fenêtre principale.
-- `PulseAppWindow.xaml(.cs)` (nouvelle fenêtre) : pas d'onglets, pas de barre d'adresse, `PrivacyEngine` local actif (bloqueur pubs/trackers, anti-télémétrie, HTTPS, CNAME cloaking), barre de confinement de domaine douce avec bouton « Retour à l'application ». Limite documentée : filtre cosmétique, refus automatique des bannières cookies et auto-remplissage identifiants/cartes pas encore branchés dans les fenêtres d'application (v1).
-- `App.xaml.cs` : détecte `--app=<id>` et lance directement une `PulseAppWindow` sans passer par la fenêtre principale ; retombe proprement sur le navigateur normal si l'id est introuvable (vérifié par lancement avec un id inconnu).
+- `NovaAppWindow.xaml(.cs)` (nouvelle fenêtre) : pas d'onglets, pas de barre d'adresse, `PrivacyEngine` local actif (bloqueur pubs/trackers, anti-télémétrie, HTTPS, CNAME cloaking), barre de confinement de domaine douce avec bouton « Retour à l'application ». Limite documentée : filtre cosmétique, refus automatique des bannières cookies et auto-remplissage identifiants/cartes pas encore branchés dans les fenêtres d'application (v1).
+- `App.xaml.cs` : détecte `--app=<id>` et lance directement une `NovaAppWindow` sans passer par la fenêtre principale ; retombe proprement sur le navigateur normal si l'id est introuvable (vérifié par lancement avec un id inconnu).
 - `MainWindow.WebApps.cs` : installation depuis la page active (dialogue nom + option raccourci Bureau), icône générée depuis le favicon déjà en cache, ajout automatique du domaine aux sites de confiance (synergie directe avec [[0.46.0-dev]]), panneau « Applications » (ouvrir, toggle « toujours au premier plan », renommer, désinstaller).
-- Menu Pulse et palette `Ctrl+K` : entrées « Applications » et « Installer comme application ».
+- Menu Nova et palette `Ctrl+K` : entrées « Applications » et « Installer comme application ».
 - Correction incidente découverte en cours de route : `ShowPanel` ne masquait jamais `WalletPanel` en changeant de panneau (oubli du palier portefeuille 0.45.0-dev) — corrigé en même temps que l'ajout de `WebAppsPanel` à la liste de collapse.
 - Ajout de `docs/WEB_APPS_0_47.md` et `logs/2026-07-09-web-apps-0-47.md`.
 
 ### Vérification
 - `dotnet test` : 94/94 verts (80 existants + 14 nouveaux : `WebAppLaunchArgsTests`, `WebAppUrlPolicyTests`, `IcoWriterTests`).
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
-- Lancement court normal : fenêtre `Pulse Browser 0.47.0-dev` répondante.
+- Lancement court normal : fenêtre `Nova Browser 0.47.0-dev` répondante.
 - Lancement avec `--app=doesnotexist` : retombe correctement sur la fenêtre principale, aucun crash.
 - Non vérifié manuellement dans cette session : le parcours complet clic-à-clic (installer une vraie page depuis l'UI, ouvrir depuis un raccourci Menu Démarrer réel) — reste à valider par l'utilisateur, comme convenu pour cette session (vérification groupée en fin de session, palier par palier).
 
@@ -1742,7 +1742,7 @@ Troisième demande de la session : un « lecteur vidéo flottant » évoqué en 
 
 ### Picture-in-Picture
 - `MainWindow.PictureInPicture.cs` (nouveau) : action strictement à la demande, aucun script en tâche de fond sur les pages visitées. Script JS asynchrone exécuté via `CoreWebView2.ExecuteScriptAsync` : cible la vidéo en lecture en priorité, sinon la plus grande vidéo du document, appelle `requestPictureInPicture()` en attendant la promesse — un rejet du moteur remonte tel quel en barre de statut (pas de faux succès masqué).
-- UI : bouton dédié `DetachVideoButton` dans la barre de navigation (nouvelle 12e colonne du `NavigationToolbar`, `NavigationMenuButton` décalé en conséquence), entrée dans les deux menus Pulse existants, entrée dans la palette `Ctrl+K`.
+- UI : bouton dédié `DetachVideoButton` dans la barre de navigation (nouvelle 12e colonne du `NavigationToolbar`, `NavigationMenuButton` décalé en conséquence), entrée dans les deux menus Nova existants, entrée dans la palette `Ctrl+K`.
 - Limite documentée et **non vérifiée interactivement dans cette session** (pas d'outillage d'automatisation UI disponible) : vidéo dans un iframe cross-origin inaccessible au script ; `requestPictureInPicture()` exige normalement un geste utilisateur côté page, dont la propagation depuis un clic WinUI vers le script injecté par WebView2 n'a pas été confirmée sur une vraie page vidéo — à valider par l'utilisateur.
 - Aucune nouvelle classe pure : logique entièrement côté script JS à la demande, dans la continuité des moniteurs identifiants/paiement/passkeys déjà présents (non unitairement testables par nature).
 - Ajout de `docs/PICTURE_IN_PICTURE_0_48.md` et `logs/2026-07-09-picture-in-picture-0-48.md`.
@@ -1750,7 +1750,7 @@ Troisième demande de la session : un « lecteur vidéo flottant » évoqué en 
 ### Vérification
 - `dotnet test` : 94/94 verts (inchangé, aucune nouvelle logique pure pour ce palier).
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
-- Lancement court : fenêtre `Pulse Browser 0.48.0-dev` répondante.
+- Lancement court : fenêtre `Nova Browser 0.48.0-dev` répondante.
 - Session menée en enchaînant les paliers 0.46.0-dev (sessions expliquées), 0.47.0-dev (applications web) et celui-ci sans pause de validation manuelle intermédiaire, à la demande explicite de l'utilisateur — vérification manuelle groupée des trois paliers prévue ensuite par l'utilisateur lui-même.
 
 **Version :** `0.48.0-dev`.
@@ -1771,7 +1771,7 @@ Retour utilisateur après vérification manuelle des trois paliers précédents 
 ### Vérification
 - `dotnet test` : 94/94 verts (pas de nouvelle classe pure testable pour ce correctif — dépendance à l'API WinRT `Windows.Graphics.Imaging`, non compilable dans le projet de tests autonome `net8.0-windows`).
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
-- Lancement court : fenêtre `Pulse Browser 0.48.1-dev` répondante.
+- Lancement court : fenêtre `Nova Browser 0.48.1-dev` répondante.
 
 **Version :** `0.48.1-dev`.
 
@@ -1783,7 +1783,7 @@ Retour utilisateur : « j'avais défini une icône propre à l'application, pour
 - Journal de démarrage (`PULSE_BROWSER_TRACE_STARTUP=1`) : `ApplyAppIcon()` s'exécute sans exception.
 - Icône réellement appliquée à la fenêtre en cours d'exécution, extraite via `WM_GETICON` (Win32) sur le process réel : tache orange floue, méconnaissable.
 - Icône embarquée dans l'exe (`<ApplicationIcon>`), extraite via `System.Drawing.Icon.ExtractAssociatedIcon` sur une copie fraîche du binaire (pour écarter tout cache d'icône Shell Windows) : même tache floue.
-- Le fichier source `Assets/PulseBrowser.ico` à sa taille native (256×256) montre bien le tourbillon Pulse net et reconnaissable. Extrait à 16×16 : la même tache floue.
+- Le fichier source `Assets/NovaBrowser.ico` à sa taille native (256×256) montre bien le tourbillon Nova net et reconnaissable. Extrait à 16×16 : la même tache floue.
 - Cause : `scripts/generate-app-icon.ps1` dessinait le même motif détaillé (traits fins, courbes, petit point d'accent) à toutes les tailles, mis à l'échelle linéairement — jamais vérifié visuellement à la taille réelle d'affichage depuis son introduction en 0.44.1-dev. Un motif pensé pour 1024px devient illisible une fois ses traits réduits à moins d'un pixel de large.
 
 ### Correction
@@ -1797,37 +1797,37 @@ Retour utilisateur : « j'avais défini une icône propre à l'application, pour
 - Icône réellement appliquée à la fenêtre en direct et icône embarquée dans l'exe toutes deux re-vérifiées après reconstruction (même méthode qu'au diagnostic) : anneau orange/charcoal net et reconnaissable.
 - `dotnet test` : 94/94 verts (aucun changement de logique C#, uniquement le script de génération d'assets et les fichiers `.ico`/`.png` régénérés).
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
-- Lancement court : fenêtre `Pulse Browser 0.48.2-dev` répondante.
+- Lancement court : fenêtre `Nova Browser 0.48.2-dev` répondante.
 
 **Version :** `0.48.2-dev`.
 
 ## 2026-07-09 — 0.48.3-dev
 
-Retour utilisateur : l'icone Pulse validee n'apparaissait plus pour une fenetre lancee depuis une application web installee ; capture fournie montrant un globe generique.
+Retour utilisateur : l'icone Nova validee n'apparaissait plus pour une fenetre lancee depuis une application web installee ; capture fournie montrant un globe generique.
 
 ### Diagnostic
-- Le raccourci Menu Demarrer `Connexion comptes Google - a8356f11.lnk` lancait `PulseBrowser.WinUI.exe --app=a8356f11fa6b4874b10729b3c06d886c`.
+- Le raccourci Menu Demarrer `Connexion comptes Google - a8356f11.lnk` lancait `NovaBrowser.WinUI.exe --app=a8356f11fa6b4874b10729b3c06d886c`.
 - Le raccourci pointait vers `C:\Users\Handi-Jyhel\Desktop\bob\navigation\webapp-icons\a8356f11fa6b4874b10729b3c06d886c.ico`.
 - Extraction du PNG embarque dans l'ICO : c'etait exactement le globe generique WebView2 16x16 px visible dans la capture utilisateur.
 - Hash SHA-256 du PNG generique : `959A80AA9A16AD7B306D7895B34083F3817CC61FB6E8B676B05D5DD59AC89F15`.
-- Plusieurs favicons du profil custom `C:\Users\Handi-Jyhel\Desktop\bob` avaient le meme hash, confirmant que Pulse memorisait le fallback generique WebView2 comme favicon de site.
+- Plusieurs favicons du profil custom `C:\Users\Handi-Jyhel\Desktop\bob` avaient le meme hash, confirmant que Nova memorisait le fallback generique WebView2 comme favicon de site.
 
 ### Correction
 - Ajout de `FaviconQuality` : validation PNG et rejet du globe generique WebView2 connu par hash.
 - `CaptureFaviconForTabAsync` ignore maintenant le PNG generique venant de `GetFaviconAsync` ou du fallback HTTP.
 - Les lectures de cache favicon pour favoris, onglets, historique et panneau Applications ignorent les fichiers contamines.
-- Les applications web ne peuvent plus utiliser un `.ico` genere depuis ce globe generique ; elles retombent sur `Assets\PulseBrowser.ico`.
-- Ajout d'une migration au demarrage de la fenetre principale : si une app web existante a une icone invalide, l'icone dediee est supprimee du registre, le fichier genere est retire et le raccourci est recree avec l'icone Pulse.
+- Les applications web ne peuvent plus utiliser un `.ico` genere depuis ce globe generique ; elles retombent sur `Assets\NovaBrowser.ico`.
+- Ajout d'une migration au demarrage de la fenetre principale : si une app web existante a une icone invalide, l'icone dediee est supprimee du registre, le fichier genere est retire et le raccourci est recree avec l'icone Nova.
 - Version passee a `0.48.3-dev`.
 - Ajout de `docs/FAVICON_GENERIC_WEBVIEW2_FIX_0_48_3.md` et `logs/2026-07-09-favicon-generic-webview2-0-48-3.md`.
 
 ### Verification
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` : 98/98 verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 98/98 verts.
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` avec trace active : `Web app generic icon repaired: a8356f11fa6b4874b10729b3c06d886c`.
-- Lancement court avec `--app=a8356f11fa6b4874b10729b3c06d886c` : `PulseAppWindow activated for a8356f11fa6b4874b10729b3c06d886c`.
+- Lancement court de `NovaBrowser.WinUI.exe` avec trace active : `Web app generic icon repaired: a8356f11fa6b4874b10729b3c06d886c`.
+- Lancement court avec `--app=a8356f11fa6b4874b10729b3c06d886c` : `NovaAppWindow activated for a8356f11fa6b4874b10729b3c06d886c`.
 - Apres migration, `C:\Users\Handi-Jyhel\Desktop\bob\navigation\webapp-icons` ne contient plus l'icone fautive.
-- Le raccourci Menu Demarrer `Connexion comptes Google - a8356f11.lnk` pointe maintenant son icone vers `Assets\PulseBrowser.ico`.
+- Le raccourci Menu Demarrer `Connexion comptes Google - a8356f11.lnk` pointe maintenant son icone vers `Assets\NovaBrowser.ico`.
 
 **Version :** `0.48.3-dev`.
 
@@ -1862,38 +1862,38 @@ Apres le « Go » explicite de l'utilisateur, poursuite du meme principe (extrai
 
 ## 2026-07-09 — 0.49.0-dev
 
-Retour utilisateur : maintenant que l'icone applicative est identifiable, l'interface de Pulse Browser reste trop generique et doit recevoir une vraie identite graphique. `Go` donne pour un palier visuel coherent.
+Retour utilisateur : maintenant que l'icone applicative est identifiable, l'interface de Nova Browser reste trop generique et doit recevoir une vraie identite graphique. `Go` donne pour un palier visuel coherent.
 
-### Identite graphique Pulse v1
-- `App.xaml` : accent global WinUI aligne sur l'orange Pulse, pour que les boutons accentues et etats selectionnes ne dependent plus de l'accent Windows generique.
-- `MainWindow.xaml` : palette Pulse renforcee (charcoal, orange, accent secondaire menthe), barre d'identite au-dessus des onglets, barre de navigation en degrade discret, barre de favoris et barre de statut harmonisees.
+### Identite graphique Nova v1
+- `App.xaml` : accent global WinUI aligne sur l'orange Nova, pour que les boutons accentues et etats selectionnes ne dependent plus de l'accent Windows generique.
+- `MainWindow.xaml` : palette Nova renforcee (charcoal, orange, accent secondaire menthe), barre d'identite au-dessus des onglets, barre de navigation en degrade discret, barre de favoris et barre de statut harmonisees.
 - Bouton d'ouverture de l'adresse rendu plus distinctif via un style d'icone accentue.
 - `pulse://accueil` : page d'accueil retravaillee avec une marque CSS inspiree de l'icone, un fond plus signe, une recherche plus lumineuse, des raccourcis moins arrondis et moins generiques.
-- Overlays de connexion et d'assistant premier lancement : remplacement des tuiles "P" par `Assets/PulseBrowser.png`, surfaces et bordures alignees sur la nouvelle palette.
-- `PulseBrowser.WinUI.csproj` : `Assets/PulseBrowser.png` declare comme contenu copie au build pour garantir son affichage depuis le XAML.
-- `PulseAppWindow.xaml` : barre de sortie de domaine harmonisee avec la nouvelle identite Pulse.
+- Overlays de connexion et d'assistant premier lancement : remplacement des tuiles "P" par `Assets/NovaBrowser.png`, surfaces et bordures alignees sur la nouvelle palette.
+- `NovaBrowser.WinUI.csproj` : `Assets/NovaBrowser.png` declare comme contenu copie au build pour garantir son affichage depuis le XAML.
+- `NovaAppWindow.xaml` : barre de sortie de domaine harmonisee avec la nouvelle identite Nova.
 - Page A propos : correction de l'information technique, suppression de l'ancienne mention Rust actif et alignement sur la stack reelle actuelle (`DPAPI + fichiers .pulse`, `AES-256-GCM + Argon2id`).
 - Ajout de `docs/IDENTITE_GRAPHIQUE_0_49.md` et `logs/2026-07-09-identite-graphique-0-49.md`.
 
 ### Verification
 - Premier essai de `dotnet test` et `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), sans rapport avec le code.
-- Relance avec acces autorise : `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` reussi, 129/129.
+- Relance avec acces autorise : `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` reussi, 129/129.
 - `build-winui.cmd` reussi, 0 avertissement, 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` apres build : processus vivant apres 5 secondes, puis fermeture du processus lance pour verification.
+- Lancement court de `NovaBrowser.WinUI.exe` apres build : processus vivant apres 5 secondes, puis fermeture du processus lance pour verification.
 
 **Version :** `0.49.0-dev`.
 
 ## 2026-07-10 — 0.50.0-dev
 
-Suite au `Go` utilisateur, mise en place d'un palier centre sur l'accessibilite visible et la coherence graphique de `PulseBrowser.WinUI`, sans changer le moteur WebView2 ni les flux de donnees sensibles.
+Suite au `Go` utilisateur, mise en place d'un palier centre sur l'accessibilite visible et la coherence graphique de `NovaBrowser.WinUI`, sans changer le moteur WebView2 ni les flux de donnees sensibles.
 
 ### Accessibilite et coherence graphique
-- `App.xaml` : ajout de ressources globales Pulse pour le focus clavier, les surfaces, les traits et les controles.
-- `MainWindow.xaml` : styles du chrome renforces (bordures discretes, focus systeme visible, focus jaune Pulse), action d'ouverture d'adresse accentuee, noms accessibles sur les boutons iconiques principaux, barre d'adresse et palette `Ctrl+K`.
+- `App.xaml` : ajout de ressources globales Nova pour le focus clavier, les surfaces, les traits et les controles.
+- `MainWindow.xaml` : styles du chrome renforces (bordures discretes, focus systeme visible, focus jaune Nova), action d'ouverture d'adresse accentuee, noms accessibles sur les boutons iconiques principaux, barre d'adresse et palette `Ctrl+K`.
 - `MainWindow.Settings.cs` : `ApplyAccessibilitySettings()` met maintenant a jour davantage de ressources selon contraste renforce, texte plus lisible et focus visible ; les barres contextuelles sensibles adaptent aussi leur taille de texte.
-- `MainWindow.xaml.cs` : ajout d'un helper runtime pour appliquer focus Pulse et noms accessibles aux controles generes par code.
+- `MainWindow.xaml.cs` : ajout d'un helper runtime pour appliquer focus Nova et noms accessibles aux controles generes par code.
 - `MainWindow.Bookmarks.cs` : les favoris et dossiers de la barre de favoris generes dynamiquement recoivent un libelle accessible explicite.
-- Barres identifiants/autofill/portefeuille/session, panneau Parametres, barre d'etat, palette de commande et `PulseAppWindow` harmonises avec les surfaces Pulse.
+- Barres identifiants/autofill/portefeuille/session, panneau Parametres, barre d'etat, palette de commande et `NovaAppWindow` harmonises avec les surfaces Nova.
 - Barre d'etat exposee comme region live polie pour les changements de statut.
 - `AGENTS.md` et la constante d'application passent a `0.50.0-dev`.
 
@@ -1902,21 +1902,21 @@ Suite au `Go` utilisateur, mise en place d'un palier centre sur l'accessibilite 
 - Ajout de `logs/2026-07-10-accessibilite-coherence-0-50.md`.
 
 ### Verification
-- Premier `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie : 136/136 tests verts.
+- Premier `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie : 136/136 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.50.0-dev`, processus repondant, fermeture propre du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.50.0-dev`, processus repondant, fermeture propre du processus de test.
 
 **Version :** `0.50.0-dev`.
 
 ## 2026-07-10 — 0.50.1-dev
 
-Suite au retour utilisateur estimant que le rendu translucide n'etait pas forcement utile, retrait volontaire de l'option visible dans `PulseBrowser.WinUI`.
+Suite au retour utilisateur estimant que le rendu translucide n'etait pas forcement utile, retrait volontaire de l'option visible dans `NovaBrowser.WinUI`.
 
 ### Chrome solide
 - `Parametres > Apparence` ne propose plus le reglage `Effet translucide`, ni les choix `Mica` / `Acrylic`.
 - Les anciens reglages `WindowBackdrop` sont normalises en `solid` au chargement et a la sauvegarde des reglages UI.
 - `ApplyWindowBackdrop()` force maintenant `SystemBackdrop = null` et conserve le retrait de l'eventuel style layered Win32 pour eviter toute transparence residuelle du contenu WebView2.
-- `PulseBrowser.WinUI/README.md` documente que `0.50.1-dev` retire l'option utilisateur d'effet translucide.
+- `NovaBrowser.WinUI/README.md` documente que `0.50.1-dev` retire l'option utilisateur d'effet translucide.
 - `AGENTS.md` et la constante d'application passent a `0.50.1-dev`.
 
 ### Documentation
@@ -1924,15 +1924,15 @@ Suite au retour utilisateur estimant que le rendu translucide n'etait pas forcem
 - Ajout de `logs/2026-07-10-solid-chrome-0-50-1.md`.
 
 ### Verification
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 136/136 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 136/136 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.50.1-dev`, processus repondant, fermeture propre du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.50.1-dev`, processus repondant, fermeture propre du processus de test.
 
 **Version :** `0.50.1-dev`.
 
 ## 2026-07-10 — 0.51.0-dev
 
-Suite a la demande utilisateur de continuer le plan pour rendre l'application plus utilisable au quotidien, ajout d'un premier centre de permissions par site dans `PulseBrowser.WinUI`.
+Suite a la demande utilisateur de continuer le plan pour rendre l'application plus utilisable au quotidien, ajout d'un premier centre de permissions par site dans `NovaBrowser.WinUI`.
 
 ### Permissions par site
 - Ajout de `Privacy/SitePermissions/SitePermissionPolicy.cs`, modele pur testable qui normalise les permissions WebView2 et stocke les decisions `ask` / `allow` / `block`.
@@ -1944,25 +1944,25 @@ Suite a la demande utilisateur de continuer le plan pour rendre l'application pl
 - `AGENTS.md` et la constante d'application passent a `0.51.0-dev`.
 
 ### Tests et documentation
-- Ajout de `PulseBrowser.Tests/SitePermissionPolicyTests.cs`.
-- `PulseBrowser.Tests.csproj` compile maintenant `Privacy/SitePermissions/SitePermissionPolicy.cs`.
+- Ajout de `NovaBrowser.Tests/SitePermissionPolicyTests.cs`.
+- `NovaBrowser.Tests.csproj` compile maintenant `Privacy/SitePermissions/SitePermissionPolicy.cs`.
 - Ajout de `docs/SITE_PERMISSIONS_0_51.md`.
 - Ajout de `logs/2026-07-10-site-permissions-0-51.md`.
 
 ### Verification
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 145/145 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 145/145 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.51.0-dev`, processus repondant, fermeture propre du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.51.0-dev`, processus repondant, fermeture propre du processus de test.
 
 **Version :** `0.51.0-dev`.
 
 ## 2026-07-10 — 0.52.0-dev
 
-Suite au `go` utilisateur pour continuer le plan d'utilisabilite quotidienne, transformation du panneau `Telechargements` en historique local persistant dans `PulseBrowser.WinUI`.
+Suite au `go` utilisateur pour continuer le plan d'utilisabilite quotidienne, transformation du panneau `Telechargements` en historique local persistant dans `NovaBrowser.WinUI`.
 
 ### Telechargements persistants
 - Ajout de `Models/DownloadHistory.cs` avec `DownloadHistoryEntry` et `DownloadHistoryStore`.
-- `PulseProfilePaths` gagne `DownloadsFile`, stocke dans `navigation/downloads.pulse`.
+- `NovaProfilePaths` gagne `DownloadsFile`, stocke dans `navigation/downloads.pulse`.
 - `HistoryPanelController` porte maintenant un store de telechargements distinct de l'historique de navigation.
 - `CoreWebView2.DownloadStarting` enregistre le telechargement au demarrage, puis met a jour la meme entree pendant la progression et au changement d'etat.
 - Le panneau `Telechargements` affiche maintenant un historique local par profil, avec bouton `Effacer` et action `Retirer` par entree.
@@ -1971,21 +1971,21 @@ Suite au `go` utilisateur pour continuer le plan d'utilisabilite quotidienne, tr
 - `AGENTS.md` et la constante d'application passent a `0.52.0-dev`.
 
 ### Tests et documentation
-- Ajout de `PulseBrowser.Tests/DownloadHistoryTests.cs`.
-- `PulseBrowser.Tests.csproj` compile maintenant `Models/DownloadHistory.cs`.
+- Ajout de `NovaBrowser.Tests/DownloadHistoryTests.cs`.
+- `NovaBrowser.Tests.csproj` compile maintenant `Models/DownloadHistory.cs`.
 - Ajout de `docs/DOWNLOAD_HISTORY_0_52.md`.
 - Ajout de `logs/2026-07-10-download-history-0-52.md`.
 
 ### Verification
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 149/149 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 149/149 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
-- Lancement court de `PulseBrowser.WinUI.exe` reussi : fenetre `Pulse Browser 0.52.0-dev`, processus repondant, fermeture propre du processus de test.
+- Lancement court de `NovaBrowser.WinUI.exe` reussi : fenetre `Nova Browser 0.52.0-dev`, processus repondant, fermeture propre du processus de test.
 
 **Version :** `0.52.0-dev`.
 
 ## 2026-07-10 — authenticite des builds
 
-Suite a la demande utilisateur de preparer les "certificats d'authenticite open source", ajout d'une premiere brique de gouvernance pour les futurs artifacts Pulse Browser.
+Suite a la demande utilisateur de preparer les "certificats d'authenticite open source", ajout d'une premiere brique de gouvernance pour les futurs artifacts Nova Browser.
 
 ### Authenticite et signatures
 
@@ -2014,7 +2014,7 @@ Suite au `go` utilisateur, ajout d'une brique concrete pour rassurer l'utilisate
 
 ### Build propre de test
 
-- Ajout du support `PULSE_BROWSER_PROFILE_DIR` dans `PulseProfilePaths.Default()` pour lancer Pulse Browser avec un profil isole sans modifier le profil normal de l'utilisateur.
+- Ajout du support `PULSE_BROWSER_PROFILE_DIR` dans `NovaProfilePaths.Default()` pour lancer Nova Browser avec un profil isole sans modifier le profil normal de l'utilisateur.
 - Ajout de `scripts/build-clean-test-artifact.ps1` et `build-clean-test-artifact.cmd`.
 - Le script cree un artifact horodate sous `artifacts/clean-test/`, place l'application dans `app/`, genere `app/VERIFICATION.txt`, ajoute `run-clean-profile.cmd` et produit un manifeste SHA256.
 - Ajout de `docs/CLEAN_TEST_BUILD_AUTHENTICITY.md` et `logs/2026-07-10-clean-test-authenticity.md`.
@@ -2027,14 +2027,14 @@ Suite au `go` utilisateur, ajout d'une brique concrete pour rassurer l'utilisate
 
 ### Verification
 
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 152/152 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 152/152 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee reussie avec 0 avertissement et 0 erreur.
 - Premier `build-clean-test-artifact.cmd` bloque par le sandbox reseau NuGet, puis relance autorisee compile en Release mais echoue apres build car `Get-FileHash` n'etait pas disponible dans la session PowerShell.
 - Correction de `scripts/generate-release-checksums.ps1` et `scripts/build-clean-test-artifact.ps1` pour calculer les SHA256 avec `System.Security.Cryptography.SHA256`.
 - Relance autorisee de `build-clean-test-artifact.cmd` reussie avec 0 avertissement et 0 erreur.
-- Artifact propre cree : `artifacts\clean-test\PulseBrowser-0.52.0-dev-win-x64-clean-20260710-162845`.
-- SHA256 de `PulseBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
-- `VERIFICATION.txt` present dans `app/`, manifeste SHA256 genere dans `artifacts\signatures\PulseBrowser-0.52.0-dev-clean-20260710-162858.sha256`.
+- Artifact propre cree : `artifacts\clean-test\NovaBrowser-0.52.0-dev-win-x64-clean-20260710-162845`.
+- SHA256 de `NovaBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
+- `VERIFICATION.txt` present dans `app/`, manifeste SHA256 genere dans `artifacts\signatures\NovaBrowser-0.52.0-dev-clean-20260710-162858.sha256`.
 - `run-clean-profile.cmd` pointe vers `_clean-profile`, et `_clean-profile` n'existe pas encore dans l'artifact: aucun profil de test n'est embarque avant lancement.
 
 ## 2026-07-10 — installateur propre 0.52.0-dev
@@ -2052,15 +2052,15 @@ Suite a la clarification utilisateur, l'objectif devient un vrai installateur Wi
 
 - Utiliser un installateur .NET WinForms autonome genere par `scripts/build-installer.ps1`.
 - Emballer le build propre existant en `app.zip` comme ressource de l'installateur.
-- Installer par utilisateur sous `%LOCALAPPDATA%\Programs\PulseBrowser`.
+- Installer par utilisateur sous `%LOCALAPPDATA%\Programs\NovaBrowser`.
 - Creer un raccourci Bureau et un raccourci Menu Demarrer.
-- Ajouter une entree de desinstallation sous `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\PulseBrowser`.
+- Ajouter une entree de desinstallation sous `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\NovaBrowser`.
 - Ne copier aucun profil utilisateur.
-- Lancer l'application installee via un petit launcher VBS qui definit `PULSE_BROWSER_PROFILE_DIR=%LOCALAPPDATA%\PulseBrowser\installed-profile`, afin de tester une installation vierge sans reprendre les profils de developpement.
+- Lancer l'application installee via un petit launcher VBS qui definit `PULSE_BROWSER_PROFILE_DIR=%LOCALAPPDATA%\NovaBrowser\installed-profile`, afin de tester une installation vierge sans reprendre les profils de developpement.
 - Conserver `VERIFICATION.txt`, generer un fichier de verification de l'installateur et un manifeste SHA256.
 - Apres retour utilisateur, ajout d'options visibles dans l'installateur: installation propre du profil installe precedent, raccourci Bureau, raccourci Menu Demarrer, lancement apres installation.
-- Apres nouveau retour utilisateur, ajout du dossier d'installation visible et modifiable via `Parcourir...`; le chemin par defaut reste `%LOCALAPPDATA%\Programs\PulseBrowser` pour fonctionner sans administrateur, mais un autre dossier peut etre choisi si les droits Windows le permettent.
-- L'option propre ne touche que `%LOCALAPPDATA%\PulseBrowser\installed-profile`, pas les profils de developpement ni l'ancien dossier `Desktop\bob`.
+- Apres nouveau retour utilisateur, ajout du dossier d'installation visible et modifiable via `Parcourir...`; le chemin par defaut reste `%LOCALAPPDATA%\Programs\NovaBrowser` pour fonctionner sans administrateur, mais un autre dossier peut etre choisi si les droits Windows le permettent.
+- L'option propre ne touche que `%LOCALAPPDATA%\NovaBrowser\installed-profile`, pas les profils de developpement ni l'ancien dossier `Desktop\bob`.
 
 ### Verification
 
@@ -2068,25 +2068,25 @@ Suite a la clarification utilisateur, l'objectif devient un vrai installateur Wi
 - Remplacement par un installateur .NET WinForms genere par `scripts/build-installer.ps1`, avec `app.zip` embarque comme ressource.
 - Premiere publication .NET bloquee par le sandbox reseau NuGet (`NU1301` sur `Microsoft.NET.ILLink.Tasks`), puis relance autorisee.
 - Correction de la publication: retrait de `EnableCompressionInSingleFile`, reserve aux applications self-contained.
-- Generation reussie de `artifacts\installer\PulseBrowserSetup-0.52.0-dev-win-x64.exe`.
+- Generation reussie de `artifacts\installer\NovaBrowserSetup-0.52.0-dev-win-x64.exe`.
 - Regeneration reussie apres ajout des options utilisateur visibles et du choix explicite du dossier d'installation.
 - Nettoyage automatique du dossier `staging-dotnet` apres generation reussie.
 - Taille de l'installateur : 35 865 226 octets.
 - SHA256 installateur : `f8c41c4eef38fa2af123995f41f8eb69ab224893130c6b075c9bcba3e35ae1b5`.
-- Fichier de verification : `artifacts\installer\PulseBrowserSetup-0.52.0-dev-win-x64.VERIFICATION.txt`.
-- Manifeste SHA256 : `artifacts\signatures\PulseBrowserSetup-0.52.0-dev-20260710-174414.sha256`.
-- Verification que `%LOCALAPPDATA%\PulseBrowser\installed-profile` n'existe pas encore apres generation: l'installateur n'a pas cree de profil avant lancement.
+- Fichier de verification : `artifacts\installer\NovaBrowserSetup-0.52.0-dev-win-x64.VERIFICATION.txt`.
+- Manifeste SHA256 : `artifacts\signatures\NovaBrowserSetup-0.52.0-dev-20260710-174414.sha256`.
+- Verification que `%LOCALAPPDATA%\NovaBrowser\installed-profile` n'existe pas encore apres generation: l'installateur n'a pas cree de profil avant lancement.
 
 ### Correction du poste de test
 
 - Retrait du `CustomProfilePath` local qui pointait vers `C:\Users\Handi-Jyhel\Desktop\bob`.
-- Reecriture de `%LOCALAPPDATA%\PulseBrowser\config.json` avec `ActiveProfileId=default`.
-- Deplacement sans suppression definitive de `Desktop\bob` et `%LOCALAPPDATA%\PulseBrowser\installed-profile` vers `%LOCALAPPDATA%\PulseBrowser\profile-quarantine\`.
-- Verification finale: `%LOCALAPPDATA%\PulseBrowser\installed-profile` est absent et Pulse Browser repartira sur le profil local `default` ou sur le profil dedie de l'installateur au premier lancement installe.
+- Reecriture de `%LOCALAPPDATA%\NovaBrowser\config.json` avec `ActiveProfileId=default`.
+- Deplacement sans suppression definitive de `Desktop\bob` et `%LOCALAPPDATA%\NovaBrowser\installed-profile` vers `%LOCALAPPDATA%\NovaBrowser\profile-quarantine\`.
+- Verification finale: `%LOCALAPPDATA%\NovaBrowser\installed-profile` est absent et Nova Browser repartira sur le profil local `default` ou sur le profil dedie de l'installateur au premier lancement installe.
 
 ## 2026-07-10 — 0.53.0-dev
 
-Suite a l'interruption utilisateur, arret du chantier installateur pour traiter une fonction de base manquante: importer des mots de passe depuis un CSV, notamment depuis Proton Pass, puisque Pulse Browser ne depend pas d'extensions navigateur.
+Suite a l'interruption utilisateur, arret du chantier installateur pour traiter une fonction de base manquante: importer des mots de passe depuis un CSV, notamment depuis Proton Pass, puisque Nova Browser ne depend pas d'extensions navigateur.
 
 ### Import CSV des mots de passe
 
@@ -2101,7 +2101,7 @@ Suite a l'interruption utilisateur, arret du chantier installateur pour traiter 
 
 ### Verification
 
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 155/155 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 155/155 tests verts.
 - Aucun build d'installateur ni artifact executable regenere pendant cette etape.
 
 **Version :** `0.53.0-dev`.
@@ -2125,7 +2125,7 @@ Suite au `go` utilisateur sur la question de la vraie gestion des utilisateurs, 
 
 ### Verification
 
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 157/157 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 157/157 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee.
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
 - Aucun build d'installateur ni artifact executable de distribution regenere pendant cette etape.
@@ -2139,22 +2139,22 @@ Suite au `go` utilisateur, generation d'un nouvel installateur Windows propre in
 ### Installateur
 
 - `scripts/build-clean-test-artifact.ps1` et `scripts/build-installer.ps1` passent par defaut a `0.54.0-dev`.
-- `scripts/build-installer.ps1` nettoie les anciens installeurs Pulse Browser dans `artifacts\installer` avant de produire le nouvel exe.
+- `scripts/build-installer.ps1` nettoie les anciens installeurs Nova Browser dans `artifacts\installer` avant de produire le nouvel exe.
 - L'installateur conserve le dossier d'installation visible et modifiable via `Parcourir...`.
-- L'installation par defaut reste sans administrateur sous `%LOCALAPPDATA%\Programs\PulseBrowser`, avec choix possible d'un autre dossier si les droits Windows le permettent.
+- L'installation par defaut reste sans administrateur sous `%LOCALAPPDATA%\Programs\NovaBrowser`, avec choix possible d'un autre dossier si les droits Windows le permettent.
 - Aucun profil utilisateur n'est embarque.
 - Ajout de `docs/INSTALLER_0_54.md` et `logs/2026-07-10-installer-clean-0-54.md`.
 
 ### Verification
 
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 157/157 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 157/157 tests verts.
 - Build propre Release autorise apres blocage sandbox NuGet, reussi avec 0 avertissement et 0 erreur.
-- Artifact propre : `artifacts\clean-test\PulseBrowser-0.54.0-dev-win-x64-clean-20260710-180138`.
-- SHA256 de `PulseBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
-- Manifeste du build propre : `artifacts\signatures\PulseBrowser-0.54.0-dev-clean-20260710-180202.sha256`.
-- Installateur genere : `artifacts\installer\PulseBrowserSetup-0.54.0-dev-win-x64.exe`.
+- Artifact propre : `artifacts\clean-test\NovaBrowser-0.54.0-dev-win-x64-clean-20260710-180138`.
+- SHA256 de `NovaBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
+- Manifeste du build propre : `artifacts\signatures\NovaBrowser-0.54.0-dev-clean-20260710-180202.sha256`.
+- Installateur genere : `artifacts\installer\NovaBrowserSetup-0.54.0-dev-win-x64.exe`.
 - SHA256 installateur : `672f0da6a9c09f3fbe10589e3fb5c92eb66b711a70d8789e7054c10af88480d3`.
-- Manifeste installateur : `artifacts\signatures\PulseBrowserSetup-0.54.0-dev-20260710-180303.sha256`.
+- Manifeste installateur : `artifacts\signatures\NovaBrowserSetup-0.54.0-dev-20260710-180303.sha256`.
 - `artifacts\installer` ne contient plus que l'exe final et son fichier `.VERIFICATION.txt`.
 
 ## 2026-07-10 — 0.54.1-dev
@@ -2163,28 +2163,28 @@ Suite au pre-test utilisateur de l'application installee, correction d'un blocag
 
 ### Profil personnalise installe
 
-- Cause identifiee : l'installateur `0.54.0-dev` creait un `PulseBrowserLauncher.vbs` qui forcait `PULSE_BROWSER_PROFILE_DIR=%LOCALAPPDATA%\PulseBrowser\installed-profile`. Ce choix isolait bien un artifact de test, mais cassait l'installation normale des qu'un profil personnalise etait choisi dans l'application.
+- Cause identifiee : l'installateur `0.54.0-dev` creait un `NovaBrowserLauncher.vbs` qui forcait `PULSE_BROWSER_PROFILE_DIR=%LOCALAPPDATA%\NovaBrowser\installed-profile`. Ce choix isolait bien un artifact de test, mais cassait l'installation normale des qu'un profil personnalise etait choisi dans l'application.
 - `MainWindow.Profile.cs` : le selecteur de profils recharge maintenant le profil depuis le chemin reel de l'entree choisie, et redemarre si l'entree selectionnee ne correspond pas au profil charge par le runtime.
 - `MainWindow.Profile.cs` : le dossier cible de creation est conserve dans `_profileCreationTarget`, afin que l'import de favoris d'onboarding ecrive dans le bon profil quand un redemarrage est necessaire.
-- `Models/Profiles.cs` : `PulseProfileRegistry.Discover` ne marque plus un profil custom actif seulement parce que `config.json` pointe dessus ; il compare aussi le dossier actif reel.
+- `Models/Profiles.cs` : `NovaProfileRegistry.Discover` ne marque plus un profil custom actif seulement parce que `config.json` pointe dessus ; il compare aussi le dossier actif reel.
 - `ProfileRegistryTests` : ajout de deux tests pour verrouiller le marquage actif/non actif d'un profil custom selon le dossier runtime.
-- `scripts/build-installer.ps1` : l'installateur supprime l'ancien launcher VBS s'il existe, cree des raccourcis directs vers `PulseBrowser.WinUI.exe`, et ne force plus `PULSE_BROWSER_PROFILE_DIR`.
-- `AGENTS.md`, `MainWindow.xaml.cs`, `scripts/build-clean-test-artifact.ps1`, `scripts/build-installer.ps1` et `PulseBrowser.WinUI/README.md` passent a `0.54.1-dev`.
+- `scripts/build-installer.ps1` : l'installateur supprime l'ancien launcher VBS s'il existe, cree des raccourcis directs vers `NovaBrowser.WinUI.exe`, et ne force plus `PULSE_BROWSER_PROFILE_DIR`.
+- `AGENTS.md`, `MainWindow.xaml.cs`, `scripts/build-clean-test-artifact.ps1`, `scripts/build-installer.ps1` et `NovaBrowser.WinUI/README.md` passent a `0.54.1-dev`.
 - Ajout de `docs/INSTALLER_0_54_1.md` et `logs/2026-07-10-profile-custom-installer-0-54-1.md`.
 
 ### Verification
 
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 159/159 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 159/159 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet (`NU1301`), puis relance autorisee.
 - `build-winui.cmd` : 0 avertissement, 0 erreur.
 - `build-clean-test-artifact.cmd` autorise apres blocage sandbox NuGet, build Release propre reussi avec 0 avertissement et 0 erreur.
-- Artifact propre : `artifacts\clean-test\PulseBrowser-0.54.1-dev-win-x64-clean-20260710-183017`.
-- SHA256 de `PulseBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
-- Manifeste du build propre : `artifacts\signatures\PulseBrowser-0.54.1-dev-clean-20260710-183042.sha256`.
+- Artifact propre : `artifacts\clean-test\NovaBrowser-0.54.1-dev-win-x64-clean-20260710-183017`.
+- SHA256 de `NovaBrowser.WinUI.exe` : `512b669edd5cec018c2d48fffbd20477ebec554ef5acce5fbe996a6edd2e1eae`.
+- Manifeste du build propre : `artifacts\signatures\NovaBrowser-0.54.1-dev-clean-20260710-183042.sha256`.
 - Premier `build-installer.cmd` bloque par le sandbox reseau NuGet (`Microsoft.NET.ILLink.Tasks`), puis relance autorisee.
-- Installateur genere : `artifacts\installer\PulseBrowserSetup-0.54.1-dev-win-x64.exe`.
+- Installateur genere : `artifacts\installer\NovaBrowserSetup-0.54.1-dev-win-x64.exe`.
 - SHA256 installateur : `9bc6666ae6e2757915f2e1785ade3312636c47484a045650867fd74d0f4aded5`.
-- Manifeste installateur : `artifacts\signatures\PulseBrowserSetup-0.54.1-dev-20260710-183135.sha256`.
+- Manifeste installateur : `artifacts\signatures\NovaBrowserSetup-0.54.1-dev-20260710-183135.sha256`.
 - `artifacts\installer` contient uniquement l'exe final et son fichier `.VERIFICATION.txt`.
 - Le fichier de verification indique : `Profil: Aucun profil embarque ; aucun dossier de profil force au lancement`.
 
@@ -2196,16 +2196,16 @@ Suite au retour utilisateur apres installation de `0.54.1-dev`, correction d'une
 
 ### Acces visibles aux imports
 
-- `MainWindow.xaml` : ajout dans les deux menus Pulse des entrees `Importer des favoris`, `Mots de passe` et `Importer des mots de passe`.
+- `MainWindow.xaml` : ajout dans les deux menus Nova des entrees `Importer des favoris`, `Mots de passe` et `Importer des mots de passe`.
 - `MainWindow.xaml` : ajout dans `Parametres > Coffre` de boutons explicites pour ouvrir les mots de passe et importer un CSV.
 - `MainWindow.CommandPalette.cs` : ajout des commandes `Importer des favoris` et `Importer des mots de passe`.
 - `MainWindow.Vault.cs` : ajout de `ImportPasswordsMenu_Click` et factorisation de l'import CSV dans `ImportPasswordsCsvAsync`, afin que le meme import fonctionne depuis le bouton du coffre, les parametres ou le menu.
-- `AGENTS.md`, `MainWindow.xaml.cs`, `scripts/build-clean-test-artifact.ps1`, `scripts/build-installer.ps1` et `PulseBrowser.WinUI/README.md` passent a `0.54.2-dev`.
+- `AGENTS.md`, `MainWindow.xaml.cs`, `scripts/build-clean-test-artifact.ps1`, `scripts/build-installer.ps1` et `NovaBrowser.WinUI/README.md` passent a `0.54.2-dev`.
 - Ajout de `logs/2026-07-10-import-access-0-54-2.md`.
 
 ### Verification
 
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj --no-restore` : 159/159 tests verts.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 159/159 tests verts.
 - Premier `build-winui.cmd` bloque par le sandbox reseau NuGet.
 - Relance reseau refusee par la limite d'usage de l'environnement.
 - Build WinUI via MSBuild Visual Studio sans restore : 0 avertissement, 0 erreur.
@@ -2220,7 +2220,7 @@ Suite au retour utilisateur apres installation de `0.54.1-dev`, correction d'une
 
 ## 2026-07-10 — 0.55.0-dev
 
-Retour utilisateur : apres avoir installe le vrai installateur, l'import des mots de passe d'un AUTRE navigateur (Chrome, Edge, Brave...) deja installe sur la machine n'existait pas — seul un CSV etait accepte. `ChromiumCredentialReader` existait deja mais ne lisait que le magasin interne WebView2 de Pulse (migration), jamais le dossier `User Data` d'un navigateur tiers.
+Retour utilisateur : apres avoir installe le vrai installateur, l'import des mots de passe d'un AUTRE navigateur (Chrome, Edge, Brave...) deja installe sur la machine n'existait pas — seul un CSV etait accepte. `ChromiumCredentialReader` existait deja mais ne lisait que le magasin interne WebView2 de Nova (migration), jamais le dossier `User Data` d'un navigateur tiers.
 
 ### Import de mots de passe depuis un navigateur installe
 
@@ -2233,12 +2233,12 @@ Retour utilisateur : apres avoir installe le vrai installateur, l'import des mot
 
 ### Verification
 
-- `PulseBrowser.Tests/ChromiumCredentialReaderTests.cs` (nouveau, 4 tests) : fabrique un `Local State` (cle DPAPI) + `Login Data` (SQLite, mots de passe AES-GCM `v10`) et verifie le dechiffrement, l'exclusion des lignes blacklistees, et `CountLogins`. Ajout de `Microsoft.Data.Sqlite` a `PulseBrowser.Tests.csproj`.
-- `dotnet test PulseBrowser.Tests\PulseBrowser.Tests.csproj` : 163/163 tests verts.
+- `NovaBrowser.Tests/ChromiumCredentialReaderTests.cs` (nouveau, 4 tests) : fabrique un `Local State` (cle DPAPI) + `Login Data` (SQLite, mots de passe AES-GCM `v10`) et verifie le dechiffrement, l'exclusion des lignes blacklistees, et `CountLogins`. Ajout de `Microsoft.Data.Sqlite` a `NovaBrowser.Tests.csproj`.
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 163/163 tests verts.
 - `build-winui.cmd` (MSBuild, avec restore reseau) : 0 avertissement, 0 erreur.
 - `scripts/build-clean-test-artifact.ps1 -Version 0.55.0-dev` : build Release propre reussi.
 - `scripts/build-installer.ps1 -Version 0.55.0-dev` : installateur genere avec succes, `artifacts\installer` ne contient que l'exe final et son `.VERIFICATION.txt`.
-- Installateur : `artifacts\installer\PulseBrowserSetup-0.55.0-dev-win-x64.exe`, SHA256 `1735beab9ef4c33d133524e2393f859611383a85867217292f78a5eff01cdb71`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.55.0-dev-win-x64.exe`, SHA256 `1735beab9ef4c33d133524e2393f859611383a85867217292f78a5eff01cdb71`.
 
 **Version :** `0.55.0-dev`.
 
@@ -2260,6 +2260,2502 @@ Passage de version source a `0.55.1-dev`. Log : `logs/2026-07-10-chrome-fixes-0-
 - `dotnet test` : 163/163 tests verts (ce sont des changements de cablage UI natif WinUI, non couvrables par le projet de tests purs).
 - `build-winui.cmd`, `scripts/build-clean-test-artifact.ps1 -Version 0.55.1-dev`, `scripts/build-installer.ps1 -Version 0.55.1-dev` : tous reussis, 0 avertissement/erreur.
 - Test de fumee : lancement de l'exe Debug + capture d'ecran (fenetre s'ouvre, selecteur de profil visible). **Verification interactive volontairement arretee la** : le selecteur de profil affichait le profil REEL de l'utilisateur (`H.J. - emplacement personnalise`) — simuler des clics/frappes au-dela risquait de toucher ses vraies donnees. Molette/double-clic/bandeau Amazon a confirmer par l'utilisateur apres installation.
-- Installateur : `artifacts\installer\PulseBrowserSetup-0.55.1-dev-win-x64.exe`, SHA256 `add0f826bbacc04fbbaadc74c5707031021d34b1a81ab5ed80aea276fa593ed1`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.55.1-dev-win-x64.exe`, SHA256 `add0f826bbacc04fbbaadc74c5707031021d34b1a81ab5ed80aea276fa593ed1`.
 
 **Version :** `0.55.1-dev`.
+
+## 2026-07-10 — 0.55.2-dev
+
+Apres installation de `0.55.1-dev`, l'utilisateur confirme 2 correctifs efficaces (molette, double-clic maximiser) mais signale 2 points encore insatisfaisants : barre de favoris toujours "collee"/peu lisible, cookies toujours pas refuses sur amazon.fr. Diagnostic fait AVANT correction (tentative de recuperer le HTML reel d'amazon.fr via curl/Invoke-WebRequest/WebFetch — le site bloque les requetes automatisees, 202/503 vides — donc diagnostic par deduction), plan valide par `GO` avant d'agir.
+
+### 2 correctifs supplementaires
+
+1. **Barre de favoris** : le correctif precedent n'ajustait que l'espace autour de la barre, pas les favoris entre eux (boutons avec fond+bordure, 4px d'ecart). Boutons rendus plats (`Background=Transparent`, `BorderThickness=0` — le style WinUI par defaut affiche deja fond/bordure au survol) + espacement 4px→8px (`MainWindow.xaml`, `MainWindow.Bookmarks.cs`).
+2. **Cookies amazon.fr** : `ConsentManagerScripts` ne cherchait un bouton par texte que parmi `<button>`/`<a role="button">`. Beaucoup de sites (probablement Amazon) utilisent des `<span>/<div role="button">` ou `<input type="submit">` avec le libelle dans `value`/`aria-label` plutot que le contenu. Nouvelle constante `CLICKABLE` (`[role="button"]` sur toute balise + `input[type="button"/"submit"]`) et fonction `label(el)` qui lit `aria-label` → `value` → `textContent`, appliquees a `InjectionScript` ET `RetryScript`.
+
+Passage de version source a `0.55.2-dev`. Log : `logs/2026-07-10-cookies-bookmarks-0-55-2.md`.
+
+### Verification
+
+- `dotnet test` : 163/163 tests verts. `build-winui.cmd`, `build-clean-test-artifact.ps1 -Version 0.55.2-dev`, `build-installer.ps1 -Version 0.55.2-dev` : tous reussis, 0 avertissement/erreur.
+- **Pas de verification interactive** (meme limite que 0.55.1 : selecteur de profil affiche le profil reel de l'utilisateur) et **pas de confirmation contre la vraie page amazon.fr** (bloque les requetes automatisees) — le correctif cookies est un raisonnement par deduction sur des patterns de boutons courants, pas une correction verifiee contre le DOM reel. A confirmer par l'utilisateur ; si le bandeau persiste, prochaine piste = demander un export HTML du bandeau (DevTools) pour cibler le bon selecteur precisement.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.55.2-dev-win-x64.exe`, SHA256 `aefee5abecc5ff97e53dc2cdd51503c757b92a6e5a70111ed5a8e3bcdbcb258a`.
+
+**Version :** `0.55.2-dev`.
+
+## 2026-07-10 — 0.55.3-dev a 0.55.8-dev : autofill silencieux sur amazon.fr
+
+Apres import de mots de passe via CSV, l'utilisateur constate que la barre d'autofill (`AutoFillBar`) ne propose jamais les identifiants sur amazon.fr, alors que le coffre contient bien l'entree correcte (domaine verifie par capture d'ecran du panneau coffre : `https://amazon.fr` / `www.amazon.fr`, correspond exactement a la page visitee). Six versions ont ete necessaires ; les quatre premieres corrigeaient des bugs reels mais n'etaient pas la cause principale — historique conserve pour ne pas refaire les memes hypotheses.
+
+### 0.55.3-dev : race condition scripts par-onglet (insuffisant)
+
+- `BrowserView_CoreWebView2Initialized` (`MainWindow.Navigation.cs`) lancait tous les scripts par-moteur (cosmetique, anti-cookies, passkeys, paiement, capture d'identifiants) en fire-and-forget (`_ = ...Async(...)`) puis demarrait la navigation sans attendre leur enregistrement. Sur un onglet neuf (notamment ouvert via `NewWindowRequested`), la page pouvait charger son DOM avant que le script de capture soit enregistre, qui ratait alors ce chargement sans jamais se rattraper.
+- Correctif : les 5 enregistrements sont desormais attendus via `await Task.WhenAll(...)` avant `NavigateTabView`.
+- Teste par l'utilisateur : **insuffisant**, le probleme persiste a l'identique.
+
+### 0.55.4-dev : etat de page ecrase par un appel sans etat live (insuffisant)
+
+- `BrowserView_NavigationCompleted` appelle `OfferAutoFill(address)` sans etat de page, et `PasswordManagerInteractionService.EvaluatePage` retournait alors systematiquement `WaitingForPasswordField`/`None` (aucun etat pour verifier `hasUsernameField`/`hasPasswordField`), ecrasant une barre deja correctement affichee par un message JS recu juste avant.
+- Correctif : `EvaluatePage` retombe desormais sur `_pageStatesByRoot[root]` (dernier etat connu du domaine) quand aucun etat live n'est fourni.
+- Teste par l'utilisateur : **insuffisant**, toujours rien propose.
+
+### 0.55.5-dev : instrumentation (pas de correctif)
+
+- Ajout de traces `WinUiRuntimeTrace.Write(...)` (mecanisme opt-in deja present dans le repo, active via `PULSE_BROWSER_TRACE_STARTUP=1`, ecrit dans `winui-runtime-trace.log`) a chaque etape : script attache, message `page-state` recu, etat verrouille/invite, resultat du rapprochement coffre/domaine, decision finale, affichage de la barre.
+- L'installateur genere aussi un lanceur `Lancer avec journal de diagnostic.cmd` dans le dossier d'installation.
+- Trace obtenue : **chaque** message `page-state` (hasUser=True correctement detecte par le script JS) est rejete avec `onglet non actif`, sur 2 onglets differents, pendant toute la session.
+
+### 0.55.6-dev : suppression de `_activeCore` / `SetActiveCore` (insuffisant)
+
+- Cause supposee : `CredentialService._activeCore` etait une copie poussee depuis 3 endroits differents (`ActivateTab`, `BrowserView_CoreWebView2Initialized`, restauration de session), susceptible d'etre reinitialisee a `null` par une reentrance pendant l'attente asynchrone de `EnsureCoreWebView2Async`.
+- Correctif : suppression de `_activeCore`/`SetActiveCore`, remplaces par `ActiveCoreProvider` (`Func<CoreWebView2?>`) cable une seule fois dans le constructeur de `MainWindow` (`() => _browserView?.CoreWebView2`), lu en direct a chaque besoin plutot que pousse.
+- Teste par l'utilisateur, meme avec **un seul onglet ouvert** (aucune ambiguite possible sur l'onglet actif) : **toujours insuffisant**. Ceci invalide l'hypothese de depart : le probleme n'est pas la copie d'etat, mais la fiabilite de la comparaison d'objets `CoreWebView2` elle-meme dans ce contexte WinUI/WebView2.
+- Correction annexe : la constante `Version` (`MainWindow.xaml.cs`) etait figee a `"0.55.2-dev"` depuis plusieurs builds, independante du parametre `-Version` des scripts — source de confusion sur la version reellement testee.
+
+### 0.55.7-dev : traces d'identite d'objet (diagnostic)
+
+- Ajout de `RuntimeHelpers.GetHashCode(...)` a chaque point de la chaine (creation WebView2, assignation de `_browserView`, `CoreWebView2Initialized`, attache du script, invocation d'`ActiveCoreProvider`, reception de `page-state`) pour visualiser directement quel objet divergeait.
+- Constante `Version` corrigee a `"0.55.7-dev"`.
+
+### 0.55.8-dev : changement d'architecture — routage par ID d'onglet (RESOLU)
+
+- Sur question explicite de l'utilisateur ("comment font les autres navigateurs du marche pour leur gestionnaire de mots de passe ?") : les navigateurs (Chrome/Firefox) ne comparent jamais de references d'objets pour router un signal vers un onglet ; le composant est rattache par une identite stable a l'onglet des sa creation, et la decision d'affichage interroge toujours en direct la meme source unique que le reste de l'interface (pas un registre separe pouvant se desynchroniser).
+- Correctif applique dans `CredentialService.cs` : suppression totale des comparaisons de references `CoreWebView2`. Remplace par `Dictionary<CoreWebView2, int> _tabIdByCore` (associe chaque moteur a l'ID de son onglet des l'attache, `AttachAsync(core, tabId)`) et `Func<int?> ActiveTabIdProvider` cable dans `MainWindow` sur `() => CurrentTab()?.Id` (meme source que la barre d'adresse/titre). `Core_WebMessageReceived` compare desormais deux entiers, plus aucun objet.
+- Nettoyage : suppression des traces d'identite d'objet (0.55.5/0.55.7), devenues obsoletes avec cette architecture.
+- Correctif generique, sans regle par site : s'applique a tout site que l'utilisateur ajoutera par la suite, pas seulement amazon.fr. Conforme au principe du coffre souverain (aucun changement de stockage, Chromium natif toujours desactive, capture/UI maison inchangees).
+- **Confirme fonctionnel par l'utilisateur** le 2026-07-10.
+
+Passage de version source a `0.55.8-dev`.
+
+### Verification
+
+- Compilation propre a chaque etape (0.55.3 a 0.55.8) : `build-clean-test-artifact.ps1`, 0 avertissement/erreur.
+- Installateurs generes a chaque version ; dernier en date : `artifacts\installer\NovaBrowserSetup-0.55.8-dev-win-x64.exe`, SHA256 `9fea4cdb163f3b5fd78c4c577f3d7c3945b44d709d5bb47f75ad064bfa15dc47`.
+- Verification faite par tests reels de l'utilisateur sur amazon.fr a chaque iteration (pas de simulation automatisee, le site bloque les requetes non-navigateur), avec journal de diagnostic (`winui-runtime-trace.log`) exploite pour les versions 0.55.5 a 0.55.7.
+
+**Version :** `0.55.8-dev`.
+
+## 2026-07-11 — 0.56.0-dev a 0.57.1-dev : multi-compte, correctif fenetre, suggestion de mot de passe
+
+Apres confirmation de `0.55.8-dev`, l'utilisateur signale que le gestionnaire de mots de passe ne gere pas plusieurs comptes sur un meme site (ex. 2 comptes Google). Demande explicite : etudier comment Chrome/Firefox font, pas de rustine. Plan valide via `EnterPlanMode`/`ExitPlanMode` avant toute implementation (pratique reprise pour les 2 sessions suivantes de cette meme journee).
+
+### 0.56.0-dev : support multi-compte par site (CONFIRME fonctionnel par l'utilisateur)
+
+- Diagnostic : le coffre (`VaultStore`) stockait deja plusieurs identifiants distincts par origine (liste plate), mais `PasswordManagerService.FindBestForAddress` ne renvoyait qu'un seul candidat (`.FirstOrDefault()` apres tri), et l'identite d'un identifiant etait `(Origin, Username)` sans Id stable.
+- `VaultCredential.Id` ajoute (GUID, meme pattern que `VaultPaymentCard.Id`). Migration en memoire a l'ouverture (`EnsureCredentialIds()` dans `VaultStore.cs`), **sans forcer d'ecriture disque** — piege rencontre : persister immediatement cassait `VaultMigrationTests` (invariant "lire ne doit jamais ecrire" pour un coffre CBC herite). Corrige en gardant la migration strictement en memoire, persistee au prochain vrai `Save()`.
+- `PasswordManagerService.FindAllForAddress()` remplace `FindBestForAddress` (liste triee, pas juste le premier). `PasswordManagerPageDecision.Credentials` (liste) remplace `Credential` (singulier).
+- UX validee avec l'utilisateur (`AskUserQuestion`) : `AutoFillBar` native etendue plutot qu'un dropdown ancre dans la page façon Chrome (plus gros chantier JS, plus de risque). 1 compte → bouton "Remplir" direct ; >1 comptes → bouton "Choisir un compte" avec `MenuFlyout`.
+- `VaultStore.SetLabelById`/`DeleteById` : Renommer/Supprimer du panneau coffre routent desormais par Id, plus par `(Origin, Username)`.
+- 8 tests dedies (`MultiAccountCredentialTests.cs`), 171/171 tests verts au total.
+- Build via MSBuild de Visual Studio (`vswhere` → `MSBuild\Current\Bin\amd64\MSBuild.exe`) : `dotnet build`/`dotnet test` sur le csproj WinUI echouent avec `MSB4062` sur cette machine (SDK .NET 10.0.301 seul n'a pas le composant de packaging MSIX/WinUI) — `dotnet test` sur `NovaBrowser.Tests.csproj` fonctionne en revanche tres bien (projet volontairement sans dependance WinUI).
+- Installateur : `NovaBrowserSetup-0.56.0-dev-win-x64.exe`, SHA256 `05e02eddd6043769df0e920a47c72eed99b0c50cda7531c7099f2c13c9b08d77`.
+- **Confirme fonctionnel par l'utilisateur.**
+
+### 0.57.0-dev : bug boutons fenetre (onglets verticaux) + suggestion de mot de passe (CONFIRME fonctionnel)
+
+Deux demandes dans la meme session : (1) capture d'ecran montrant que les boutons systeme (reduire/agrandir/fermer) empechaient le bon fonctionnement du navigateur en mode onglets verticaux ; (2) suggestion de mot de passe fort a l'inscription, comme Chrome/Firefox.
+
+- **Bug fenetre** : `ExtendsContentIntoTitleBar = true` fait dessiner les boutons systeme dans la zone Y=0..38px. En mode onglets verticaux, `ApplyVerticalTabsLayout()` mettait `TopTabsRow.Height = 0`, faisant remonter `NavigationToolbar` (barre d'adresse) dans cette zone reservee — sans marge ni rectangle de drag recalcule. Clics interceptes par le chrome systeme au lieu d'atteindre les boutons de l'app.
+- Correctif : `TopTabsRow` garde TOUJOURS sa hauteur (38px), comme Edge/Arc — bande de titre permanente, vide en mode vertical mais jamais recouverte. Appels explicites a `ApplyTitleBarSafeArea()`/`UpdateTitleBarDragRegion()` ajoutes a la fin d'`ApplyVerticalTabsLayout()`. Compromis assume : ~38px de hauteur en permanence en mode vertical.
+- **Suggestion de mot de passe** : detection prudente dans `CredentialCaptureScript.js` (`newPasswordFields`/`newPasswordScore`) — `autocomplete="new-password"`, ou ≥2 champs password vides (mot de passe + confirmation), ou mots-cles d'inscription dans le contexte ; jamais sur un simple formulaire de connexion. Signal transporte par le canal existant `pulse.credential.page-state` (`hasEmptyNewPasswordField`), pas de nouveau canal. `PasswordManagerPromptKind.SuggestNewPassword` prioritaire sur toute proposition de remplissage d'un identifiant existant. Nouvelle barre `SuggestPasswordBar` (mot de passe genere affiche en clair, boutons Utiliser/Regenerer/Ignorer). Le pipeline de capture/enregistrement existant n'a eu besoin d'AUCUNE modification — reutilise integralement une fois le mot de passe genere injecte via `window.__pulseFillNewPassword` (meme motif "React-safe" que `CredentialAutofillScript.js`).
+- 3 tests dedies (`SuggestNewPasswordTests.cs`), 174/174 tests verts.
+- Installateur : `NovaBrowserSetup-0.57.0-dev-win-x64.exe`, SHA256 `e877acdfedb6964ae0686ba4688b6755d8d249b9b6e5010b86e524c6dee54e49`.
+
+### 0.57.1-dev : liseré de couleur autour des boutons systeme (CONFIRME fonctionnel)
+
+Apres confirmation que 0.57.0-dev corrigeait bien le bug fonctionnel, l'utilisateur montre 2 captures comparant Chrome ("parfaitement integre") a Nova ("pas integre") — probleme purement visuel cette fois.
+
+- Cause trouvee par lecture de code (comparaison exacte des valeurs hex/RGB, pas de clic GUI au-dela du selecteur de profil) : `ApplyWindowTitleBarColors()` fixait le fond des boutons systeme a `RGB(38,37,34)` alors que `NovaChromeSurfaceBrush` (fond de la bande de titre) est `#FF242521` = `RGB(36,37,33)` — ecart de ~2 unites suffisant pour un liseré visible. Plus important : en onglets verticaux, `TopTabsRow` n'avait aucun fond propre une fois `BrowserTabs` masque, retombant sur le fond general de la fenetre (`RGB(31,33,31)`, nettement plus sombre) → contraste net autour des boutons.
+- Correctif : `Border` de fond permanent ajoute dans `TopTabsRow` (`NovaChromeSurfaceBrush`), toujours affiche que les onglets soient horizontaux ou verticaux. Couleurs de `ApplyWindowTitleBarColors()` alignees exactement sur `(36,37,33)`.
+- **Tentative de verification live** : profil isole `_clean-profile` pre-configure via `PULSE_BROWSER_PROFILE_DIR` + `ui-settings.pulse` chiffre DPAPI ecrit directement (sans clic) pour activer les onglets verticaux. Constat : meme avec la variable d'environnement positionnee, l'ecran de selection affiche encore le VRAI profil de l'utilisateur, et le code (`ProfilePickerContinueButton_Click`/creation de profil) montre que continuer ou creer un profil depuis cet ecran modifie `NovaConfig` (fichier GLOBAL, hors du dossier de profil isole). Verification arretee a l'ecran de connexion (capture lecture seule), correctif applique par analyse de code des couleurs uniquement. **Nouvelle regle retenue** : l'isolation par variable d'environnement protege les donnees du profil mais pas la config globale des qu'on interagit avec l'ecran de selection/creation de profil — durcit la prudence deja actee pour le selecteur de profil.
+- Installateur : `NovaBrowserSetup-0.57.1-dev-win-x64.exe`, SHA256 `1d266aa2af8880e0baf8d83c94e48a6faba150c3f172ee76ac3cd694ad881bb1`.
+- **Confirme fonctionnel par l'utilisateur.**
+
+**Version :** `0.57.1-dev`.
+
+## 2026-07-11 — 0.57.2-dev : correctifs plein écran, favoris, onglets verticaux, anti-télémétrie
+
+Mise à jour corrective demandée par l'utilisateur après `0.57.1-dev`, avec plusieurs points UX et navigation à reprendre.
+
+### Correctifs et améliorations
+
+- Le bouton de la barre d'outils qui ressemblait à du plein écran active désormais un vrai plein écran WinUI (`AppWindowPresenterKind.FullScreen`) et `Echap` permet d'en sortir. L'ancienne interface compacte reste pilotée depuis les paramètres.
+- Les menus Nova sont réorganisés en groupes lisibles : navigation, données locales, coffre, outils, puis paramètres/a propos.
+- Les onglets verticaux ne dépendent plus du `TabView` horizontal masqué pour changer d'onglet : le clic active directement l'onglet par ID. Les onglets verticaux ont aussi une fermeture directe et une entrée "Fermer l'onglet" dans leur menu contextuel.
+- Les boutons de la barre d'onglets verticaux sont rendus plus explicites : libellé/infobulle pour le nouvel onglet et bouton réduire/agrandir lisible en mode étendu.
+- L'import Chromium lit aussi la racine `synced` du fichier `Bookmarks`, placée dans un dossier "Favoris mobiles Chrome", ce qui corrige le cas où des favoris Chrome semblaient absents.
+- Le panneau d'import compare maintenant la source sélectionnée avec les favoris Nova : nombre total côté source, déjà présents, et absents.
+- L'import Chromium tente de récupérer les favicons depuis la base `Favicons` du profil source, les convertit en PNG et les rattache aux favoris importés.
+- Le bouclier de confidentialité affiche un indicateur visuel quand l'anti-télémétrie bloque quelque chose sur la page courante.
+- Le bloqueur réseau ne remplace plus une navigation principale par une réponse vide : les sous-ressources restent filtrées, mais une règle qui touche le document principal ne produit plus une page blanche silencieuse.
+
+### Hors scope volontaire
+
+- La fonction de téléchargement général de vidéos YouTube n'a pas été ajoutée dans `0.57.2-dev`. Décision volontaire : le sujet doit être cadré séparément avec garde-fous d'usage/droits, pas traité comme une rustine dans une M.A.J. bugfix.
+
+Passage de version source à `0.57.2-dev`. Log : `logs/2026-07-11-bugfix-0-57-2.md`.
+
+### Vérification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.2-dev` : réussi, 0 avertissement/erreur après autorisation réseau NuGet.
+- `scripts\build-installer.ps1 -Version 0.57.2-dev` : réussi après autorisation réseau NuGet.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.2-dev-win-x64-clean-20260711-014917`, SHA256 exe `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.57.2-dev-win-x64.exe`, SHA256 `71c279689e27d1d8044d180c767544d4075d66407983d3f5db7723623eadcff2`.
+
+**Version :** `0.57.2-dev`.
+
+## 2026-07-11 — 0.57.3-dev : module de téléchargement vidéo YouTube
+
+Après la livraison de `0.57.2-dev`, l'utilisateur corrige le cadrage : il n'avait pas demandé un "aspirateur", mais un petit module Nova permettant de télécharger une vidéo YouTube à la demande, directement depuis le navigateur.
+
+### Fonction ajoutée
+
+- Ajout d'un bouton `Télécharger la vidéo` dans la barre d'outils, à côté du Picture-in-Picture et du menu Nova.
+- Ajout d'un flyout natif Nova qui analyse l'onglet actif, détecte une page vidéo YouTube (`youtube.com/watch?v=...` ou `youtu.be/...`) et affiche le titre de la vidéo.
+- Ajout de `MainWindow.VideoDownload.cs` pour isoler la logique du module vidéo.
+- Le module cherche un moteur local `yt-dlp.exe` dans cet ordre : variable `PULSE_BROWSER_YTDLP_PATH`, dossier `tools` de Nova Browser, `%LOCALAPPDATA%\NovaBrowser\tools`, puis `PATH`.
+- Le téléchargement ne démarre jamais automatiquement : il faut un clic explicite sur `Télécharger`.
+- Le téléchargement est lancé dans le dossier Windows `Downloads`, avec un nom basé sur le titre YouTube et l'ID vidéo.
+- Le résultat est inscrit dans l'historique local des téléchargements Nova (`DownloadHistoryStore`) pour rester cohérent avec les téléchargements WebView2.
+- L'entrée `Télécharger la vidéo` est également disponible dans `Menu Nova > Outils`.
+
+### Limite assumée
+
+- Nova Browser pilote un moteur local spécialisé (`yt-dlp.exe`) quand il est présent, mais ne télécharge pas silencieusement ce moteur et n'embarque pas de contournement maison fragile dans l'interface.
+
+Passage de version source à `0.57.3-dev`. Log : `logs/2026-07-11-video-download-0-57-3.md`.
+
+### Vérification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.3-dev` : réussi, 0 avertissement/erreur après autorisation réseau NuGet.
+- `scripts\build-installer.ps1 -Version 0.57.3-dev` : réussi après autorisation réseau NuGet.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.3-dev-win-x64-clean-20260711-020040`, SHA256 exe hôte `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.57.3-dev-win-x64.exe`, SHA256 `f9a6c7a25dec340aae0b70c6bd52ef723048f874bf7c2d8e4d334b169d520d90`.
+
+**Version :** `0.57.3-dev`.
+
+## 2026-07-11 — 0.57.4-dev : lisibilite du rail vertical compact et popups de connexion
+
+Apres essai de `0.57.3-dev`, l'utilisateur confirme une amelioration generale mais signale encore trois points : les actions du rail vertical compact restent peu lisibles, un bouton de connexion sur un site adulte n'ouvre rien, et l'icone du module YouTube ressemble trop au telechargement de fichiers.
+
+### Correctifs
+
+- Le rail vertical compact passe a 60 px pour donner plus d'espace aux actions.
+- Les boutons compacts `Nouvel onglet` et `Agrandir` utilisent maintenant des mini-controles encadres (`+` et `>>`) au lieu d'icones trop ambigues en colonne etroite.
+- Les boutons d'onglets verticaux compacts sont agrandis et affichent des icones de site plus visibles.
+- L'icone du module `Telecharger la video` est remplacee par une icone media/video, plus differenciee du telechargement de fichiers classique.
+- Les popups WebView2 sans URL explicite ou `about:blank` sont maintenant raccordees a un vrai onglet Nova via `args.NewWindow`, apres creation et initialisation du WebView2 cible. Cela corrige le cas technique probable des boutons de connexion qui ouvrent une fenetre vide/non attachee.
+
+### Limite assumee
+
+- Le site adulte mentionne par l'utilisateur n'a pas ete teste en connexion reelle. Le correctif est structurel pour les popups de login `about:blank`, mais la validation finale doit se faire sur le site concerne.
+
+Passage de version source a `0.57.4-dev`. Log : `logs/2026-07-11-ux-login-0-57-4.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.4-dev` : reussi, 0 avertissement/erreur apres autorisation reseau NuGet.
+- `scripts\build-installer.ps1 -Version 0.57.4-dev` : reussi apres autorisation reseau NuGet.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.4-dev-win-x64-clean-20260711-021432`, SHA256 `NovaBrowser.WinUI.dll` `3fed3dea4ed2ddbc95fdb2a7b9e7a33f7ea1e79bbcf6411fdc3188fe2deeb464`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.57.4-dev-win-x64.exe`, SHA256 `ed552b625cac3d46d9b46c9932101ed69818a3d552d72cc360812d1c7e6af90b`.
+
+**Version :** `0.57.4-dev`.
+
+## 2026-07-11 — 0.57.5-dev : popups OAuth rattachees et rail vertical compact lisible
+
+Apres essai de `0.57.4-dev`, l'utilisateur precise deux problemes restants : la capture du rail vertical compact montre des boutons encore impossibles a identifier, et un site tiers semble accepter la connexion Google sans que la session revienne reellement au site d'origine.
+
+### Correctifs
+
+- Le rail vertical compact passe de 60 px a 64 px, avec des marges compactes reduites pour donner une vraie surface aux actions.
+- Les actions compactes n'utilisent plus des glyphes seuls. Elles affichent maintenant une icone et un mini-libelle : `Onglet` pour creer un onglet, `Liste` pour afficher/agrandir la liste des onglets.
+- Le symbole `>>`, mal rendu et trop proche d'un prompt technique, est supprime du rail compact.
+- La gestion `CoreWebView2_NewWindowRequested` ne traite plus seulement `about:blank` : toutes les popups creent maintenant un onglet Nova dont le `CoreWebView2` est donne a `args.NewWindow`.
+- Les flux OAuth/Google gardent ainsi le contrat popup attendu par WebView2 (`window.opener`, `postMessage`, retour de session vers l'onglet d'origine).
+- `WindowCloseRequested` ferme l'onglet correspondant, pour les popups qui appellent `window.close()` apres authentification.
+
+### Limite assumee
+
+- Le site adulte mentionne n'a pas ete teste avec un compte reel. Le correctif est structurel pour les popups OAuth detachees ; la validation fonctionnelle finale reste a faire sur le site concerne.
+
+Passage de version source a `0.57.5-dev`. Log : `logs/2026-07-11-oauth-compact-tabs-0-57-5.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.5-dev` : reussi, 0 avertissement/erreur apres autorisation reseau NuGet.
+- `scripts\build-installer.ps1 -Version 0.57.5-dev` : reussi apres autorisation reseau NuGet.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.5-dev-win-x64-clean-20260711-022717`, SHA256 `NovaBrowser.WinUI.dll` `c2db86eeb76763050cf69495cf5879a2e6ebdd94333b376c1964542129257746`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.57.5-dev-win-x64.exe`, SHA256 `eec3da27f6acc0bb23646c8d453af66297418dc05c2bcc1eed5c26f36ef390a4`.
+
+**Version :** `0.57.5-dev`.
+
+## 2026-07-11 — 0.57.6-dev : Google Identity, faux positif mot de passe et barre des favoris
+
+Apres essai de `0.57.5-dev`, l'utilisateur montre le cas reel : un site adulte fonctionne globalement, mais la connexion Google finit sur une page blanche `accounts.google.com/gsi/transform`. La capture montre aussi un faux positif du generateur de mot de passe Nova sur cette page Google intermediaire et une barre des favoris visuellement abimee.
+
+### Correctifs
+
+- Detection explicite des pages intermediaires Google Identity (`accounts.google.com/gsi/*`, `accounts.google.com/o/oauth2/*`, `accounts.google.com/signin/oauth*`).
+- Les popups Google Identity intermediaires ne prennent plus le focus utilisateur : Nova revient vers l'onglet source pendant que la transition Google continue.
+- Le rattachement WebView2 popup (`args.NewWindow`) reste conserve pour garder `window.opener`, `postMessage` et le retour de session vers le site d'origine.
+- Le bloqueur reseau laisse passer uniquement les ressources critiques Google Identity dans ce contexte precis (`accounts.google.com` et ressources `gstatic` necessaires), sans desactiver globalement les protections.
+- La capture/remplissage d'identifiants et la suggestion `Utiliser un mot de passe fort genere ?` sont ignores sur les pages Google Identity intermediaires.
+- La barre des favoris est nettoyee : espacement reduit, alignement vertical corrige, largeur de libelle ajustee et icones fallback remplacees par des `SymbolIcon` WinUI (`Folder`/`Link`) au lieu des glyphes MDL2 prives qui pouvaient s'afficher comme des carres.
+
+### Limite assumee
+
+- Le site adulte montre par l'utilisateur n'a pas ete teste avec un compte reel. Le correctif cible le flux Google Identity observe dans la capture et doit etre confirme en usage reel.
+
+Passage de version source a `0.57.6-dev`. Log : `logs/2026-07-11-google-identity-bookmarks-0-57-6.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.6-dev` : reussi, 0 avertissement/erreur apres autorisation reseau NuGet.
+- `scripts\build-installer.ps1 -Version 0.57.6-dev` : reussi apres autorisation reseau NuGet.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.6-dev-win-x64-clean-20260711-024016`, SHA256 `NovaBrowser.WinUI.dll` `895945402bb10e618a241bd1ac728ba0e59382da9f60384463393a98012bb271`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.57.6-dev-win-x64.exe`, SHA256 `9e7096dec1032dfd7fed701f5c39a96ee57c7ec461750ae4d3b97de72e177557`.
+
+**Version :** `0.57.6-dev`.
+
+## 2026-07-11 — 0.57.7-dev : consentement cookies moins destructif pour les connexions
+
+L'utilisateur signale avec frustration que le bouton `Connexion` ne declenche toujours rien. Relecture du cas montre un suspect concret : sur la capture precedente, le site affiche un bandeau indiquant que rejeter les cookies peut limiter certaines fonctionnalites, alors que Nova injectait un gestionnaire de consentement tres agressif.
+
+### Correctifs
+
+- Le gestionnaire de consentement n'emule plus `__cmp` / `__tcfapi` avec un consentement "tout refuse" avant l'initialisation du site.
+- Le refus automatique reste disponible, mais il ne clique plus que sur un bouton visible.
+- Si un bandeau indique que refuser/rejeter les cookies peut limiter des fonctionnalites, Nova ne refuse plus automatiquement et laisse l'utilisateur choisir.
+- Objectif : ne plus rendre un bouton `Connexion` muet en cassant le CMP ou la session avant que le site ait pu initialiser son flux de login.
+
+Passage de version source a `0.57.7-dev`. Log : `logs/2026-07-11-consent-login-0-57-7.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.7-dev` : reussi, 0 avertissement/erreur apres autorisation reseau NuGet.
+- `scripts\build-installer.ps1 -Version 0.57.7-dev` : reussi apres autorisation reseau NuGet.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.7-dev-win-x64-clean-20260711-025010`, SHA256 `NovaBrowser.WinUI.dll` `8897bc1ed2aabf4bd35ea688e5ac7720e08afd206667b5974214f61b6a0f17f6`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.57.7-dev-win-x64.exe`, SHA256 `f052aaa7819bbb68c2deaeb7517cb88e2a95a44a0e421b938ae2950373f4b38d`.
+
+**Version :** `0.57.7-dev`.
+
+## 2026-07-11 — 0.57.8-dev : mode compatibilite connexion par site
+
+L'utilisateur clarifie la politique de confidentialite : Nova Browser ne doit pas eviter un serveur Nova inexistant, mais limiter les fuites vers les GAFAM, la publicite ciblee et la telemetrie, tout en permettant les connexions voulues par l'utilisateur.
+
+### Correctifs
+
+- Ajout d'un mode `Compatibilite connexion` persistant par domaine racine dans les reglages locaux.
+- Ajout de l'interrupteur correspondant dans le panneau `Site actuel`.
+- Le gestionnaire de consentement evite le refus automatique des cookies sur les sites en compatibilite, pour ne pas casser le flux de login.
+- Le bloqueur reseau laisse passer les ressources Google Identity necessaires uniquement dans ce contexte, sans ouvrir ads/analytics/telemetrie.
+- Le resume du bouclier indique quand la compatibilite connexion est active.
+
+Passage de version source a `0.57.8-dev`. Log : `logs/2026-07-11-login-compatibility-0-57-8.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- MSBuild Visual Studio Release x64 : reussi, 0 avertissement/erreur.
+- Artefact propre genere localement : `artifacts\clean-test\NovaBrowser-0.57.8-dev-win-x64-clean-20260711-031906`, SHA256 `NovaBrowser.WinUI.dll` `c11a2359a1f20abc90e70b82f1184dd52c59acaf48cce39a536166f201c2652e`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- `scripts\build-installer.ps1` standard bloque par NuGet/ILLink (`Microsoft.NET.ILLink.Tasks`) pour `PublishSingleFile=true`, mais ajout du fallback local `scripts\build-installer-netfx.ps1`.
+- `scripts\build-installer-netfx.ps1 -Version 0.57.8-dev` : reussi, 0 avertissement/erreur.
+- Installateur unique genere : `artifacts\installer\NovaBrowserSetup-0.57.8-dev-win-x64.exe`, SHA256 `2f9e6f767c481010afbf5b5661e177b290cd640e211bc22ed01a47c9cb09d4a6`.
+- Sortie setup non-single-file publiee dans `artifacts\installer\staging-dotnet\publish-folder`, avec `NovaBrowserSetup.exe` SHA256 `086df31b716f6e61f2d5c875c6c73eaa1eead377b636837de9bccbd183e0d082`; elle doit rester accompagnee de son `.dll` et de ses fichiers runtime.
+
+**Version :** `0.57.8-dev`.
+
+## 2026-07-11 — 0.57.9-dev : blocage du Google One Tap automatique
+
+L'utilisateur confirme que le site concerne est `fr.faphouse.com`, que les cookies ont ete acceptes, et que la connexion echoue toujours parce que Google se lance automatiquement au chargement sans rendre une session valide au site.
+
+### Correctifs
+
+- Ajout d'un script `LoginCompatibilityScripts`, separe du gestionnaire cookies.
+- Le script est enregistre par moteur WebView2 et ne s'active que sur les domaines en `Compatibilite connexion`.
+- Sur ces domaines, Nova force `google.accounts.id.initialize` avec `auto_select=false`.
+- Nova bloque `google.accounts.id.prompt()` quand il est lance automatiquement sans clic/touche recente.
+- Nova laisse passer `google.accounts.id.prompt()` quand l'appel suit une action utilisateur recente, pour conserver la connexion Google volontaire.
+- Les protections publicite, analytics et telemetrie restent separees et actives.
+
+Passage de version source a `0.57.9-dev`. Log : `logs/2026-07-11-google-one-tap-0-57-9.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- MSBuild Visual Studio Release x64 : reussi, 0 avertissement/erreur.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.9-dev-win-x64-clean-20260711-124252`, SHA256 `NovaBrowser.WinUI.dll` `dc7e67b7bdeb5c9a446bb86fbbceddc9fa6e33a1e82a86995ef008fb1643fe0a`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur unique : `artifacts\installer\NovaBrowserSetup-0.57.9-dev-win-x64.exe`, SHA256 `49d4a2e38483ddab99339a0b40374d8ea1df0209375584ebab0fee276fdface3`.
+
+**Version :** `0.57.9-dev`.
+
+## 2026-07-11 — 0.57.10-dev : diagnostic connexion exportable par site
+
+L'utilisateur confirme que le probleme de connexion Google persiste sur le site de test, meme apres acceptation des cookies. Le journal applicatif fourni ne contient pas assez d'elements pour conclure : il montre surtout la navigation vers le site puis `#signin`, sans trace exploitable de redirection Google, cookie, requete bloquee ou erreur de script.
+
+### Correctifs
+
+- Ajout d'un module local `SiteLoginDiagnosticRecorder`.
+- Ajout d'un mode `Diagnostic connexion` dans le panneau `Site actuel`.
+- Le mode est persistant par domaine racine dans les reglages locaux.
+- Le diagnostic capture les navigations, nouvelles fenetres, requetes WebView2, reponses reseau, actions utilisateur et signaux Google Identity.
+- Le script injecte detecte les appels `google.accounts.id.initialize`, `prompt` et `renderButton`, ainsi que les erreurs JavaScript visibles.
+- Le rapport exporte masque les valeurs de parametres d'URL, tokens, fragments et donnees sensibles.
+- Le bouton `Exporter le diagnostic` cree un fichier local dans le dossier de navigation du profil, sans envoi vers un serveur Nova.
+
+Passage de version source a `0.57.10-dev`. Log : `logs/2026-07-11-login-diagnostic-0-57-10.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- MSBuild Visual Studio Release x64 : reussi, 0 avertissement/erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.10-dev` : premier essai bloque par l'acces NuGet du bac a sable, second essai reussi apres autorisation reseau.
+- `scripts\build-installer-netfx.ps1 -Version 0.57.10-dev -CleanArtifactDir artifacts\clean-test\NovaBrowser-0.57.10-dev-win-x64-clean-20260711-130909` : reussi.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.10-dev-win-x64-clean-20260711-130909`, SHA256 `NovaBrowser.WinUI.dll` `7690d29163020955fe9336a205e1c8bfd41ea38c278c11a4816703eae41c6693`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur unique : `artifacts\installer\NovaBrowserSetup-0.57.10-dev-win-x64.exe`, SHA256 `113e211e1760e994309fbd5d326f1f51ebdee845647d8a2fb4c40c32d9f34140`.
+
+**Version :** `0.57.10-dev`.
+
+## 2026-07-11 — 0.57.11-dev : compatibilite modal de connexion
+
+L'utilisateur fournit le rapport `login-diagnostic-f_a_p_h_o_u_s_e_._c_o_m-20260711-134143.txt`. Le diagnostic montre que le clic `Connexion` est bien capte, puis que Nova bloque `https://fr.faphouse.com/api/common-modals-api/all`. Cette requete semble charger le contenu de la fenetre de connexion ; comme le bloqueur renvoyait une reponse vide `200 OK`, le site pouvait rester visuellement muet.
+
+### Correctifs
+
+- Ajout d'une exception locale tres limitee pour les sites en `Compatibilite connexion`.
+- L'exception ne s'applique qu'au meme domaine racine que la page active.
+- L'exception ne s'applique qu'aux chemins lies a `login`, `signin`, `oauth`, `auth`, `session`, `account` ou `modal`.
+- Les requetes de telemetrie comme `sentry envelope` restent bloquees.
+- Correction du nom de fichier du diagnostic : `faphouse.com` au lieu de `f_a_p_h_o_u_s_e_._c_o_m`.
+
+Passage de version source a `0.57.11-dev`. Log : `logs/2026-07-11-login-modal-compat-0-57-11.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 174/174 tests verts.
+- MSBuild Visual Studio Release x64 : reussi, 0 avertissement/erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.57.11-dev` : premier essai bloque par l'acces NuGet du bac a sable, second essai reussi apres autorisation reseau.
+- `scripts\build-installer-netfx.ps1 -Version 0.57.11-dev -CleanArtifactDir artifacts\clean-test\NovaBrowser-0.57.11-dev-win-x64-clean-20260711-134805` : reussi.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.57.11-dev-win-x64-clean-20260711-134805`, SHA256 `NovaBrowser.WinUI.dll` `465157d9a3a0e0ee9e214510433afa7864176968b8402d2910e5acfcf2993ddc`, SHA256 exe hote `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur unique : `artifacts\installer\NovaBrowserSetup-0.57.11-dev-win-x64.exe`, SHA256 `475fdd4a1b245f0a7a4d4877921e6d5db51dbf0404b8a43281e62db1a151fc95`.
+
+**Version :** `0.57.11-dev`.
+
+## 2026-07-11 — 0.58.0-dev : Bouclier Nova et Centre du site v2
+
+Apres discussion sur les ameliorations utiles, choix du palier `Site actuel / Bouclier Nova v2` : rendre les protections plus lisibles et plus actionnables, sans affaiblir la logique locale-first.
+
+### Changements
+
+- Ajout d'une trace locale en memoire des blocages privacy recents par page.
+- La trace retient le module, le domaine de requete, le chemin sans parametres, le domaine de page et l'instant du blocage ; elle ne conserve pas les query strings ni fragments.
+- Le flyout du bouclier affiche maintenant une recommandation courte et les derniers blocages recents.
+- Le panneau `Site actuel` explique mieux l'etat de protection : blocage probablement lie a une connexion, compatibilite active, telemetrie bloquee, ou protection standard sans signal de casse.
+- Ajout d'un bouton `Autoriser seulement le flux de connexion` quand un blocage recent ressemble a un flux login/signin/oauth/auth/session/account/modal et que le mode `Compatibilite connexion` n'est pas encore actif.
+- Ajout de tests pour `PrivacyEngine` afin de verrouiller la trace locale et l'absence de valeurs sensibles dans les chemins affiches.
+
+Passage de version source a `0.58.0-dev`. Log : `logs/2026-07-11-shield-site-center-0-58.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 176/176 tests verts.
+- Premier `build-winui.cmd` bloque par l'acces NuGet du bac a sable (`NU1301`).
+- `build-winui.cmd` relance avec autorisation reseau : reussi, 0 avertissement/erreur.
+
+### Limite
+
+- Aucun nouvel installateur genere dans cette etape.
+
+**Version :** `0.58.0-dev`.
+
+## 2026-07-11 — 0.58.1-dev : coherence UI des panneaux secondaires
+
+Apres demande utilisateur sur l'amelioration de l'interface, lancement d'une passe "maturite UI" sans ajout fonctionnel : objectif de calmer les panneaux secondaires, reduire le bruit textuel et harmoniser `Site actuel` / `Parametres`.
+
+### Changements
+
+- Ajout de styles XAML partages pour les surfaces secondaires : cartes de panneau, titres de page, titres de section et textes descriptifs.
+- `Site actuel` :
+  - panneau passe sur le fond `NovaPanelBackgroundBrush` ;
+  - cartes harmonisees via un style commun ;
+  - recommandation de protection mise en avant dans un bloc dedie ;
+  - action `Autoriser seulement le flux de connexion` raccourcie en `Autoriser le flux de connexion` et traitee comme action principale ;
+  - diagnostic connexion et export regroupes dans une meme zone ;
+  - titres et textes secondaires uniformises.
+- `Parametres` :
+  - navigation laterale legerement elargie ;
+  - contenu plus large et mieux espace ;
+  - titres harmonises dans Navigation, Apparence, Accessibilite, Demarrage, Coffre, Profil, Stockage et Confidentialite ;
+  - textes longs raccourcis, surtout dans Confidentialite, pour rendre les reglages plus scannables ;
+  - aucun handler ni comportement de reglage modifie.
+
+Passage de version source a `0.58.1-dev`. Log : `logs/2026-07-11-ui-coherence-0-58-1.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 176/176 tests verts.
+- Premier `build-winui.cmd` bloque par l'acces NuGet du bac a sable (`NU1301`).
+- `build-winui.cmd` relance avec autorisation reseau : reussi, 0 avertissement/erreur.
+
+### Limite
+
+- Aucun nouvel installateur genere dans cette etape.
+
+**Version :** `0.58.1-dev`.
+
+## 2026-07-11 — 0.59.0-dev : organisation generale du navigateur et executable
+
+L'utilisateur estime qu'il faut revoir la structure et l'organisation du navigateur avant de produire un executable. Accord : arreter de patcher panneau par panneau et clarifier l'architecture visible.
+
+### Changements
+
+- Barre d'outils principale allegee :
+  - conserve les actions essentielles de navigation, la barre d'adresse, le bouclier, les favoris et le menu Nova ;
+  - retire de la surface visible les actions moins quotidiennes comme Accueil, plein ecran, Picture-in-Picture et telechargement video ;
+  - ces actions restent accessibles depuis le menu Nova.
+- Menu Nova restructure en groupes produit :
+  - `Naviguer` ;
+  - `Controle du site` ;
+  - `Donnees locales` ;
+  - `Coffre local` ;
+  - `Outils de page`.
+- Palette `Ctrl+K` alignee sur les memes categories pour garder une organisation mentale coherente entre menu et recherche de commandes.
+- Passage de version source a `0.59.0-dev`. Log : `logs/2026-07-11-browser-organization-0-59.md`.
+
+### Verification et artefacts
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 176/176 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.59.0-dev` : premier essai bloque par l'acces NuGet du bac a sable (`NU1301`), second essai reussi avec autorisation reseau.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.59.0-dev-win-x64-clean-20260711-172122`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- SHA256 `NovaBrowser.WinUI.dll` : `660eae3bcb3ceb5aa01e8c335e4b4bf7e76a604b6b04c204fcd30cc22f4fa38b`.
+- `scripts\build-installer-netfx.ps1 -Version 0.59.0-dev -CleanArtifactDir artifacts\clean-test\NovaBrowser-0.59.0-dev-win-x64-clean-20260711-172122` : reussi, 0 avertissement/erreur.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.59.0-dev-win-x64.exe`.
+- SHA256 installateur : `65d6456a20b1ab1af47cf1394c35cb452244701a7c0aa566d2260b22cd3a2dd9`.
+
+### Note
+
+- L'executable n'est pas signe Authenticode ; Windows peut afficher `Editeur inconnu`.
+
+**Version :** `0.59.0-dev`.
+
+## 2026-07-11 — 0.59.1-dev : correction critique de la barre de favoris
+
+L'utilisateur signale qu'apres l'import incomplet de Chrome, il a voulu ajouter YouTube en favori et que le favori n'apparait nulle part, notamment pas dans la barre des favoris. Diagnostic : ce n'est pas acceptable pour une fonction centrale de navigateur.
+
+### Cause
+
+- La barre des favoris rendait uniquement les 18 premiers elements du dossier `Barre des favoris`.
+- Un favori ajoute apres une importation pouvait donc etre bien enregistre dans `bookmarks.pulse`, mais invisible dans la barre.
+- Les tests existants ne couvraient pas ce comportement.
+
+### Correction
+
+- Suppression de la limite arbitraire `.Take(18)` dans `MainWindow.Bookmarks.cs`.
+- Ajout d'un `BookmarksBarScrollViewer` nomme dans `MainWindow.xaml`.
+- `BookmarkStore.AddOrUpdateUrl` retourne maintenant le `BookmarkNode` sauvegarde.
+- Apres ajout dans la barre, Nova Browser appelle `RevealBookmarkInBar(saved.Id)` pour amener le favori visible.
+- Message utilisateur clarifie : `Favori ajoute dans la barre des favoris.`
+- Ajout de `NovaBrowser.Tests/BookmarkBarRegressionTests.cs` pour empecher le retour de cette limite cachee.
+- Passage de version source a `0.59.1-dev`. Log : `logs/2026-07-11-bookmark-bar-fix-0-59-1.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 178/178 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.59.1-dev` : premier essai bloque par l'acces NuGet du bac a sable (`NU1301`), second essai reussi avec autorisation reseau.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.59.1-dev-win-x64-clean-20260711-174419`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- SHA256 `NovaBrowser.WinUI.dll` : `00bd80a12d9494facf218482f0a52c902dcf3145061bbdc9e9f9ffd9184f2bbe`.
+- `scripts\build-installer-netfx.ps1 -Version 0.59.1-dev -CleanArtifactDir artifacts\clean-test\NovaBrowser-0.59.1-dev-win-x64-clean-20260711-174419` : reussi, 0 avertissement/erreur.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.59.1-dev-win-x64.exe`.
+- SHA256 installateur : `6567c983e005118949131f0bedfddcf8f85472989121dea7f45d770c3de40a43`.
+
+### Suite necessaire
+
+- Faire une passe dediee sur l'import Chrome reel pour comparer le nombre de favoris source avec le nombre importe dans Nova et comprendre les favoris manquants.
+
+**Version :** `0.59.1-dev`.
+
+## 2026-07-11 — 0.59.2-dev : gestion des favoris, titres invisibles et debordement de barre
+
+L'utilisateur veut s'occuper de la gestion des favoris : pouvoir tout selectionner/supprimer pour tester une importation HTML Chrome, conserver des favoris Google sans nom visible, et remplacer l'ascenseur de la barre des favoris par un menu de debordement plus proche d'un navigateur classique.
+
+### Changements
+
+- Gestionnaire de favoris :
+  - selection multiple activee dans `BookmarksList` ;
+  - bouton `Tout selectionner` ;
+  - bouton `Supprimer selection` avec confirmation ;
+  - bouton `Vider` avec confirmation pour supprimer tous les favoris utilisateur et repartir sur une importation propre.
+- Stockage :
+  - `BookmarkStore.RemoveNodes` supprime plusieurs noeuds avec leurs sous-dossiers ;
+  - `BookmarkStore.ClearUserBookmarks` conserve les racines `Barre des favoris` et `Autres favoris` ;
+  - sauvegarde locale avant suppression massive ou vidage complet.
+- Noms invisibles / favoris icone seule :
+  - ajout de `BookmarkStore.InvisibleTitle` (`\u200B`) ;
+  - les titres vides de favoris URL deviennent des favoris icone seule au lieu d'etre remplaces par le domaine ;
+  - l'ajout/modification propose `Nom invisible (icone seule dans la barre)` ;
+  - le gestionnaire et les menus affichent `(icone seule)` pour garder ces favoris manipulables.
+- Barre des favoris :
+  - suppression du `ScrollViewer` horizontal ;
+  - rendu plus compact des dossiers/favicons pour se rapprocher d'une barre Chrome classique ;
+  - suppression de l'icone decorative en debut de barre ;
+  - estimation de largeur par favori, avec traitement compact des favoris icone seule ;
+  - ajout d'un bouton de debordement `»` pour les favoris supplementaires ;
+  - les dossiers et favoris du debordement restent ouvrables.
+- Tests de regression source mis a jour pour couvrir l'absence d'ascenseur, le debordement, la selection multiple et les titres invisibles.
+- Passage de version source a `0.59.2-dev`. Log : `logs/2026-07-11-bookmarks-management-0-59-2.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 180/180 tests verts.
+- Premier `scripts\build-winui.ps1` bloque par l'acces NuGet du bac a sable (`NU1301`).
+- `scripts\build-winui.ps1` relance avec autorisation reseau : reussi, 0 avertissement/erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.59.2-dev` : premier essai bloque par l'acces NuGet du bac a sable (`NU1301`), second essai reussi avec autorisation reseau.
+- Artefact propre : `artifacts\clean-test\NovaBrowser-0.59.2-dev-win-x64-clean-20260711-180227`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- SHA256 `NovaBrowser.WinUI.dll` : `cd831d3f0e8c390a4ba1debfb5ee70376f2d51f15bb3bbf83f8d36aaf4fdfcbd`.
+- `scripts\build-installer-netfx.ps1 -Version 0.59.2-dev -CleanArtifactDir artifacts\clean-test\NovaBrowser-0.59.2-dev-win-x64-clean-20260711-180227` : reussi, 0 avertissement/erreur.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.59.2-dev-win-x64.exe`.
+- SHA256 installateur : `7fe92088e38b153c95d8b2e215bd7731bb5e0e42868a354762fcda7aeb8f2d9a`.
+
+**Version :** `0.59.2-dev`.
+
+## 2026-07-11 — 0.59.3-dev : barre de favoris compacte type navigateur
+
+Apres comparaison visuelle avec Google Chrome, l'utilisateur precise que la barre Nova reste trop eloignee d'une barre de favoris normale. Diagnostic : le rendu Nova etait encore trop proche d'une zone de controles d'application, avec elements trop larges, hauteur trop importante, icone decorative au debut et calcul de debordement trop grossier.
+
+### Changements
+
+- Hauteur de barre reduite a 26 px.
+- Suppression de l'icone decorative fixe en debut de barre.
+- Espacement horizontal reduit.
+- Boutons de favoris rendus plus plats et compacts :
+  - hauteur 22 px ;
+  - padding reduit ;
+  - coins moins arrondis ;
+  - largeur minimale supprimee ;
+  - favoris icone seule rendus sans texte ni espace vide.
+- Calcul de debordement affine par favori :
+  - favoris icone seule tres compacts ;
+  - dossiers/favoris nommes estimes selon le titre ;
+  - reserve du bouton de debordement seulement quand il reste des elements.
+- Bouton de debordement rendu en `»`.
+- Passage de version source a `0.59.3-dev`. Log : `logs/2026-07-11-bookmarks-bar-chrome-like-0-59-3.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 180 tests reussis.
+- `scripts\build-winui.ps1` : build WinUI reussi, 0 avertissement, 0 erreur.
+- Artifact propre genere : `artifacts\clean-test\NovaBrowser-0.59.3-dev-win-x64-clean-20260711-181720`.
+- SHA256 executable propre : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- Installateur genere : `artifacts\installer\NovaBrowserSetup-0.59.3-dev-win-x64.exe`.
+- SHA256 installateur : `e7e8127b773d16e7c81861b281a92f78a3a9c2ed8b4155217077aab220635c4d`.
+
+**Version :** `0.59.3-dev`.
+
+## 2026-07-11 — 0.59.4-dev : fusion des dossiers de favoris importes
+
+Apres explication de la barre des favoris "doublee", correction de la cause cote import : Nova dedoublonnait les URL, mais recreait encore des dossiers homonymes au meme niveau (`Collection`, `DL`, `Games`, etc.), ce qui pouvait laisser des dossiers vides ou partiels dans le gestionnaire.
+
+### Changements
+
+- `BookmarkStore.AddImportItems` reutilise desormais un dossier existant de meme nom au meme parent.
+- Les dossiers crees pendant un import puis restes vides parce que toutes leurs URL existaient deja sont retires immediatement.
+- Ajout de `MergeSiblingImportFolders` apres fusion/remplacement d'import pour reparer les doublons de dossiers freres crees par d'anciennes versions.
+- Le test de regression des favoris verifie que l'import contient bien cette protection contre les dossiers homonymes.
+- Passage de version source a `0.59.4-dev`. Log : `logs/2026-07-11-bookmark-import-folder-merge-0-59-4.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 181 tests reussis.
+- `scripts\build-winui.ps1` : build WinUI reussi, 0 avertissement, 0 erreur.
+- Artifact propre genere : `artifacts\clean-test\NovaBrowser-0.59.4-dev-win-x64-clean-20260711-182847`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- SHA256 `NovaBrowser.WinUI.dll` : `f9bb2c538be83271803ca02e2cd74211e7e5314dda0d8845c854921eb85e5236`.
+- Installateur genere : `artifacts\installer\NovaBrowserSetup-0.59.4-dev-win-x64.exe`.
+- SHA256 installateur : `acaf12f5ff6de494c86d18ef4760c3aee34ed31e18e273291dd921922bd0afd4`.
+
+**Version :** `0.59.4-dev`.
+
+## 2026-07-11 — 0.59.5-dev : nettoyage favoris au demarrage et runtime autonome
+
+Apres installation de `0.59.4-dev`, l'utilisateur signale deux problemes reels : les doublons de favoris sont encore visibles et le raccourci bureau affiche une erreur demandant d'installer le .NET Desktop Runtime. Diagnostic : `0.59.4-dev` ne reparait les doublons qu'au prochain import, pas au demarrage, et `build-clean-test-artifact.ps1` faisait un `Build` framework-dependent au lieu d'un `Publish` self-contained.
+
+### Changements
+
+- Ajout de `BookmarkStore.RepairImportedFolderDuplicates()`.
+- Le demarrage WinUI appelle cette reparation juste apres creation du `BookmarkStore`.
+- La reparation fusionne les dossiers freres homonymes, retire les URL dupliquees et cree une sauvegarde `before-bookmark-duplicate-repair` avant ecriture.
+- `scripts\build-clean-test-artifact.ps1` utilise desormais `/t:Publish` avec `SelfContained=true`, `PublishSelfContained=true` et `PublishDir`.
+- Tests de regression ajoutes pour verrouiller le nettoyage au demarrage et le publish autonome.
+- Passage de version source a `0.59.5-dev`. Log : `logs/2026-07-11-bookmark-runtime-fix-0-59-5.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 183 tests reussis.
+- `scripts\build-winui.ps1` : build WinUI reussi, 0 avertissement, 0 erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.59.5-dev` : publish autonome reussi, 0 avertissement, 0 erreur.
+- Artifact propre genere : `artifacts\clean-test\NovaBrowser-0.59.5-dev-win-x64-clean-20260711-184021`.
+- Verification runtime local : `coreclr.dll`, `hostfxr.dll`, `hostpolicy.dll` presents dans le dossier `app`.
+- `NovaBrowser.WinUI.runtimeconfig.json` contient `includedFrameworks` avec `Microsoft.NETCore.App` `8.0.28`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- SHA256 `NovaBrowser.WinUI.dll` : `201b47d69e2cdde73c23adc46a74bf146ffb7937b4833b297259cf085f93ee31`.
+- Installateur genere : `artifacts\installer\NovaBrowserSetup-0.59.5-dev-win-x64.exe`.
+- SHA256 installateur : `5bbb302b1577b90c9baea92db3d92dc6f515c513d36826a7c7b78f1cc9f13bc9`.
+
+**Version :** `0.59.5-dev`.
+
+## 2026-07-11 — 0.59.6-dev : ressources XAML WinUI embarquees
+
+Apres installation de `0.59.5-dev`, l'utilisateur signale que l'application ne se lance toujours pas. Diagnostic : le paquet etait bien autonome cote .NET, mais la publication WinUI n'embarquait pas toutes les ressources XAML applicatives necessaires.
+
+### Changements
+
+- Identification du fichier `NovaBrowser.WinUI.pri` genere dans la sortie WinUI mais absent de l'artifact publie.
+- `scripts\build-clean-test-artifact.ps1` copie maintenant `App.xbf`, `MainWindow.xbf`, `NovaAppWindow.xbf` et `NovaBrowser.WinUI.pri` dans le dossier `app` final.
+- Le script echoue explicitement si le fichier de ressources WinUI applicatif est introuvable.
+- Ajout d'un mode `-NoRestore` pour permettre une generation locale quand NuGet est indisponible mais que le cache est deja restaure.
+- Le test de regression des favoris verrouille aussi la presence de `NovaBrowser.WinUI.pri` dans le script de packaging.
+- Passage de version source a `0.59.6-dev`. Log : `logs/2026-07-11-xaml-resource-packaging-0-59-6.md`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` : 183 tests reussis.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.59.6-dev -NoRestore` : publish autonome reussi, 0 avertissement, 0 erreur.
+- Artifact propre genere : `artifacts\clean-test\NovaBrowser-0.59.6-dev-win-x64-clean-20260711-185340`.
+- Verification artifact : `App.xbf`, `MainWindow.xbf`, `NovaAppWindow.xbf`, `NovaBrowser.WinUI.pri`, `coreclr.dll`, `hostfxr.dll`, `hostpolicy.dll` presents dans le dossier `app`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- SHA256 `NovaBrowser.WinUI.dll` : `2c32e6c6e5495552fe7bba017f566381675c9ff9992d2687ae1ee20a6e2ca2b3`.
+- Installateur genere : `artifacts\installer\NovaBrowserSetup-0.59.6-dev-win-x64.exe`.
+- SHA256 installateur : `4094dd88a0247c084e79b5742291c7366a4566b1baf7197b2ec493bfa4c438c3`.
+- Verification du zip embarque par l'installateur : les fichiers XAML, le `.pri` applicatif et le runtime autonome sont presents.
+- Limite : le lancement GUI final n'a pas pu etre relance apres correction complete, car l'environnement a refuse l'autorisation d'execution graphique.
+
+**Version :** `0.59.6-dev`.
+
+## 2026-07-11 (suite) - audit comparatif vs autres navigateurs + 4 chantiers greenlites
+
+### Contexte
+
+Apres un audit honnete comparant Nova Browser a Chrome/Firefox/Edge/Brave (points forts : coffre souverain Argon2id/AES-GCM, anti-tracking multi-couche avec CNAME uncloaking ; points faibles : zero extension assume par choix, couverture de tests inegale, pas de vrai theme clair/sombre, accessibilite partielle, pas d'epinglage/glisser-deposer d'onglets, pas de mise a jour auto), l'utilisateur a tranche point par point : extensions refusees definitivement (surface d'attaque, evite l'ecosysteme Google) ; mise a jour auto deprioritisee (utilisateur unique, pas de serveur/distribution) ; export favoris multi-format mis en attente ; 4 chantiers greenlites d'un coup : tests, onglets, theme, accessibilite.
+
+### Changements
+
+- **Tests** : ajout de `ParameterCleanerModuleTests.cs`, `HttpsEnforcerModuleTests.cs`, `CosmeticFilterParserTests.cs`, `CosmeticFilterModuleTests.cs`, `NetworkBlockerModuleTests.cs`, `CnameUncloakerModuleTests.cs`. Les fichiers source correspondants (`ParameterCleanerModule`, `HttpsEnforcerModule`, `CosmeticFilterModule/Parser/SeedSelectors`, `NetworkBlockerModule/SeedList/FilterListManager`, `CnameUncloakerModule/CnameResolver`) sont maintenant compiles dans `NovaBrowser.Tests.csproj`. Tests limites volontairement aux chemins sans I/O reseau/disque reel (LoadAsync de NetworkBlocker/CosmeticFilter et la resolution DNS reelle de CnameResolver ne sont pas exercees, pour rester deterministe et hors-ligne).
+- **Onglets - epinglage + glisser-deposer** : `BrowserTabState.Pinned`/`SavedTab.Pinned` ajoutes. Epingler compacte l'onglet en icone seule (reutilise le mode `compact` deja existant de `TabHeaderContent`) et le regroupe en tete de `_tabs`. Glisser-deposer natif sur la barre horizontale (`TabView.CanReorderTabs="True"`, resynchronise `_tabs` via `INotifyCollectionChanged` sur `TabItems`) ; glisser-deposer manuel sur le rail vertical (`DragStarting`/`DragOver`/`Drop` sur chaque bouton). Regle commune : impossible de melanger epingles et non-epingles par glisser-deposer (clamp automatique).
+- **Theme clair/sombre/systeme** : `UiSettings.ThemeMode` (`dark` par defaut = identite historique inchangee). Palette claire ajoutee en parallele de la palette sombre existante dans `ApplyAccessibilitySettings`. Mode `system` lit `HKCU\...\Personalize\AppsUseLightTheme` (resolu une fois par appel, pas d'ecoute live du changement OS en cours de session). Le contraste renforce reste prioritaire sur le theme. Selecteur ajoute dans Parametres > Apparence.
+- **Accessibilite** : `AutomationProperties.Name` ajoute sur les boutons icone-seule qui en manquaient (Vault import/export/actualiser/ajouter, Site Control actualiser, Sessions actualiser) et sur les onglets (`TabViewItem` + boutons du rail vertical), pour que les onglets epingles (icone seule) restent lisibles au lecteur d'ecran. Reduction des animations : verifie qu'aucun Storyboard/Transition custom n'existe dans le code natif (seule la page d'accueil HTML avait deja une vraie regle CSS conditionnelle, conservee telle quelle) — pas de wiring natif supplementaire invente sans preuve de motion reelle a couper.
+- Passage de version a `0.60.0-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 233 tests reussis (etait 191 avant les 6 nouveaux fichiers de test).
+- `build-winui.cmd` : 0 avertissement, 0 erreur (verifie 3 fois, une par etape).
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.0-dev` : publish autonome reussi.
+- `scripts\build-installer.ps1 -Version 0.60.0-dev` : installateur genere avec succes.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.60.0-dev-win-x64.exe`.
+- SHA256 installateur : `6035a9a6a46a5e48254f7b4f736e726152946fb3318350406fb579b6ac06b804`.
+- **Non teste manuellement par l'IA** : glisser-deposer d'onglets (horizontal et vertical), rendu visuel du theme clair et du theme systeme, lecture reelle au lecteur d'ecran — necessite une confirmation utilisateur sur poste reel (coherent avec [[feedback_ui_automation_profile_risk]] : pas d'automatisation de clics/drag au-dela des tests unitaires).
+
+**Version :** `0.60.0-dev`.
+
+## 2026-07-11 (suite) - verrouillage automatique pendant une lecture video/audio (0.60.1-dev)
+
+### Contexte
+
+L'utilisateur regardait une video dans un onglet (sans toucher au clavier/a la souris, occupe a autre chose a cote) et le navigateur s'est verrouille automatiquement (`SessionTimer_Tick` purge la cle du coffre apres `SessionTimeoutMinutes` d'inactivite clavier/souris, cf. `MainWindow.Profile.cs`). Regarder une video est un usage actif meme sans interaction clavier/souris — meme principe que "empecher la mise en veille" pendant une lecture, deja standard cote OS/lecteurs video.
+
+### Changements
+
+- `SessionTimer_Tick` (`MainWindow.Profile.cs`) verifie desormais `IsAnyTabPlayingAudio()` avant de verrouiller : si un onglet (actif OU en arriere-plan) a `CoreWebView2.IsDocumentPlayingAudio == true`, le timer est simplement redemarre au lieu de verrouiller.
+- `IsAnyTabPlayingAudio()` : nouvelle methode, parcourt `_tabs` et lit la propriete native WebView2 `IsDocumentPlayingAudio` (aucun script injecte, aucune dependance JS par page).
+- Limite assumee : une video totalement muette ou sans piste audio ne suspend pas le verrouillage (meme logique que le signal "lecture audio" standard des navigateurs/OS, pas une detection visuelle des pixels).
+- Passage de version a `0.60.1-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 233 tests reussis (inchange, correctif hors perimetre testable — depend de CoreWebView2 reel).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.60.1-dev-win-x64.exe`.
+- SHA256 installateur : `1341082c2850064c60920ba18e47a4c6e0da1c96d6dbe5a42f91db25bc6c8127`.
+- **Non teste manuellement par l'IA** : necessite de lancer une vraie lecture video/audio dans l'app et de verifier que le verrouillage n'intervient plus — a confirmer par l'utilisateur.
+
+**Version :** `0.60.1-dev`.
+
+## 2026-07-11 (suite) - raccourcis nouvel onglet toujours accessibles depuis la page (0.60.2-dev)
+
+### Contexte
+
+L'utilisateur a montre par capture d'ecran que sa page `pulse://accueil` n'affichait aucun raccourci ni bouton "+", le forcant a editer une zone de texte brute "Nom | URL" dans Parametres > Apparence — pas pratique pour un utilisateur de base, contrairement a Chrome ou le "+" est toujours visible. Diagnostic : `NewTabShortcutsHtml()` (`MainWindow.Navigation.cs`) retournait une chaine vide des que `UiSettings.NewTabShortcutsVisible` etait desactive (cas de l'utilisateur) OU des que la liste de raccourcis etait vide — dans les deux cas, meme le bouton "+" disparaissait, sans aucun moyen de revenir en arriere depuis la page.
+
+### Changements
+
+- `NewTabShortcutsHtml()` separe maintenant deux notions : `showExisting` (afficher la liste = toggle ON et liste non vide) et `canAddMore` (< 12 raccourcis). Le bouton "+" (`canAddMore`) s'affiche desormais **independamment** du toggle et du nombre de raccourcis existants — un utilisateur n'est plus jamais bloque sans moyen d'ajouter un raccourci depuis la page elle-meme.
+- Ajout d'un texte explicatif sous le toggle "Afficher les raccourcis" dans Parametres > Apparence : precise que la desactivation masque seulement la liste, pas le bouton d'ajout rapide.
+- Passage de version a `0.60.2-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 233 tests reussis (inchange, correctif de rendu HTML non couvert par les tests actuels).
+- `build-winui.cmd` : 0 avertissement, 0 erreur.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.60.2-dev-win-x64.exe`.
+- SHA256 installateur : `0a94cc6d937651b34c9c85c7b4e615c5a9b5a485dea052a252d9d8638018e233`.
+- **Non teste manuellement par l'IA** : necessite de verifier visuellement sur `pulse://accueil` (toggle desactive puis reactive, liste vide) que le bouton "+" apparait bien dans tous les cas — a confirmer par l'utilisateur.
+
+**Version :** `0.60.2-dev`.
+
+## 2026-07-12 - UX plein ecran, raccourcis, accessibilite et champ d'accueil (0.60.3-dev)
+
+### Contexte
+
+L'utilisateur a signale, captures a l'appui, un lot UX prioritaire dans
+`NovaBrowser.WinUI` : anciens raccourcis rapides encore presents dans les
+parametres, menus trop centres en plein ecran, accessibilite trop pauvre,
+section Navigation trop limitee et peu claire sur `Ctrl+K`, barre de favoris
+trop compacte, champ de recherche de l'accueil rempli au demarrage avec une
+valeur ressemblant a un PIN, et mode plein ecran qui gardait une chrome trop
+lourde.
+
+### Changements
+
+- Suppression des raccourcis rapides par defaut `Accueil`, `Google`, `YouTube`
+  et `GitHub` pour les nouveaux profils.
+- Migration douce des profils existants : si la liste contient exactement ces
+  quatre anciens raccourcis par defaut, elle est videe et le toggle reste
+  desactive ; les raccourcis personnalises ne sont pas touches.
+- Correction confidentialite de la barre d'adresse : `pulse://accueil` est
+  maintenant affiche comme un champ vide, pour eviter de revoir une ancienne
+  saisie ou un fragment de PIN au demarrage.
+- Correction de la page d'accueil : le champ de recherche HTML est force a
+  `value=""` et vide sur `DOMContentLoaded`/`pageshow`, avec autocomplete et
+  autocorrect desactives.
+- Refonte du mode plein ecran : la chrome principale, les onglets horizontaux,
+  la barre de favoris et le rail vertical se replient ; une barre Nova compacte
+  reste disponible avec nouvel onglet, accueil, sortie plein ecran et menu.
+- En plein ecran, la palette de commande est ancree plus pres du bord droit et
+  reduite, au lieu de rester comme un grand panneau centre.
+- Parametres > Navigation enrichi : explication claire de `Ctrl+K`, actions
+  rapides vers la palette, le demarrage et l'accessibilite.
+- Parametres > Accessibilite enrichi : descriptions des effets contraste,
+  texte, reduction de mouvement, focus clavier et rappel des raccourcis clavier
+  utiles.
+- Barre de favoris legerement aeree : hauteur 28 px, espacement horizontal
+  augmente, boutons 24 px et padding legerement plus confortable.
+- Passage de version a `0.60.3-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` :
+  233 tests reussis.
+- `build-winui.cmd` : restore/build WinUI reussis apres autorisation reseau
+  NuGet, 0 avertissement, 0 erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.3-dev` : publish
+  autonome reussi apres autorisation reseau NuGet.
+- Artefact propre :
+  `artifacts\clean-test\NovaBrowser-0.60.3-dev-win-x64-clean-20260712-133244`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- `scripts\build-installer.ps1 -Version 0.60.3-dev` : installateur genere
+  apres autorisation reseau NuGet pour le projet setup.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.60.3-dev-win-x64.exe`.
+- Taille installateur : 69 019 786 octets.
+- SHA256 installateur :
+  `eb1fed96bb4858e3f7ae8d56d24c7676b8bae052aac4ac6bf8cbcd514a435092`.
+- Non teste manuellement par l'IA : rendu visuel du plein ecran, position des
+  menus en conditions multi-ecran/plein ecran, lecture reelle au lecteur
+  d'ecran et confirmation que le champ d'accueil ne reprend plus l'ancien PIN
+  sur le poste utilisateur.
+
+**Version :** `0.60.3-dev`.
+
+## 2026-07-12 - Plein ecran immersif, champ d'accueil verrouille et personnalisation (0.60.4-dev)
+
+### Contexte
+
+Apres installation de `0.60.3-dev`, l'utilisateur a confirme que le champ de
+recherche de l'accueil pouvait encore contenir `9` apres connexion, que le mode
+plein ecran n'avait pas assez change visuellement, et que le reglage
+accessibilite "reduire les animations" n'etait pas assez pertinent en l'etat.
+Il a aussi ouvert le chantier plus large de la personnalisation du navigateur.
+
+### Changements
+
+- Correction renforcee du champ de recherche de `pulse://accueil` : champ HTML
+  cree vide, temporairement en lecture seule, autocomplete desactive, purge JS
+  au chargement/pageshow, puis purge cote WebView apres navigation.
+- Pendant l'ecran de connexion/profil, le `BrowserHost` ne recoit plus les
+  clics et la saisie clavier est renvoyee vers l'overlay de connexion ; une
+  purge du champ d'accueil est aussi declenchee apres saisie PIN et fermeture
+  de l'overlay.
+- Ajout du reglage `NewTabFocusSearchOnOpen`, desactive par defaut, pour ne pas
+  placer automatiquement le curseur dans la recherche d'accueil.
+- Refonte du plein ecran en mode auto-masque : barres hautes, favoris et rail
+  lateral sont caches ; une zone de survol en haut revele la barre compacte, et
+  une zone de survol a gauche revele le rail vertical quand il est actif.
+- Ajout du reglage `FullScreenAutoHideChrome`, active par defaut, dans
+  Parametres > Personnalisation.
+- Renommage de la section `Apparence` en `Personnalisation` et ajout de
+  controles visibles pour le comportement plein ecran et le focus du nouvel
+  onglet.
+- Clarification du libelle accessibilite : "Limiter les transitions visuelles"
+  remplace l'ancien message trop ambitieux sur les animations.
+- Passage de version a `0.60.4-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` :
+  233 tests reussis.
+- `build-winui.cmd` : restore/build WinUI reussis apres autorisation reseau
+  NuGet, 0 avertissement, 0 erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.4-dev` : publish
+  autonome reussi apres autorisation reseau NuGet.
+- Artefact propre :
+  `artifacts\clean-test\NovaBrowser-0.60.4-dev-win-x64-clean-20260712-135943`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- `scripts\build-installer.ps1 -Version 0.60.4-dev` : installateur genere
+  apres autorisation reseau NuGet pour le projet setup.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.60.4-dev-win-x64.exe`.
+- Taille installateur : 69 022 346 octets.
+- SHA256 installateur :
+  `277ec3ade9b1ffb15cca17114c74a8b6669c5eb260ba9614d8a632c81ea5dd2b`.
+- Non teste manuellement par l'IA : verification visuelle sur le poste
+  utilisateur que le champ d'accueil reste vide apres connexion et que le plein
+  ecran auto-masque correspond bien a l'usage attendu.
+
+**Version :** `0.60.4-dev`.
+
+## 2026-07-12 - Plein ecran video vraiment immersif (0.60.5-dev)
+
+### Contexte
+
+L'utilisateur a montre qu'une video YouTube en plein ecran gardait encore la
+barre d'adresse, la barre de favoris et le rail lateral visibles. Le probleme
+n'etait donc pas seulement un reglage de disposition : Nova ne reagissait pas
+au plein ecran demande par le contenu WebView2, et le mode obtenu ressemblait a
+une fenetre agrandie plutot qu'a un vrai plein ecran.
+
+### Changements
+
+- Ajout d'un etat distinct pour le plein ecran demande par une page web
+  (`_contentFullScreenCore`), separe du plein ecran Nova demande par
+  l'utilisateur.
+- Branchement de `CoreWebView2.ContainsFullScreenElementChanged` sur chaque
+  moteur WebView2 : quand YouTube ou une page video passe en plein ecran, Nova
+  bascule aussi la fenetre en `AppWindowPresenterKind.FullScreen`.
+- `ApplyFullScreenLayout()` utilise maintenant un etat immersif commun :
+  plein ecran Nova ou plein ecran contenu declenchent le meme masquage de
+  chrome.
+- En mode immersif, les onglets horizontaux, la barre de navigation, la barre de
+  favoris et le rail vertical permanent sont caches.
+- Les colonnes du rail vertical passent a zero en plein ecran pour que la page
+  occupe toute la surface ; le rail ne revient qu'au survol gauche, en overlay,
+  sans pousser la video.
+- Le dock haut reste masque par defaut et revient au survol haut, avec rappel
+  de l'adresse courante et commandes minimales.
+- `Echap` gere maintenant l'etat immersif commun : sortie du plein ecran contenu
+  si une page l'a demande, sinon sortie du plein ecran Nova.
+- Passage de version a `0.60.5-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` :
+  233 tests reussis.
+- `build-winui.cmd` : restore/build WinUI reussis apres autorisation reseau
+  NuGet, 0 avertissement, 0 erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.5-dev` : publish
+  autonome reussi apres autorisation reseau NuGet.
+- Artefact propre :
+  `artifacts\clean-test\NovaBrowser-0.60.5-dev-win-x64-clean-20260712-142233`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- `scripts\build-installer.ps1 -Version 0.60.5-dev` : installateur genere
+  apres autorisation reseau NuGet pour le projet setup.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.60.5-dev-win-x64.exe`.
+- SHA256 installateur :
+  `4f4552dcdb1010843b6a097eb5bc4b03b1d76834206fe3dd9a920ede3a81271b`.
+- Non teste manuellement par l'IA : rendu visuel reel du plein ecran YouTube
+  sur le poste utilisateur.
+
+**Version :** `0.60.5-dev`.
+
+## 2026-07-12 - Restauration apres plein ecran video (0.60.6-dev)
+
+### Contexte
+
+L'utilisateur a confirme que le plein ecran video de `0.60.5-dev` masquait bien
+la chrome Nova et revelait correctement le dock haut et le rail gauche au
+survol. Il a en revanche signale qu'en quittant le plein ecran YouTube, Nova
+restait en plein ecran alors que le navigateur devait revenir a son etat
+precedent.
+
+### Changements
+
+- Ajout d'un snapshot de l'etat de presentation avant entree en plein ecran
+  contenu : `AppWindowPresenterKind` et, si applicable, etat
+  `OverlappedPresenterState`.
+- A l'entree en plein ecran contenu, Nova memorise l'etat precedent uniquement
+  au premier passage.
+- A la sortie du plein ecran contenu, Nova restaure l'etat precedent :
+  fenetre normale, maximisee, ou plein ecran Nova si celui-ci etait deja actif.
+- La fermeture d'un onglet contenant le plein ecran utilise la meme restauration
+  au lieu de forcer simplement `Overlapped`.
+- Passage de version source a `0.60.6-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` :
+  233 tests reussis.
+- `build-winui.cmd` : bloque par `NU1301` dans le sandbox Codex (acces NuGet
+  refuse). Relance hors sandbox refusee par la limite d'usage de
+  l'environnement Codex ce jour-la.
+- Reprise en session Claude Code (meme jour, environnement different) :
+  restore/build MSBuild (via `vswhere` + Visual Studio 2022) reussis sans
+  restriction reseau. Le blocage NU1301/NU1101 rencontre par Codex etait donc
+  une limite d'environnement (sandbox/quota reseau), pas un defaut de code.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.6-dev` : publish
+  autonome reussi.
+- Artefact propre :
+  `artifacts\clean-test\NovaBrowser-0.60.6-dev-win-x64-clean-20260712-144422`.
+- SHA256 exe hote : `2695bcae6456a5d3f9aaed2fa4c8cc9738ac524cbd7862fd035e668144ac33a0`.
+- `scripts\build-installer.ps1 -Version 0.60.6-dev` : installateur genere.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.60.6-dev-win-x64.exe`.
+- SHA256 installateur :
+  `2dd68207a0c192a16dfd5ff1299b2177ab3909176b6920981c52f0d16bc84dd3`.
+- Non teste manuellement par l'IA : sortie reelle du plein ecran YouTube dans
+  l'application installee (pas de pilotage UI possible dans cette session).
+
+**Version :** `0.60.6-dev`.
+
+## 2026-07-12 - Deux correctifs plein ecran video (0.60.7-dev)
+
+L'utilisateur a teste `0.60.6-dev` et confirme que les DEUX bugs persistent :
+fenetre restant en plein ecran a la sortie du plein ecran video, et barre
+superieure immersive qui clignote au survol au lieu de rester affichee.
+
+### Diagnostic
+
+Relecture complete de la logique 0.60.6 : correcte sur le papier, la cause la
+plus probable pour le bug de restauration est que l'evenement WinRT natif
+`ContainsFullScreenElementChanged` de WebView2 ne se declenche pas de facon
+fiable a la sortie du plein ecran (comportement connu comme capricieux selon
+les versions du runtime WebView2). Pour le clignotement : la zone de survol
+10px (`FullScreenTopRevealZone`) reste visible en permanence SOUS la barre
+44px une fois celle-ci affichee ; si le pointeur ne bouge pas, WinUI ne
+reassigne pas immediatement Entered/Exited entre les deux elements superposes,
+et le `Collapsed` instantane sur le premier `PointerExited` fait disparaitre
+la barre avant confirmation du survol reel dessus.
+
+### Changements
+
+- Signal de sortie de plein ecran redondant, independant de l'evenement WinRT :
+  listener JS `fullscreenchange` injecte sur chaque page
+  (`RegisterFullScreenExitMonitorAsync`), previent le C# par `postMessage`.
+  Traite par `HandleContentFullScreenExitSignal`, idempotent avec le chemin
+  existant.
+- Masquage differe (350 ms, `DispatcherTimer`) des barres immersives au lieu
+  d'un `Collapsed` instantane, pour la barre superieure ET le rail d'onglets
+  verticaux (qui n'avait meme pas de `PointerEntered` cable sur lui-meme).
+- Passage de version source a `0.60.7-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 233 tests
+  reussis (aucun test ne couvre le comportement WinUI/WebView2 reel).
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.7-dev` : build MSBuild
+  reussi, 0 avertissement, 0 erreur.
+- Artefact propre :
+  `artifacts\clean-test\NovaBrowser-0.60.7-dev-win-x64-clean-20260712-151018`.
+- `scripts\build-installer.ps1 -Version 0.60.7-dev` : installateur genere.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.60.7-dev-win-x64.exe`.
+- SHA256 installateur :
+  `ee1049af34e1c524a0a5cbabb9b4a4621794af7e89f08429dbeaaf5e0964aef3`.
+
+### Limite
+
+- Non teste manuellement par l'IA : aucun outil de pilotage UI (souris/clavier
+  reel) disponible dans cette session. Le correctif du clignotement repose sur
+  une explication plausible et standard (hysteresis), non observee en
+  conditions reelles. Le signal JS redondant ne resoudra le bug de
+  restauration QUE si la cause est bien la fiabilite de l'evenement WinRT ; si
+  la fenetre reste plein ecran pour une autre raison (ex. `SetPresenter`
+  silencieusement ignore par Windows juste apres `FullScreen`), ce correctif
+  ne suffira pas et il faudra un retour utilisateur precis (quelle methode de
+  sortie est utilisee : bouton du lecteur video, Echap, bouton Nova ?).
+
+### Retour utilisateur
+
+- L'utilisateur confirme que cette session n'a pas atteint ce qu'il voulait
+  (correctif reellement verifie/fonctionnel), sans donner de detail sur si
+  `0.60.7-dev` a ete retestee concretement ou si le constat porte sur
+  l'absence de verification live pendant la session elle-meme. A clarifier
+  au prochain retour avant de tenter un nouveau correctif speculatif : quelle
+  methode de sortie de plein ecran a ete utilisee, et lequel des deux
+  symptomes (fenetre bloquee / barre qui clignote) persiste encore.
+- Le fond du probleme reste **non resolu et non confirme** cote utilisateur.
+  Les correctifs de ce log restent dans le code mais ne doivent pas etre
+  presentes comme une resolution acquise tant qu'un retour utilisateur positif
+  n'est pas obtenu.
+
+**Version :** `0.60.7-dev` (correctifs non confirmes par l'utilisateur).
+
+## 2026-07-12 - Correctif rafraichissement raccourci nouvel onglet (0.60.8-dev)
+
+L'utilisateur a signale, separement des bugs plein ecran, que le bouton
+"Ajouter" de la page nouvel onglet ne fonctionnait pas : raccourci "Google"
+ajoute, "Enregistrer" clique, rien n'apparaissait.
+
+### Diagnostic
+
+Contrairement aux bugs plein ecran (cause non confirmee), celui-ci a une
+cause identifiee sans ambiguite par lecture de code :
+
+1. A l'ouverture, `tab.Address = "pulse://accueil"`.
+2. La page d'accueil est chargee via `CoreWebView2.NavigateToString(...)`
+   (pas une vraie navigation HTTP).
+3. Une fois cette "navigation" terminee, `sender.Source` vaut `"about:blank"`
+   (comportement WebView2 standard pour `NavigateToString`).
+   `BrowserView_NavigationCompleted` ecrasait `tab.Address` avec cette valeur
+   via `UpdateTab(...)` : `tab.Address` ne valait plus jamais
+   `"pulse://accueil"` une fois la page chargee (quasi immediat).
+4. `RefreshNovaHomePages()` (appelee apres ajout/edition/suppression d'un
+   raccourci) filtre les onglets sur `tab.Address == "pulse://accueil"` pour
+   savoir lesquels recharger — ce filtre ne trouvait donc plus jamais
+   l'onglet nouvel onglet ouvert. Le raccourci etait bien sauvegarde sur
+   disque (persistant), mais la page affichee ne se rafraichissait jamais.
+   Un nouvel onglet frais l'aurait montre normalement.
+
+Le code avait deja une correction partielle pour ce probleme, mais seulement
+sur la barre d'adresse visible (`SyncActiveAddressBar`), pas sur
+`tab.Address` lui-meme dont depend `RefreshNovaHomePages()`.
+
+### Changements
+
+- `BrowserView_NavigationCompleted` et `BrowserCore_DocumentTitleChanged`
+  (meme risque, second point d'entree) : preservent desormais `tab.Address`
+  logique quand la source reelle n'est pas une URL web
+  (`BookmarkStore.IsWebUrl`), au lieu de l'ecraser avec `"about:blank"`.
+- Passage de version source a `0.60.8-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 233 tests
+  reussis.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.8-dev` : build MSBuild
+  reussi, 0 avertissement, 0 erreur.
+- `scripts\build-installer.ps1 -Version 0.60.8-dev` : installateur genere.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.60.8-dev-win-x64.exe`.
+- SHA256 installateur :
+  `ca90a305e3c034de58d9f153ac16748ec325047e216c9db86710d40aad6ae43a`.
+- Non teste manuellement par l'IA (pas de pilotage UI disponible dans cette
+  session) : a confirmer par l'utilisateur en ajoutant un raccourci depuis un
+  onglet nouvel onglet deja ouvert.
+
+**Version :** `0.60.8-dev`.
+
+## 2026-07-12 - Deuxieme correctif raccourci nouvel onglet (0.60.9-dev)
+
+L'utilisateur a reteste 0.60.8-dev et confirme que le raccourci ajoute via
+le bouton "+" n'apparaissait toujours pas.
+
+### Diagnostic
+
+Second bug independant, confirme par lecture de code (pas une hypothese) :
+`NewTabShortcutsHtml()` ne rend la liste des raccourcis QUE si
+`_uiSettings.NewTabShortcutsVisible` vaut `true`. Ce reglage ("Afficher les
+raccourcis", Parametres > Apparence) vaut `false` par defaut
+(`UiSettings.Default()`). Ajouter un raccourci via le bouton "+" enregistrait
+bien la donnee, mais ne touchait jamais ce toggle : sur un profil ou il n'a
+jamais ete active manuellement, le raccourci restait invisible indefiniment,
+meme apres le correctif de rafraichissement de 0.60.8-dev.
+
+Deja documente comme piege partiel en 0.60.2-dev
+([[project_newtab_shortcuts_always_addable_0_60_2]]) : le bouton "+" avait
+ete rendu toujours visible independamment du toggle, mais sans jamais rendre
+le raccourci ajoute visible automatiquement — on pouvait ajouter, mais jamais
+voir ce qu'on venait d'ajouter.
+
+### Changements
+
+- `HandleNewTabShortcutMessageAsync` (branche ajout) : force
+  `_uiSettings.NewTabShortcutsVisible = true` juste apres l'ajout. Un
+  utilisateur qui utilise le bouton "+" veut evidemment voir le raccourci
+  qu'il cree. Le toggle Parametres reste synchronise
+  (`SaveNewTabShortcutSettings`).
+- Passage de version source a `0.60.9-dev`.
+
+### Verification
+
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj` : 233 tests
+  reussis.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.60.9-dev` +
+  `scripts\build-installer.ps1 -Version 0.60.9-dev` : reussis.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.60.9-dev-win-x64.exe`.
+- SHA256 installateur :
+  `94a571877305d5faf4fee39b0b1efb10afc501caf7193dc932cdd76d4821ec9d`.
+- Non teste manuellement par l'IA (pas de pilotage UI dans cette session).
+  Les deux bugs (0.60.8 + 0.60.9) ont des causes confirmees par lecture de
+  code, mais seul un test reel de l'utilisateur peut confirmer qu'aucun
+  troisieme obstacle ne subsiste.
+
+**Version :** `0.60.9-dev`.
+
+## 2026-07-12 - Suivi raccourcis nouvel onglet, sans correctif de code (0.60.9.1-dev)
+
+L'utilisateur confirme que 0.60.9-dev fonctionne (le raccourci "Google"
+ajoute apparait), mais signale que 3 raccourcis crees dans des sessions
+precedentes sont reapparus en meme temps, masques jusque-la par le meme bug
+de toggle desactive par defaut.
+
+**Ce n'est pas un bug** : ces 3 entrees existaient deja dans
+`_uiSettings.NewTabShortcuts` (donnees reelles de l'utilisateur), simplement
+jamais affichees tant que `NewTabShortcutsVisible` valait `false`. Une fois
+ce toggle active, toute la liste sauvegardee redevient visible — comportement
+normal d'un toggle "afficher/masquer la liste", pas seulement le dernier
+ajout.
+
+L'utilisateur a demande de "repartir de 0". Solution retenue apres question
+posee : le bouton "×" de suppression, deja fonctionnel sur la page nouvel
+onglet (meme correctif de rafraichissement que l'ajout, 0.60.8-dev),
+permet de supprimer les 3 raccourcis indesirables un par un. Aucun code
+supplementaire necessaire.
+
+**Pourquoi l'IA n'a PAS edite directement le fichier de profil reel** :
+`ui-settings.pulse` du profil actif aurait pu etre ecrase silencieusement si
+Nova Browser tournait encore pendant l'edition — action jugee trop risquee
+sur des donnees utilisateur reelles pour un gain nul face au bouton "×" deja
+operationnel. Voir [[feedback_ui_automation_profile_risk]] pour le meme
+principe de prudence applique au profil reel de l'utilisateur.
+
+Passage de version source a `0.60.9.1-dev` (demande explicite de
+l'utilisateur, purement pour le suivi — aucun changement de code fonctionnel
+dans cette entree). Build + installateur regeneres pour coherence :
+`artifacts\installer\NovaBrowserSetup-0.60.9.1-dev-win-x64.exe`
+(SHA256 `b23ab6906084bc535b862621a54961845fa6ceed8b580f9f316ae5c82a201116`).
+
+**Version :** `0.60.9.1-dev`.
+
+## 2026-07-12 - Suite : suppression reelle des raccourcis a la demande explicite
+
+Apres l'entree precedente, l'utilisateur a fait remarquer (a raison) que sa
+reponse "on va repartir de 0" voulait bien dire "fais-le toi-meme", et pas
+seulement "je vais cliquer sur × moi-meme" comme je l'avais suppose sans
+demander confirmation.
+
+**Action effectuee, avec precaution** :
+1. Verifie que Nova Browser etait bien completement ferme (process
+   `NovaBrowser.WinUI` absent) avant toute modification, pour eviter qu'une
+   sauvegarde de l'app n'ecrase le changement fait hors-app.
+2. Profil reel localise via `config.json`
+   (`%LOCALAPPDATA%\NovaBrowser\config.json`) : `CustomProfilePath` pointe
+   vers `E:\Documents\NovaBrowser\H.J` (PAS le dossier profil par defaut
+   sous `%LOCALAPPDATA%\NovaBrowser\profiles\default`, qui existe mais n'est
+   pas utilise ici). Fichier reel :
+   `E:\Documents\NovaBrowser\H.J\navigation\ui-settings.pulse`.
+3. Fichier dechiffre (DPAPI, `CurrentUser`, entropie
+   `"NovaBrowser.WinUI.v1"` — voir `NovaFile.cs`), confirmant les 4
+   raccourcis Google visibles sur la capture d'ecran utilisateur (2×
+   "Google", 2× "G", tous vers google.com/www.google.com).
+4. `NewTabShortcuts` remplace par `[]` (edition texte ciblee, PAS de
+   round-trip JSON complet via PowerShell, pour ne risquer d'alterer aucun
+   autre champ). `NewTabShortcutsVisible` laisse a `true` : les prochains
+   raccourcis ajoutes via "+" resteront visibles immediatement.
+5. Verification par re-dechiffrement : `NewTabShortcuts.Count == 0`,
+   `NewTabShortcutsVisible == true`.
+
+**Why:** l'action est irreversible sur des donnees utilisateur reelles hors
+du depot git — a ne refaire qu'apres verification explicite que
+l'application est fermee, et jamais sans confirmation prealable de
+l'utilisateur sur le fond (voir [[feedback_ui_automation_profile_risk]] pour
+le meme principe de prudence sur le profil reel).
+
+**How to apply:** si l'utilisateur redemande une action similaire sur ses
+donnees reelles (vault, favoris, historique...), toujours (1) demander/
+verifier que Nova est ferme, (2) localiser le VRAI profil via
+`config.json`->`CustomProfilePath` plutot que de supposer le dossier
+`profiles\default` par defaut, (3) preferer une edition textuelle ciblee a
+un round-trip de deserialisation/reserialisation complet pour minimiser le
+risque de corruption d'autres champs.
+
+Aucun changement de version necessaire (aucun code modifie) : reste
+`0.60.9.1-dev`.
+
+## 2026-07-12 - Dictee vocale accessibilite, 1ere des 3 fonctions discutees (0.61.0-dev)
+
+Suite a une discussion sur 3 nouvelles fonctions (traduction de pages,
+dictee vocale accessibilite, aide IA a la recherche), analyse de faisabilite
+faite AVANT tout code : les 3 sont possibles mais avec un niveau de risque
+tres different vis-a-vis du principe "aucune donnee envoyee vers un serveur
+externe" (AGENTS.md). Recommandation donnee a l'utilisateur : dictee vocale
+d'abord (100% locale, aucun compromis), puis traduction en local uniquement
+(pas de cloud), puis IA de recherche en dernier et seulement si un choix
+explicite local-vs-cloud est tranche. Confirme par l'utilisateur ("go").
+
+**Implemente : dictee vocale (bouton micro barre d'outils)**
+- Reconnaissance vocale via `Windows.Media.SpeechRecognition` (API Windows
+  on-device, disponible nativement sur net8.0-windows10.0.19041.0 sans
+  paquet supplementaire) : aucun son ni texte dicte n'est envoye a un
+  serveur externe, conforme au principe local-first du projet.
+- Nouveau fichier `NovaBrowser.WinUI/MainWindow.Dictation.cs` : logique de
+  capture (une seule requete `RecognizeAsync`, pas de session continue),
+  insertion du texte reconnu soit dans le champ WinUI actuellement focus
+  (ex. `AddressBox`), soit — si le focus est dans la page web — via
+  injection JS `NovaBrowser.WinUI/Dictation/DictationFillScript.js` sur
+  `document.activeElement` (input/textarea/contenteditable), insertion au
+  point du curseur (pas d'ecrasement).
+- Nouveau bouton `MicDictationButton` dans `NavigationToolbar`
+  (`MainWindow.xaml`), cache par defaut (`Visibility="Collapsed"`).
+- Nouveau reglage `AccessibilityVoiceDictationEnabled` (`UiSettings.cs`,
+  defaut `false`) + `ToggleSwitch` dans la section Accessibilite des
+  parametres : fonction strictement opt-in (acces micro = permission
+  sensible), le bouton n'apparait que si l'utilisateur l'active
+  explicitement. Cablage load/save dans `MainWindow.Settings.cs`, suit le
+  meme pattern que les autres reglages `AccessibilityX`.
+- Adresse pas navigee automatiquement apres dictee dans la barre d'adresse :
+  l'utilisateur confirme lui-meme (Entree/bouton Ouvrir), pour eviter une
+  mauvaise reconnaissance vocale qui ouvrirait un mauvais site.
+
+**Non fait / a savoir** :
+- PAS teste manuellement (pas de micro/speech pack disponible dans cet
+  environnement d'execution).
+- Compilation verifiee et reussie, mais UNIQUEMENT via le bon outil :
+  `dotnet build NovaBrowser.WinUI/NovaBrowser.WinUI.csproj` echoue
+  toujours ici (`MSB4062`, tache `Microsoft.Build.Packaging.Pri.Tasks.
+  ExpandPriContent` introuvable dans le SDK .NET CLI seul) — reproduit
+  a l'identique avec `git stash` (HEAD seul, code non modifie), donc
+  probleme d'environnement preexistant et sans rapport avec ce changement.
+  En revanche, `MSBuild.exe` de Visual Studio (celui deja utilise par
+  `scripts/build-clean-test-artifact.ps1` et `scripts/build-installer.ps1`
+  via `vswhere`) compile ce projet sans erreur : `/t:Restore` puis `/t:Build`
+  aboutissent proprement et produisent `NovaBrowser.WinUI.dll`. Conclusion :
+  ne jamais utiliser `dotnet build` en CLI seule sur ce projet WinUI3/MSIX
+  packaging-transitive — toujours passer par le MSBuild.exe localise via
+  `vswhere`, comme le font deja les scripts de build/installateur du depot.
+  Rien a installer, la toolchain est deja complete.
+- Pas de traitement du cas "aucun micro" / "aucun pack de langue installe" :
+  l'exception generique s'affiche dans `StatusText`, sans distinction fine
+  des causes (accepte comme suffisant pour une 1ere version).
+
+**Why :** le choix "100% local, opt-in" decoule directement du principe
+"aucune donnee personnelle envoyee sur un serveur externe" (AGENTS.md) et de
+la discussion prealable avec l'utilisateur — ne pas remplacer par une API
+cloud de dictee sans nouvelle discussion explicite.
+
+**How to apply :** pour les 2 fonctions restantes (traduction, IA
+recherche), reprendre le meme reflexe : verifier qu'une option 100% locale
+existe avant d'implementer, et si seul le cloud est realiste, le proposer
+comme opt-in explicite et desactive par defaut, jamais comme comportement
+silencieux.
+
+Passage de version source a `0.61.0-dev` (nouvelle fonction globale,
+2eme chiffre). Compilation confirmee via MSBuild.exe VS ; pas d'installateur
+genere pour cette version (pas de test manuel du micro effectue).
+
+**Version :** `0.61.0-dev`.
+
+## 2026-07-12 - Traduction locale de pages, 2e des 3 fonctions (0.62.0-dev)
+
+Suite au feu vert complet de l'utilisateur ("Go" sur les 3 fonctions +
+autorisation d'installer ce qu'il faut + installateur final a generer),
+implementation de la traduction de pages 100% locale, en anglais->francais
+pour commencer (paire prioritaire, cf discussion initiale).
+
+**Travail de validation AVANT integration (essentiel)** : le plan initial
+disait "aucune bibliotheque .NET cle-en-main, moteur a ecrire soi-meme,
+risque reel". Confirme a l'usage : un vrai modele ONNX EN-FR (Xenova/
+opus-mt-en-fr, export ONNX quantifie du modele Helsinki-NLP/opus-mt-en-fr)
+a ete telecharge et teste en Python AVANT d'ecrire le C#. Deux bugs reels
+trouves et corriges pendant ce prototypage :
+1. Le planificateur memoire d'ONNX Runtime (`enable_mem_pattern`) reutilise
+   mal un buffer pour ce graphe particulier (dimensions dynamiques + noeud
+   `If` de fusion) — desactive par prudence.
+2. **Bug plus grave** : sur la branche "cache" (`use_cache_branch=true`) du
+   decodeur fusionne, les sorties `present.*.encoder.key/value` (cache
+   d'attention croisee) sont une **constante factice codee en dur** dans le
+   graphe exporte, pas les vraies valeurs. Sans ce test reel, le code aurait
+   compile, la 1ere traduction aurait semble fonctionner, et tout mot generé
+   apres le 2e aurait ete du charabia — corrige en figeant le cache
+   d'attention croisee a la sortie du tout premier pas (`use_cache_branch=
+   false`) et en ne le mettant plus jamais a jour ensuite.
+- Traductions de reference obtenues apres correctif (Python, pipeline
+  identique a celui porte en C#) : "Hello, how are you?" -> "Bonjour,
+  comment allez-vous ?" ; "The weather is nice today." -> "Le temps est
+  beau aujourd'hui." ; "This is a private and secure browser." -> "C'est un
+  navigateur prive et securise." — trois traductions correctes et
+  naturelles.
+- Tokenisation validee separement : `Microsoft.ML.Tokenizers.
+  SentencePieceTokenizer` (encore en preversion cote Microsoft) segmente le
+  texte correctement, mais ses ids internes NE correspondent PAS a l'espace
+  d'ids du modele (`vocab.json`) — verifie avec `sentencepiece` Python en
+  parallele. Le code utilise donc uniquement les *pieces* (chaines) du
+  tokenizer, remappees via `vocab.json`, jamais ses ids internes.
+
+**Implemente** :
+- `NovaBrowser.WinUI/Translation/TranslationModelCatalog.cs` : paires
+  supportees (en-fr, fr-en), fichiers requis par paire.
+- `NovaBrowser.WinUI/Translation/TranslationEngine.cs` : pipeline ONNX
+  Runtime valide ci-dessus (encodeur + decodeur fusionne, decodage glouton
+  — pas de recherche en faisceau, choix assume pour limiter le risque d'un
+  bug de logique complexe au prix d'un peu de qualite). Nombre de couches/
+  tetes/dimension deduits dynamiquement des metadonnees du graphe (pas de
+  constante figee pour une seule paire de langues).
+- `NovaBrowser.WinUI/Translation/TranslationService.cs` : telechargement a
+  la demande des fichiers de modele (~110 Mo par paire, variante quantifiee)
+  depuis Hugging Face, mise en cache dans `%LocalAppData%\NovaBrowser\
+  translation-models\{paire}\`, meme principe que `FilterListManager` pour
+  les listes de filtrage (GET de fichiers generiques, pas de donnee
+  utilisateur envoyee). Traduction elle-meme 100% hors ligne ensuite.
+- `NovaBrowser.WinUI/Translation/DetectLanguageScript.js`,
+  `PageTextExtractScript.js`, `PageTextApplyScript.js` : detection de
+  `document.documentElement.lang`, extraction des blocs de texte visibles
+  (p/li/h1-h6/td/th/blockquote/figcaption/dd/dt, feuilles uniquement pour
+  eviter de traduire un parent ET ses enfants, plafond 150 blocs/400
+  caracteres par bloc), reinjection du texte traduit par attribut
+  `data-pulse-tid`.
+- Bandeau `TranslateBar` (MainWindow.xaml, nouvelle ligne de grille) :
+  jamais de traduction automatique, uniquement sur clic "Traduire".
+  Reglage `TranslationEnabled` (UiSettings, actif par defaut — simple
+  telechargement generique, pas de donnee personnelle, meme logique que
+  le bloqueur de pubs/traqueurs) avec toggle dans les parametres.
+
+**Non fait / a savoir** :
+- Decodage glouton, pas de recherche en faisceau (beam search) : qualite
+  correcte mais en retrait par rapport a un moteur de production.
+- Seules les paires en-fr et fr-en sont cablees ; extension a d'autres
+  langues = ajouter une entree dans `TranslationModelCatalog` (meme
+  famille de modeles Helsinki-NLP/OPUS-MT).
+- Extraction de texte par heuristique DOM (elements feuilles d'une liste de
+  selecteurs) : rate le texte fortement imbrique dans du HTML riche
+  (formatage inline multiple), et un site avec des centaines de blocs de
+  texte peut prendre du temps (CPU seul, pas de GPU).
+- PAS teste manuellement dans le navigateur reel (pas de webview
+  interactive dans cet environnement) — seule la compilation et le moteur
+  ONNX pur (Python + C#) ont ete verifies avec de vraies traductions.
+- Compilation confirmee via MSBuild.exe VS (`/t:Build` sans erreur).
+
+**Why :** la philosophie "local d'abord" (AGENTS.md, discutee explicitement
+avant tout code) exclut une API de traduction cloud sauf opt-in assume —
+choix fait ici : 100% local, quitte a assumer une qualite/latence en retrait
+et un travail d'implementation nettement plus lourd (aucune bibliotheque
+cle-en-main en C# pour ce type de modele).
+
+**How to apply :** si un bug de traduction bizarre apparait plus tard
+(traduction correcte au 1er mot puis charabia), verifier en premier le
+traitement du cache d'attention croisee — c'est exactement la classe de bug
+trouvee ici, facile a rater sans un vrai test de bout en bout.
+
+Passage de version source a `0.62.0-dev` (nouvelle fonction globale, 2eme
+chiffre). Compilation confirmee via MSBuild.exe VS ; pas d'installateur
+genere pour cette version individuellement (installateur final prevu apres
+les 3 fonctions, cf plan valide par l'utilisateur).
+
+**Version :** `0.62.0-dev`.
+
+## 2026-07-12 - Assistant IA local pour preciser une recherche, 3e des 3 fonctions (0.63.0-dev)
+
+Derniere des 3 fonctions discutees. Contrairement a la traduction, l'API
+`Microsoft.ML.OnnxRuntimeGenAI` est documentee et stable dans son usage (pas
+besoin d'ecrire soi-meme la logique d'inference) : risque nettement plus bas,
+confirme par le plan initial. Verifiee malgre tout avec un vrai modele
+telecharge et une vraie generation avant integration (meme discipline que
+pour la traduction), pas seulement une compilation.
+
+**Modele** : `microsoft/Phi-3-mini-4k-instruct-onnx`, variante
+`cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4` (quantifiee int4,
+~2,7 Go, CPU uniquement — pas besoin de GPU/NPU). Test reel effectue :
+prompt "restaurant pas cher proche" -> "Afficher les meilleurs restaurants
+economiques a moins de 5 km de Paris" en ~10s sur CPU. Le modele a tendance
+a ajouter une explication apres la reformulation si le prompt n'insiste pas
+assez sur "une seule ligne, aucune explication" — corrige par une consigne
+systeme stricte + troncature a la 1ere ligne cote C# (defense en profondeur,
+pas uniquement confiance dans le prompt).
+
+**Implemente** :
+- `NovaBrowser.WinUI/SearchAssist/SearchAssistService.cs` : telechargement
+  a la demande (~2,7 Go, une seule fois) dans `%LocalAppData%\NovaBrowser\
+  search-assist-model\`, chargement de `Model`/`Tokenizer`
+  (OnnxRuntimeGenAI), generation via `Generator`/`GeneratorParams`
+  (`max_length=96`), prompt au format Phi-3 (`<|system|>...<|user|>...
+  <|assistant|>`).
+- `NovaBrowser.WinUI/MainWindow.SearchAssist.cs` : bouton barre d'outils
+  (icone, colonne dediee dans `NavigationToolbar`) avec Flyout affichant la
+  suggestion + boutons "Utiliser" (remplace le texte de la barre d'adresse,
+  ne lance jamais la recherche automatiquement) / "Ignorer".
+- Reglage `SearchAssistEnabled` (`UiSettings`, **desactive par defaut** —
+  contrairement a la traduction, le telechargement est nettement plus
+  lourd) avec avertissement explicite de taille dans la description du
+  parametre.
+- Verifie que les binaires natifs (`onnxruntime-genai.dll`,
+  `onnxruntime.dll`, etc.) sont bien copies dans le dossier de sortie du
+  build : aucune installation supplementaire requise pour l'utilisateur
+  final, conforme a la contrainte donnee ("rien a installer d'autre que
+  le navigateur").
+
+**Non fait / a savoir** :
+- Consigne de confidentialite du prompt systeme : seule la requete FINALE
+  choisie par l'utilisateur part vers le moteur de recherche — la
+  reformulation elle-meme ne quitte jamais la machine. A rappeler si la
+  fonction evolue vers un envoi automatique (a eviter).
+- PAS teste manuellement dans le navigateur reel (pas de webview
+  interactive dans cet environnement) — seule la compilation et le moteur
+  OnnxRuntimeGenAI pur (C# standalone) ont ete verifies avec une vraie
+  generation.
+- Pas de gestion fine des erreurs de memoire/VRAM insuffisante sur des
+  machines plus faibles : l'exception generique s'affiche dans `StatusText`.
+
+**Why :** achevement du plan valide par l'utilisateur (traduction + dictee +
+IA recherche, toutes 100% locales par defaut, opt-in explicite pour les
+fonctions les plus lourdes en telechargement/ressources).
+
+**How to apply :** si une 4e fonction IA locale est demandee plus tard,
+reprendre `SearchAssistService` comme modele d'integration
+`OnnxRuntimeGenAI` (API stable, contrairement au moteur de traduction
+qui a demande un vrai travail de reverse engineering).
+
+Passage de version source a `0.63.0-dev` (nouvelle fonction globale, 2eme
+chiffre). Compilation confirmee via MSBuild.exe VS. Installateur complet a
+generer ensuite pour cette version (les 3 fonctions reunies), comme demande.
+
+**Version :** `0.63.0-dev`.
+
+## 2026-07-12 (suite) - Installateur complet 0.63.0-dev (3 fonctions reunies)
+
+Build propre autonome puis installateur generes avec les scripts habituels,
+sans erreur :
+- `scripts\build-clean-test-artifact.ps1 -Version 0.63.0-dev` : publish
+  MSBuild autonome reussi (dossier `app\` ~194 Mo, sans les modeles ML —
+  ceux-ci se telechargent a la demande a l'usage, jamais embarques dans
+  l'installateur). Presence verifiee de `onnxruntime.dll` et
+  `onnxruntime-genai.dll` dans le dossier publie : les binaires natifs
+  necessaires a la traduction et a l'assistant IA sont bien autonomes,
+  rien a installer en plus pour l'utilisateur final.
+- `scripts\build-installer.ps1 -Version 0.63.0-dev` : installateur genere.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.63.0-dev-win-x64.exe`
+- SHA256 : `38da3e6007998d57b2ce278889971b86cef8abb2ce1b01ec5a309b514c3a6119`
+- Non signe Authenticode (comme les versions precedentes) : Windows peut
+  afficher "Editeur inconnu" a l'installation, normal a ce stade.
+
+**Non fait / a savoir** : aucun des 3 ajouts (dictee vocale, traduction,
+assistant IA) n'a ete teste manuellement dans le navigateur reel — seules
+la compilation et, pour la traduction et l'assistant IA, de vraies
+executions du moteur ML hors du navigateur (Python + C# standalone) ont ete
+verifiees avec des resultats corrects. Un test manuel complet dans
+l'application installee reste a faire.
+
+**Version :** `0.63.0-dev`.
+
+## 2026-07-12 (suite) - Retours utilisateur post-installateur : 3 correctifs mineurs (0.63.1-dev)
+
+Apres avoir teste l'idee des 3 sections d'installateur, l'utilisateur a
+propose 4 pistes ("23 trucs" au depart, ramenes a 4) : menu parametres
+fouilli, avatar de profil local, personnalisation plus poussee, section
+accessibilite peu utile + lecture a voix haute. Avis donne avant tout code
+(le point personnalisation juge trop flou, laisse de cote pour un autre
+assistant) ; l'utilisateur a valide 3 des 4 points, dans l'ordre choisi
+(lecture a voix haute et avatar avant la reorganisation des parametres,
+pour ne pas avoir a la retoucher juste apres).
+
+**1. Lecture a voix haute (accessibilite)** — Synthese vocale native
+Windows (`Windows.Media.SpeechSynthesis.SpeechSynthesizer` +
+`Windows.Media.Playback.MediaPlayer`), meme famille d'API que la dictee
+vocale (0.61.0-dev) : 100% locale, aucun texte de page envoye a un serveur
+externe. `NovaBrowser.WinUI/ReadAloud/ReadAloudService.cs` synthetise et
+joue les blocs de texte un par un (pas un seul flux) pour permettre un
+arret net ; reutilise le meme script d'extraction de texte que la
+traduction (`PageTextExtractScript.js`, copie dans `ReadAloud/`). Bouton
+barre d'outils avec Flyout (Lire/Pause, Arreter). Reglage
+`ReadAloudEnabled` (actif par defaut : pas de permission sensible, contrairement
+au micro).
+
+**2. Avatar de profil local** — Image stockee directement comme fichier
+`avatar.<ext>` dans le dossier du profil (pas dans le blob DPAPI chiffre de
+`UserProfile` qui contient les hachages de mot de passe : une photo n'a pas
+la meme sensibilite, pas de raison de l'y meler). Choix via
+`FileOpenPicker` (png/jpg/jpeg/webp/bmp) dans Parametres > Profil ; affichee
+en cercle a cote du nom d'utilisateur dans la barre de statut
+(`ProfileStatusText`) et dans la section Profil elle-meme. Jamais
+synchronisee, jamais envoyee. Confirmation implicite par l'utilisateur (Go
+sans correction) que l'avatar concerne bien le selecteur de profil Nova
+local, pas une notion de compte en ligne.
+
+**3. Reorganisation du menu parametres** — Diagnostic : la sidebar a 8
+categories etait deja une architecture saine (pas le probleme) ; le
+vrai souci etait la densite a l'interieur des sections "Navigation" et
+"Accessibilite", ou plusieurs fonctions ajoutees cette session (traduction,
+assistant IA, dictee, lecture a voix haute) avaient ete empilees les unes
+sous les autres sans separation visuelle. Correctif limite au risque :
+ajout de sous-titres (`NovaPanelSectionTitleStyle`) et de separateurs
+visuels regroupant par theme ("Recherche" / "Onglets" / "Palette de
+commande" en Navigation ; "Affichage" / "Assistants vocaux (100% locaux)" /
+"Clavier et lecteurs d'ecran" en Accessibilite), sans renommer ni deplacer
+aucun controle existant entre sections — aucun risque de casser le cablage
+existant (`x:Name`/`Click`/`Toggled` inchanges).
+
+**Non fait / a savoir** :
+- Point "personnalisation plus poussee" volontairement laisse de cote (juge
+  trop vague pour estimer un effort ; l'utilisateur le traite separement).
+- PAS teste manuellement dans le navigateur reel (pas de webview
+  interactive dans cet environnement).
+- Pas de nouvel installateur genere pour cette version : l'utilisateur a
+  lui-meme qualifie ce lot de "mise a jour mineure", d'ou le passage du
+  3eme chiffre de version plutot que le 2eme. A generer sur demande.
+
+**Why :** l'ordre d'implementation (4 et 2 avant le 1) a ete choisi pour
+eviter de retoucher la reorganisation des parametres juste apres l'ajout de
+nouveaux reglages — feedback methodologique reutilisable : quand plusieurs
+demandes touchent la meme zone d'UI, faire d'abord celles qui ajoutent du
+contenu, la reorganisation en dernier.
+
+Passage de version source a `0.63.1-dev` (mise a jour mineure explicitement
+qualifiee comme telle par l'utilisateur, 3eme chiffre). Compilation
+confirmee via MSBuild.exe VS, sans erreur, apres chacun des 3 correctifs.
+
+**Version :** `0.63.1-dev`.
+
+## 2026-07-12 (suite) - Correctif dictee vocale "je clique, rien ne se passe" (0.63.2-dev)
+
+Retour utilisateur apres test reel de la 0.63.1-dev : bouton micro bien
+present et bien place, mais clic sans effet visible. Analyse du code (pas
+de test live possible ici, diagnostic par lecture) : deux problemes reels
+trouves dans `MainWindow.Dictation.cs` tel qu'ecrit en 0.61.0-dev.
+
+1. **Bug reel (le plus probable)** : `RecognizeSpeechOnceAsync` ne
+   retournait QUE le texte reconnu, jamais le `SpeechRecognitionResultStatus`
+   — tout statut different de `Success` (micro indisponible, langue non
+   installee, timeout, refus d'acces...) etait traite EXACTEMENT comme "rien
+   compris", avec un message generique facile a manquer dans la barre de
+   statut discrete en bas de fenetre. Autrement dit : si la reconnaissance
+   echouait pour une vraie raison (tres probable au tout premier essai —
+   consentement micro Windows pas encore accorde pour cette app non
+   empaquetee), l'utilisateur ne voyait quasiment rien de comprehensible.
+2. **Manque de retour visuel** : le seul signe que "l'ecoute a demarre"
+   etait un texte discret (opacite 0.72) en bas de fenetre — facile a ne
+   pas remarquer, d'ou l'impression de "rien ne se passe" meme si le code
+   s'executait correctement.
+
+**Corrige** :
+- `RecognizeSpeechOnceAsync` retourne desormais `(string? Text,
+  SpeechRecognitionResultStatus Status)` ; chaque statut d'echec a un
+  message specifique et actionnable (`DescribeDictationFailure`) : micro
+  indisponible/refuse, langue non installee, timeout/silence, echec reseau,
+  qualite audio insuffisante, annulation. Noms d'enum verifies par
+  reflexion sur le vrai assembly `Microsoft.Windows.SDK.NET.dll` (pas de
+  membre `PermissionDenied` dans cette API contrairement a une premiere
+  tentative — verifie plutot que suppose, l'erreur de compilation l'a
+  confirme immediatement).
+- Retour visuel ajoute : l'icone du bouton micro (`MicDictationIcon`,
+  desormais nommee) passe en couleur d'accent pendant l'ecoute, revient a
+  la normale ensuite — visible independamment du texte de statut.
+  Ressource de couleur recuperee via `RootShell.Resources[...]` (pas
+  `this.Resources`, qui n'existe pas sur une `Window` WinUI3 — verifie sur
+  le pattern `SetBrush` deja utilise ailleurs dans le projet).
+- Erreurs et statuts logues via `WinUiRuntimeTrace.Write(...)` (log
+  opt-in `PULSE_BROWSER_TRACE_STARTUP=1`) pour un diagnostic futur si le
+  probleme persiste.
+
+**Non fait / a savoir** : toujours pas de test manuel possible dans cet
+environnement — ce correctif est le meilleur diagnostic possible par
+lecture de code, mais reste a confirmer par l'utilisateur. Si le probleme
+persiste apres ce correctif, le prochain reflexe doit etre de lire le
+message de statut EXACT affiche (il est maintenant specifique) plutot que
+de re-deviner une cause.
+
+**Why :** un statut d'echec avale silencieusement est un anti-pattern
+classique qui transforme un vrai probleme (ex. consentement micro jamais
+accorde) en un faux "bug fantome" indiscernable d'un probleme de cablage UI.
+
+**How to apply :** pour toute future fonction basee sur une API Windows
+avec un enum de statut (speech, capture, etc.), toujours propager le
+statut jusqu'a l'UI plutot que de le reduire a un booleen succes/echec.
+
+Passage de version source a `0.63.2-dev` (correction de bug, 3eme chiffre).
+Compilation confirmee via MSBuild.exe VS, sans erreur.
+
+Installateur genere directement (lecon retenue de la 0.63.1-dev : ne plus
+attendre qu'on le demande) :
+- `scripts\build-clean-test-artifact.ps1 -Version 0.63.2-dev` : reussi.
+- `scripts\build-installer.ps1 -Version 0.63.2-dev` : reussi.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.63.2-dev-win-x64.exe`
+- SHA256 : `61d4fbfb434f2e63674b98183b7c0e32449ceec8ad84bae5fe1629102b0604a1`
+
+**Version :** `0.63.2-dev`.
+
+## 2026-07-12 (suite) - Vrai bug de la dictee vocale trouve : le focus (0.63.3-dev)
+
+Retour utilisateur apres test de la 0.63.2-dev : toujours rien ("je ne sais
+pas ce que t'as corrige, ça marche pas"). Le correctif precedent
+(diagnostics + retour visuel) etait reel mais ne s'attaquait pas a la
+cause racine. Relecture plus approfondie du flux complet (pas seulement de
+la gestion d'erreur) : trouve.
+
+**Cause racine** : `MicDictationButton_Click` lisait le focus WinUI via
+`FocusManager.GetFocusedElement(...)` **au moment du clic**. Or cliquer
+sur un `Button` WinUI lui donne le focus AVANT que l'evenement `Click` ne
+se declenche — donc `FocusManager` renvoyait quasi systematiquement le
+bouton micro lui-meme (pas un `TextBox`), jamais la barre d'adresse que
+l'utilisateur venait de quitter en cliquant sur le micro. Consequence :
+`focusedTextBox` etait presque toujours `null`, le code tombait dans la
+branche "inserer dans la page web", et si le focus DOM de la page n'etait
+pas non plus sur un champ editable (cas le plus courant, l'utilisateur
+voulait dicter dans la barre d'adresse, pas dans la page), l'insertion
+echouait silencieusement — sans que rien ne le signale, d'ou l'impression
+de bouton mort meme apres l'ajout des messages de diagnostic (le message
+"texte insere" s'affichait meme quand rien n'avait vraiment ete insere,
+puisque le retour du script JS n'etait jamais verifie).
+
+**Corrige** :
+- `MainWindow.xaml.cs` : `InitializeDictationFocusTracking()` appelee dans
+  le constructeur, qui abonne `RootShell.GettingFocus` pour memoriser
+  `args.OldFocusedElement` (le TextBox qui avait le focus juste AVANT que
+  le focus ne change) dans `_lastFocusedTextBoxForDictation`. C'est
+  l'API WinUI concue exactement pour ce probleme ("que se passait-il juste
+  avant que le focus bouge").
+- `MicDictationButton_Click` utilise desormais le focus WinUI live
+  s'il pointe vers un `TextBox` (cas clavier), sinon
+  `_lastFocusedTextBoxForDictation` (cas clic souris sur le bouton, le cas
+  le plus courant).
+- `InsertIntoWebPageAsync` retourne desormais un `bool` reflétant le vrai
+  resultat du script JS (au lieu de l'ignorer), et le message affiche a
+  l'utilisateur differencie maintenant clairement "texte insere" de "texte
+  reconnu mais aucun champ selectionne, cliquez d'abord dans un champ".
+
+**Non fait / a savoir** : toujours pas de test manuel possible ici — ce
+correctif s'attaque cette fois a une cause structurelle identifiee avec
+certitude (pas une hypothese), mais reste a confirmer par l'utilisateur.
+
+**Why :** le correctif de la 0.63.2-dev n'etait pas faux, juste
+insuffisant — il rendait un echec plus lisible sans corriger pourquoi
+l'insertion echouait reellement. Les deux corrections se completent.
+
+**How to apply :** pour toute future fonction qui doit "revenir" inserer
+du texte dans un champ apres une action nécessitant de cliquer un bouton
+tiers (dictee, IA, etc.), ne jamais interroger `FocusManager` au moment du
+clic — le bouton cliqué a deja le focus a cet instant. Utiliser
+`GettingFocus`/`OldFocusedElement` pour capturer le focus precedent, comme
+ici.
+
+Passage de version source a `0.63.3-dev` (correction de bug, 3eme chiffre).
+Compilation confirmee via MSBuild.exe VS, sans erreur.
+
+Installateur genere directement :
+- `scripts\build-clean-test-artifact.ps1 -Version 0.63.3-dev` : reussi.
+- `scripts\build-installer.ps1 -Version 0.63.3-dev` : reussi.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.63.3-dev-win-x64.exe`
+- SHA256 : `3aa305b75eb408e26cb254df5ceac87fa580a1c9a2998dd9983cf3dba4e0250c`
+
+**Version :** `0.63.3-dev`.
+
+## 2026-07-12 (suite) - Changement de moteur de dictee : WinRT abandonne pour SAPI (0.63.4-dev)
+
+Le correctif de focus (0.63.3-dev) etait reel mais insuffisant : capture
+d'ecran utilisateur des parametres Windows > Heure et langue > Voix montre
+le pack de reconnaissance vocale francais liste a **0 Mo** (jamais
+reellement telecharge, entree fantome). L'utilisateur a decline la pop-up
+de consentement "reconnaissance vocale en ligne" (bon reflexe, conforme a
+la philosophie du navigateur), mais sans pack hors-ligne fonctionnel,
+`Windows.Media.SpeechRecognition.SpeechRecognizer` (API WinRT moderne,
+utilisee depuis la 0.61.0-dev) ne peut litteralement rien reconnaitre :
+ni en ligne (refuse), ni hors ligne (pack casse).
+
+**Decision** : abandon complet de l'API WinRT moderne au profit du moteur
+Windows classique (SAPI, accessible en .NET via le paquet NuGet officiel
+`System.Speech` -> `System.Speech.Recognition.SpeechRecognitionEngine`).
+Raisons :
+- SAPI n'a **jamais eu de mode en ligne** : 100% local par construction,
+  aucune ambiguite, aucune pop-up de consentement a gerer.
+- Systeme d'installation de langue completement different et independant
+  du "Voix" moderne qui s'est revele casse chez l'utilisateur (Panneau de
+  configuration > Reconnaissance vocale, present sur Windows depuis
+  longtemps).
+- Permet un diagnostic plus precis : la construction de
+  `SpeechRecognitionEngine(culture)` echoue immediatement et explicitement
+  s'il n'y a aucun moteur installe pour la culture, plutot que renvoyer un
+  statut ambigu apres coup.
+
+**Implemente** (`MainWindow.Dictation.cs` reecrit) :
+- `SpeechRecognitionEngine(CultureInfo.CurrentUICulture)` + `DictationGrammar`
+  + `Recognize(TimeSpan.FromSeconds(8))`, execute sur un thread d'arriere-plan
+  (`Task.Run`, l'API SAPI est synchrone/bloquante).
+- Nouvel enum interne `DictationOutcome` (Recognized / NoRecognizerForLanguage
+  / NoMicrophone / NothingRecognized / OtherError) avec message specifique
+  et actionnable pour chaque cas, y compris le nom de la culture manquante
+  dans le message d'erreur.
+- Conserve les correctifs precedents (suivi du focus via `GettingFocus`,
+  verification du resultat reel de l'insertion dans la page web).
+- Paquet NuGet ajoute : `System.Speech` 8.0.0 (wrapper officiel Microsoft
+  pour SAPI depuis .NET Core/.NET 5+, aucune dependance native
+  supplementaire a empaqueter : appelle directement les composants SAPI du
+  systeme Windows).
+- **Bug annexe trouve et corrige au passage** : le dossier `ReadAloud\*.js`
+  n'etait jamais inclus dans le csproj (`Content Include`) — le script
+  d'extraction de texte de la fonction "lecture a voix haute" (0.63.1-dev)
+  n'etait donc jamais copie dans le build publie, cassant silencieusement
+  cette fonction aussi. Corrige dans le meme passage.
+
+**Non fait / a savoir** : toujours pas de test manuel possible ici. Si SAPI
+n'a pas non plus de moteur francais installe sur la machine de
+l'utilisateur, le message d'erreur guidera cette fois clairement vers
+"Reconnaissance vocale" (Panneau de configuration classique) plutot que de
+laisser deviner.
+
+**Why :** deux echecs consecutifs sur la meme API (WinRT) avec un
+diagnostic de plus en plus fin ont fini par reveler que le probleme n'etait
+pas dans le code Nova mais dans l'etat du systeme de langue Windows
+moderne lui-meme, chez cet utilisateur precis — changer de sous-systeme
+plutot que de continuer a rustiner le meme point de defaillance.
+
+**How to apply :** pour toute fonction vocale future sur Windows, envisager
+SAPI (`System.Speech`) par defaut plutot que l'API WinRT moderne si la
+cible est un usage desktop classique local-first : moins d'ambiguite
+en-ligne/hors-ligne, diagnostic d'echec plus direct.
+
+Passage de version source a `0.63.4-dev` (correction de bug, 3eme chiffre).
+Compilation confirmee via MSBuild.exe VS, sans erreur.
+
+Installateur genere :
+- `scripts\build-clean-test-artifact.ps1 -Version 0.63.4-dev` : reussi.
+- `scripts\build-installer.ps1 -Version 0.63.4-dev` : reussi.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.63.4-dev-win-x64.exe`
+- SHA256 : `23364fb6e10ba814f5c930921c1bb3bbcc5e304bc9bfd574307808a69bbb7be7`
+
+**Version :** `0.63.4-dev`.
+
+## 2026-07-12 (suite) - Outil de diagnostic externe + vraie piste + bouton "Configurer mon micro" (0.63.5-dev)
+
+La 0.63.4-dev (SAPI) ne fonctionnait toujours pas cote utilisateur. Sur
+proposition de l'utilisateur ("faire un petit module externe" pour
+diagnostiquer avant d'incorporer quoi que ce soit), creation d'un outil de
+diagnostic autonome plutot que de continuer a deviner a l'aveugle.
+
+**Outil cree** : `tools/DictationDiagnostic/` — projet console .NET 8
+independant (pas integre a NovaBrowser.WinUI), publie en executable
+autonome (`dotnet publish -r win-x64 --self-contained true
+-p:PublishSingleFile=true`). Affiche en texte brut, sans filtre UI :
+culture systeme, liste des moteurs SAPI installes
+(`SpeechRecognitionEngine.InstalledRecognizers()`), test de creation du
+moteur, test d'acces au micro, test de reconnaissance reelle avec resultat
+explicite. Executable livre a l'utilisateur pour test hors de Nova.
+
+**Resultat du diagnostic** : moteur francais bien installe
+(`MS-1036-80-DESK`), creation OK, acces micro OK, mais reconnaissance
+renvoie NULL (rien capte) — **meme en dehors de Nova**. Ceci confirmait
+d'abord une piste materielle (mauvais peripherique par defaut), mais
+l'utilisateur a fait remarquer un point cle : son micro fonctionne
+parfaitement pour d'autres usages (dictee vers cet assistant y compris) au
+meme moment. Diagnostic affine : le moteur SAPI classique necessite parfois
+une calibration dediee, unique, via l'assistant Windows "Configurer le
+microphone" (Panneau de configuration > Reconnaissance vocale) —
+independante des reglages micro generaux de Windows, meme si le micro
+fonctionne tres bien ailleurs. C'est un probleme systeme connu de SAPI, pas
+un bug Nova : confirme par le fait que le probleme se reproduit a
+l'identique dans l'outil de diagnostic autonome, hors de tout code Nova.
+
+**Fonction ajoutee dans Nova** (`MainWindow.Dictation.cs`) : plutot que de
+laisser l'utilisateur chercher cette calibration tout seul dans Windows
+(contraire a l'objectif exprime : "le micro doit etre interne au
+navigateur, les gens ne connaissent pas le micro Windows"), Nova detecte
+maintenant les echecs de type "rien capte"/"micro inaccessible" et propose
+une `ContentDialog` "Configurer mon micro" qui ouvre directement le panneau
+de configuration Windows concerne
+(`control.exe /name Microsoft.SpeechRecognition`). Propose une seule fois
+par session (`_micSetupOfferedThisSession`) pour ne pas harceler
+l'utilisateur a chaque clic rate. Le raisonnement produit : le reglage
+technique reste un composant Windows partage (comme un pilote
+d'imprimante), mais tout le parcours utilisateur (decouverte du probleme +
+solution) reste a l'interieur de Nova.
+
+**Non fait / a savoir** :
+- Toujours pas de confirmation finale que la calibration resout le
+  probleme chez l'utilisateur — reste a tester.
+- L'outil `tools/DictationDiagnostic/` est un outil de developpement/
+  diagnostic, pas une fonction produit : ne pas l'inclure dans
+  l'installateur final.
+- PAS teste manuellement dans le navigateur reel pour cette derniere
+  couche (le dialogue + l'ouverture du panneau de configuration).
+
+**Why :** apres 3 tentatives de correctif sur le meme symptome sans
+confirmation, la bonne strategie a ete de sortir du code Nova entierement
+(outil externe) pour obtenir un signal fiable, plutot que de continuer a
+deviner dans le meme perimetre. Lecon meta : quand un bug resiste a
+plusieurs correctifs cibles, envisager un outil de diagnostic isole avant
+un 4e correctif a l'aveugle.
+
+**How to apply :** conserver le principe "detecter l'echec + proposer
+l'action corrective directement dans l'app" pour toute autre fonction qui
+depend d'un composant systeme externe (ex. futurs prompts de configuration
+Windows) plutot que de se contenter d'un message d'erreur passif.
+
+Passage de version source a `0.63.5-dev` (suite du correctif de dictee,
+3eme chiffre). Compilation confirmee via MSBuild.exe VS, sans erreur.
+
+Installateur genere :
+- `scripts\build-clean-test-artifact.ps1 -Version 0.63.5-dev` : reussi.
+- `scripts\build-installer.ps1 -Version 0.63.5-dev` : reussi.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.63.5-dev-win-x64.exe`
+- SHA256 : `2198332cd50669701411c8ac07b1c049056ca0424a58fd2465a47df72a117cf9`
+
+**Version :** `0.63.5-dev`.
+
+## 2026-07-12 (suite) - Installateur 0.63.1-dev
+
+L'utilisateur a demande l'installateur pour cette version malgre le
+qualificatif "mise a jour mineure" (question directe : "pourquoi t'as pas
+fait l'executable"). Genere avec les memes scripts habituels :
+- `scripts\build-clean-test-artifact.ps1 -Version 0.63.1-dev` : reussi.
+- `scripts\build-installer.ps1 -Version 0.63.1-dev` : reussi.
+- Installateur : `artifacts\installer\NovaBrowserSetup-0.63.1-dev-win-x64.exe`
+- SHA256 : `81175867f9d7ae2827c48cda06b407b4f9bea946f9e7ae68ef15e9041777603f`
+
+**How to apply :** ne plus supposer qu'un lot qualifie de "mineur" par
+l'utilisateur signifie "pas d'installateur" — generer systematiquement,
+sauf refus explicite. Le cout (quelques minutes de build) est faible face
+au risque de devoir refaire l'aller-retour.
+
+**Version :** `0.63.1-dev`.
+
+## 2026-07-12 (suite) - Identite Nova et personnalisation validee (0.64.0-dev)
+
+Retour utilisateur : apres le changement de nom du navigateur, il fallait
+changer le logo/l'icone, revoir la page du nouvel onglet, puis commencer une
+vraie personnalisation visible avec validation explicite des options. Le nom
+valide pour ce palier est reste `Nova Browser`.
+
+**Corrige / ajoute** :
+- Nouveaux assets `NovaBrowserApp.png` et `NovaBrowserApp.ico`, generes par
+  `scripts/generate-app-icon.ps1` avec une palette cyan/vert au lieu de
+  l'ancienne dominance orange/creme.
+- Raccordement de la nouvelle icone a l'application WinUI, aux fenetres
+  d'app web, aux images internes et aux scripts d'installateur.
+- Page `nova://accueil` refondue pour reutiliser le vrai PNG applicatif au
+  lieu d'un logo CSS independant. Le style du nouvel onglet peut maintenant
+  etre `Signature`, `Calme` ou `Minimal`.
+- Ajout d'une option `Palette Nova` (`Nova cyan`, `Ocean`, `Foret`, `Ambre`)
+  qui pilote les accents WinUI et la page nouvel onglet.
+- Les options du nouvel onglet et de palette sont maintenant appliquees par
+  le bouton `Valider les options`, afin d'eviter une sauvegarde silencieuse a
+  chaque frappe.
+- L'avatar de profil local passe par un apercu puis `Valider l'image`; la
+  copie ou suppression reelle du fichier avatar n'a lieu qu'a la validation.
+- Version source recalee a `0.64.0-dev` dans `AGENTS.md` et
+  `MainWindow.xaml.cs` (la constante etait restee a `0.60.9.1-dev` alors que
+  la gouvernance indiquait `0.63.5-dev`).
+
+**Verification** :
+- `build-winui.cmd` : reussi, 0 avertissement, 0 erreur apres autorisation
+  reseau NuGet (premier essai bloque par `NU1301` sandbox).
+- `dotnet test NovaBrowser.Tests\NovaBrowser.Tests.csproj --no-restore` :
+  233/233 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.64.0-dev` : reussi apres
+  autorisation d'ecriture hors sandbox pour l'artifact.
+- Verification de l'artifact propre : `App.xbf`, `MainWindow.xbf`,
+  `NovaAppWindow.xbf`, `NovaBrowser.WinUI.pri`, `Assets\NovaBrowserApp.ico`
+  et `Assets\NovaBrowserApp.png` presents.
+- `scripts\build-installer.ps1 -Version 0.64.0-dev` : reussi.
+- Installateur :
+  `artifacts\installer\NovaBrowserSetup-0.64.0-dev-win-x64.exe`.
+- SHA256 :
+  `5475b095408821383fcf4e88f40baa72905f2b5700fde0e646290e64c95f0005`.
+
+**Non fait / a savoir** : pas de validation visuelle interactive de
+l'application lancee dans cette session. La compilation XAML, les tests,
+l'artifact propre et l'installateur ont ete verifies.
+
+**Version :** `0.64.0-dev`.
+
+## 2026-07-12 (suite) - Renommage Lumora large (0.65.0-dev)
+
+Retour utilisateur : `Nova` etait deja trop utilise. Apres recherche de nom,
+l'utilisateur a valide le premier nom propose, `Lumora`, et a demande de
+modifier le maximum de surface projet : icone, charte graphique, noms de
+fichiers et installateur, en laissant le renommage du dossier depot racine pour
+plus tard.
+
+**Corrige / ajoute** :
+- Renommage de la solution et des projets actifs en `Lumora.slnx`,
+  `Lumora.WinUI` et `Lumora.Tests`.
+- Renommage des fichiers/classes applicatifs visibles : `LumoraConfig`,
+  `LumoraBackup`, `LumoraFile`, `LumoraAppWindow`, `LumoraApp.png` et
+  `LumoraApp.ico`.
+- Page interne et nouvel onglet passes sur `lumora://accueil`, avec libelles
+  visibles `Accueil Lumora`, `Palette Lumora`, `Lumora cyan`, etc.
+- Scripts de build, artefact propre et installateur passes sur les chemins et
+  noms Lumora (`Lumora.WinUI.exe`, `LumoraSetup`).
+- Nouveaux profils par defaut sous `%LOCALAPPDATA%\Lumora`.
+- Nouveaux fichiers de donnees en `.lumora`, tout en conservant la lecture des
+  anciens `.nova` si un profil existant les contient deja.
+- `LumoraConfig` relit puis migre les configs legacy `%LOCALAPPDATA%\NovaBrowser`
+  et `%LOCALAPPDATA%\PulseBrowser`.
+- `LumoraFile` et `VaultStore` conservent une lecture de secours avec les
+  anciennes entropies DPAPI Nova, afin de ne pas rendre les fichiers chiffres
+  existants illisibles.
+- Version source passee a `0.65.0-dev` dans `AGENTS.md` et `MainWindow.xaml.cs`.
+
+**Verification** :
+- Controle `rg` : les seules mentions `NovaBrowser` restantes dans la surface
+  active sont les fallbacks legacy volontaires.
+- `build-winui.cmd` : reussi hors sandbox apres blocage NuGet `NU1301` dans le
+  sandbox, 0 avertissement, 0 erreur.
+- `dotnet vstest Lumora.Tests\bin\Debug\net8.0-windows\Lumora.Tests.dll` :
+  233/233 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.65.0-dev -NoRestore` :
+  reussi hors sandbox.
+- Artifact propre :
+  `artifacts\clean-test\Lumora-0.65.0-dev-win-x64-clean-20260712-232315`.
+- Verification artifact : `Lumora.WinUI.exe`, `App.xbf`, `MainWindow.xbf`,
+  `LumoraAppWindow.xbf`, `Lumora.WinUI.pri`, `Assets\LumoraApp.ico`,
+  `Assets\LumoraApp.png`, `coreclr.dll`, `hostfxr.dll`, `hostpolicy.dll`
+  presents.
+- SHA256 `Lumora.WinUI.exe` :
+  `01aa7368b91a8e063ceb572e212e1dc7e0ff17f911cf08e1e9a6de89860f6441`.
+- Installateur :
+  `artifacts\installer\LumoraSetup-0.65.0-dev-win-x64.exe`.
+- SHA256 installateur :
+  `06978e5bb24d28836def9f25c0f2ac4cddc5c0259998da5c7a395657864a1d89`.
+
+**Non fait / a savoir** : le dossier racine du depot reste a renommer par
+l'utilisateur. Pas de validation visuelle interactive de l'application lancee
+dans cette passe.
+
+**Version :** `0.65.0-dev`.
+
+## 2026-07-12 (suite) - Correction migration profil Lumora apres renommage de dossier (0.65.1-dev)
+
+Retour utilisateur : apres avoir renomme le dossier contenant ses donnees puis
+lance une nouvelle installation Lumora, l'application demandait de recreer un
+profil. Diagnostic disque volontairement limite aux configs et fichiers profil
+non sensibles :
+
+- `%LOCALAPPDATA%\Lumora\config.json` pointait encore vers
+  `E:\Documents\PulseBrowser\H.J`.
+- Ce dossier n'existait plus.
+- Le vrai dossier utilisateur etait `E:\Documents\LumoraBrowser\H.J`.
+- Ce dossier contenait bien `profile.pulse`, `vault.pulse`, `navigation` et
+  `webview2`.
+- Lumora 0.65.0-dev ne cherchait pas les fichiers `.pulse` dans
+  `LumoraProfilePaths.DataFile`, et des fichiers `.nova` vides/recents pouvaient
+  prendre le dessus sur les vrais fichiers `.pulse`.
+
+**Corrige / ajoute** :
+- `LumoraProfilePaths.DataFile` choisit maintenant `.lumora` si present, sinon
+  `.pulse`, sinon `.nova`, afin de recuperer les vrais profils historiques.
+- `LumoraConfig.Load()` repare un `CustomProfilePath` legacy introuvable en
+  essayant les remplacements `PulseBrowser` / `NovaBrowser` vers
+  `LumoraBrowser` / `Lumora`, uniquement si le dossier candidat ressemble a un
+  profil reel.
+- `LumoraFile` et `VaultStore` ajoutent une tentative de dechiffrement DPAPI
+  avec les entropies legacy Pulse en plus des entropies Lumora/Nova.
+- Tests ajoutes pour la priorite `.pulse` et la reparation du chemin custom.
+- Version runtime passee a `0.65.1-dev` dans `MainWindow.xaml.cs`; `AGENTS.md`
+  indiquait deja `0.65.1-dev`.
+
+**Nettoyage effectue** :
+- Suppression des anciennes installations navigateur :
+  `%LOCALAPPDATA%\Programs\PulseBrowser`,
+  `%LOCALAPPDATA%\Programs\NovaBrowser`, raccourcis Bureau `Pulse Browser.lnk`
+  et `Nova Browser.lnk`, dossiers Menu Demarrer `Pulse Browser`,
+  `Nova Browser`, `Pulse Apps`, et cles uninstall HKCU `PulseBrowser` /
+  `NovaBrowser`.
+- `PulseAuth` n'a pas ete touche.
+- Suppression des anciens installateurs Nova/Pulse dans `artifacts\installer`,
+  pour ne laisser que Lumora 0.65.1-dev.
+- Remplacement de l'installation Lumora existante sous
+  `%LOCALAPPDATA%\Programs\Lumora` par l'artefact propre `0.65.1-dev`, sans
+  toucher aux donnees utilisateur.
+- Correction immediate de `%LOCALAPPDATA%\Lumora\config.json` pour pointer vers
+  `E:\Documents\LumoraBrowser\H.J`.
+
+**Verification** :
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 237/237 tests
+  verts.
+- `build-winui.cmd` : reussi, 0 avertissement, 0 erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.65.1-dev -NoRestore` :
+  reussi.
+- Artifact propre :
+  `artifacts\clean-test\Lumora-0.65.1-dev-win-x64-clean-20260712-234012`.
+- Verification artifact : `Lumora.WinUI.exe`, `App.xbf`, `MainWindow.xbf`,
+  `LumoraAppWindow.xbf`, `Lumora.WinUI.pri`, `Assets\LumoraApp.ico`,
+  `Assets\LumoraApp.png`, `coreclr.dll`, `hostfxr.dll`, `hostpolicy.dll`
+  presents.
+- Installateur :
+  `artifacts\installer\LumoraSetup-0.65.1-dev-win-x64.exe`.
+- SHA256 installateur :
+  `5c973e8fca01fff590b19601dfa97b992af73a2c9036377c424c3d231d43fc1c`.
+- Verification finale des installations : il reste Lumora et PulseAuth ; les
+  installations navigateur Pulse/Nova ont ete retirees. L'entree uninstall
+  Lumora indique `0.65.1-dev`.
+- Verification config : `%LOCALAPPDATA%\Lumora\config.json` pointe vers
+  `E:\Documents\LumoraBrowser\H.J`.
+
+**Non fait / a savoir** : pas de validation visuelle interactive de l'ouverture
+du profil. Le correctif a ete valide par tests unitaires, build, artefact propre,
+installateur et remplacement de l'installation locale.
+
+**Version :** `0.65.1-dev`.
+
+## 2026-07-12 (suite) - Titre Pulse restant sur le nouvel onglet (0.65.2-dev)
+
+Retour utilisateur : a l'ouverture d'un nouvel onglet, le nom affiche etait
+encore `Pulse` alors qu'il devait afficher le nouveau nom `Lumora`.
+
+**Cause** : le code neuf avait bien `Lumora` par defaut, mais les profils
+historiques peuvent conserver `NewTabTitle = Pulse` dans `ui-settings.pulse`.
+La page `lumora://accueil` reutilisait ce reglage personnalise tel quel.
+
+**Corrige / ajoute** :
+- Ajout de `BrandingText.NormalizeLegacyProductTitle`.
+- Migration douce des anciens titres exacts `Pulse`, `Pulse Browser`, `Nova` et
+  `Nova Browser` vers `Lumora`.
+- Application de cette migration au chargement des reglages UI, au champ de
+  parametres du titre de nouvel onglet, et au rendu HTML du nouvel onglet.
+- Les titres personnalises differents ne sont pas modifies.
+- Tests ajoutes dans `NewTabMarkupTests`.
+- Version runtime passee a `0.65.2-dev`; `AGENTS.md` indiquait deja
+  `0.65.2-dev`.
+
+**Verification** :
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 241/241 tests
+  verts.
+- `build-winui.cmd` : reussi, 0 avertissement, 0 erreur.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.65.2-dev -NoRestore` :
+  reussi.
+- Artifact propre :
+  `artifacts\clean-test\Lumora-0.65.2-dev-win-x64-clean-20260712-235244`.
+- Verification artifact : `Lumora.WinUI.exe`, `App.xbf`, `MainWindow.xbf`,
+  `LumoraAppWindow.xbf`, `Lumora.WinUI.pri`, `Assets\LumoraApp.ico`,
+  `Assets\LumoraApp.png`, `coreclr.dll`, `hostfxr.dll`, `hostpolicy.dll`
+  presents.
+- Installateur :
+  `artifacts\installer\LumoraSetup-0.65.2-dev-win-x64.exe`.
+- SHA256 installateur :
+  `2cd0586f005bac7754fc4f3ef37b499a3ed30a58c15f6d17156716057703adc4`.
+- Installation locale `%LOCALAPPDATA%\Programs\Lumora` remplacee par l'artefact
+  propre `0.65.2-dev`; l'entree uninstall HKCU indique `0.65.2-dev`.
+
+**Non fait / a savoir** : pas de validation visuelle interactive de
+`lumora://accueil` dans cette passe. Le correctif est valide par test unitaire,
+build, artefact propre, installateur et remplacement local.
+
+**Version :** `0.65.2-dev`.
+
+## 2026-07-13 - Selection du microphone de dictee (0.65.3-dev)
+
+Retour utilisateur : la dictee vocale Lumora fonctionnait, mais utilisait le
+mauvais micro, notamment le micro de la manette PlayStation 5, et Lumora ne
+proposait aucun choix de microphone.
+
+**Cause** : la dictee appelait `SetInputToDefaultAudioDevice()`, donc le moteur
+Windows classique utilisait uniquement le peripherique d'entree par defaut.
+
+**Corrige / ajoute** :
+- Ajout d'une preference locale `DictationMicrophoneDeviceId`.
+- Ajout d'un selecteur de micro dans Parametres > Accessibilite, avec choix
+  `Micro par defaut Windows`, micros detectes et bouton `Actualiser`.
+- Ajout de `DictationAudioInput` et de la dependance ciblee `NAudio.WinMM`.
+- Quand un micro precis est choisi, Lumora capture ce micro en PCM mono 16 kHz
+  et alimente `SpeechRecognitionEngine` via `SetInputToAudioStream`.
+- Conservation du mode par defaut Windows pour compatibilite.
+- Statut de dictee enrichi avec le micro selectionne.
+- Version passee a `0.65.3-dev`.
+
+**Verification** :
+- `dotnet restore Lumora.WinUI\Lumora.WinUI.csproj` : reussi.
+- `cmd /c build-winui.cmd` : reussi, 0 avertissement, 0 erreur.
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` :
+  241/241 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.65.3-dev -NoRestore` :
+  reussi.
+- Artifact propre final :
+  `artifacts\clean-test\Lumora-0.65.3-dev-win-x64-clean-20260713-001232`.
+- Installateur final :
+  `artifacts\installer\LumoraSetup-0.65.3-dev-win-x64.exe`.
+- SHA256 installateur :
+  `51901f27b23a1e1cecb0717b4f49652e214c8ba2bc3015db2314db3e1a14602e`.
+- Installation locale `%LOCALAPPDATA%\Programs\Lumora` remplacee par l'artefact
+  final `0.65.3-dev`.
+- Verification installation : `NAudio.Core.dll`, `NAudio.WinMM.dll` et
+  `System.Speech.dll` presents ; `NAudio.dll` absent.
+- Entree uninstall HKCU verifiee : `DisplayVersion = 0.65.3-dev`.
+
+**Non fait / a savoir** : pas de validation vocale interactive avec le vrai
+micro utilisateur dans cette passe. Le correctif a ete valide par build, tests,
+packaging, installation locale et verification des dependances audio.
+
+**Version :** `0.65.3-dev`.
+
+## 2026-07-13 (suite) - Focus de dictee et micro explicite (0.65.4-dev)
+
+Retour utilisateur apres `0.65.3-dev` : le selecteur de micro etait bien
+present, mais apres choix du micro de la camera, Lumora indiquait que le micro
+ne captait pas et proposait encore `Configurer mon micro`. Apres passage par
+l'assistant Windows, la dictee ne fonctionnait plus. Autre point important :
+cliquer sur le bouton micro retirait le curseur du champ de recherche ; cliquer
+ensuite dans le champ semblait desactiver le micro.
+
+**Cause** :
+- Le bouton micro prenait encore le focus WinUI au clic.
+- Cote page web, le script d'insertion ne savait utiliser que
+  `document.activeElement`; si le focus etait perdu, le champ cible etait perdu.
+- Le dialogue `Configurer mon micro` etait propose meme pour un micro Lumora
+  explicite, alors que cet assistant Windows est surtout pertinent pour le micro
+  par defaut Windows/SAPI.
+
+**Corrige / ajoute** :
+- `MicDictationButton` ne prend plus le focus :
+  `AllowFocusOnInteraction="False"` et `IsTabStop="False"`.
+- Ajout de `DictationRememberTargetScript.js` pour memoriser le champ editable
+  actif avant l'ecoute.
+- `DictationFillScript.js` reutilise le champ memorise si
+  `document.activeElement` n'est plus editable au moment de l'insertion.
+- Le dialogue `Configurer mon micro` n'est propose que pour le micro par defaut
+  Windows.
+- Pour un micro explicite (camera, casque, etc.), Lumora affiche un message
+  indiquant que ce micro n'a donne aucun son reconnu et invite a actualiser ou
+  changer le micro dans Parametres > Accessibilite.
+- Version passee a `0.65.4-dev`.
+
+**Verification** :
+- `cmd /c build-winui.cmd` : reussi, 0 avertissement, 0 erreur.
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` :
+  241/241 tests verts.
+- `scripts\build-clean-test-artifact.ps1 -Version 0.65.4-dev -NoRestore` :
+  reussi.
+- Artifact propre :
+  `artifacts\clean-test\Lumora-0.65.4-dev-win-x64-clean-20260713-002647`.
+- Installateur :
+  `artifacts\installer\LumoraSetup-0.65.4-dev-win-x64.exe`.
+- SHA256 installateur :
+  `93675bf91d965cbea9c8b263d2224dbace56686ab9fa880e8e7a2707b4d36ff0`.
+- Installation locale `%LOCALAPPDATA%\Programs\Lumora` remplacee par l'artefact
+  propre `0.65.4-dev`.
+- Verification installation : `Dictation\DictationFillScript.js`,
+  `Dictation\DictationRememberTargetScript.js`, `NAudio.Core.dll`,
+  `NAudio.WinMM.dll` et `System.Speech.dll` presents.
+- Entree uninstall HKCU verifiee : `DisplayVersion = 0.65.4-dev`.
+
+**Non fait / a savoir** : pas de validation vocale interactive avec le vrai
+micro utilisateur dans cette passe. Le correctif cible le focus et le parcours
+de configuration, puis a ete valide par build, tests, packaging et installation
+locale.
+
+**Version :** `0.65.4-dev`.
+
+## 2026-07-13 (suite) - Dictee micro explicite reparee + favicons retrouves (0.65.5-dev)
+
+**Probleme 1 (dictee)** : micro webcam MX Brio selectionne -> "il ne se passe
+rien". Cause prouvee sur machine : `BlockingAudioStream` violait le contrat
+SAPI de `SetInputToAudioStream` — `Length` levait une exception des
+l'initialisation (=> "micro introuvable" sans demarrer la capture), et une
+lecture partielle de `Read` etait interpretee comme une fin de flux (=> null
+en 0,3 s, "aucun son reconnu"). La capture NAudio 16 kHz mono du micro MX Brio
+fonctionnait, elle, parfaitement.
+
+**Probleme 2 (favicons)** : favoris importes (AlloCine, Amazon...) avec
+`IconPath` absolus pointant vers `E:\Documents\PulseBrowser\...` (dossier
+renomme en `LumoraBrowser`) ET url en `http://` alors que les icones sont
+capturees sous l'origine `https://` (hash different).
+
+**Corrections** :
+- `DictationAudioStream.cs` (nouveau) : flux au contrat SAPI (Length=-1,
+  Seek/Position inoffensifs, Read qui remplit tout le tampon). Valide de bout
+  en bout : parole francaise reconnue via le micro MX Brio avec la classe de
+  production.
+- `MainWindow.Bookmarks.cs` : reparation des IconPath morts (meme nom de
+  fichier dans le dossier favicons courant) + recherche hash-origine sur les
+  deux schemes http/https.
+- `BookmarkStore.SetIconForOrigin` : correspondance par hote sans scheme.
+- Tests : +6 (`DictationAudioStreamTests`), total 247/247 verts.
+
+**Livraison** : build 0 avertissement ; artifact
+`Lumora-0.65.5-dev-win-x64-clean-20260713-012912` ; installateur
+`LumoraSetup-0.65.5-dev-win-x64.exe` (SHA256
+`66ba41a17dc1c58a9fd74f5084da7e7fd1b135e9237cb7d6759380f4adfa4a78`) ;
+installation locale remplacee ; uninstall HKCU `DisplayVersion = 0.65.5-dev`.
+Details : `logs/2026-07-13-dictation-sapi-stream-favicon-paths-0-65-5.md`.
+
+**Version :** `0.65.5-dev`.
+
+## 2026-07-13 (suite) - Dictee continue (0.65.6-dev)
+
+**Probleme** : apres 0.65.5, la dictee capte mais "s'eteint au bout de 3
+secondes" — comportement par construction du mode mono-phrase
+(`Recognize(TimeSpan)` : une phrase puis coupure).
+
+**Correction** : dictee continue dans `MainWindow.Dictation.cs`. Bouton micro
+= interrupteur (clic demarre / clic arrete), `RecognizeAsync(Multiple)` +
+insertion phrase par phrase dans le champ cible, arret automatique apres 20 s
+de silence, arret propre avec finalisation de la phrase en cours (grace 8 s),
+`DictationFillScript.js` conserve le marqueur du champ pendant la session.
+
+**Validation** : test reel machine (micro MX Brio) — ecoute continue 15 s,
+phrases reconnues au fil de l'eau, arret propre. Build 0 avertissement,
+247/247 tests. Artifact `Lumora-0.65.6-dev-win-x64-clean-20260713-021122`,
+installateur `LumoraSetup-0.65.6-dev-win-x64.exe` (SHA256
+`11149ed6940215d14c04bfa26004886c751bcbe6b65e00e3544cbbecfa0c5c33`),
+installation locale remplacee, uninstall HKCU `0.65.6-dev`.
+Details : `logs/2026-07-13-dictation-continue-0-65-6.md`.
+
+**Version :** `0.65.6-dev`.
+
+## 2026-07-13 (suite) - Dictee : arret instantane, gain auto, filtre anti-charabia (0.65.7-dev)
+
+**Problemes** (retour sur 0.65.6) : 1) impossible d'arreter la dictee, quasi
+plantage — `RecognizeAsyncStop()` bloquait le thread UI >4 s (minuteur de
+secours fige aussi). 2) retranscription "n'importe quoi" — capture WaveIn
+brute trop faible (pics 5-13% de la pleine echelle mesures) + SAPI qui
+hallucine des phrases a 14-27% de confiance, inserees sans filtre.
+
+**Corrections** :
+- Arret : audio coupe d'abord (fin de flux => moteur se termine seul),
+  `RecognizeAsyncStop` en arriere-plan. Mesure : arret en 0,27 s.
+- `DictationAutoGain` (nouveau, 4 tests) : gain auto cible 30% FS, plafond x8,
+  silence jamais amplifie, ecretage sans enroulement.
+- Filtre de confiance 30% : le charabia n'est plus insere, message "je n'ai
+  pas bien compris" a la place. Verifie : ambiant 17-27% filtre.
+- Culture moteur choisie parmi les recognizers installes (UI exacte > meme
+  langue > premier) + trace.
+
+**Livraison** : 251/251 tests, build 0 avertissement, artifact
+`Lumora-0.65.7-dev-win-x64-clean-20260713-025158`, installateur SHA256
+`49f901019f111bb94607fc38e503abe3345d2884f468dabef14d96cf907e4bc7`,
+installation locale remplacee, uninstall HKCU `0.65.7-dev`.
+Si la qualite SAPI reste insuffisante : piste Whisper/ONNX (deja en dependance)
+notee dans le log. Details :
+`logs/2026-07-13-dictation-arret-gain-confiance-0-65-7.md`.
+
+**Version :** `0.65.7-dev`.
+
+## 2026-07-13 (suite) - Dictee : retrait du moteur SAPI, bouton micro devenu astuce Win+H (0.66.0-dev)
+
+**Probleme** (retour sur 0.65.7) : malgre gain auto et filtre de confiance,
+la retranscription reste du charabia. Test comparatif utilisateur : la dictee
+Windows (Win+H) fonctionne parfaitement dans les champs de Lumora. Verdict :
+le moteur SAPI est structurellement mediocre en francais, pas la peine de
+s'acharner une 4e fois.
+
+**Decision** (validee par l'utilisateur) : Lumora n'embarque plus de moteur
+de reconnaissance vocale. Le bouton micro reste dans la barre d'adresse
+(toujours pilote par le reglage d'accessibilite) mais devient un aide-memoire :
+infobulle au survol + message dans la barre de statut au clic, qui expliquent
+"cliquez dans un champ puis Win+H". Pas d'appel programmatique de la dictee
+Windows (pas d'API publique ; la simulation clavier Win+H reste une piste
+future si demandee).
+
+**Supprime** : MainWindow.Dictation.cs reduit a l'astuce (~590 -> ~30 lignes),
+DictationAudioInput/AudioStream/AutoGain.cs, les 2 scripts JS Dictation,
+tools/DictationDiagnostic, 10 tests dictee, dependances System.Speech et
+NAudio.WinMM, reglage DictationMicrophoneDeviceId + selecteur micro des
+Parametres. La description du reglage ne promet plus "100% local" : la voix
+est traitee par Windows selon les parametres systeme.
+
+**Validation** : build MSBuild Debug x64 0 erreur 0 avertissement,
+241/241 tests. Pas d'artifact/installateur produit a cette etape.
+Details : `logs/2026-07-13-dictation-retrait-sapi-astuce-win-h-0-66-0.md`.
+
+**Version :** `0.66.0-dev`.
+
+## 2026-07-13 (suite) - Fenetre de navigation privee (0.67.0-dev)
+
+**Fonction** : premiere navigation privee de Lumora, choisie comme trou le plus
+visible pour un navigateur oriente vie privee. Nouvelle `LumoraPrivateWindow`
+(barre d'adresse + moteur, sans onglets) sur profil WebView2 InPrivate
+(`IsInPrivateModeEnabled`, profil `lumora-prive`) : cookies/cache/stockages en
+memoire, purges par le moteur. Rien n'est relie aux stores du profil
+(historique, coffre, favoris, favicons) par construction. Protections reseau
+actives (memes modules que les fenetres d'application web, meme limite v1 :
+pas de filtre cosmetique ni d'anti-bannieres). `NewWindowRequested` reste en
+prive. Acces : menu Naviguer, palette, `Ctrl+Shift+N`. Extraction de
+`AddressNormalizer` (classe pure partagee, testee).
+Details : `logs/2026-07-13-navigation-privee-0-67-0.md`,
+doc `docs/NAVIGATION_PRIVEE_0_67.md`.
+
+**Version :** `0.67.0-dev`.
+
+## 2026-07-13 (suite) - Rouvrir l'onglet ferme Ctrl+Shift+T (0.68.0-dev)
+
+**Fonction** : pile bornee (20) des onglets fermes (`Tabs/ClosedTabHistory.cs`,
+classe pure testee), capture dans `CloseTab`. `Ctrl+Shift+T` restaure le
+dernier ferme ; la palette liste chaque onglet ferme recent pour une
+restauration ciblee ; menu Naviguer aussi. Groupe restaure si encore existant,
+etat epingle conserve. Onglets accueil ignores. Pile en memoire uniquement
+(pas de trace disque) et videe au passage en mode invite.
+Details : `logs/2026-07-13-onglets-recemment-fermes-0-68-0.md`,
+doc `docs/ONGLETS_RECEMMENT_FERMES_0_68.md`.
+
+**Version :** `0.68.0-dev`.
+
+## 2026-07-13 (suite) - Bilan de sante des mots de passe (0.69.0-dev)
+
+**Fonction** : bouton `Bilan de sante` dans le panneau coffre + entree palette.
+`PasswordManager/PasswordHealthAnalyzer.cs` (classe pure testee) signale les
+mots de passe reutilises entre sites distincts (pas intra-site), faibles
+(< 8 caracteres, classe unique, caractere repete, liste de mots de passe
+courants) et anciens (> 2 ans sans modification, entrees sans date ignorees).
+Rapport en ContentDialog, mots de passe jamais affiches, analyse 100% locale.
+Verification type Have I Been Pwned volontairement exclue (aucune requete
+sortante sans validation explicite).
+
+**Livraison des 3 fonctions** : `dotnet test` 276/276 verts (30 nouveaux tests),
+`build-winui.cmd` 0 avertissement 0 erreur, lancement court de l'exe OK.
+Pas d'artifact/installateur produit a cette etape.
+Details : `logs/2026-07-13-bilan-sante-mots-de-passe-0-69-0.md`,
+doc `docs/BILAN_SANTE_MOTS_DE_PASSE_0_69.md`.
+
+**Version :** `0.69.0-dev`.
+
+## 2026-07-13 (suite) - Personnalisation globale du navigateur (0.70.0-dev)
+
+**Fonction** : personnalisation globale de Lumora. La gestion de l'avatar est
+deplacee dans `Parametres > Personnalisation`, avec conservation locale dans le
+dossier du profil. Le bandeau d'etat reste visible pendant la navigation et
+affiche l'etat du profil avec l'avatar ; ce bloc est cliquable et ouvre la
+personnalisation. Les categories de parametres sont reordonnees pour un parcours
+plus naturel, et une barre d'action globale en bas des parametres remplace la
+validation limitee a une seule categorie.
+
+**Verification** : `cmd /c .\build-winui.cmd` reussi avec 0 avertissement et
+0 erreur ; `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` :
+276/276 tests verts. Le premier build sous sandbox a ete bloque par l'acces
+reseau NuGet, puis le build hors sandbox a restaure/compile correctement.
+Details : `logs/2026-07-13-personnalisation-globale-0-70-0.md`.
+
+**Version :** `0.70.0-dev`.
+
+## 2026-07-13 (suite) - Installateur 0.70.0-dev
+
+Demande utilisateur : produire un nouvel installateur apres la personnalisation
+globale.
+
+**Correction packaging** : la premiere verification de l'artefact propre a
+revele que `LumoraPrivateWindow.xbf` n'etait pas copie dans le dossier final.
+`scripts/build-clean-test-artifact.ps1` copie maintenant aussi ce fichier, en
+plus de `App.xbf`, `MainWindow.xbf` et `LumoraAppWindow.xbf`.
+
+**Artefact propre final** :
+`artifacts\clean-test\Lumora-0.70.0-dev-win-x64-clean-20260713-122428`.
+SHA256 de `Lumora.WinUI.exe` :
+`01aa7368b91a8e063ceb572e212e1dc7e0ff17f911cf08e1e9a6de89860f6441`.
+Verification presence fichiers : `Lumora.WinUI.exe`, `App.xbf`,
+`MainWindow.xbf`, `LumoraAppWindow.xbf`, `LumoraPrivateWindow.xbf`,
+`Lumora.WinUI.pri`, `coreclr.dll`, `hostfxr.dll`, `hostpolicy.dll`.
+
+**Installateur final** :
+`artifacts\installer\LumoraSetup-0.70.0-dev-win-x64.exe`.
+SHA256 :
+`aa558fbbbc6829b3766453b68ad9267c80776b6916cccc3492e27d2ab4c7314c`.
+Fichier de verification :
+`artifacts\installer\LumoraSetup-0.70.0-dev-win-x64.VERIFICATION.txt`.
+Manifeste :
+`artifacts\signatures\LumoraSetup-0.70.0-dev-20260713-122534.sha256`.
+
+**Verification** : publication Release autonome reussie avec 0 avertissement et
+0 erreur ; installateur genere ; verification finale des fichiers essentiels
+reussie. Details : `logs/2026-07-13-installeur-0-70-0.md`.
+
+**Version :** `0.70.0-dev`.
+
+## 2026-07-13 (suite) - Restauration plein ecran video (0.70.1-dev)
+
+Retour utilisateur avec captures `Cap1.png`, `Cap2.png`, `Cap3.png` : apres
+plein ecran YouTube, la sortie du plein ecran video laisse Lumora en mode
+immersif ; puis la sortie du plein ecran navigateur restaure seulement une
+partie de l'interface, avec options manquantes jusqu'au redemarrage.
+
+**Correction** :
+- ajout de `_wasLumoraFullScreenBeforeContentFullScreen` pour distinguer le
+  plein ecran Lumora volontaire du plein ecran demande par la page ;
+- sortie de plein ecran contenu centralisee dans
+  `CompleteContentFullScreenExit` ;
+- restauration forcee en presenter `Overlapped` si Lumora n'etait pas deja en
+  plein ecran avant la video ;
+- restauration explicite de `NavigationRow`, toolbar, onglets, rail vertical,
+  paddings et timers de masquage dans `ApplyFullScreenLayout` ;
+- le signal JS `fullscreenchange` est traite sans attendre que l'etat WebView2
+  natif soit deja revenu a `false` ;
+- la fermeture d'un onglet en plein ecran contenu utilise la meme routine.
+
+**Verification** : premier build sous sandbox bloque par NuGet (`NU1301`) et
+acces refuse sur `obj`, puis `cmd /c .\build-winui.cmd` hors sandbox reussi
+avec 0 avertissement et 0 erreur ; `dotnet test
+Lumora.Tests\Lumora.Tests.csproj --no-restore` : 276/276 tests verts.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.70.1-dev-win-x64-clean-20260713-130000`.
+SHA256 de `Lumora.WinUI.exe` :
+`01aa7368b91a8e063ceb572e212e1dc7e0ff17f911cf08e1e9a6de89860f6441`.
+Fichiers essentiels verifies : `Lumora.WinUI.exe`, `App.xbf`,
+`MainWindow.xbf`, `LumoraAppWindow.xbf`, `LumoraPrivateWindow.xbf`,
+`Lumora.WinUI.pri`, `coreclr.dll`, `hostfxr.dll`, `hostpolicy.dll`.
+Installateur :
+`artifacts\installer\LumoraSetup-0.70.1-dev-win-x64.exe`.
+SHA256 installateur :
+`e79423e74a5d0ca0583f0b4553a1b1a69702d4abe8287cec2b69850ed7673ceb`.
+Fichier de verification :
+`artifacts\installer\LumoraSetup-0.70.1-dev-win-x64.VERIFICATION.txt`.
+Manifeste :
+`artifacts\signatures\LumoraSetup-0.70.1-dev-20260713-130127.sha256`.
+Pas de validation manuelle interactive du scenario YouTube plein ecran dans
+cette passe. Details :
+`logs/2026-07-13-fullscreen-video-restore-0-70-1.md`.
+
+**Version :** `0.70.1-dev`.
+
+## 2026-07-13 (suite) - Coffre : remplissage multi-frames (0.70.2-dev)
+
+Retour utilisateur : les mots de passe importes dans le coffre sont corrects,
+mais quand Lumora propose de remplir sur un site et qu'il accepte, le
+remplissage echoue souvent. Diagnostic : asymetrie detection/remplissage —
+le script de capture vit dans toutes les frames
+(`AddScriptToExecuteOnDocumentCreatedAsync`), mais le remplissage passait par
+`ExecuteScriptAsync` (frame principale uniquement) avec des regles trop
+strictes (`elementFromPoint`, viewport, rejet des champs `readonly`, pas de
+shadow DOM).
+
+**Correction** :
+- le remplissage demenage dans `CredentialCaptureScript.js`
+  (`window.__novaFillCredential`, definie dans chaque frame) ;
+  `CredentialAutofillScript.js` supprime (duplication divergente) ;
+- recherche des champs etendue : shadow roots ouverts + iframes same-origin
+  (`queryAllDeep`) ; regles assouplies au remplissage : pas d'exigence de
+  premier plan ni de viewport (`scrollIntoView` a la place), deverrouillage
+  des champs `readonly` ;
+- `CredentialService.FillAsync` : suivi des `CoreWebView2Frame` et appel
+  frame principale puis chaque iframe cross-origin, agregation des resultats
+  partiels sans double remplissage ; idem `FillGeneratedPasswordAsync` ;
+- verification differee ~300 ms cote page (les SPA effacent parfois la valeur
+  au re-render) : nouvel essai puis rapport `nova.credential.fill-report` →
+  evenement `FillReported` → `StatusText` ;
+- les page-states des iframes ne sont volontairement pas routes vers l'UI
+  (une frame tierce sans champ masquerait la barre) ;
+- `credential-lab.html` : 4 nouveaux cas (readonly anti-autofill, formulaire
+  hors viewport, iframe same-origin, shadow DOM).
+
+**Verification** : `node --check` OK ; build via MSBuild.exe (vswhere) reussi
+(`dotnet build` seul echoue toujours ici, MSB4062 PriGen, environnement) ;
+`dotnet test Lumora.Tests\Lumora.Tests.csproj --no-build` : 276/276 verts.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.70.2-dev-win-x64-clean-20260713-135646`
+(0 avertissement, 0 erreur). SHA256 de `Lumora.WinUI.exe` :
+`01aa7368b91a8e063ceb572e212e1dc7e0ff17f911cf08e1e9a6de89860f6441`
+(identique a 0.70.1 : stub apphost generique, le code vit dans la DLL ;
+contenu verifie — ancien script absent, `__novaFillCredential` et chaine
+`0.70.2-dev` presents). Installateur :
+`artifacts\installer\LumoraSetup-0.70.2-dev-win-x64.exe`, SHA256
+`376b43c7855afa9c417485594e0abbe0ef1a48373441824fec0ad2a32188c49d`.
+Manifestes :
+`artifacts\signatures\Lumora-0.70.2-dev-clean-20260713-135711.sha256` et
+`artifacts\signatures\LumoraSetup-0.70.2-dev-20260713-135847.sha256`.
+Pas de validation manuelle interactive dans cette passe : a verifier par
+l'utilisateur sur ses sites quotidiens et via `credential-lab.html`.
+Details : `logs/2026-07-13-vault-autofill-multiframe-0-70-2.md`.
+
+**Version :** `0.70.2-dev`.

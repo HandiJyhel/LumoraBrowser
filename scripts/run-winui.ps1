@@ -4,8 +4,8 @@ param()
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$project = Join-Path $repoRoot "PulseBrowser.WinUI\PulseBrowser.WinUI.csproj"
-$exe = Join-Path $repoRoot "PulseBrowser.WinUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\PulseBrowser.WinUI.exe"
+$project = Join-Path $repoRoot "Lumora.WinUI\Lumora.WinUI.csproj"
+$exe = Join-Path $repoRoot "Lumora.WinUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\Lumora.WinUI.exe"
 
 if (-not (Test-Path $project)) {
     throw "Projet WinUI introuvable: $project"

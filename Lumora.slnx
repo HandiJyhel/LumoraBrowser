@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Lumora.WinUI/Lumora.WinUI.csproj" />
+  <Project Path="Lumora.Tests/Lumora.Tests.csproj" />
+</Solution>
+

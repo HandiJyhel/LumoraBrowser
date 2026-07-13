@@ -1,0 +1,72 @@
+<Window
+    x:Class="Lumora.WinUI.LumoraPrivateWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Navigation privee - Lumora">
+
+    <!--
+        Fenêtre de navigation privée : profil WebView2 InPrivate (mémoire seule),
+        aucune écriture dans l'historique, le coffre ou les favicons Lumora.
+        Volontairement minimale : une barre d'adresse et un moteur, pas d'onglets
+        (chaque nouvelle page cible ouvre une nouvelle fenêtre privée). Les
+        protections réseau (bloqueur pubs/trackers, anti-télémétrie, HTTPS, CNAME)
+        restent actives ; le filtre cosmétique et le refus automatique des bannières
+        cookies restent réservés à la fenêtre principale (même limite v1 que les
+        fenêtres d'application web).
+    -->
+    <Grid x:Name="RootGrid" Background="#FF1E1830">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Padding="10,8" ColumnSpacing="8" Background="#FF2A2142">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <FontIcon Grid.Column="0" Glyph="&#xE727;" FontFamily="Segoe MDL2 Assets"
+                      FontSize="16" Foreground="#FFB9A7E8" VerticalAlignment="Center"
+                      Margin="2,0,4,0" />
+
+            <Button x:Name="PrivateBackButton" Grid.Column="1" Padding="8,5"
+                    Click="PrivateBackButton_Click" IsEnabled="False"
+                    AutomationProperties.Name="Page precedente"
+                    ToolTipService.ToolTip="Page precedente">
+                <FontIcon Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+            <Button x:Name="PrivateForwardButton" Grid.Column="2" Padding="8,5"
+                    Click="PrivateForwardButton_Click" IsEnabled="False"
+                    AutomationProperties.Name="Page suivante"
+                    ToolTipService.ToolTip="Page suivante">
+                <FontIcon Glyph="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+            <Button x:Name="PrivateReloadButton" Grid.Column="3" Padding="8,5"
+                    Click="PrivateReloadButton_Click"
+                    AutomationProperties.Name="Recharger la page"
+                    ToolTipService.ToolTip="Recharger la page">
+                <FontIcon Glyph="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+
+            <TextBox x:Name="PrivateAddressBox" Grid.Column="4"
+                     PlaceholderText="Rechercher ou saisir une URL (navigation privee)"
+                     KeyDown="PrivateAddressBox_KeyDown"
+                     AutomationProperties.Name="Barre d'adresse de la navigation privee"
+                     VerticalAlignment="Center" />
+
+            <TextBlock Grid.Column="5" Text="Privee" Foreground="#FFB9A7E8"
+                       FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                       Margin="4,0,2,0" />
+        </Grid>
+
+        <Grid x:Name="PrivateWebViewHost" Grid.Row="1" />
+    </Grid>
+</Window>

@@ -1,5 +1,6 @@
 param(
-    [string]$OutputDir = "PulseBrowser.WinUI\Assets"
+    [string]$OutputDir = "Lumora.WinUI\Assets",
+    [string]$AssetName = "LumoraApp"
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,14 +42,14 @@ function New-IconBitmap {
 
     $tileBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
         $rect,
-        [System.Drawing.Color]::FromArgb(255, 248, 244, 236),
-        [System.Drawing.Color]::FromArgb(255, 239, 231, 219),
+        [System.Drawing.Color]::FromArgb(255, 17, 42, 41),
+        [System.Drawing.Color]::FromArgb(255, 25, 58, 55),
         [System.Drawing.Drawing2D.LinearGradientMode]::ForwardDiagonal
     )
     $graphics.FillPath($tileBrush, $path)
 
     if (-not $Simplified) {
-        $borderPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(210, 255, 255, 250), (S 12))
+        $borderPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(210, 207, 250, 244), (S 12))
         $graphics.DrawPath($borderPen, $path)
     }
 
@@ -57,14 +58,14 @@ function New-IconBitmap {
     $orangePath.AddBezier((S 808), (S 470), (S 830), (S 700), (S 610), (S 720), (S 478), (S 704))
     $orangePath.AddBezier((S 478), (S 704), (S 440), (S 700), (S 435), (S 745), (S 462), (S 770))
 
-    $orangePen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 225, 120, 24), (Sw 70))
+    $orangePen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 72, 210, 198), (Sw 70))
     $orangePen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
     $orangePen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
     $orangePen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
     $graphics.DrawPath($orangePen, $orangePath)
 
     if (-not $Simplified) {
-        $highlightPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(110, 255, 187, 79), (S 22))
+        $highlightPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(130, 180, 218, 122), (S 22))
         $highlightPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
         $highlightPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
         $graphics.DrawBezier($highlightPen, (S 360), (S 360), (S 520), (S 220), (S 720), (S 245), (S 780), (S 340))
@@ -74,7 +75,7 @@ function New-IconBitmap {
     $charcoalPath.AddBezier((S 360), (S 398), (S 215), (S 560), (S 295), (S 735), (S 486), (S 792))
     $charcoalPath.AddBezier((S 486), (S 792), (S 620), (S 835), (S 770), (S 745), (S 835), (S 560))
 
-    $charcoalPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 34, 33, 31), (Sw 38))
+    $charcoalPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 238, 250, 247), (Sw 38))
     $charcoalPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
     $charcoalPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
     $charcoalPen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
@@ -88,15 +89,15 @@ function New-IconBitmap {
     $dotRect = New-Object System.Drawing.RectangleF(($dotCenterX - $dotSize / 2), ($dotCenterY - $dotSize / 2), $dotSize, $dotSize)
     $dotBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
         $dotRect,
-        [System.Drawing.Color]::FromArgb(255, 255, 169, 45),
-        [System.Drawing.Color]::FromArgb(255, 225, 104, 15),
+        [System.Drawing.Color]::FromArgb(255, 180, 218, 122),
+        [System.Drawing.Color]::FromArgb(255, 72, 210, 198),
         [System.Drawing.Drawing2D.LinearGradientMode]::ForwardDiagonal
     )
     $graphics.FillEllipse($dotBrush, $dotRect)
 
     if (-not $Simplified) {
         $endpointRect = New-Object System.Drawing.RectangleF((S 760), (S 234), (S 74), (S 74))
-        $endpointBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 238, 119, 18))
+        $endpointBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 180, 218, 122))
         $graphics.FillEllipse($endpointBrush, $endpointRect)
     }
 
@@ -109,7 +110,15 @@ function Save-Png {
         [System.Drawing.Bitmap]$Bitmap,
         [string]$Path
     )
-    $Bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+    $tempPath = "$Path.tmp"
+    if (Test-Path -LiteralPath $tempPath) {
+        Remove-Item -LiteralPath $tempPath -Force
+    }
+    $Bitmap.Save($tempPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    if (Test-Path -LiteralPath $Path) {
+        Remove-Item -LiteralPath $Path -Force
+    }
+    Move-Item -LiteralPath $tempPath -Destination $Path -Force
 }
 
 function Write-Ico {
@@ -150,8 +159,8 @@ function Write-Ico {
     }
 }
 
-$sourcePath = Join-Path $resolvedOutput "PulseBrowser.png"
-$icoPath = Join-Path $resolvedOutput "PulseBrowser.ico"
+$sourcePath = Join-Path $resolvedOutput "$AssetName.png"
+$icoPath = Join-Path $resolvedOutput "$AssetName.ico"
 
 $source = New-IconBitmap -Size 1024
 Save-Png -Bitmap $source -Path $sourcePath
