@@ -4850,3 +4850,29 @@ HTTPS, cookies, parametres, CNAME, cosmetique, purge session).
 Details : `logs/2026-07-13-lecture-voix-haute-opt-in-0-71-1.md`.
 
 **Version :** `0.71.1-dev`.
+
+## 2026-07-13 (suite) - Focus WebView2 au retour d'un panneau (holy.com) (0.71.2-dev)
+
+Retour utilisateur (holy.com) : (1) pas de proposition de remplissage sur la
+page de connexion ; (2) apres passage par le coffre et retour sur le site, plus
+de clic droit ni de raccourcis clavier.
+
+**Symptome 2 = bug confirme** : `BackToPageButton_Click` reaffichait le
+WebView2 mais ne lui rendait pas le focus clavier (focus reste dans le XAML du
+panneau). Correctif : `view.Focus(FocusState.Programmatic)` au retour sur la
+page (comme a l'activation d'onglet) + `OfferAutoFill(tab.Address)` pour re-
+proposer le remplissage au retour (l'utilisateur revient peut-etre du coffre).
+
+**Symptome 1 = pas cote coffre** : verifie que le login deverrouille le coffre
+et que l'auto-verrouillage force un re-login ; le coffre est donc DEVERROUILLE
+en navigation normale. Cause probable : formulaire holy.com dans un pop-in/
+drawer/iframe sans champ mot de passe au chargement (a confirmer avec la
+structure exacte de la page). Le clic droit peut aussi etre bloque en JS par le
+site (pas un bug Lumora dans ce cas).
+
+**Verification** : build OK ; 283/283 tests verts. Installateur :
+`artifacts\installer\LumoraSetup-0.71.2-dev-win-x64.exe`, SHA256
+`3f6ed8b57baeecdb9a0ee3616bf25ffa20ae839f2dfb75ca9ac7f02144cb8c94`.
+Details : `logs/2026-07-13-focus-retour-page-coffre-0-71-2.md`.
+
+**Version :** `0.71.2-dev`.

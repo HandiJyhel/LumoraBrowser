@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.71.1-dev";
+    private const string Version = "0.71.2-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -426,6 +426,21 @@ public sealed partial class MainWindow : Window
     {
         var tab = CurrentTab();
         ShowPanel(BrowserPanel, tab?.Title ?? "Accueil Lumora");
+
+        if (tab?.View is { } view && BookmarkStore.IsWebUrl(tab.Address))
+        {
+            // Rendre le focus clavier au WebView2. Sans ca, apres un passage par un
+            // panneau interne (coffre, historique, parametres...), les raccourcis de
+            // la page (Ctrl+V, Ctrl+F...) et le menu contextuel ne repondent plus
+            // tant que l'utilisateur n'a pas reclique dans la page : le focus etait
+            // reste dans le XAML du panneau. Meme correctif qu'a l'activation d'onglet.
+            view.Focus(FocusState.Programmatic);
+
+            // L'utilisateur revient peut-etre du coffre ou il a consulte un identifiant :
+            // re-proposer le remplissage sur la page en cours si un compte correspond
+            // (l'offre initiale ne se declenche qu'au chargement de la page).
+            OfferAutoFill(tab.Address);
+        }
     }
 
     private void ApplyWindowTitleBarColors()
