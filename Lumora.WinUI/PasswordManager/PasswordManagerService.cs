@@ -185,7 +185,60 @@ internal sealed class PasswordManagerService
         }
 
         var host = PublicSuffixService.HostOf(credential.Origin);
-        return string.IsNullOrWhiteSpace(host) ? credential.Origin : host;
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return credential.Origin;
+        }
+
+        // "www." est du bruit d'import : sans ce retrait, "amazon.fr" et
+        // "www.amazon.fr" affichent deux noms differents pour le meme site et
+        // se trient a deux endroits opposes de la liste.
+        return host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) && host.Length > 4
+            ? host[4..]
+            : host;
+    }
+
+    // Doublons d'import : le meme compte enregistre sous plusieurs origines du
+    // meme site (www./apex/sous-domaine — http est deja normalise en https).
+    // Un doublon = meme domaine racine, meme identifiant ET meme mot de passe ;
+    // deux entrees dont le mot de passe differe ne sont JAMAIS considerees en
+    // double (multi-comptes, rotation de mot de passe...).
+    // Retourne les entrees excedentaires, celles qu'une fusion supprimerait.
+    public IReadOnlyList<VaultCredential> FindDuplicates()
+    {
+        return _vault.ListCredentials()
+            .GroupBy(c => (
+                Site: DuplicateSiteKey(c.Origin),
+                User: c.Username.Trim().ToLowerInvariant(),
+                c.Password))
+            .Where(g => !string.IsNullOrWhiteSpace(g.Key.Site) && g.Count() > 1)
+            .SelectMany(g => g
+                // L'entree conservee : la plus renseignee (nom perso, page de
+                // connexion), puis la plus recente.
+                .OrderByDescending(c => string.IsNullOrWhiteSpace(c.Label) ? 0 : 1)
+                .ThenByDescending(c => string.IsNullOrWhiteSpace(c.LoginUrl) ? 0 : 1)
+                .ThenByDescending(c => c.UpdatedAt)
+                .Skip(1))
+            .ToList();
+    }
+
+    public int MergeDuplicates()
+    {
+        var duplicates = FindDuplicates();
+        foreach (var extra in duplicates)
+        {
+            _vault.DeleteById(extra.Id);
+        }
+
+        return duplicates.Count;
+    }
+
+    private static string DuplicateSiteKey(string origin)
+    {
+        var root = PublicSuffixService.RootDomainOf(origin);
+        return string.IsNullOrWhiteSpace(root)
+            ? PublicSuffixService.HostOf(origin).ToLowerInvariant()
+            : root.ToLowerInvariant();
     }
 
     private static PasswordManagerEntryDraft NormalizeDraft(PasswordManagerEntryDraft draft)

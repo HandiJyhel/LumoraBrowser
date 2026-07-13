@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
@@ -691,6 +691,40 @@ public sealed partial class MainWindow
             : "Coffre a jour.";
     }
 
+    // Fusion des doublons d'import (meme site racine, meme identifiant, meme mot
+    // de passe) : detection d'abord, puis confirmation explicite avant suppression.
+    private async void VaultMergeButton_Click(object sender, RoutedEventArgs e)
+    {
+        var duplicates = _passwordManager.FindDuplicates();
+        if (duplicates.Count == 0)
+        {
+            StatusText.Text = "Aucun doublon dans le coffre.";
+            return;
+        }
+
+        var confirm = new ContentDialog
+        {
+            Title = "Fusionner les doublons ?",
+            Content = $"{duplicates.Count} entree(s) en double detectee(s) : meme site, meme identifiant et meme " +
+                      "mot de passe enregistres plusieurs fois (souvent des variantes www. ou sous-domaines " +
+                      "issues d'un import).\n\nChaque groupe sera reduit a une seule entree. Deux comptes dont " +
+                      "le mot de passe differe ne sont jamais fusionnes.",
+            PrimaryButtonText = "Fusionner",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+        {
+            StatusText.Text = "Fusion annulee.";
+            return;
+        }
+
+        var n = _passwordManager.MergeDuplicates();
+        RefreshVaultPanel();
+        StatusText.Text = $"Fusion terminee : {n} doublon(s) supprime(s).";
+    }
+
     private async void VaultAddButton_Click(object sender, RoutedEventArgs e)
     {
         var (draft, cancelled) = await PromptNewCredentialAsync();
@@ -1259,7 +1293,9 @@ public sealed partial class MainWindow
         };
         deleteBtn.Content = new FontIcon
         {
-            Glyph = "",
+            // Corbeille (U+E74D). Le caractere avait ete perdu (chaine vide) :
+            // le bouton s'affichait sans icone.
+            Glyph = "", // Corbeille (Delete)
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
             FontSize = 14
         };

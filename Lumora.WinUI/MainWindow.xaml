@@ -1706,6 +1706,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Gestionnaire de mots de passe" FontSize="24" FontWeight="SemiBold" />
@@ -1717,25 +1718,31 @@
                             Click="VaultHealthButton_Click">
                         <FontIcon Glyph="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
                     </Button>
-                    <Button Grid.Column="2" x:Name="VaultImportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                    <Button Grid.Column="2" x:Name="VaultMergeButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Fusionner les doublons : meme site, meme identifiant et meme mot de passe enregistres plusieurs fois (www., sous-domaines...)"
+                            AutomationProperties.Name="Fusionner les doublons du coffre"
+                            Click="VaultMergeButton_Click">
+                        <FontIcon Glyph="&#xEA99;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                    </Button>
+                    <Button Grid.Column="3" x:Name="VaultImportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
                             ToolTipService.ToolTip="Importer des mots de passe : fichier CSV ou navigateur installe (Chrome, Edge, Brave...)"
                             AutomationProperties.Name="Importer des mots de passe"
                             Click="VaultImportButton_Click">
                         <SymbolIcon Symbol="Import" />
                     </Button>
-                    <Button Grid.Column="3" x:Name="VaultExportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                    <Button Grid.Column="4" x:Name="VaultExportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
                             ToolTipService.ToolTip="Exporter en clair vers un fichier CSV"
                             AutomationProperties.Name="Exporter les mots de passe"
                             Click="VaultExportButton_Click">
                         <SymbolIcon Symbol="Save" />
                     </Button>
-                    <Button Grid.Column="4" x:Name="VaultRefreshButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                    <Button Grid.Column="5" x:Name="VaultRefreshButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
                             ToolTipService.ToolTip="Actualiser"
                             AutomationProperties.Name="Actualiser le coffre"
                             Click="VaultRefreshButton_Click">
                         <SymbolIcon Symbol="Refresh" />
                     </Button>
-                    <Button Grid.Column="5" x:Name="VaultAddButton" VerticalAlignment="Bottom"
+                    <Button Grid.Column="6" x:Name="VaultAddButton" VerticalAlignment="Bottom"
                             ToolTipService.ToolTip="Ajouter un identifiant"
                             AutomationProperties.Name="Ajouter un identifiant"
                             Click="VaultAddButton_Click">

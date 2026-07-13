@@ -419,7 +419,8 @@ public sealed partial class MainWindow
         // Repli HTTPS→HTTP : cette navigation venait d'une promotion http→https. Si elle
         // échoue, le site ne supporte probablement pas HTTPS → on propose de continuer en HTTP.
         var wasHttpsUpgrade = _httpsUpgradeOriginals.Remove(sender, out var originalHttpUrl);
-        if (!args.IsSuccess && wasHttpsUpgrade && isActive && originalHttpUrl is not null)
+        if (!args.IsSuccess && wasHttpsUpgrade && isActive && originalHttpUrl is not null &&
+            IndicatesHttpsUnsupported(args.WebErrorStatus))
         {
             _ = PromptHttpsFallbackAsync(tab, originalHttpUrl);
         }
@@ -480,6 +481,22 @@ public sealed partial class MainWindow
         }
         UpdatePrivacyUi();
     }
+
+    // Ne proposer le passage en HTTP que si l'échec signifie vraiment « ce site ne
+    // sert pas de HTTPS utilisable » : certificat invalide ou connexion refusée sur
+    // le port TLS. Une panne transitoire (timeout, DNS, réseau coupé) toucherait
+    // aussi la version HTTP — proposer un repli non chiffré serait à la fois inutile
+    // et un faux signal « site en HTTP » pour un site parfaitement sécurisé.
+    private static bool IndicatesHttpsUnsupported(CoreWebView2WebErrorStatus status) => status is
+        CoreWebView2WebErrorStatus.CertificateCommonNameIsIncorrect or
+        CoreWebView2WebErrorStatus.CertificateExpired or
+        CoreWebView2WebErrorStatus.ClientCertificateContainsErrors or
+        CoreWebView2WebErrorStatus.CertificateRevoked or
+        CoreWebView2WebErrorStatus.CertificateIsInvalid or
+        CoreWebView2WebErrorStatus.CannotConnect or
+        CoreWebView2WebErrorStatus.ConnectionAborted or
+        CoreWebView2WebErrorStatus.ConnectionReset or
+        CoreWebView2WebErrorStatus.ErrorHttpInvalidServerResponse;
 
     // Le forçage HTTPS a échoué : proposer de charger la version HTTP (non chiffrée).
     // Sur acceptation, l'hôte est autorisé en HTTP pour la session et rechargé tel quel.

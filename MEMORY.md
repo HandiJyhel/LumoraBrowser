@@ -4759,3 +4759,35 @@ l'utilisateur sur ses sites quotidiens et via `credential-lab.html`.
 Details : `logs/2026-07-13-vault-autofill-multiframe-0-70-2.md`.
 
 **Version :** `0.70.2-dev`.
+
+## 2026-07-13 (suite) - Coffre : doublons/affichage ; repli HTTP affine (0.70.3-dev)
+
+Retour utilisateur : coffre « en bordel » apres import (doublons, affichage) ;
+surprise devant la boite « continuer en HTTP » ; validation demandee du refus
+automatique des cookies (deja actif par defaut — aucun changement).
+
+**Corrections** :
+- glyphe corbeille (U+E74D) retabli sur le bouton supprimer des passkeys
+  (chaine vide dans le source, seul glyphe casse du projet apres balayage) ;
+- `DisplayName` sans prefixe `www.` (nom perso toujours prioritaire) :
+  fini « amazon.fr » et « www.amazon.fr » tries a deux endroits ;
+- fusion des doublons d'import : `FindDuplicates()`/`MergeDuplicates()` dans
+  `PasswordManagerService` (meme domaine racine + meme identifiant + MEME mot
+  de passe ; jamais de fusion si les mots de passe different) + bouton balai
+  « Fusionner les doublons » dans l'en-tete du panneau coffre avec dialogue de
+  confirmation (nombre exact annonce) ;
+- repli HTTPS->HTTP (`IndicatesHttpsUnsupported`) : propose uniquement sur
+  certificat invalide/expire/revoque, connexion refusee/reinitialisee ou
+  reponse serveur invalide — plus jamais sur timeout/DNS/reseau coupe (faux
+  positifs « site en HTTP » sur des sites sains).
+
+**Verification** : build Debug OK (MSBuild vswhere) ; 283/283 tests verts dont
+7 nouveaux (`VaultDuplicateMergeTests`). Artefact propre :
+`artifacts\clean-test\Lumora-0.70.3-dev-win-x64-clean-20260713-164236`
+(0 avertissement, 0 erreur), SHA256 exe
+`800e54e340a8051e2d6d1309cce34aca5c04fa524f00122c5ec107152f150037`.
+Installateur : `artifacts\installer\LumoraSetup-0.70.3-dev-win-x64.exe`,
+SHA256 `cf7d7f4263c37eafa35d705e481c10918d6d0316ed8775ea1b5fe63273f21cdd`.
+Details : `logs/2026-07-13-coffre-doublons-https-repli-0-70-3.md`.
+
+**Version :** `0.70.3-dev`.
