@@ -383,6 +383,17 @@ public sealed partial class MainWindow
         StatusText.Text = ReadAloudEnabledSwitch.IsOn ? "Lecture a voix haute activee." : "Lecture a voix haute desactivee.";
     }
 
+    private void AddressSuggestionsSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        if (!AddressSuggestionsSwitch.IsOn)
+            CloseAddressSuggestions();
+        StatusText.Text = AddressSuggestionsSwitch.IsOn
+            ? "Suggestions de la barre d'adresse activees (calcul 100% local)."
+            : "Suggestions de la barre d'adresse desactivees.";
+    }
+
     private void SearchAssistEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
@@ -560,6 +571,7 @@ public sealed partial class MainWindow
             UpdateReadAloudButtonVisibility();
             TranslationEnabledSwitch.IsOn = _uiSettings.TranslationEnabled;
             SearchAssistEnabledSwitch.IsOn = _uiSettings.SearchAssistEnabled;
+            AddressSuggestionsSwitch.IsOn = _uiSettings.AddressBarSuggestionsEnabled;
             UpdateSearchAssistButtonVisibility();
             ApplyCompactModeLayout();
             ApplyVerticalTabsLayout();
@@ -608,6 +620,8 @@ public sealed partial class MainWindow
             NetworkBlockerSwitch.IsOn   = _uiSettings.NetworkBlockerEnabled;
             TelemetryBlockerSwitch.IsOn = _uiSettings.TelemetryBlockerEnabled;
             SmartScreenSwitch.IsOn      = _uiSettings.SmartScreenEnabled;
+            PopupBlockerSwitch.IsOn     = _uiSettings.PopupBlockerEnabled;
+            StrictAdBlockSwitch.IsOn    = _uiSettings.StrictAdBlockEnabled;
             ParameterCleanerSwitch.IsOn = _uiSettings.ParameterCleanerEnabled;
             HttpsEnforcerSwitch.IsOn    = _uiSettings.HttpsEnforcerEnabled;
             CnameUncloakerSwitch.IsOn   = _uiSettings.CnameUncloakerEnabled;
@@ -707,6 +721,7 @@ public sealed partial class MainWindow
         _uiSettings.ReadAloudEnabled = ReadAloudEnabledSwitch.IsOn;
         _uiSettings.TranslationEnabled = TranslationEnabledSwitch.IsOn;
         _uiSettings.SearchAssistEnabled = SearchAssistEnabledSwitch.IsOn;
+        _uiSettings.AddressBarSuggestionsEnabled = AddressSuggestionsSwitch.IsOn;
         if (SessionTimeoutCombo.SelectedItem is ComboBoxItem timeoutItem &&
             int.TryParse(timeoutItem.Tag?.ToString(), out var tm))
             _uiSettings.SessionTimeoutMinutes = tm;

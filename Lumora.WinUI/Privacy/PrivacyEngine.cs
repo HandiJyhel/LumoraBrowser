@@ -93,6 +93,16 @@ internal sealed class PrivacyEngine
         return result;
     }
 
+    // Enregistre un blocage décidé hors du pipeline de requêtes (popup bloquée,
+    // navigation publicitaire annulée) : mêmes compteurs et même journal que les
+    // blocages de requêtes, pour que le bouclier reflète tout ce qui est bloqué.
+    public void RecordManualBlock(string moduleId, string moduleName, string requestUri, string pageUri)
+    {
+        Interlocked.Increment(ref _blockedCount);
+        Interlocked.Increment(ref _pageBlockedCount);
+        RecordBlock(moduleId, moduleName, requestUri, pageUri);
+    }
+
     public void ResetBlockedCount()
     {
         Interlocked.Exchange(ref _blockedCount, 0);
@@ -111,12 +121,15 @@ internal sealed class PrivacyEngine
         }
     }
 
-    private void RecordBlock(IPrivacyModule module, string requestUri, string pageUri)
+    private void RecordBlock(IPrivacyModule module, string requestUri, string pageUri) =>
+        RecordBlock(module.Id, module.DisplayName, requestUri, pageUri);
+
+    private void RecordBlock(string moduleId, string moduleName, string requestUri, string pageUri)
     {
         var entry = new PrivacyBlockEvent(
             DateTimeOffset.Now,
-            module.Id,
-            module.DisplayName,
+            moduleId,
+            moduleName,
             HostOf(requestUri),
             PathOf(requestUri),
             HostOf(pageUri));

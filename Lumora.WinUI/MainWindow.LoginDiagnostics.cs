@@ -12,6 +12,11 @@ public sealed partial class MainWindow
             return;
         }
 
+        // Santé du document principal (5xx, redirections permanentes) — voir
+        // MainWindow.SiteNotFound.cs. Avant le filtre diagnostic : celui-ci ne
+        // concerne que les sites listés, la santé concerne toutes les pages.
+        ObserveMainDocumentResponse(args);
+
         var pageUri = core.Source;
         var root = LoginDiagnosticRootForRequest(args.Request.Uri, pageUri, CoreWebView2WebResourceContext.Other);
         if (root is null)

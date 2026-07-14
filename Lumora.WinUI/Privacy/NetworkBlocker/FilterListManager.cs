@@ -18,6 +18,10 @@ internal sealed class FilterListManager
         ("easyprivacy",     "https://easylist.to/easylist/easyprivacy.txt"),
         ("ublock-filters",  "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt"),
         ("adguard-base",    "https://filters.adtidy.org/extension/ublock/filters/2.txt"),
+        // Pubs des sites francophones (0.77) : indispensable pour un usage FR.
+        ("liste-fr",        "https://easylist-downloads.adblockplus.org/liste_fr.txt"),
+        // Overlays et pop-ins insistants (0.77) : la pub « impossible a enlever ».
+        ("ublock-annoyances", "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/annoyances.txt"),
     ];
 
     private static readonly System.Net.Http.HttpClient Http = new()

@@ -176,6 +176,7 @@
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
                             <MenuFlyoutItem Text="Nouvelle fenetre privee" Click="PrivateWindowMenu_Click" />
                             <MenuFlyoutItem Text="Rouvrir l'onglet ferme" Click="ReopenTabMenu_Click" />
+                            <MenuFlyoutItem Text="Groupes enregistres" Click="SavedTabGroupsMenu_Click" />
                             <MenuFlyoutItem Text="Accueil Lumora" Click="HomeMenu_Click" />
                             <MenuFlyoutItem Text="Arreter le chargement" Click="StopButton_Click" />
                             <MenuFlyoutItem Text="Plein ecran" Click="CompactModeButton_Click" />
@@ -291,7 +292,58 @@
                 AutomationProperties.Name="Adresse ou recherche"
                 VerticalAlignment="Center"
                 KeyDown="AddressBox_KeyDown"
+                TextChanged="AddressBox_TextChanged"
+                LostFocus="AddressBox_LostFocus"
                 PlaceholderText="Rechercher ou entrer une adresse" />
+
+            <!-- Suggestions locales pendant la frappe : onglets ouverts, favoris,
+                 historique. Popup ancré sous la barre d'adresse via PlacementTarget
+                 (rendu dans la couche popup, au-dessus du WebView2). Jamais de requête
+                 réseau : tout vient des stores locaux du profil. -->
+            <Popup x:Name="AddressSuggestionsPopup"
+                   PlacementTarget="{x:Bind AddressBox}"
+                   DesiredPlacement="Bottom"
+                   IsLightDismissEnabled="False">
+                <Border x:Name="AddressSuggestionsSurface"
+                        Background="{StaticResource NovaChromeSurfaceRaisedBrush}"
+                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="6"
+                        MaxHeight="420"
+                        PointerEntered="AddressSuggestions_PointerEntered"
+                        PointerExited="AddressSuggestions_PointerExited">
+                    <ListView x:Name="AddressSuggestionsList"
+                              SelectionMode="Single"
+                              IsItemClickEnabled="True"
+                              ItemClick="AddressSuggestionsList_ItemClick">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="6,7" ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="22" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Grid.Column="0" Glyph="{Binding Glyph}"
+                                              FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                              VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding UrlDisplay}"
+                                                   Opacity="0.6" FontSize="11"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding KindLabel}"
+                                               Opacity="0.5" FontSize="11"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
+            </Popup>
             <Button Grid.Column="5"
                     Style="{StaticResource NovaChromeAccentIconButtonStyle}"
                     ToolTipService.ToolTip="Ouvrir l'adresse"
@@ -495,6 +547,7 @@
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
                             <MenuFlyoutItem Text="Nouvelle fenetre privee" Click="PrivateWindowMenu_Click" />
                             <MenuFlyoutItem Text="Rouvrir l'onglet ferme" Click="ReopenTabMenu_Click" />
+                            <MenuFlyoutItem Text="Groupes enregistres" Click="SavedTabGroupsMenu_Click" />
                             <MenuFlyoutItem Text="Accueil" Click="HomeMenu_Click" />
                             <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
                         </MenuFlyoutSubItem>
@@ -648,6 +701,10 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
@@ -794,7 +851,95 @@
                     </Grid>
                 </Border>
 
-                <Grid x:Name="BrowserHost" Grid.Row="7" />
+                <!-- Garde-fou : quand on ferme ou dissout un groupe non enregistre,
+                     propose de le ranger dans la bibliotheque avant qu'il disparaisse. -->
+                <Border x:Name="SaveGroupBar" Grid.Row="7" Visibility="Collapsed"
+                        Background="{StaticResource NovaInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Glyph="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SaveGroupText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button x:Name="SaveGroupAccept" Grid.Column="2" Content="Garder ce groupe" Click="SaveGroupAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SaveGroupDismiss" Grid.Column="3" Content="Non" Click="SaveGroupDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Reprise « site introuvable » : le domaine ne se resout plus (site
+                     ferme, nom de domaine change, faute de frappe). Suggestion calculee
+                     100% localement ; la recherche web ne part QUE sur clic explicite,
+                     vers le moteur de recherche configure. -->
+                <Border x:Name="SiteNotFoundBar" Grid.Row="8" Visibility="Collapsed"
+                        Background="{StaticResource NovaInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Glyph="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SiteNotFoundText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button x:Name="SiteNotFoundTrySuggestion" Grid.Column="2" Visibility="Collapsed" Click="SiteNotFoundTrySuggestion_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                        <Button x:Name="SiteNotFoundSearch" Grid.Column="3" Content="Rechercher ce site sur le web" Click="SiteNotFoundSearch_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SiteNotFoundDismiss" Grid.Column="4" Content="Fermer" Click="SiteNotFoundDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Site demenage : une redirection permanente (301/308) vers un autre
+                     domaine a ete observee et des favoris/raccourcis pointent encore
+                     vers l'ancien. Proposition unique par demenagement ; apprentissage
+                     100% local (SiteRelocationStore), rien n'est envoye nulle part. -->
+                <Border x:Name="SiteMovedBar" Grid.Row="9" Visibility="Collapsed"
+                        Background="{StaticResource NovaInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Glyph="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SiteMovedText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button x:Name="SiteMovedUpdate" Grid.Column="2" Content="Mettre a jour" Click="SiteMovedUpdate_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SiteMovedDismiss" Grid.Column="3" Content="Non merci" Click="SiteMovedDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Navigation bloquee : la page a envoye l'onglet vers un domaine
+                     repertorie publicitaire (clic detourne). L'utilisateur garde la
+                     main : « Continuer quand meme » autorise le domaine pour la
+                     session. Une adresse tapee dans la barre n'est jamais bloquee. -->
+                <Border x:Name="AdBlockedBar" Grid.Row="10" Visibility="Collapsed"
+                        Background="{StaticResource NovaInfoSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="AdBlockedText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <Button x:Name="AdBlockedContinue" Grid.Column="2" Content="Continuer quand meme" Click="AdBlockedContinue_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                        <Button x:Name="AdBlockedDismiss" Grid.Column="3" Content="Fermer" Click="AdBlockedDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                    </Grid>
+                </Border>
+
+                <Grid x:Name="BrowserHost" Grid.Row="11" />
             </Grid>
 
             <Grid x:Name="BookmarksPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
@@ -985,6 +1130,9 @@
                                 <ComboBoxItem Content="Brave Search" Tag="brave" />
                                 <ComboBoxItem Content="Bing" Tag="bing" />
                             </ComboBox>
+                            <ToggleSwitch x:Name="AddressSuggestionsSwitch" Header="Suggestions dans la barre d'adresse" Toggled="AddressSuggestionsSwitch_Toggled" />
+                            <TextBlock Text="Pendant la frappe, propose vos onglets ouverts, favoris et pages deja visitees. Calcul 100% local sur cet appareil : ce que vous tapez n'est jamais envoye a un service de suggestions."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="TranslationEnabledSwitch" Header="Proposer de traduire les pages" Toggled="TranslationEnabledSwitch_Toggled" />
                             <TextBlock Text="Traduction neuronale locale (actuellement anglais vers francais). Le modele est telecharge une seule fois puis la traduction se fait entierement hors ligne, jamais de texte envoye a un serveur."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
@@ -1470,6 +1618,17 @@
                                          Header="Activer SmartScreen (envoie les URL a Microsoft)"
                                          Toggled="SmartScreenSwitch_Toggled" />
 
+                            <!-- Renforcement anti-publicite (0.77) : popups et detournements -->
+                            <TextBlock Text="Popups et redirections" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,14,0,0" />
+                            <TextBlock Text="Les popups automatiques et les detournements de clic vers des domaines publicitaires sont bloques. Les fenetres de connexion (Google, OAuth...) restent toujours autorisees."
+                                       Opacity="0.7" TextWrapping="Wrap" FontSize="12" Margin="0,2,0,6" />
+                            <ToggleSwitch x:Name="PopupBlockerSwitch"
+                                         Header="Bloquer les popups publicitaires et automatiques"
+                                         Toggled="PopupBlockerSwitch_Toggled" />
+                            <ToggleSwitch x:Name="StrictAdBlockSwitch"
+                                         Header="Bloquer les redirections vers des domaines publicitaires"
+                                         Toggled="StrictAdBlockSwitch_Toggled" />
+
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
 
                             <!-- Whitelist utilisateur -->
@@ -1689,6 +1848,21 @@
                 </Grid>
                 <ScrollViewer Grid.Row="1">
                     <StackPanel x:Name="DownloadsPanelItems" Spacing="6" />
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="SavedTabGroupsPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Spacing="4" Margin="0,0,0,16">
+                    <TextBlock Text="Groupes enregistres" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="Vos groupes d'onglets ranges. Ouvrez-en un pour retrouver tous ses onglets d'un coup. Tout est stocke localement sur cet appareil."
+                               Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
+                </StackPanel>
+                <ScrollViewer Grid.Row="1">
+                    <StackPanel x:Name="SavedTabGroupsPanelItems" Spacing="10" />
                 </ScrollViewer>
             </Grid>
 

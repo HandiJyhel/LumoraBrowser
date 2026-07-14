@@ -166,6 +166,20 @@ public sealed partial class MainWindow
         ApplyPrivacySettings();
     }
 
+    private void PopupBlockerSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        _uiSettings.PopupBlockerEnabled = PopupBlockerSwitch.IsOn;
+        SaveUiSettings();
+    }
+
+    private void StrictAdBlockSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        _uiSettings.StrictAdBlockEnabled = StrictAdBlockSwitch.IsOn;
+        SaveUiSettings();
+    }
+
     private void SmartScreenSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;

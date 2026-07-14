@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.72.0-dev";
+    private const string Version = "0.78.1-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -50,6 +50,10 @@ public sealed partial class MainWindow : Window
     private readonly List<TabGroup> _tabGroups = new();
     private int _nextGroupId = 1;
     private readonly HashSet<int> _collapsedGroupIds = new();
+    // Identifiants des groupes vivants déjà rangés dans la bibliothèque : sert au
+    // garde-fou (ne pas reproposer de garder un groupe déjà enregistré).
+    private readonly HashSet<int> _savedGroupIds = new();
+    private SavedTabGroupStore _savedTabGroups = null!;
     private readonly List<BrowserImportSource> _importSources = new();
     private readonly Dictionary<string, string> _faviconCache = new(StringComparer.OrdinalIgnoreCase);
     private UiSettings _uiSettings = UiSettings.Default();
@@ -250,8 +254,13 @@ public sealed partial class MainWindow : Window
         _historyPanel = new HistoryPanelController(
             new HistoryStore(_profile.HistoryFile, _profile.LegacyHistoryFile),
             new DownloadHistoryStore(_profile.DownloadsFile));
+        _savedTabGroups = new SavedTabGroupStore(
+            _profile.SavedTabGroupsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
+        _siteRelocations = new SiteRelocationStore(
+            _profile.SiteRelocationsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
         HistoryList.ItemsSource = _historyPanel.Items;
         CommandPaletteList.ItemsSource = _commandPaletteItems;
+        AddressSuggestionsList.ItemsSource = _addressSuggestionItems;
         WinUiRuntimeTrace.Write("History store loaded");
         LoadPasskeys();
         ApplyStartupPage();
@@ -404,6 +413,7 @@ public sealed partial class MainWindow : Window
         AboutPanel.Visibility = Visibility.Collapsed;
         HistoryPanel.Visibility = Visibility.Collapsed;
         DownloadsPanel.Visibility = Visibility.Collapsed;
+        SavedTabGroupsPanel.Visibility = Visibility.Collapsed;
         VaultPanel.Visibility = Visibility.Collapsed;
         PasskeysPanel.Visibility = Visibility.Collapsed;
         SiteControlPanel.Visibility = Visibility.Collapsed;

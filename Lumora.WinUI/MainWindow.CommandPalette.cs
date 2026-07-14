@@ -164,6 +164,8 @@ public sealed partial class MainWindow
             () => OpenPrivateWindow()), 98);
         Add(new("Naviguer", "Rouvrir l'onglet ferme", "Restaure le dernier onglet ferme (Ctrl+Shift+T)", "\uE7A7",
             () => ReopenLastClosedTab()), 97);
+        Add(new("Naviguer", "Groupes enregistres", "Retrouver et rouvrir vos groupes d'onglets ranges", "\uE7C1",
+            () => SavedTabGroupsMenu_Click(this, new RoutedEventArgs())), 96);
         Add(new("Naviguer", "Accueil", "Retourne a la page d'accueil Lumora", "\uE80F",
             () => HomeMenu_Click(this, new RoutedEventArgs())), 95);
         Add(new("Controle du site", "Site actuel", "Ouvre le centre du site visible", "\uE774",

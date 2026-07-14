@@ -566,6 +566,9 @@ public sealed partial class MainWindow
         _historyPanel.Store.SetGuestMode(true);
         _historyPanel.Downloads.SetGuestMode(true);
         _webApps.SetGuestMode(true);
+        _savedTabGroups.SetGuestMode(true);
+        _siteRelocations.SetGuestMode(true);
+        _savedGroupIds.Clear();
         DismissLoginOverlay();
         // Reconstruire l'UI avec les stores vides
         ReloadBookmarks();

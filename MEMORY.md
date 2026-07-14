@@ -4908,3 +4908,244 @@ identifiant, nom) — filet manuel.
 Details : `logs/2026-07-13-coffre-detection-changement-domaine-0-72-0.md`.
 
 **Version :** `0.72.0-dev`.
+
+---
+
+## 2026-07-14 - Suggestions de la barre d'adresse (0.73.0-dev)
+
+Demande utilisateur : analyse complete du projet + ameliorations dans sa
+philosophie (« meilleur navigateur tout-en-un »). Bilan : projet deja tres
+dense ; manques = fondamentaux du quotidien (suggestions de barre d'adresse,
+zoom, impression, mise en veille des onglets, navigateur par defaut). Apres
+`Go` : premiere fonction = suggestions de la barre d'adresse.
+
+Fonction : en tapant, un popup sous la barre propose onglets ouverts + favoris +
+historique du profil, fusionnes et classes. 100% local (aucune autocompletion
+reseau, contrairement aux autres navigateurs). Fleches pour parcourir (l'URL se
+recopie dans la barre), Entree/clic pour ouvrir, Echap pour revenir au texte
+tape. Choisir un onglet ouvert bascule vers lui. Accents ignores, `lumora://`
+exclus. Reglage `Parametres > Navigation > Recherche` (actif par defaut).
+
+**Changements** : `AddressSuggestionEngine` (classe pure testee : `Suggest` +
+`AggregateHistory`) ; `MainWindow.AddressSuggestions.cs` (partiel UI, collecte
+`_tabs`/`_allBookmarkNodes`/`_historyPanel.Store`, clavier + souris) ; popup XAML
+ancre via `PlacementTarget`/`DesiredPlacement=Bottom` (au-dessus du WebView2) ;
+liaison `AddressSuggestionsList.ItemsSource` au constructeur ; toggle Reglages ;
+`UiSettings.AddressBarSuggestionsEnabled` (defaut true) ; `App.UnhandledException`
+-> `WinUiRuntimeTrace` (opt-in `LUMORA_TRACE_STARTUP=1`, ajoute au diagnostic).
+
+**Verification** (skill verify) : build OK ; 300/300 tests verts dont 11 nouveaux
+(`AddressSuggestionEngineTests`). Pilotage reel (mode invite, UIA + captures) :
+popup affiche l'onglet GitHub ouvert en tapant « gith », Fleche bas recopie
+l'URL, Entree bascule vers l'onglet. **Bug trouve/corrige en verifiant** : la
+`ListView` du popup n'etait pas liee a sa collection (`ItemsSource`) -> popup
+ouvert mais vide/invisible. Note : instabilite aleatoire du process WinUI/WebView2
+observee dans l'environnement de test (pas liee a la fonction ; base sans mes
+changements aussi ; aucune exception non geree loggee).
+
+Details : `docs/ADDRESS_SUGGESTIONS_0_73.md`,
+`logs/2026-07-14-suggestions-barre-adresse-0-73-0.md`.
+
+**Version :** `0.73.0-dev`.
+
+---
+
+## 2026-07-14 - Groupes d'onglets enregistres (0.74.0-dev)
+
+Demande utilisateur : les groupes d'onglets marchent mal dans les navigateurs
+actuels, surtout parce qu'on perd ses groupements quand on quitte. Il veut pouvoir
+les retrouver. Etat existant : groupes vivants (creer/renommer/dissoudre/replier,
+couleurs) persistes dans la session tant que les onglets restent ouverts ; le trou =
+fermer le groupe le perd definitivement.
+
+Fonction : bibliotheque de « groupes enregistres ». Enregistrer un groupe (nom,
+couleur, titres + URL) dans un fichier chiffre du profil et le rouvrir plus tard,
+meme apres l'avoir ferme. Mode d'enregistrement choisi avec l'utilisateur :
+**manuel + garde-fou** (action « Enregistrer le groupe » dans l'en-tete + barre
+« Garder ce groupe ? » a la fermeture du dernier onglet / dissolution d'un groupe
+non enregistre). Panneau « Groupes enregistres » (menu Naviguer + palette) :
+carte par groupe (pastille couleur, nb onglets, date, apercu), boutons Ouvrir /
+Supprimer. 100% local. Mode invite : aucune ecriture disque.
+
+**Changements** : `Tabs/SavedTabGroup.cs` (`SavedTabGroup`, `SavedTabGroupTab`,
+`SavedTabGroupStore` pur : Save/Remove/Find/Groups/IsSavableUrl/SetGuestMode,
+persistance chiffree injectee par delegues) ; `ProfilePaths.SavedTabGroupsFile`
+(`navigation/saved-tab-groups.lumora`) ; `MainWindow.SavedTabGroups.cs` (partiel
+UI : enregistrement, garde-fou, panneau, OpenSavedGroup via AddTab+groupId,
+suppression) ; garde-fou branche dans `CloseTab` + `DissolveGroup_Click` ;
+panneau + `SaveGroupBar` en XAML (BrowserHost passe Row 8) ; entrees menus x2 +
+palette de commandes ; `_savedTabGroups`/`_savedGroupIds` au constructeur ;
+SetGuestMode au passage invite.
+
+**Verification** (skill verify) : build OK ; 315/315 tests verts dont 15 nouveaux
+(`SavedTabGroupStoreTests` : enregistrement + relecture disque, filtrage pages
+internes, dedoublonnage titre vide, tri recence, suppression, mode invite sans
+ecriture, IsSavableUrl). Verification live de l'UI NON aboutie : instabilite
+aleatoire du process WebView2 (deja notee en 0.73, sans exception loggee, non liee
+a la fonction) + refus des commandes de pilotage souris/clavier. Accord utilisateur :
+finaliser, il teste lui-meme (clic droit onglet > Nouveau groupe ; clic droit
+en-tete > Enregistrer ; menu Naviguer > Groupes enregistres). Round-trip couvert
+par les tests ; chemins UI restants = patrons existants.
+
+Details : `docs/SAVED_TAB_GROUPS_0_74.md`,
+`logs/2026-07-14-groupes-onglets-enregistres-0-74-0.md`.
+
+**Version :** `0.74.0-dev`.
+
+---
+
+## 2026-07-14 - Reprise « site introuvable » (0.75.0-dev)
+
+Demande utilisateur : un site dont le domaine ne correspondait plus l'a bloque
+dans Lumora, alors que Chrome a retrouve le bon site et l'a redirige. Analyse :
+Chrome envoie chaque adresse en echec aux serveurs de Google (contraire aux
+principes Lumora). Proposition validee par « Go » : meme service rendu, sans
+divulgation silencieuse.
+
+Fonction : quand le domaine ne se resout pas (`HostNameNotResolved` uniquement —
+pannes transitoires exclues), barre « Site introuvable » sur l'onglet actif :
+« Essayer <suggestion> » (domaine tres proche deja connu du profil — faute de
+frappe, mauvaise extension — sinon variante www., calcul 100% local),
+« Rechercher ce site sur le web » (recherche du domaine via le moteur configure,
+part UNIQUEMENT sur ce clic), « Fermer ».
+
+**Changements** : `SiteNotFoundRecovery.cs` (pur : SearchQueryFor/DisplayHostOf,
+WwwVariantOf, ClosestKnownUrl — distance d'edition bornee + regle extension via
+PublicSuffixService) ; `MainWindow.SiteNotFound.cs` (partiel UI, candidats =
+onglets + favoris + historique) ; declenchement dans `NavigationCompleted`,
+masquage dans `NavigationStarting`/`ActivateTab` ; `SiteNotFoundBar` en XAML
+(BrowserHost passe Row 9).
+
+**Verification** (skill verify) : build OK ; 333/333 tests verts dont 18
+nouveaux (`SiteNotFoundRecoveryTests`). **Live reussie** en mode invite via UIA
+(ValuePattern/InvokePattern, pas de refus contrairement au pilotage
+souris/clavier de 0.74) : barre affichee sur domaine inexistant, « Fermer »
+masque sans fermer l'onglet, « Rechercher » ouvre la recherche Google du domaine.
+Note : instabilite WebView2 de 0.73/0.74 non reproduite.
+
+Details : `docs/SITE_NOT_FOUND_RECOVERY_0_75.md`,
+`logs/2026-07-14-site-introuvable-0-75-0.md`.
+
+Installeur construit dans la foulee (retour utilisateur : l'installeur fait
+partie de chaque version, automatiquement) :
+`artifacts\installer\LumoraSetup-0.75.0-dev-win-x64.exe`, SHA256
+`79bea13b9c4f2044354337d55550fb761e680705694aaa3b9e8f11fbd81fdade`. Binaire
+publie verifie (type `SiteNotFoundRecovery` + chaines version/UI presentes).
+Details : `logs/2026-07-14-installeur-0-75-0.md`.
+
+**Version :** `0.75.0-dev`.
+
+---
+
+## 2026-07-14 - Sites en panne et memoire des demenagements (0.76.0-dev)
+
+Retour utilisateur avec captures : la barre 0.75 ne couvrait pas son cas reel —
+`zone-telechargement.win` repond en **522 Cloudflare** (pas une erreur DNS), et
+l'« acces magique » de Chrome n'etait qu'un raccourci pointant vers un domaine
+intermediaire qui redirige encore. Plan valide par « Go ».
+
+Fonction : (1) detection elargie de la barre « site introuvable » — echecs
+reseau (Timeout, CannotConnect, ConnectionAborted/Reset, DNS ; Disconnected
+exclu) + **erreurs 5xx du document principal** avec code affiche ; (2)
+recherche du **nom sans extension** (« zone-telechargement ») ; (3)
+**`SiteRelocationStore`** : apprentissage local des redirections permanentes
+301/308 inter-domaines (accueil→accueil ou chemin conserve, raccourcisseurs
+exclus, chaines suivies, plafond 200) → bouton « **Aller sur <nouveau>** »
+quand l'ancien domaine meurt (chemin conserve), + barre « site demenage » de
+mise a jour des favoris/raccourcis (une proposition par demenagement,
+`SiteRelocationUpdatePlanner` pur + `BookmarkStore.UpdateUrls`).
+
+**Pieges WebView2 decouverts** (voir log) : `Dictionary<CoreWebView2,...>`
+inutilisable (identite wrapper WinRT non fiable → indexation par URI + id
+d'onglet) ; ordre reponse document / NavigationCompleted non garanti (couplage
+bilateral via `_pendingUnknownFailures`) ; 5xx document = `IsSuccess=false` +
+`WebErrorStatus=Unknown`.
+
+**Verification** (skill verify) : build OK ; 353/353 tests verts (20 nouveaux).
+Live UIA reussie de bout en bout : barre 522 sur le site reel de l'utilisateur,
+recherche `q=zone-telechargement`, apprentissage reel `twitter.com -> x.com`
+(301), echec force → « Aller sur x.com » → `https://x.com/lumora-test`.
+
+Details : `docs/SITE_RELOCATION_0_76.md`,
+`logs/2026-07-14-site-demenage-0-76-0.md`.
+
+Installeur construit dans la foulee :
+`artifacts\installer\LumoraSetup-0.76.0-dev-win-x64.exe`, SHA256
+`34b526d392843a5cbd63376ac85d28456da62c95d25f7dfc60672463f1b93afa`. Binaire
+publie verifie (types `SiteRelocationStore`/`SiteRelocationUpdatePlanner` +
+version presents). Details : `logs/2026-07-14-installeur-0-76-0.md`.
+
+**Version :** `0.76.0-dev`.
+
+---
+
+## 2026-07-14 - Renforcement anti-publicite (0.77.0-dev)
+
+Retour utilisateur : apres avoir visite un site, « pub de jeux impossible a
+l'enlever ». Diagnostic : le bloqueur reseau filtre les requetes DANS les pages
+mais laissait passer les popups (`window.open` = onglet gratuit pour un
+popunder) et les detournements de l'onglet vers un domaine de pub. Plan valide
+par « Go ».
+
+Fonction : (1) **blocage des popups** — popunder automatique (hors geste) +
+clic detourne vers domaine repertorie pub bloques ; fenetres de connexion
+(OAuth/login/sso) et sites whitelist toujours autorises (`PopupPolicy` pur) ;
+(2) **blocage des redirections publicitaires** de l'onglet, avec barre
+« Continuer quand meme » (session) ; adresse tapee / favori / suggestion jamais
+bloques (`_explicitNavigationUris`) ; (3) **listes renforcees** : + Liste FR +
+uBlock annoyances ; (4) 2 interrupteurs Confidentialite (defaut ON), blocages
+comptes dans le bouclier (`PrivacyEngine.RecordManualBlock`).
+
+**Changements** : `PopupPolicy.cs` (pur), `MainWindow.AdShield.cs` (partiel),
+branchements dans `NewWindowRequested` + `NavigationStarting`,
+`NetworkBlockerModule.IsWhitelisted`, `FilterListManager` (2 sources),
+`AdBlockedBar` XAML (BrowserHost Row 11), `UiSettings` 2 flags.
+
+**Verification** (skill verify) : build OK ; 365/365 tests verts (12 nouveaux
+`PopupPolicyTests`). Live (UIA + clic souris natif, page de test locale) :
+popunder auto bloque (`BlockAutomatic`, page recoit null), clic vers
+`doubleclick.net` bloque (`BlockAdDomain`), aucun onglet parasite dans les deux
+cas.
+
+Details : `docs/AD_SHIELD_0_77.md`, `logs/2026-07-14-anti-pub-0-77-0.md`.
+
+Installeur construit dans la foulee :
+`artifacts\installer\LumoraSetup-0.77.0-dev-win-x64.exe`, SHA256
+`cdc5036206a644569043bc1cc718e96c021998638947d65d46c13d93b6255fb9`. Binaire
+publie verifie (type `PopupPolicy` + version presents). Details :
+`logs/2026-07-14-installeur-0-77-0.md`.
+
+**Version :** `0.77.0-dev`.
+
+---
+
+## 2026-07-14 - Refactor NavigationHealthTracker, sans regression (0.78.1-dev)
+
+Suite a une discussion sur la solidite du projet : `MainWindow` est un
+god-object (28 partiels, ~13 500 lignes, 132 champs prives partages). Le
+decoupage en fichiers est fait ; l'etat n'est pas encapsule (chaque partiel
+touche l'etat des autres via `this`) — c'est ce qui avait produit le bug
+WebView2 0.76. Premier pilote de refactor **sans changement de comportement**,
+validé par l'utilisateur, sur une branche dediee.
+
+Patron : extraire l'etat + les decisions dans un collaborateur possede et
+testable, laisser la colle UI mince sur MainWindow (meme patron que les stores).
+Cluster pilote = « sante de navigation » (site introuvable + demenagements +
+bouclier anti-pub). Nouveau `NavigationHealthTracker` (pur) possede les 6
+dictionnaires par-onglet + les decisions (dont `ClassifyMainDocumentResponse` →
+verdict typé, couplage bilateral 5xx/NavigationCompleted preserve). MainWindow
+garde barres, handlers, `IndicatesSiteDead` (typé WebView2) et l'extraction des
+champs WebView2. Surface partagee 132 → 126 champs.
+
+**Verification** (skill verify) : greps de controle (aucun residu) ; 383/383
+tests verts (18 nouveaux verrouillent le comportement) ; build OK ; live UIA
+identique 0.76/0.77 (522, recherche, `twitter.com→x.com`, « Aller sur x.com »,
+popunder + doubleclick bloques). Zero regression confirmee.
+
+Patron reutilisable cluster par cluster ; `Navigation.cs` (2242 l.) laisse pour
+plus tard, une fois le patron rode.
+
+Details : `docs/REFACTOR_NAVIGATION_HEALTH_0_78_1.md`,
+`logs/2026-07-14-refactor-navigation-health-0-78-1.md`.
+
+**Version :** `0.78.1-dev`.

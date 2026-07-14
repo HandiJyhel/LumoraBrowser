@@ -62,6 +62,8 @@ public sealed partial class MainWindow
         AutoFillBar.Visibility = Visibility.Collapsed;
         WalletFillBar.Visibility = Visibility.Collapsed;
         SuggestPasswordBar.Visibility = Visibility.Collapsed;
+        HideSiteNotFoundBar();
+        HideAdBlockedBar();
         _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
         _pendingGeneratedPassword = null;
 
@@ -180,6 +182,18 @@ public sealed partial class MainWindow
 
     private void CloseTab(BrowserTabState state)
     {
+        // Garde-fou : si on ferme le dernier onglet d'un groupe, le groupement va
+        // disparaître ; proposer de le ranger dans la bibliothèque avant.
+        if (state.GroupId is int closingGroupId &&
+            _tabs.Count(tab => tab.GroupId == closingGroupId) == 1 &&
+            _tabGroups.FirstOrDefault(group => group.Id == closingGroupId) is { } emptyingGroup)
+        {
+            OfferKeepGroupIfUnsaved(emptyingGroup);
+            _tabGroups.Remove(emptyingGroup);
+            _collapsedGroupIds.Remove(closingGroupId);
+            _savedGroupIds.Remove(closingGroupId);
+        }
+
         RememberClosedTab(state);
         var wasActive = CurrentTab()?.Id == state.Id;
         var oldIndex = _tabs.FindIndex(tab => tab.Id == state.Id);
@@ -230,6 +244,7 @@ public sealed partial class MainWindow
         _popupParentTabIds.Remove(state.Id);
         _federatedIdentityPopupTabIds.Remove(state.Id);
         _httpsUpgradeOriginals.Remove(view);
+        _navHealth.ForgetTab(state.Id);
         var core = view.CoreWebView2;
         if (core is not null)
         {
@@ -361,6 +376,11 @@ public sealed partial class MainWindow
     {
         RecordLoginDiagnosticForNavigation(sender.Source?.ToString(), "navigation-starting", args.Uri);
 
+        // Suivi du document principal (redirections comprises : l'événement est
+        // relevé à chaque saut) pour la détection 5xx et la mémoire des
+        // déménagements. Voir MainWindow.SiteNotFound.cs.
+        _navHealth.TrackNavigationStart(TabForView(sender)?.Id, args.Uri, args.IsRedirected);
+
         if (TabForView(sender) is { } startingTab &&
             IsFederatedIdentityIntermediary(args.Uri))
         {
@@ -381,8 +401,28 @@ public sealed partial class MainWindow
                 _httpsUpgradeOriginals[sender] = args.Uri;
             }
 
+            // La légitimité « demandé explicitement » suit l'URL nettoyée : sinon
+            // un domaine tapé à la main serait re-vérifié (et bloqué) après nettoyage.
+            if (_navHealth.TakeExplicitNavigation(args.Uri))
+            {
+                _navHealth.RegisterExplicitNavigation(cleaned);
+            }
+
             args.Cancel = true;
             DispatcherQueue.TryEnqueue(() => sender.CoreWebView2?.Navigate(cleaned));
+            return;
+        }
+
+        // Détournement de l'onglet vers un domaine répertorié publicitaire
+        // (clic capturé, redirection forcée) : navigation annulée, barre
+        // « Continuer quand même ». Jamais pour une adresse demandée via l'UI.
+        if (ShouldStrictBlockNavigation(args.Uri))
+        {
+            args.Cancel = true;
+            if (IsActiveView(sender))
+            {
+                OfferAdBlockedContinue(args.Uri, sender.Source?.ToString());
+            }
             return;
         }
 
@@ -394,6 +434,8 @@ public sealed partial class MainWindow
             UpdateToolbarPrivacyIndicator();
             // La proposition de carte appartient à la page quittée.
             WalletFillBar.Visibility = Visibility.Collapsed;
+            HideSiteNotFoundBar();
+            HideAdBlockedBar();
             _currentPageDomain = ExtractDomain(args.Uri);
             StatusText.Text = $"Chargement: {DisplayTitle(args.Uri)}";
         }
@@ -449,7 +491,7 @@ public sealed partial class MainWindow
         // visible : une page d'arrière-plan ne pilote pas les barres.
         if (isActive)
         {
-            WinUiRuntimeTrace.Write($"NavigationCompleted: address={address} isSuccess={args.IsSuccess}");
+            WinUiRuntimeTrace.Write($"NavigationCompleted: address={address} isSuccess={args.IsSuccess} status={args.WebErrorStatus}");
             AutoFillBar.Visibility = Visibility.Collapsed;
         }
 
@@ -474,6 +516,26 @@ public sealed partial class MainWindow
         // fermée que par l'utilisateur (Enregistrer / Ignorer).
         if (_pendingCredential is null)
             CredentialSaveBar.Visibility = Visibility.Collapsed;
+
+        // Reprise « site introuvable » : domaine qui ne se résout plus, serveur
+        // qui ne répond plus (timeout, connexion refusée) ou erreur serveur 5xx
+        // sur le document principal (ex. 522 Cloudflare = origine morte). Réseau
+        // local coupé (Disconnected) exclu, et jamais pendant une promotion
+        // HTTPS (le repli HTTP a son propre dialogue).
+        var mainDocumentHttpError = _navHealth.TakeMainDocumentHttpError(tab.Id);
+        if (isActive && !args.IsSuccess && !wasHttpsUpgrade && BookmarkStore.IsWebUrl(address))
+        {
+            if (IndicatesSiteDead(args.WebErrorStatus) || mainDocumentHttpError is not null)
+            {
+                OfferSiteNotFoundRecovery(address, mainDocumentHttpError);
+            }
+            else if (args.WebErrorStatus == CoreWebView2WebErrorStatus.Unknown)
+            {
+                // Erreur HTTP probable dont la réponse (5xx) n'est pas encore
+                // arrivée : WebResourceResponseReceived déclenchera la barre.
+                _navHealth.ArmPendingUnknownFailure(tab.Id, address);
+            }
+        }
 
         if (isActive)
         {
@@ -758,6 +820,13 @@ public sealed partial class MainWindow
 
     private void AddressBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Le popup de suggestions consomme flèches, Échap et Entrée-sur-sélection.
+        if (HandleAddressSuggestionsKey(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == VirtualKey.Enter)
         {
             NavigateFromAddressBox();
@@ -811,6 +880,7 @@ public sealed partial class MainWindow
 
     private void NavigateFromAddressBox()
     {
+        CloseAddressSuggestions();
         var address = NormalizeAddress(AddressBox.Text);
         var title = address == "lumora://accueil" ? "Accueil Lumora" : DisplayTitle(address);
         NavigateCurrentTab(address, title);
@@ -1097,6 +1167,12 @@ public sealed partial class MainWindow
         renameItem.Click += RenameGroup_Click;
         flyout.Items.Add(renameItem);
 
+        var saveItem = new MenuFlyoutItem { Text = "Enregistrer le groupe", Tag = group };
+        saveItem.Click += SaveGroupToLibrary_Click;
+        flyout.Items.Add(saveItem);
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
         var dissolveItem = new MenuFlyoutItem { Text = "Dissoudre le groupe", Tag = group };
         dissolveItem.Click += DissolveGroup_Click;
         flyout.Items.Add(dissolveItem);
@@ -1330,12 +1406,16 @@ public sealed partial class MainWindow
             return;
         }
 
+        // Garde-fou : le groupement va etre perdu ; proposer de le ranger d'abord.
+        OfferKeepGroupIfUnsaved(group);
+
         foreach (var tab in _tabs.Where(t => t.GroupId == group.Id))
         {
             tab.GroupId = null;
         }
         _tabGroups.Remove(group);
         _collapsedGroupIds.Remove(group.Id);
+        _savedGroupIds.Remove(group.Id);
         RenderVerticalTabs();
         SaveTabSession();
     }
@@ -1498,12 +1578,14 @@ public sealed partial class MainWindow
 
             if (BookmarkStore.IsWebUrl(address))
             {
+                _navHealth.RegisterExplicitNavigation(address);
                 browser.CoreWebView2.Navigate(address);
                 StatusText.Text = $"Chargement: {DisplayTitle(address)}";
                 return;
             }
 
             var normalized = NormalizeAddress(address);
+            _navHealth.RegisterExplicitNavigation(normalized);
             browser.CoreWebView2.Navigate(normalized);
             StatusText.Text = $"Chargement: {DisplayTitle(normalized)}";
         }
@@ -1879,6 +1961,15 @@ public sealed partial class MainWindow
     private async void CoreWebView2_NewWindowRequested(CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
     {
         RecordLoginDiagnosticForNavigation(sender.Source, "new-window-requested", args.Uri, args.IsUserInitiated ? "user-initiated" : "not-user-initiated");
+
+        // Popups indésirables (popunder automatique, clic détourné vers un domaine
+        // publicitaire) : bloquées AVANT toute création d'onglet. Politique pure
+        // dans PopupPolicy ; les fenêtres d'authentification passent toujours.
+        if (BlockPopupIfUnwanted(args.Uri, sender.Source, args.IsUserInitiated))
+        {
+            args.Handled = true;
+            return;
+        }
 
         // Les flux OAuth (Google, Microsoft, etc.) utilisent souvent window.open puis
         // window.opener/postMessage pour rendre la session au site d'origine. Il faut

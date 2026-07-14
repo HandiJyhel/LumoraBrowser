@@ -10,6 +10,10 @@ public partial class App : Application
     {
         WinUiRuntimeTrace.Write("App constructor start");
         InitializeComponent();
+        UnhandledException += (_, e) =>
+        {
+            WinUiRuntimeTrace.Write($"UNHANDLED: {e.Message} :: {e.Exception}");
+        };
         WinUiRuntimeTrace.Write("App constructor after InitializeComponent");
     }
 

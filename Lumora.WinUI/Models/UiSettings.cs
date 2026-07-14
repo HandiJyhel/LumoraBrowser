@@ -33,6 +33,10 @@ internal sealed class UiSettings
     public string StartupMode { get; set; } = "restore";
     public string StartupUrl { get; set; } = string.Empty;
     public string SearchEngine { get; set; } = "google";
+    // Suggestions locales de la barre d'adresse (onglets ouverts, favoris,
+    // historique du profil). Activées par défaut : tout est calculé sur
+    // l'appareil, la frappe n'est jamais envoyée à un service distant.
+    public bool AddressBarSuggestionsEnabled { get; set; } = true;
     public bool CommandPaletteEnabled { get; set; } = true;
     public bool CommandPaletteOpenFromWebPages { get; set; }
     public bool CommandPaletteOpenFromTextFields { get; set; }
@@ -49,6 +53,13 @@ internal sealed class UiSettings
     // SmartScreen vérifie la réputation des sites en envoyant chaque URL à
     // Microsoft : désactivé par défaut (philosophie locale-first).
     public bool SmartScreenEnabled { get; set; }
+
+    // Renforcement anti-publicité (0.77) : popups (popunders, clics détournés
+    // vers un domaine listé) et navigations de l'onglet vers un domaine listé.
+    // Actifs par défaut : c'est la protection attendue d'un navigateur moderne ;
+    // désactivables ici, et la whitelist par site les lève site par site.
+    public bool PopupBlockerEnabled { get; set; } = true;
+    public bool StrictAdBlockEnabled { get; set; } = true;
     public bool ParameterCleanerEnabled { get; set; } = true;
     public bool HttpsEnforcerEnabled { get; set; } = true;
     public bool CnameUncloakerEnabled { get; set; } = true;

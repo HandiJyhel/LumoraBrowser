@@ -234,6 +234,41 @@ public sealed class BookmarkStore
         WriteNodes(nodes);
     }
 
+    // Réécrit l'URL de signets existants (id -> nouvelle URL), en un seul passage
+    // disque. Utilisé quand un site a déménagé de domaine : titres, position et
+    // icônes sont conservés. Retourne le nombre de signets réellement modifiés.
+    public int UpdateUrls(IReadOnlyDictionary<string, string> newUrlsByNodeId)
+    {
+        if (newUrlsByNodeId.Count == 0)
+        {
+            return 0;
+        }
+
+        var nodes = AllNodes();
+        var updated = 0;
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            if (node.Kind != BookmarkKind.Url ||
+                !newUrlsByNodeId.TryGetValue(node.Id, out var url) ||
+                !IsWebUrl(url) ||
+                node.Url.Equals(url, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            nodes[i] = node with { Url = url };
+            updated++;
+        }
+
+        if (updated > 0)
+        {
+            WriteNodes(nodes);
+        }
+
+        return updated;
+    }
+
     public void RemoveNode(string id)
     {
         if (id is ToolbarRootId or OtherRootId)

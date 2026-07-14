@@ -20,6 +20,8 @@ internal sealed class LumoraProfilePaths
         LegacyUiSettingsFile = Path.Combine(NavigationDir, "ui-settings.json");
         TabsFile            = DataFile(NavigationDir, "tabs");
         LegacyTabsFile      = Path.Combine(NavigationDir, "tabs.json");
+        SavedTabGroupsFile  = DataFile(NavigationDir, "saved-tab-groups");
+        SiteRelocationsFile = DataFile(NavigationDir, "site-relocations");
         HistoryFile         = DataFile(NavigationDir, "history");
         LegacyHistoryFile   = Path.Combine(NavigationDir, "history.json");
         DownloadsFile       = DataFile(NavigationDir, "downloads");
@@ -42,6 +44,8 @@ internal sealed class LumoraProfilePaths
     public string LegacyUiSettingsFile { get; }
     public string TabsFile             { get; }
     public string LegacyTabsFile       { get; }
+    public string SavedTabGroupsFile   { get; }
+    public string SiteRelocationsFile  { get; }
     public string HistoryFile          { get; }
     public string LegacyHistoryFile    { get; }
     public string DownloadsFile        { get; }

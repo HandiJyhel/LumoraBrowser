@@ -37,6 +37,10 @@ internal sealed class NetworkBlockerModule : IPrivacyModule
         !IsInSet(_allowedDomains, host) &&
         IsInSet(_blockedDomains, host);
 
+    // Un site whitelisté par l'utilisateur garde TOUS ses comportements, popups
+    // comprises : c'est le signal « je fais confiance à ce site, laisse-le faire ».
+    public bool IsWhitelisted(string host) => IsInSet(_userWhitelist, host);
+
     public event Action<string>? StatusChanged;
 
     public NetworkBlockerModule()
