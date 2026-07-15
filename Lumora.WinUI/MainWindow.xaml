@@ -922,28 +922,11 @@
                     </Grid>
                 </Border>
 
-                <!-- Navigation bloquee : la page a envoye l'onglet vers un domaine
-                     repertorie publicitaire (clic detourne). L'utilisateur garde la
-                     main : « Continuer quand meme » autorise le domaine pour la
-                     session. Une adresse tapee dans la barre n'est jamais bloquee. -->
-                <Border x:Name="AdBlockedBar" Grid.Row="10" Visibility="Collapsed"
-                        Background="{StaticResource NovaInfoSurfaceBrush}"
-                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeBrush}"
-                        Padding="10,6">
-                    <Grid ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <FontIcon Grid.Column="0" Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="AdBlockedText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        <Button x:Name="AdBlockedContinue" Grid.Column="2" Content="Continuer quand meme" Click="AdBlockedContinue_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
-                        <Button x:Name="AdBlockedDismiss" Grid.Column="3" Content="Fermer" Click="AdBlockedDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
-                    </Grid>
-                </Border>
-
+                <!-- 0.78.3.1 : les navigations publicitaires/parasites sont
+                     bloquees silencieusement (statut + bouclier), plus de barre
+                     « Continuer quand meme ». Une adresse tapee dans la barre
+                     n'est jamais bloquee ; la whitelist par site reste la
+                     soupape durable. -->
                 <Grid x:Name="BrowserHost" Grid.Row="11" />
             </Grid>
 

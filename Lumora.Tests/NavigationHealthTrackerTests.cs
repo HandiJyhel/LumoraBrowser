@@ -256,14 +256,4 @@ public class NavigationHealthTrackerTests
         Assert.True(t.TakeExplicitNavigation("https://site.example"));
     }
 
-    [Fact]
-    public void AdContinue_AutoriseParDomaineRacine()
-    {
-        var t = new NavigationHealthTracker();
-        Assert.False(t.IsAdContinueAllowed("pub.example"));
-
-        t.AllowAdContinue("pub.example");
-
-        Assert.True(t.IsAdContinueAllowed("pub.example"));
-    }
 }

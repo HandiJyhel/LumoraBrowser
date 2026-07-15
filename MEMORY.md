@@ -5212,3 +5212,33 @@ page, lien visible, capture). Installeur construit :
 Details : `logs/2026-07-15-bloc-notes-0-78-3.md`.
 
 **Version :** `0.78.3-dev`.
+
+---
+
+## 2026-07-15 - Blocage silencieux des sites parasites (0.78.3.1-dev)
+
+Rectification demandee : sur les sites agressifs, chaque clic est detourne
+vers un site douteux (Temu, paris...) et il faut recliquer plusieurs fois.
+L'utilisateur ne veut plus VOIR ces parasites. Micro-correctif -> quatrieme
+nombre de version (regle documentee dans AGENTS.md).
+
+- Nouveau fichier pur `NavigationHijackPolicy.cs` (teste seul) : verdict de
+  chaque navigation du document principal — explicite/whitelist/auth/meme
+  site racine passent ; domaine repertorie bloque ; cross-domaine sur site
+  sous pression pub (>= 3 requetes bloquees) ou apres popup -> BlockParasite.
+  Absorbe l'ancien strict-block + tab-under du partiel AdShield.
+- Popups : sous pression, cross-domaine et about:blank bloques NET
+  (`BlockUnderAdPressure` remplace l'arriere-plan de la 0.78.2).
+- Silence complet : barre « Continuer quand meme » supprimee (XAML, handlers,
+  `AllowAdContinue` du tracker). Statut + compteur bouclier seulement.
+  Recours : adresse tapee (jamais bloquee) ou whitelist par site.
+- AUCUN comptage de clics : chaque tentative est bloquee, une par une.
+
+**Verification** : 421/421 tests verts (12 nouveaux NavigationHijackPolicy) ;
+builds 0 avert. ; fumee live UIA (navigation normale intacte). Pas de site
+parasite reproductible en test : a confirmer en usage reel. Installeur :
+`artifacts\installer\LumoraSetup-0.78.3.1-dev-win-x64.exe`, SHA256
+`783d881678e21abf118bcc5f1b24732110f6e474270ac156ba0f04fa88379dbb`.
+Details : `logs/2026-07-15-anti-parasite-0-78-3-1.md`.
+
+**Version :** `0.78.3.1-dev`.

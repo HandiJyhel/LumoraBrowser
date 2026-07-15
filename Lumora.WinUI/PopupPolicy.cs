@@ -15,16 +15,18 @@ namespace Lumora.WinUI;
 //    chemin) n'ouvrent que sur geste utilisateur — durcissement 0.78.2 : une
 //    régie servait « pub.example/login/... » pour traverser le bouclier ;
 //  - sur un site déjà pris en flagrant délit publicitaire (requêtes bloquées en
-//    nombre sur la page), la popup s'ouvre SANS voler le focus : le clic
-//    détourné n'interrompt plus la lecture ;
+//    nombre sur la page), toute popup vers un domaine TIERS est bloquée net
+//    (0.78.4, durci sur demande : plus d'onglet du tout, barre « Continuer
+//    quand même » en recours) ; seules les popups vers le même site racine
+//    restent ouvrables ;
 //  - un site whitelisté par l'utilisateur garde toutes ses popups.
 public enum PopupVerdict
 {
     Allow,
-    AllowInBackground,
     BlockAutomatic,
     BlockAdDomain,
-    BlockGestureFlood
+    BlockGestureFlood,
+    BlockUnderAdPressure
 }
 
 public static class PopupPolicy
@@ -66,8 +68,20 @@ public static class PopupPolicy
         if (popupsAlreadyOpenedForGesture >= 1)
             return PopupVerdict.BlockGestureFlood;
 
-        return openerUnderAdPressure ? PopupVerdict.AllowInBackground : PopupVerdict.Allow;
+        // Site sous pression publicitaire : le clic est très probablement
+        // détourné. Seule une popup vers le MÊME site racine reste ouvrable ;
+        // tout domaine tiers (et about:blank, support du document.write
+        // publicitaire) est bloqué net — l'utilisateur garde la barre
+        // « Continuer quand même » en recours.
+        if (openerUnderAdPressure && !IsSameRootSite(popupHost, openerHost))
+            return PopupVerdict.BlockUnderAdPressure;
+
+        return PopupVerdict.Allow;
     }
+
+    private static bool IsSameRootSite(string popupHost, string openerHost) =>
+        popupHost.Length > 0 && openerHost.Length > 0 &&
+        SiteRelocationStore.RootOf(popupHost).Equals(SiteRelocationStore.RootOf(openerHost), StringComparison.OrdinalIgnoreCase);
 
     // Hôtes des grands fournisseurs d'identité (match exact ou sous-domaine).
     // Les régies publicitaires ne servent pas d'OAuth depuis ces domaines : le

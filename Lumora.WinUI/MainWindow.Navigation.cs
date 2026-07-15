@@ -64,7 +64,6 @@ public sealed partial class MainWindow
         WalletFillBar.Visibility = Visibility.Collapsed;
         SuggestPasswordBar.Visibility = Visibility.Collapsed;
         HideSiteNotFoundBar();
-        HideAdBlockedBar();
         _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
         _pendingGeneratedPassword = null;
 
@@ -414,19 +413,16 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Détournement de l'onglet : domaine répertorié publicitaire (clic
-        // capturé, redirection forcée) ou tab-under (redirection cross-domaine
-        // juste après une popup). Navigation annulée, barre « Continuer quand
-        // même ». Jamais pour une adresse demandée via l'UI.
+        // Détournement de l'onglet : domaine répertorié publicitaire, clic
+        // capturé vers un domaine tiers sur un site sous pression publicitaire,
+        // ou tab-under. Navigation annulée SILENCIEUSEMENT : l'utilisateur
+        // reste sur sa page. Jamais pour une adresse demandée via l'UI.
         var adVerdict = ClassifyNavigationForAdShield(
             TabForView(sender)?.Id, sender.Source?.ToString(), args.Uri);
-        if (adVerdict != AdNavigationVerdict.Allow)
+        if (adVerdict != NavigationVerdict.Allow)
         {
             args.Cancel = true;
-            if (IsActiveView(sender))
-            {
-                OfferAdBlockedContinue(args.Uri, sender.Source?.ToString(), adVerdict);
-            }
+            ReportBlockedNavigation(adVerdict, args.Uri, sender.Source?.ToString(), IsActiveView(sender));
             return;
         }
 
@@ -439,7 +435,6 @@ public sealed partial class MainWindow
             // La proposition de carte appartient à la page quittée.
             WalletFillBar.Visibility = Visibility.Collapsed;
             HideSiteNotFoundBar();
-            HideAdBlockedBar();
             _currentPageDomain = ExtractDomain(args.Uri);
             StatusText.Text = $"Chargement: {DisplayTitle(args.Uri)}";
         }
@@ -1978,7 +1973,7 @@ public sealed partial class MainWindow
         // d'onglet. Politique pure dans PopupPolicy ; les fenêtres
         // d'authentification passent toujours.
         var popupVerdict = DecidePopupVerdict(args.Uri, sender.Source, args.IsUserInitiated, parentTab?.Id);
-        if (popupVerdict is PopupVerdict.BlockAutomatic or PopupVerdict.BlockAdDomain or PopupVerdict.BlockGestureFlood)
+        if (popupVerdict != PopupVerdict.Allow)
         {
             ReportBlockedPopup(popupVerdict, args.Uri, sender.Source);
             args.Handled = true;
@@ -1995,13 +1990,7 @@ public sealed partial class MainWindow
         try
         {
             var isFederatedIdentity = IsFederatedIdentityIntermediary(uri);
-
-            // Site sous pression publicitaire : la popup s'ouvre SANS voler le
-            // focus — le clic détourné n'interrompt plus la navigation en cours.
-            var openInBackground = popupVerdict == PopupVerdict.AllowInBackground && !isFederatedIdentity;
-            var popupTab = AddTab(PopupTabTitle(uri), uri,
-                select: !isFederatedIdentity && !openInBackground,
-                createViewWhenSelected: false);
+            var popupTab = AddTab(PopupTabTitle(uri), uri, select: !isFederatedIdentity, createViewWhenSelected: false);
             if (parentTab is not null)
             {
                 _popupParentTabIds[popupTab.Id] = parentTab.Id;
@@ -2016,15 +2005,13 @@ public sealed partial class MainWindow
             if (popupView?.CoreWebView2 is not null)
             {
                 args.NewWindow = popupView.CoreWebView2;
-                if (!isFederatedIdentity && !openInBackground)
+                if (!isFederatedIdentity)
                 {
                     _browserView = popupView;
                 }
                 StatusText.Text = isFederatedIdentity
                     ? "Connexion Google en cours dans une fenetre Lumora rattachee."
-                    : openInBackground
-                        ? $"Popup ouverte en arriere-plan (site sous pression publicitaire) : {DisplayTitle(uri)}"
-                        : "Fenetre de connexion ouverte dans un onglet Lumora.";
+                    : "Fenetre de connexion ouverte dans un onglet Lumora.";
             }
             else
             {

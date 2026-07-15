@@ -140,13 +140,41 @@ public class PopupPolicyTests
     }
 
     [Fact]
-    public void SiteSousPressionPublicitaire_PopupEnArrierePlan()
+    public void SiteSousPressionPublicitaire_PopupCrossDomaine_BloqueeNet()
     {
-        // Le clic détourné n'interrompt plus la navigation : la popup s'ouvre
-        // sans voler le focus quand la page a déjà accumulé des blocages.
+        // 0.78.3.1 : sur un site pris en flagrant délit publicitaire, le clic
+        // détourné ne produit plus AUCUN onglet — blocage complet, silencieux.
         Assert.Equal(
-            PopupVerdict.AllowInBackground,
+            PopupVerdict.BlockUnderAdPressure,
             Decide("https://jeux-en-promo.example/", isUserInitiated: true, openerUnderAdPressure: true));
+    }
+
+    [Fact]
+    public void SiteSousPressionPublicitaire_AboutBlank_BloqueeNet()
+    {
+        // window.open('about:blank') + document.write : l'astuce classique
+        // pour servir la pub sans domaine — bloquée aussi sous pression.
+        Assert.Equal(
+            PopupVerdict.BlockUnderAdPressure,
+            Decide("about:blank", isUserInitiated: true, openerUnderAdPressure: true));
+    }
+
+    [Fact]
+    public void SiteSousPressionPublicitaire_PopupMemeSite_Autorisee()
+    {
+        // Le site garde le droit d'ouvrir SES propres pages (lecteur video,
+        // page de detail...) : seul le cross-domaine est parasite.
+        Assert.Equal(
+            PopupVerdict.Allow,
+            Decide("https://site-de-films.example/lecteur", isUserInitiated: true, openerUnderAdPressure: true));
+    }
+
+    [Fact]
+    public void SiteSousPressionPublicitaire_Authentification_Autorisee()
+    {
+        Assert.Equal(
+            PopupVerdict.Allow,
+            Decide("https://accounts.google.com/o/oauth2/auth", isUserInitiated: true, openerUnderAdPressure: true));
     }
 
     [Fact]

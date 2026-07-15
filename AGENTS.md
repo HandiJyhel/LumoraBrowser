@@ -38,13 +38,15 @@ La version de depart du projet est:
 
 La version courante du projet est:
 
-`0.78.3-dev`
+`0.78.3.1-dev`
 
 La numerotation suit ce schema:
 
 - Premier nombre: mise a jour majeure ou avancee globale importante.
 - Deuxieme nombre: mise a jour intermediaire ou ajout de fonctionnalites globales.
 - Troisieme nombre: mise a jour mineure ou correction de bug.
+- Quatrieme nombre (optionnel): micro-correctif ou rectification d'une version
+  deja livree, demande explicitement par l'utilisateur.
 - Suffixe `-dev`: version de developpement.
 
 Toute modification de version doit respecter cette regle.

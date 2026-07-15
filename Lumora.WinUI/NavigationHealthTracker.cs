@@ -53,9 +53,6 @@ public sealed class NavigationHealthTracker
     // jamais bloquées par le filtre anti-redirection publicitaire.
     private readonly HashSet<string> _explicitNavigationUris = new(StringComparer.OrdinalIgnoreCase);
 
-    // Domaines racine autorisés via « Continuer quand même » (session uniquement).
-    private readonly HashSet<string> _adContinueRoots = new(StringComparer.OrdinalIgnoreCase);
-
     // Horodatages des popups OUVERTES (autorisées) par onglet opener : sert au
     // plafond « une popup par geste » et à la détection de tab-under. L'heure
     // est injectée par l'appelant pour rester pur et testable.
@@ -168,7 +165,7 @@ public sealed class NavigationHealthTracker
     public int? TakeMainDocumentHttpError(int tabId) =>
         _mainDocumentHttpErrors.Remove(tabId, out var error) ? error.Status : null;
 
-    // ── Navigations explicites et exemptions « Continuer quand même » ────────
+    // ── Navigations explicites ───────────────────────────────────────────────
 
     public void RegisterExplicitNavigation(string address) =>
         _explicitNavigationUris.Add(DocumentUriKey(address));
@@ -176,10 +173,6 @@ public sealed class NavigationHealthTracker
     // Consomme (une seule fois) le marqueur « demandé explicitement » pour cette URI.
     public bool TakeExplicitNavigation(string? uri) =>
         _explicitNavigationUris.Remove(DocumentUriKey(uri));
-
-    public void AllowAdContinue(string rootDomain) => _adContinueRoots.Add(rootDomain);
-
-    public bool IsAdContinueAllowed(string rootDomain) => _adContinueRoots.Contains(rootDomain);
 
     // ── Popups ouvertes et tab-under ─────────────────────────────────────────
 

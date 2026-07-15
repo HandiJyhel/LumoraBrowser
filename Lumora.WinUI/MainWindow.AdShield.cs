@@ -1,33 +1,28 @@
-using Microsoft.UI.Xaml;
 using Lumora.Privacy.NetworkBlocker;
 
 namespace Lumora.WinUI;
 
 // ── Renforcement anti-publicité : popups et détournements de navigation ─────
-// Le bloqueur réseau filtre les requêtes DANS les pages ; ce partiel ferme les
-// portes restantes constatées sur les sites agressifs :
-//  1. les popups (window.open) publicitaires — politique pure : PopupPolicy,
-//     avec plafond « une popup par geste » et ouverture en arrière-plan sur les
-//     sites sous pression publicitaire (0.78.2) ;
-//  2. les détournements de l'onglet lui-même vers un domaine répertorié
-//     publicitaire (clic capturé → location.href) ;
-//  3. le tab-under : l'onglet qui vient d'ouvrir une popup et se redirige
-//     lui-même cross-domaine dans la foulée (0.78.2).
-// Dans les cas 2 et 3, barre « Continuer quand même » pour garder l'utilisateur
-// aux commandes. Une adresse demandée explicitement (barre d'adresse, favori,
-// suggestion) n'est JAMAIS bloquée.
+// Le bloqueur réseau filtre les requêtes DANS les pages ; ce partiel est la
+// colle UI de deux politiques pures :
+//  - PopupPolicy : sort des window.open / target=_blank ;
+//  - NavigationHijackPolicy : sort des navigations de l'onglet lui-même
+//    (domaine répertorié, clic détourné, tab-under).
+// Depuis 0.78.3.1, tous les blocages sont SILENCIEUX : pas de barre, pas de
+// question — ligne de statut + compteur du bouclier uniquement. Une adresse
+// demandée explicitement (barre d'adresse, favori, suggestion) n'est JAMAIS
+// bloquée ; la whitelist par site (paramètres) reste la soupape durable.
 public sealed partial class MainWindow
 {
-    // L'état d'exemption (navigations explicites, « Continuer quand même ») vit
-    // dans _navHealth (cf. MainWindow.SiteNotFound.cs).
-    private string? _pendingAdBlockedUrl;
-
     // Nombre de requêtes bloquées sur la page à partir duquel le site est
-    // considéré « sous pression publicitaire » : ses popups, même sur geste,
-    // s'ouvrent alors sans voler le focus.
+    // considéré « sous pression publicitaire » : ses popups cross-domaine et
+    // ses redirections cross-domaine sont alors bloquées net. Aucun comptage
+    // de clics : chaque tentative parasite est bloquée, une par une.
     private const int AdPressurePageBlockThreshold = 3;
 
     private NetworkBlockerModule? NetworkBlocker => _privacy.Get<NetworkBlockerModule>();
+
+    private bool PageUnderAdPressure => _privacy.PageBlockedCount >= AdPressurePageBlockThreshold;
 
     // ── Popups ───────────────────────────────────────────────────────────────
 
@@ -46,7 +41,7 @@ public sealed partial class MainWindow
             host => blocker?.IsBlocked(host) == true,
             host => blocker?.IsWhitelisted(host) == true,
             popupsForGesture,
-            openerUnderAdPressure: _privacy.PageBlockedCount >= AdPressurePageBlockThreshold);
+            openerUnderAdPressure: PageUnderAdPressure);
     }
 
     // Journalise un blocage de popup et met à jour le bouclier.
@@ -62,119 +57,47 @@ public sealed partial class MainWindow
         {
             PopupVerdict.BlockAdDomain => $"Popup publicitaire bloquee : {DisplayTitle(popupUri ?? string.Empty)}",
             PopupVerdict.BlockGestureFlood => "Rafale de popups bloquee (une seule fenetre par clic).",
+            PopupVerdict.BlockUnderAdPressure => $"Popup parasite bloquee : {DisplayTitle(popupUri ?? string.Empty)}",
             _ => "Popup automatique bloquee."
         };
         WinUiRuntimeTrace.Write($"Popup blocked ({verdict}): {popupUri}");
     }
 
-    // ── Détournements de l'onglet : domaine listé et tab-under ──────────────
+    // ── Détournements de l'onglet ────────────────────────────────────────────
 
-    private enum AdNavigationVerdict
+    private NavigationVerdict ClassifyNavigationForAdShield(int? tabId, string? fromUri, string toUri)
     {
-        Allow,
-        BlockAdDomain,
-        BlockTabUnder
-    }
-
-    private AdNavigationVerdict ClassifyNavigationForAdShield(int? tabId, string? fromUri, string toUri)
-    {
-        // Une navigation demandée par l'UI Lumora (barre d'adresse, favori,
-        // suggestion, bouton de reprise) n'est jamais bloquée : l'utilisateur
-        // sait où il va. Le marqueur est consommé une seule fois.
-        if (_navHealth.TakeExplicitNavigation(toUri))
-        {
-            return AdNavigationVerdict.Allow;
-        }
-
-        if (!_uiSettings.StrictAdBlockEnabled || !BookmarkStore.IsWebUrl(toUri))
-        {
-            return AdNavigationVerdict.Allow;
-        }
-
         var blocker = NetworkBlocker;
-        if (blocker is null || !blocker.IsEnabled ||
-            !Uri.TryCreate(toUri, UriKind.Absolute, out var parsed))
-        {
-            return AdNavigationVerdict.Allow;
-        }
-
-        var targetRoot = SiteRelocationStore.RootOf(parsed.Host);
-        if (_navHealth.IsAdContinueAllowed(targetRoot) || blocker.IsWhitelisted(parsed.Host))
-        {
-            return AdNavigationVerdict.Allow;
-        }
-
-        // Domaine entier répertorié publicitaire uniquement : les règles de
-        // sous-chaîne (chemins « /ads/ »...) produiraient des faux positifs sur
-        // des pages légitimes.
-        if (blocker.IsBlocked(parsed.Host))
-        {
-            return AdNavigationVerdict.BlockAdDomain;
-        }
-
-        // Tab-under : l'onglet a ouvert une popup il y a un instant et se
-        // redirige maintenant cross-domaine — pattern publicitaire classique
-        // (la popup porte le contenu, l'onglet d'origine part vers la pub).
-        // Les destinations d'authentification restent libres (retour OAuth).
-        if (tabId is int id &&
-            _navHealth.HadRecentPopup(id, DateTimeOffset.Now) &&
-            Uri.TryCreate(fromUri, UriKind.Absolute, out var from) &&
-            !string.Equals(SiteRelocationStore.RootOf(from.Host), targetRoot, StringComparison.OrdinalIgnoreCase) &&
-            !PopupPolicy.IsKnownIdentityProviderHost(toUri) &&
-            !PopupPolicy.IsLikelyAuthenticationPopup(toUri, isUserInitiated: true) &&
-            !blocker.IsWhitelisted(from.Host))
-        {
-            return AdNavigationVerdict.BlockTabUnder;
-        }
-
-        return AdNavigationVerdict.Allow;
+        return NavigationHijackPolicy.Decide(
+            fromUri,
+            toUri,
+            wasExplicitlyRequested: _navHealth.TakeExplicitNavigation(toUri),
+            strictBlockEnabled: _uiSettings.StrictAdBlockEnabled && blocker?.IsEnabled == true,
+            host => blocker?.IsBlocked(host) == true,
+            host => blocker?.IsWhitelisted(host) == true,
+            pageUnderAdPressure: PageUnderAdPressure,
+            openedPopupRecently: tabId is int id && _navHealth.HadRecentPopup(id, DateTimeOffset.Now));
     }
 
-    private void OfferAdBlockedContinue(string blockedUrl, string? fromUri, AdNavigationVerdict verdict)
+    // Blocage silencieux : journal + bouclier + ligne de statut, rien d'autre.
+    private void ReportBlockedNavigation(NavigationVerdict verdict, string blockedUrl, string? fromUri, bool isActiveView)
     {
-        _pendingAdBlockedUrl = blockedUrl;
-        var host = Uri.TryCreate(blockedUrl, UriKind.Absolute, out var parsed) ? parsed.Host : blockedUrl;
-        var isTabUnder = verdict == AdNavigationVerdict.BlockTabUnder;
-        AdBlockedText.Text = isTabUnder
-            ? $"Redirection suspecte bloquee : la page voulait partir vers {host} juste apres avoir ouvert une popup."
-            : $"Navigation bloquee : {host} est repertorie comme domaine publicitaire.";
-        AdBlockedBar.Visibility = Visibility.Visible;
-
+        var isParasite = verdict == NavigationVerdict.BlockParasite;
         _privacy.RecordManualBlock(
-            isTabUnder ? "tab-under-block" : "strict-ad-block",
-            isTabUnder ? "Blocage des tab-under" : "Blocage des redirections publicitaires",
+            isParasite ? "parasite-block" : "strict-ad-block",
+            isParasite ? "Blocage des redirections parasites" : "Blocage des redirections publicitaires",
             blockedUrl,
             fromUri ?? string.Empty);
         UpdateToolbarPrivacyIndicator();
-        StatusText.Text = isTabUnder
-            ? $"Redirection tab-under bloquee : {host}"
-            : $"Navigation publicitaire bloquee : {host}";
-        WinUiRuntimeTrace.Write($"Ad navigation blocked ({verdict}): {blockedUrl}");
-    }
 
-    private void HideAdBlockedBar()
-    {
-        AdBlockedBar.Visibility = Visibility.Collapsed;
-        _pendingAdBlockedUrl = null;
-    }
-
-    private void AdBlockedContinue_Click(object sender, RoutedEventArgs e)
-    {
-        var url = _pendingAdBlockedUrl;
-        HideAdBlockedBar();
-        if (url is null || !Uri.TryCreate(url, UriKind.Absolute, out var parsed))
+        if (isActiveView)
         {
-            return;
+            var host = Uri.TryCreate(blockedUrl, UriKind.Absolute, out var parsed) ? parsed.Host : blockedUrl;
+            StatusText.Text = isParasite
+                ? $"Redirection parasite bloquee : {host}"
+                : $"Navigation publicitaire bloquee : {host}";
         }
 
-        // Autorisation pour la session : le domaine ne re-bloquera pas à chaque
-        // clic, mais rien n'est persisté (la whitelist des paramètres reste le
-        // choix durable).
-        _navHealth.AllowAdContinue(SiteRelocationStore.RootOf(parsed.Host));
-        _navHealth.RegisterExplicitNavigation(url);
-        NavigateCurrentTab(url, DisplayTitle(url));
+        WinUiRuntimeTrace.Write($"Ad navigation blocked ({verdict}): {blockedUrl}");
     }
-
-    private void AdBlockedDismiss_Click(object sender, RoutedEventArgs e) =>
-        HideAdBlockedBar();
 }

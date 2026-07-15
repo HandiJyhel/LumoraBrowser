@@ -70,6 +70,7 @@
     <Compile Include="..\Lumora.WinUI\SiteNotFoundRecovery.cs" Link="Product\SiteNotFoundRecovery.cs" />
     <Compile Include="..\Lumora.WinUI\SiteRelocationStore.cs" Link="Product\SiteRelocationStore.cs" />
     <Compile Include="..\Lumora.WinUI\PopupPolicy.cs" Link="Product\PopupPolicy.cs" />
+    <Compile Include="..\Lumora.WinUI\NavigationHijackPolicy.cs" Link="Product\NavigationHijackPolicy.cs" />
     <Compile Include="..\Lumora.WinUI\NavigationHealthTracker.cs" Link="Product\NavigationHealthTracker.cs" />
     <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordHealthAnalyzer.cs" Link="Product\PasswordHealthAnalyzer.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\SitePermissions\SitePermissionPolicy.cs" Link="Product\SitePermissionPolicy.cs" />
