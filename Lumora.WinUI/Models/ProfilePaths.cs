@@ -24,6 +24,7 @@ internal sealed class LumoraProfilePaths
         SiteRelocationsFile = DataFile(NavigationDir, "site-relocations");
         HistoryFile         = DataFile(NavigationDir, "history");
         NotesFile           = DataFile(NavigationDir, "notes");
+        AnnotationsFile     = DataFile(NavigationDir, "annotations");
         LegacyHistoryFile   = Path.Combine(NavigationDir, "history.json");
         DownloadsFile       = DataFile(NavigationDir, "downloads");
         PasskeysFile        = DataFile(NavigationDir, "passkeys");
@@ -49,6 +50,7 @@ internal sealed class LumoraProfilePaths
     public string SiteRelocationsFile  { get; }
     public string HistoryFile          { get; }
     public string NotesFile            { get; }
+    public string AnnotationsFile      { get; }
     public string LegacyHistoryFile    { get; }
     public string DownloadsFile        { get; }
     public string PasskeysFile         { get; }

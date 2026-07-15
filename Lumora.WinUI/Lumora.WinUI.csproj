@@ -32,6 +32,7 @@
     <Content Include="Credentials\*.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Translation\*.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="ReadAloud\*.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Reader\*.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Credentials\TestPages\*.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraApp.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraApp.png" CopyToOutputDirectory="PreserveNewest" />

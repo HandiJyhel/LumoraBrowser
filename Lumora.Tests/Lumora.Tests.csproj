@@ -62,6 +62,7 @@
     <Compile Include="..\Lumora.WinUI\WebApps\ShortcutNaming.cs" Link="Product\ShortcutNaming.cs" />
     <Compile Include="..\Lumora.WinUI\Models\HistoryTimeFormatter.cs" Link="Product\HistoryTimeFormatter.cs" />
     <Compile Include="..\Lumora.WinUI\Models\Notes.cs" Link="Product\Notes.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\Annotations.cs" Link="Product\Annotations.cs" />
     <Compile Include="..\Lumora.WinUI\Tabs\TabGroupOrdering.cs" Link="Product\TabGroupOrdering.cs" />
     <Compile Include="..\Lumora.WinUI\Tabs\ClosedTabHistory.cs" Link="Product\ClosedTabHistory.cs" />
     <Compile Include="..\Lumora.WinUI\Tabs\SavedTabGroup.cs" Link="Product\SavedTabGroup.cs" />

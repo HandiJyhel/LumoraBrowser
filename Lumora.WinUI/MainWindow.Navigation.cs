@@ -539,6 +539,17 @@ public sealed partial class MainWindow
         if (isActive)
         {
             StatusText.Text = args.IsSuccess ? $"Page chargee: {title}" : $"Navigation echouee: {args.WebErrorStatus}";
+            if (args.IsSuccess && BookmarkStore.IsWebUrl(address))
+            {
+                // Reprise d'activité : signaler les annotations laissées sur cette
+                // page, et ouvrir le mode lecture si le panneau Notes l'a demandé.
+                var annotationCount = _annotations.CountForPage(address);
+                if (annotationCount > 0)
+                {
+                    StatusText.Text = $"Page chargee: {title} - {annotationCount} annotation(s) a retrouver en mode lecture.";
+                }
+                OpenReaderIfPending(address);
+            }
         }
         UpdatePrivacyUi();
     }

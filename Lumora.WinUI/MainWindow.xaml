@@ -198,6 +198,7 @@
                             <MenuFlyoutItem Text="Portefeuille" Click="WalletMenu_Click" />
                         </MenuFlyoutSubItem>
                         <MenuFlyoutSubItem Text="Outils de page">
+                            <MenuFlyoutItem Text="Mode lecture (annoter la page)" Click="ReaderModeMenu_Click" />
                             <MenuFlyoutItem Text="Applications web" Click="WebAppsMenu_Click" />
                             <MenuFlyoutItem Text="Installer la page comme application" Click="InstallAppMenu_Click" />
                             <MenuFlyoutItem Text="Detacher la video" Click="DetachVideoMenu_Click" />
@@ -246,6 +247,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -507,8 +509,34 @@
                     </Flyout>
                 </Button.Flyout>
             </Button>
-            <Button x:Name="SearchAssistButton"
+            <!-- Mode lecture : article épuré, surlignage et commentaires ancrés
+                 dans le texte (annotations rejouées à chaque retour sur la page).
+                 La pastille indique le nombre d'annotations sur la page courante. -->
+            <Button x:Name="ReaderModeButton"
                     Grid.Column="13"
+                    Style="{StaticResource NovaChromeIconButtonStyle}"
+                    AutomationProperties.Name="Mode lecture - surligner et commenter cette page"
+                    ToolTipService.ToolTip="Mode lecture - surligner et commenter cette page"
+                    Visibility="Collapsed"
+                    Click="ReaderModeButton_Click">
+                <Grid>
+                    <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                    <Border x:Name="ReaderAnnotationBadge"
+                            Background="{StaticResource NovaAccentBrush}"
+                            CornerRadius="7" MinWidth="14" Height="14"
+                            Padding="3,0"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Margin="0,-6,-8,0"
+                            Visibility="Collapsed">
+                        <TextBlock x:Name="ReaderAnnotationBadgeText"
+                                   Text="0" FontSize="9" FontWeight="SemiBold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Button>
+            <Button x:Name="SearchAssistButton"
+                    Grid.Column="14"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     AutomationProperties.Name="Preciser ma recherche"
                     ToolTipService.ToolTip="Preciser ma recherche (IA locale, aucune donnee envoyee)"
@@ -529,7 +557,7 @@
                 </Button.Flyout>
             </Button>
             <Button x:Name="MicDictationButton"
-                    Grid.Column="14"
+                    Grid.Column="15"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     AutomationProperties.Name="Dictee vocale"
                     ToolTipService.ToolTip="Dictee vocale : cliquez dans un champ de texte puis appuyez sur Win+H (dictee Windows)"
@@ -540,7 +568,7 @@
                 <FontIcon x:Name="MicDictationIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
             </Button>
             <Button x:Name="NavigationMenuButton"
-                    Grid.Column="15"
+                    Grid.Column="16"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     AutomationProperties.Name="Menu Lumora"
                     ToolTipService.ToolTip="Menu Lumora">
@@ -568,6 +596,7 @@
                             <MenuFlyoutItem Text="Portefeuille" Click="WalletMenu_Click" />
                         </MenuFlyoutSubItem>
                         <MenuFlyoutSubItem Text="Outils">
+                            <MenuFlyoutItem Text="Mode lecture (annoter la page)" Click="ReaderModeMenu_Click" />
                             <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
                             <MenuFlyoutItem Text="Installer comme application" Click="InstallAppMenu_Click" />
                             <MenuFlyoutItem Text="Detacher la video (Picture-in-Picture)" Click="DetachVideoMenu_Click" />
@@ -1854,9 +1883,10 @@
                 </ScrollViewer>
             </Grid>
 
-            <!-- Panneau Notes : bloc-notes local (notes libres ou rattachées à
-                 une page), liste à gauche, éditeur à droite, sauvegarde
-                 automatique. Tout est stocké chiffré dans le profil. -->
+            <!-- Panneau Notes : pages annotées en mode lecture (reprise
+                 d'activité) + bloc-notes libre. Liste à gauche, détail à
+                 droite (lecteur d'annotations ou éditeur de note selon la
+                 sélection). Tout est stocké chiffré dans le profil. -->
             <Grid x:Name="NotesPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -1867,23 +1897,13 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Notes" FontSize="24" FontWeight="SemiBold" />
-                        <TextBlock Text="Votre bloc-notes local. Les notes sont enregistrees automatiquement, chiffrees dans votre profil, et ne quittent jamais cet appareil."
+                        <TextBlock Text="Vos pages annotees en mode lecture et vos notes libres. Rouvrez une page annotee pour reprendre votre lecture la ou vous l'aviez laissee. Tout est chiffre dans votre profil et ne quitte jamais cet appareil."
                                    Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
                     </StackPanel>
-                    <Button Grid.Column="1" x:Name="NoteFromPageButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
-                            ToolTipService.ToolTip="Nouvelle note rattachee a la page courante"
-                            AutomationProperties.Name="Note sur la page courante"
-                            Click="NoteFromPageButton_Click">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                            <TextBlock Text="Note sur la page" />
-                        </StackPanel>
-                    </Button>
-                    <Button Grid.Column="2" x:Name="NotesAddButton" VerticalAlignment="Bottom"
+                    <Button Grid.Column="1" x:Name="NotesAddButton" VerticalAlignment="Bottom"
                             Style="{StaticResource AccentButtonStyle}"
                             AutomationProperties.Name="Nouvelle note"
                             Click="NotesAddButton_Click">
@@ -1895,8 +1915,8 @@
                 </Grid>
                 <Grid Grid.Row="1" Margin="0,0,0,12">
                     <TextBox x:Name="NotesSearchBox"
-                             PlaceholderText="Rechercher dans les notes"
-                             AutomationProperties.Name="Rechercher dans les notes"
+                             PlaceholderText="Rechercher dans les notes et annotations"
+                             AutomationProperties.Name="Rechercher dans les notes et annotations"
                              TextChanged="NotesSearchBox_TextChanged" />
                 </Grid>
                 <Grid Grid.Row="2" ColumnSpacing="16">
@@ -1905,8 +1925,48 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <ListView x:Name="NotesList" SelectionMode="Single"
-                              AutomationProperties.Name="Liste des notes"
+                              AutomationProperties.Name="Liste des notes et pages annotees"
                               SelectionChanged="NotesList_SelectionChanged" />
+
+                    <!-- Détail d'une page annotée : reprise en mode lecture,
+                         liste des surlignages et commentaires. -->
+                    <Grid Grid.Column="1" x:Name="AnnotationViewerHost" RowSpacing="10" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock x:Name="AnnotationPageTitleText" FontSize="18" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="AnnotationPageUrlText" Opacity="0.6" FontSize="12"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Button Grid.Row="1" x:Name="AnnotationOpenPageButton"
+                                Style="{StaticResource AccentButtonStyle}"
+                                AutomationProperties.Name="Reprendre la page en mode lecture"
+                                Click="AnnotationOpenPageButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                <TextBlock Text="Reprendre en mode lecture" />
+                            </StackPanel>
+                        </Button>
+                        <ListView Grid.Row="2" x:Name="AnnotationsList" SelectionMode="None"
+                                  AutomationProperties.Name="Annotations de la page" />
+                        <Grid Grid.Row="3">
+                            <TextBlock x:Name="AnnotationMetaText" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
+                            <Button x:Name="AnnotationForgetPageButton" HorizontalAlignment="Right"
+                                    AutomationProperties.Name="Oublier toutes les annotations de cette page"
+                                    Click="AnnotationForgetPageButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Delete" />
+                                    <TextBlock Text="Oublier cette page" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Grid>
+
                     <Grid Grid.Column="1" x:Name="NoteEditorHost" RowSpacing="10" Visibility="Collapsed">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -1951,7 +2011,7 @@
                         </Grid>
                     </Grid>
                     <TextBlock Grid.Column="1" x:Name="NotesEmptyText"
-                               Text="Aucune note pour l'instant. Creez votre premiere note, ou prenez une note sur la page que vous visitez."
+                               Text="Rien pour l'instant. Surlignez un passage d'une page web via le Mode lecture (bouton dans la barre d'outils) : la page annotee apparaitra ici. Vous pouvez aussi creer une note libre."
                                Opacity="0.6" TextWrapping="Wrap" MaxWidth="420"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>

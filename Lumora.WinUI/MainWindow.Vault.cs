@@ -104,6 +104,12 @@ public sealed partial class MainWindow
                 return;
             }
 
+            if (type == "lumora.annotation")
+            {
+                HandleReaderAnnotationMessage(sender as CoreWebView2, obj);
+                return;
+            }
+
             if (type == "nova.payment.form")
             {
                 HandlePaymentFormDetected(sender as CoreWebView2);

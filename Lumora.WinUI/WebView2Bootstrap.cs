@@ -17,8 +17,13 @@ internal static class WebView2Bootstrap
 
         try
         {
+            // Les arguments déjà posés dans l'environnement (diagnostic,
+            // vérification pilotée) sont CONSERVÉS : on ajoute nos drapeaux
+            // anti-télémétrie au lieu d'écraser la variable.
+            var external = Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
+            var antiTelemetry = "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings";
             Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings");
+                string.IsNullOrWhiteSpace(external) ? antiTelemetry : $"{antiTelemetry} {external.Trim()}");
         }
         catch { }
     }

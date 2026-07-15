@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.78.3.1-dev";
+    private const string Version = "0.78.3.2-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
     private readonly HashSet<int> _savedGroupIds = new();
     private SavedTabGroupStore _savedTabGroups = null!;
     private NoteStore _notes = null!;
+    private AnnotationStore _annotations = null!;
     private readonly List<BrowserImportSource> _importSources = new();
     private readonly Dictionary<string, string> _faviconCache = new(StringComparer.OrdinalIgnoreCase);
     private UiSettings _uiSettings = UiSettings.Default();
@@ -258,6 +259,7 @@ public sealed partial class MainWindow : Window
         _savedTabGroups = new SavedTabGroupStore(
             _profile.SavedTabGroupsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
         _notes = new NoteStore(_profile.NotesFile);
+        _annotations = new AnnotationStore(_profile.AnnotationsFile);
         _siteRelocations = new SiteRelocationStore(
             _profile.SiteRelocationsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
         HistoryList.ItemsSource = _historyPanel.Items;

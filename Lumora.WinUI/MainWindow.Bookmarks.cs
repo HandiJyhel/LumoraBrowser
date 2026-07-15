@@ -539,6 +539,10 @@ public sealed partial class MainWindow
         var label = bookmarked ? "Page en favori - modifier ou retirer" : "Ajouter aux favoris";
         ToolTipService.SetToolTip(AddBookmarkButton, label);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AddBookmarkButton, label);
+
+        // Le bouton Mode lecture suit la même cadence de rafraîchissement que
+        // l'étoile (navigation, changement d'onglet, restauration).
+        UpdateReaderModeUi(address);
     }
 
     private void RenderBookmarksBar()
