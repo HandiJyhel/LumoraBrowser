@@ -190,6 +190,7 @@
                             <MenuFlyoutItem Text="Importer / exporter les favoris" Click="ImportMenu_Click" />
                             <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
                             <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
+                            <MenuFlyoutItem Text="Notes" Click="NotesMenu_Click" />
                         </MenuFlyoutSubItem>
                         <MenuFlyoutSubItem Text="Coffre local">
                             <MenuFlyoutItem Text="Mots de passe" Click="VaultMenu_Click" />
@@ -559,6 +560,7 @@
                             <MenuFlyoutItem Text="Importer / exporter les favoris" Click="ImportMenu_Click" />
                             <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
                             <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
+                            <MenuFlyoutItem Text="Notes" Click="NotesMenu_Click" />
                         </MenuFlyoutSubItem>
                         <MenuFlyoutSubItem Text="Coffre">
                             <MenuFlyoutItem Text="Mots de passe" Click="VaultMenu_Click" />
@@ -1867,6 +1869,109 @@
                 <ScrollViewer Grid.Row="1">
                     <StackPanel x:Name="SavedTabGroupsPanelItems" Spacing="10" />
                 </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Notes : bloc-notes local (notes libres ou rattachées à
+                 une page), liste à gauche, éditeur à droite, sauvegarde
+                 automatique. Tout est stocké chiffré dans le profil. -->
+            <Grid x:Name="NotesPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Notes" FontSize="24" FontWeight="SemiBold" />
+                        <TextBlock Text="Votre bloc-notes local. Les notes sont enregistrees automatiquement, chiffrees dans votre profil, et ne quittent jamais cet appareil."
+                                   Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
+                    </StackPanel>
+                    <Button Grid.Column="1" x:Name="NoteFromPageButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Nouvelle note rattachee a la page courante"
+                            AutomationProperties.Name="Note sur la page courante"
+                            Click="NoteFromPageButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                            <TextBlock Text="Note sur la page" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" x:Name="NotesAddButton" VerticalAlignment="Bottom"
+                            Style="{StaticResource AccentButtonStyle}"
+                            AutomationProperties.Name="Nouvelle note"
+                            Click="NotesAddButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <SymbolIcon Symbol="Add" />
+                            <TextBlock Text="Nouvelle note" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+                <Grid Grid.Row="1" Margin="0,0,0,12">
+                    <TextBox x:Name="NotesSearchBox"
+                             PlaceholderText="Rechercher dans les notes"
+                             AutomationProperties.Name="Rechercher dans les notes"
+                             TextChanged="NotesSearchBox_TextChanged" />
+                </Grid>
+                <Grid Grid.Row="2" ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ListView x:Name="NotesList" SelectionMode="Single"
+                              AutomationProperties.Name="Liste des notes"
+                              SelectionChanged="NotesList_SelectionChanged" />
+                    <Grid Grid.Column="1" x:Name="NoteEditorHost" RowSpacing="10" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBox x:Name="NoteTitleBox" PlaceholderText="Titre de la note"
+                                 AutomationProperties.Name="Titre de la note" MaxLength="160"
+                                 TextChanged="NoteEditor_TextChanged" />
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                            <HyperlinkButton x:Name="NoteLinkButton" Padding="2,0"
+                                             AutomationProperties.Name="Ouvrir la page liee"
+                                             Click="NoteLinkButton_Click" Visibility="Collapsed" />
+                            <Button x:Name="NoteAttachPageButton"
+                                    ToolTipService.ToolTip="Rattacher cette note a la page web courante"
+                                    AutomationProperties.Name="Rattacher a la page courante"
+                                    Click="NoteAttachPageButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE71B;" FontFamily="Segoe MDL2 Assets" FontSize="13" />
+                                    <TextBlock Text="Rattacher a la page" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <TextBox Grid.Row="2" x:Name="NoteContentBox"
+                                 PlaceholderText="Ecrivez votre note ici..."
+                                 AutomationProperties.Name="Contenu de la note"
+                                 AcceptsReturn="True" TextWrapping="Wrap"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 VerticalAlignment="Stretch" VerticalContentAlignment="Top"
+                                 TextChanged="NoteEditor_TextChanged" />
+                        <Grid Grid.Row="3">
+                            <TextBlock x:Name="NoteMetaText" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
+                            <Button x:Name="NoteDeleteButton" HorizontalAlignment="Right"
+                                    AutomationProperties.Name="Supprimer la note"
+                                    Click="NoteDeleteButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Delete" />
+                                    <TextBlock Text="Supprimer" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                    <TextBlock Grid.Column="1" x:Name="NotesEmptyText"
+                               Text="Aucune note pour l'instant. Creez votre premiere note, ou prenez une note sur la page que vous visitez."
+                               Opacity="0.6" TextWrapping="Wrap" MaxWidth="420"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
             </Grid>
 
             <Grid x:Name="VaultPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">

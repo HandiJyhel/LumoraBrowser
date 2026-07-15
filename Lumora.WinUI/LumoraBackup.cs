@@ -44,6 +44,7 @@ internal static class LumoraBackup
 
             WriteProfileEntry(zip, profile.BookmarksFile, "navigation/bookmarks.txt");
             WriteProfileEntry(zip, profile.HistoryFile, "navigation/history.txt");
+            WriteProfileEntry(zip, profile.NotesFile, "navigation/notes.txt");
             WriteProfileEntry(zip, profile.TabsFile, "navigation/tabs.txt");
             WriteProfileEntry(zip, profile.UiSettingsFile, "navigation/ui-settings.txt");
 
@@ -106,6 +107,7 @@ internal static class LumoraBackup
 
             ReadProfileEntry(zip, "navigation/bookmarks.txt", profile.BookmarksFile);
             ReadProfileEntry(zip, "navigation/history.txt", profile.HistoryFile);
+            ReadProfileEntry(zip, "navigation/notes.txt", profile.NotesFile);
             ReadProfileEntry(zip, "navigation/tabs.txt", profile.TabsFile);
             ReadProfileEntry(zip, "navigation/ui-settings.txt", profile.UiSettingsFile);
 

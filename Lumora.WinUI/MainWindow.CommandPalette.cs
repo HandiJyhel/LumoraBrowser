@@ -184,6 +184,8 @@ public sealed partial class MainWindow
             () => HistoryMenu_Click(this, new RoutedEventArgs())), 86);
         Add(new("Donnees locales", "Telechargements", "Ouvre les telechargements de cette session", "\uE896",
             () => DownloadsMenu_Click(this, new RoutedEventArgs())), 84);
+        Add(new("Donnees locales", "Notes", "Ouvre le bloc-notes local", "\uE70B",
+            () => NotesMenu_Click(this, new RoutedEventArgs())), 83);
         Add(new("Controle du site", "Sites connectes", "Gere les sessions et cookies conserves", "\uE8D4",
             () => SessionsMenu_Click(this, new RoutedEventArgs())), 82);
         Add(new("Outils de page", "Applications", "Sites installes en fenetre dediee", "\uE71D",

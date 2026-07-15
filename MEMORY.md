@@ -5185,3 +5185,30 @@ correct, capture). Installeur construit :
 Details : `logs/2026-07-15-anti-pub-etoile-0-78-2.md`.
 
 **Version :** `0.78.2-dev`.
+
+---
+
+## 2026-07-15 - Module bloc-notes (0.78.3-dev)
+
+Deuxieme volet des priorites utilisateur : un bloc-notes local. `NoteStore`
+(classe pure, testee) : notes libres ou rattachees a une page web, stockage
+`notes.lumora` chiffre DPAPI, format TSV percent-encode, horodatages tronques
+a la milliseconde (aller-retour disque sans perte), mode invite en memoire de
+session. Panneau Notes : liste (titre + date relative + hote), editeur
+(titre, contenu, lien vers la page, suppression avec confirmation), recherche
+plein texte, sauvegarde automatique differee (800 ms), « Note sur la page »
+et « Rattacher a la page ». Integre aux deux menus (Donnees locales), a la
+palette de commandes et a la sauvegarde LumoraBackup.
+
+Piege appris : `TextChanged` WinUI arrive en differe -> le chargement d'une
+note declenchait une sauvegarde fantome ; garde « sans changement reel, rien »
+dans SaveNoteEditor.
+
+**Verification** : 408/408 tests verts (13 nouveaux NoteStore) ; builds 0
+avert. ; live UIA mode invite (creation, saisie, sauvegarde auto, note sur la
+page, lien visible, capture). Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3-dev-win-x64.exe`, SHA256
+`1935bb37a64bbf069f2701018857a832106587481fd4975a45b1c5530220fc0f`.
+Details : `logs/2026-07-15-bloc-notes-0-78-3.md`.
+
+**Version :** `0.78.3-dev`.

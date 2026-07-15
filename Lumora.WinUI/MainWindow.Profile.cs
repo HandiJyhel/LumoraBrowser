@@ -563,6 +563,7 @@ public sealed partial class MainWindow
     {
         _isGuestMode = true;
         _bookmarks.SetGuestMode(true);
+        _notes.SetGuestMode(true);
         _historyPanel.Store.SetGuestMode(true);
         _historyPanel.Downloads.SetGuestMode(true);
         _webApps.SetGuestMode(true);

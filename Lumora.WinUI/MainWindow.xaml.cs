@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.78.2-dev";
+    private const string Version = "0.78.3-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -54,6 +54,7 @@ public sealed partial class MainWindow : Window
     // garde-fou (ne pas reproposer de garder un groupe déjà enregistré).
     private readonly HashSet<int> _savedGroupIds = new();
     private SavedTabGroupStore _savedTabGroups = null!;
+    private NoteStore _notes = null!;
     private readonly List<BrowserImportSource> _importSources = new();
     private readonly Dictionary<string, string> _faviconCache = new(StringComparer.OrdinalIgnoreCase);
     private UiSettings _uiSettings = UiSettings.Default();
@@ -256,6 +257,7 @@ public sealed partial class MainWindow : Window
             new DownloadHistoryStore(_profile.DownloadsFile));
         _savedTabGroups = new SavedTabGroupStore(
             _profile.SavedTabGroupsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
+        _notes = new NoteStore(_profile.NotesFile);
         _siteRelocations = new SiteRelocationStore(
             _profile.SiteRelocationsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
         HistoryList.ItemsSource = _historyPanel.Items;
@@ -414,6 +416,7 @@ public sealed partial class MainWindow : Window
         HistoryPanel.Visibility = Visibility.Collapsed;
         DownloadsPanel.Visibility = Visibility.Collapsed;
         SavedTabGroupsPanel.Visibility = Visibility.Collapsed;
+        NotesPanel.Visibility = Visibility.Collapsed;
         VaultPanel.Visibility = Visibility.Collapsed;
         PasskeysPanel.Visibility = Visibility.Collapsed;
         SiteControlPanel.Visibility = Visibility.Collapsed;
