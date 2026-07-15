@@ -66,11 +66,20 @@ public sealed class BookmarkStore
         _legacyFavoritesFile = legacyFavoritesFile;
     }
 
-    public void SetGuestMode(bool isGuest) => _isGuest = isGuest;
+    // Favoris du mode invité : vivants pendant la session, jamais écrits sur le
+    // disque. Sans cette couche, « Ajouter aux favoris » annonçait un succès en
+    // mode invité sans rien ajouter nulle part (0.78.2).
+    private List<BookmarkNode>? _guestNodes;
+
+    public void SetGuestMode(bool isGuest)
+    {
+        _isGuest = isGuest;
+        if (!isGuest) _guestNodes = null;
+    }
 
     public List<BookmarkNode> AllNodes()
     {
-        if (_isGuest) return Sort(RootNodes());
+        if (_isGuest) return Sort(new List<BookmarkNode>(_guestNodes ??= RootNodes()));
 
         EnsureFile();
         var content = LumoraFile.TryReadAllText(_bookmarksFile) ?? string.Empty;
@@ -524,7 +533,12 @@ public sealed class BookmarkStore
 
     private void WriteNodes(IReadOnlyList<BookmarkNode> nodes)
     {
-        if (_isGuest) return;
+        if (_isGuest)
+        {
+            _guestNodes = nodes.ToList();
+            return;
+        }
+
         var builder = new StringBuilder();
         foreach (var node in Sort(nodes))
         {

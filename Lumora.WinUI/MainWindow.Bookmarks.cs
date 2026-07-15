@@ -58,8 +58,7 @@ public sealed partial class MainWindow
         }
 
         var existing = _allBookmarkNodes.FirstOrDefault(node =>
-            node.Kind == BookmarkKind.Url &&
-            node.Url.Equals(address, StringComparison.OrdinalIgnoreCase));
+            node.Kind == BookmarkKind.Url && SameBookmarkUrl(node.Url, address));
         var currentTitle = CurrentTab()?.Title ?? DisplayTitle(address);
         var result = await PromptBookmarkEditorAsync(address, currentTitle, existing);
         if (result.Cancelled)
@@ -509,6 +508,37 @@ public sealed partial class MainWindow
         RenderBookmarksTree();
         RenderBookmarkContent();
         RenderBookmarksBar();
+        UpdateBookmarkStar();
+    }
+
+    // ── Étoile d'état de la barre d'outils ───────────────────────────────────
+
+    // Le WebView2 rapporte « https://site.fr/ » quand l'utilisateur a saisi
+    // « https://site.fr » : l'égalité d'URL de favori ignore le slash final.
+    private static bool SameBookmarkUrl(string? a, string? b) =>
+        a is not null && b is not null &&
+        a.TrimEnd('/').Equals(b.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+
+    private Brush? _bookmarkStarDefaultForeground;
+
+    // Reflète dans la barre d'outils si la page courante est en favori :
+    // étoile pleine couleur accent si oui, contour neutre sinon.
+    private void UpdateBookmarkStar(string? address = null)
+    {
+        address ??= CurrentTab()?.Address;
+        var bookmarked = !string.IsNullOrWhiteSpace(address) &&
+                         BookmarkStore.IsWebUrl(address) &&
+                         _allBookmarkNodes.Any(node =>
+                             node.Kind == BookmarkKind.Url && SameBookmarkUrl(node.Url, address));
+
+        _bookmarkStarDefaultForeground ??= BookmarkStarIcon.Foreground;
+        BookmarkStarIcon.Glyph = bookmarked ? "\uE735" : "\uE734";
+        BookmarkStarIcon.Foreground = bookmarked
+            ? (Brush)RootShell.Resources["NovaAccentBrush"]
+            : _bookmarkStarDefaultForeground;
+        var label = bookmarked ? "Page en favori - modifier ou retirer" : "Ajouter aux favoris";
+        ToolTipService.SetToolTip(AddBookmarkButton, label);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AddBookmarkButton, label);
     }
 
     private void RenderBookmarksBar()

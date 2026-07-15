@@ -412,8 +412,11 @@
                 </Button.Flyout>
             </Button>
 
-            <Button Grid.Column="7" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" AutomationProperties.Name="Ajouter aux favoris" Click="AddBookmarkButton_Click">
-                <SymbolIcon Symbol="Favorite" />
+            <!-- Étoile d'état : pleine et accentuée quand la page courante est
+                 déjà en favori, contour simple sinon. Rafraîchie à chaque
+                 navigation, changement d'onglet et modification des favoris. -->
+            <Button Grid.Column="7" x:Name="AddBookmarkButton" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" AutomationProperties.Name="Ajouter aux favoris" Click="AddBookmarkButton_Click">
+                <FontIcon x:Name="BookmarkStarIcon" Glyph="&#xE734;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
             </Button>
             <Button Grid.Column="8"
                     Style="{StaticResource NovaChromeIconButtonStyle}"

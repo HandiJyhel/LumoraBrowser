@@ -5149,3 +5149,39 @@ Details : `docs/REFACTOR_NAVIGATION_HEALTH_0_78_1.md`,
 `logs/2026-07-14-refactor-navigation-health-0-78-1.md`.
 
 **Version :** `0.78.1-dev`.
+
+---
+
+## 2026-07-15 - Renforcement anti-pub + etoile de favori (0.78.2-dev)
+
+Priorite utilisateur : des pubs intrusives passaient encore et forcaient un
+changement d'onglet. Trois breches fermees :
+
+1. `PopupPolicy` durcie : les mots-cles de chemin (`/login`, `/signin`,
+   `oauth`) n'ouvrent plus que sur geste utilisateur ; fournisseurs d'identite
+   connus + prefixes d'hote (`login.`, `sso.`, ...) toujours ouvrables ; le
+   domaine repertorie publicitaire est eliminatoire AVANT l'heuristique de
+   chemin (`pub.example/login/...` ne passe plus).
+2. Nouveaux verdicts : `AllowInBackground` (site sous pression publicitaire,
+   >= 3 blocages sur la page -> la popup ne vole plus le focus) et
+   `BlockGestureFlood` (une seule popup par geste, fenetre d'1 s).
+3. Tab-under bloque : popup ouverte puis redirection cross-domaine de l'opener
+   dans les 3 s -> barre « Continuer quand meme » (auth et whitelist exemptes).
+   Suivi pur dans `NavigationHealthTracker` (heure injectee, teste).
+
+Etoile de favori dans la barre d'outils : pleine + couleur accent + libelle
+« Page en favori - modifier ou retirer » quand la page courante est en favori,
+contour sinon ; rafraichie a chaque navigation/onglet/rechargement. Egalite
+d'URL insensible au slash final (corrige aussi la detection de favori existant
+du bouton). Au passage : en mode invite, les favoris vivent desormais en
+memoire de session (le store etait un no-op silencieux alors que l'UI
+annoncait le succes).
+
+**Verification** : 395/395 tests verts (12 nouveaux) ; builds Debug/Release
+0 avert. ; live UIA en mode invite (ajout favori -> etoile pleine, nom UIA
+correct, capture). Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.2-dev-win-x64.exe`, SHA256
+`5c3f1ad60f047d1164ddd01f333a97af9c4cd0105e1c1916b313bef47b522216`.
+Details : `logs/2026-07-15-anti-pub-etoile-0-78-2.md`.
+
+**Version :** `0.78.2-dev`.

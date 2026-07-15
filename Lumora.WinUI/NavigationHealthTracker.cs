@@ -56,6 +56,21 @@ public sealed class NavigationHealthTracker
     // Domaines racine autorisés via « Continuer quand même » (session uniquement).
     private readonly HashSet<string> _adContinueRoots = new(StringComparer.OrdinalIgnoreCase);
 
+    // Horodatages des popups OUVERTES (autorisées) par onglet opener : sert au
+    // plafond « une popup par geste » et à la détection de tab-under. L'heure
+    // est injectée par l'appelant pour rester pur et testable.
+    private readonly Dictionary<int, List<DateTimeOffset>> _openedPopupsByTab = new();
+
+    // Deux window.open à moins d'une seconde d'écart relèvent du même geste
+    // utilisateur : aucun humain ne clique deux liens en moins d'une seconde
+    // avec l'INTENTION d'ouvrir deux fenêtres.
+    private static readonly TimeSpan PopupGestureWindow = TimeSpan.FromSeconds(1);
+
+    // Après une popup, l'opener qui se redirige lui-même dans la foulée exécute
+    // le pattern tab-under (streaming/pub). Les redirections légitimes après
+    // login arrivent bien plus tard (le temps que l'utilisateur s'authentifie).
+    private static readonly TimeSpan TabUnderWindow = TimeSpan.FromSeconds(3);
+
     // Budget de trace diagnostic : les premières réponses de chaque navigation.
     private int _responseTraceBudget;
 
@@ -83,6 +98,7 @@ public sealed class NavigationHealthTracker
         RemoveNavigatingUrisOfTab(tabId);
         _mainDocumentHttpErrors.Remove(tabId);
         _pendingUnknownFailures.Remove(tabId);
+        _openedPopupsByTab.Remove(tabId);
     }
 
     public bool IsMainDocument(string? uri, out int tabId) =>
@@ -164,6 +180,38 @@ public sealed class NavigationHealthTracker
     public void AllowAdContinue(string rootDomain) => _adContinueRoots.Add(rootDomain);
 
     public bool IsAdContinueAllowed(string rootDomain) => _adContinueRoots.Contains(rootDomain);
+
+    // ── Popups ouvertes et tab-under ─────────────────────────────────────────
+
+    // À appeler quand une popup est réellement OUVERTE (verdict Allow*).
+    public void RegisterPopupOpened(int openerTabId, DateTimeOffset now)
+    {
+        if (!_openedPopupsByTab.TryGetValue(openerTabId, out var stamps))
+        {
+            stamps = new List<DateTimeOffset>();
+            _openedPopupsByTab[openerTabId] = stamps;
+        }
+
+        stamps.RemoveAll(stamp => now - stamp > TabUnderWindow);
+        stamps.Add(now);
+    }
+
+    // Nombre de popups déjà ouvertes par cet onglet dans la fenêtre du geste
+    // courant : ≥ 1 signifie que le geste a déjà « consommé » sa popup.
+    public int CountPopupsInGestureWindow(int openerTabId, DateTimeOffset now)
+    {
+        return _openedPopupsByTab.TryGetValue(openerTabId, out var stamps)
+            ? stamps.Count(stamp => now - stamp <= PopupGestureWindow)
+            : 0;
+    }
+
+    // Vrai si cet onglet a ouvert une popup il y a moins de TabUnderWindow :
+    // sa propre navigation cross-domaine immédiate est alors suspecte.
+    public bool HadRecentPopup(int openerTabId, DateTimeOffset now)
+    {
+        return _openedPopupsByTab.TryGetValue(openerTabId, out var stamps) &&
+               stamps.Any(stamp => now - stamp <= TabUnderWindow);
+    }
 
     // ── Interne ──────────────────────────────────────────────────────────────
 

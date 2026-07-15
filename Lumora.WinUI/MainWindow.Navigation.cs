@@ -45,6 +45,7 @@ public sealed partial class MainWindow
     private void ActivateTab(BrowserTabState tab)
     {
         AddressBox.Text = DisplayAddressForBar(tab.Address);
+        UpdateBookmarkStar(tab.Address);
         ShowPanel(BrowserPanel, tab.Title);
 
         foreach (var other in _tabs)
@@ -413,15 +414,18 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Détournement de l'onglet vers un domaine répertorié publicitaire
-        // (clic capturé, redirection forcée) : navigation annulée, barre
-        // « Continuer quand même ». Jamais pour une adresse demandée via l'UI.
-        if (ShouldStrictBlockNavigation(args.Uri))
+        // Détournement de l'onglet : domaine répertorié publicitaire (clic
+        // capturé, redirection forcée) ou tab-under (redirection cross-domaine
+        // juste après une popup). Navigation annulée, barre « Continuer quand
+        // même ». Jamais pour une adresse demandée via l'UI.
+        var adVerdict = ClassifyNavigationForAdShield(
+            TabForView(sender)?.Id, sender.Source?.ToString(), args.Uri);
+        if (adVerdict != AdNavigationVerdict.Allow)
         {
             args.Cancel = true;
             if (IsActiveView(sender))
             {
-                OfferAdBlockedContinue(args.Uri, sender.Source?.ToString());
+                OfferAdBlockedContinue(args.Uri, sender.Source?.ToString(), adVerdict);
             }
             return;
         }
@@ -621,6 +625,8 @@ public sealed partial class MainWindow
     private void SyncActiveAddressBar(BrowserTabState tab, string address)
     {
         if (!IsActiveView(tab.View) || string.IsNullOrWhiteSpace(address)) return;
+        // L'étoile de favori suit la page réelle, même pendant une saisie.
+        UpdateBookmarkStar(address);
         if (AddressBox.FocusState != FocusState.Unfocused) return;
         var displayAddress = DisplayAddressForBar(address);
         if (AddressBox.Text != displayAddress) AddressBox.Text = displayAddress;
@@ -871,6 +877,7 @@ public sealed partial class MainWindow
             else if (!createViewWhenSelected)
             {
                 AddressBox.Text = DisplayAddressForBar(state.Address);
+                UpdateBookmarkStar(state.Address);
                 ShowPanel(BrowserPanel, state.Title);
             }
         }
@@ -917,6 +924,7 @@ public sealed partial class MainWindow
         if (!updateHeaderOnly && CurrentTab()?.Id == tab.Id)
         {
             AddressBox.Text = DisplayAddressForBar(address);
+            UpdateBookmarkStar(address);
         }
 
         SaveTabSession();
@@ -1681,6 +1689,7 @@ public sealed partial class MainWindow
             if (restoredTab is not null)
             {
                 AddressBox.Text = DisplayAddressForBar(restoredTab.Address);
+                UpdateBookmarkStar(restoredTab.Address);
             }
         }
 
@@ -1962,11 +1971,16 @@ public sealed partial class MainWindow
     {
         RecordLoginDiagnosticForNavigation(sender.Source, "new-window-requested", args.Uri, args.IsUserInitiated ? "user-initiated" : "not-user-initiated");
 
+        var parentTab = TabForCore(sender);
+
         // Popups indésirables (popunder automatique, clic détourné vers un domaine
-        // publicitaire) : bloquées AVANT toute création d'onglet. Politique pure
-        // dans PopupPolicy ; les fenêtres d'authentification passent toujours.
-        if (BlockPopupIfUnwanted(args.Uri, sender.Source, args.IsUserInitiated))
+        // publicitaire, rafale sur un même geste) : bloquées AVANT toute création
+        // d'onglet. Politique pure dans PopupPolicy ; les fenêtres
+        // d'authentification passent toujours.
+        var popupVerdict = DecidePopupVerdict(args.Uri, sender.Source, args.IsUserInitiated, parentTab?.Id);
+        if (popupVerdict is PopupVerdict.BlockAutomatic or PopupVerdict.BlockAdDomain or PopupVerdict.BlockGestureFlood)
         {
+            ReportBlockedPopup(popupVerdict, args.Uri, sender.Source);
             args.Handled = true;
             return;
         }
@@ -1980,12 +1994,18 @@ public sealed partial class MainWindow
         var uri = string.IsNullOrWhiteSpace(args.Uri) ? "about:blank" : args.Uri;
         try
         {
-            var parentTab = TabForCore(sender);
             var isFederatedIdentity = IsFederatedIdentityIntermediary(uri);
-            var popupTab = AddTab(PopupTabTitle(uri), uri, select: !isFederatedIdentity, createViewWhenSelected: false);
+
+            // Site sous pression publicitaire : la popup s'ouvre SANS voler le
+            // focus — le clic détourné n'interrompt plus la navigation en cours.
+            var openInBackground = popupVerdict == PopupVerdict.AllowInBackground && !isFederatedIdentity;
+            var popupTab = AddTab(PopupTabTitle(uri), uri,
+                select: !isFederatedIdentity && !openInBackground,
+                createViewWhenSelected: false);
             if (parentTab is not null)
             {
                 _popupParentTabIds[popupTab.Id] = parentTab.Id;
+                _navHealth.RegisterPopupOpened(parentTab.Id, DateTimeOffset.Now);
             }
             if (isFederatedIdentity)
             {
@@ -1996,13 +2016,15 @@ public sealed partial class MainWindow
             if (popupView?.CoreWebView2 is not null)
             {
                 args.NewWindow = popupView.CoreWebView2;
-                if (!isFederatedIdentity)
+                if (!isFederatedIdentity && !openInBackground)
                 {
                     _browserView = popupView;
                 }
                 StatusText.Text = isFederatedIdentity
                     ? "Connexion Google en cours dans une fenetre Lumora rattachee."
-                    : "Fenetre de connexion ouverte dans un onglet Lumora.";
+                    : openInBackground
+                        ? $"Popup ouverte en arriere-plan (site sous pression publicitaire) : {DisplayTitle(uri)}"
+                        : "Fenetre de connexion ouverte dans un onglet Lumora.";
             }
             else
             {

@@ -54,6 +54,56 @@ public class NavigationHealthTrackerTests
         Assert.True(t.IsMainDocument("https://new.example/", out _));
     }
 
+    // ── Popups ouvertes : plafond par geste et tab-under (0.78.2) ───────────
+
+    [Fact]
+    public void PopupOuverte_CompteDansLaFenetreDuGeste()
+    {
+        var t = new NavigationHealthTracker();
+        var now = DateTimeOffset.UtcNow;
+
+        Assert.Equal(0, t.CountPopupsInGestureWindow(5, now));
+        t.RegisterPopupOpened(5, now);
+        Assert.Equal(1, t.CountPopupsInGestureWindow(5, now.AddMilliseconds(300)));
+        Assert.Equal(0, t.CountPopupsInGestureWindow(6, now.AddMilliseconds(300)));
+    }
+
+    [Fact]
+    public void PopupOuverte_SortDeLaFenetreDuGeste_ApresUneSeconde()
+    {
+        // Deux clics espacés de plus d'une seconde = deux gestes distincts :
+        // le second a droit à sa propre popup.
+        var t = new NavigationHealthTracker();
+        var now = DateTimeOffset.UtcNow;
+        t.RegisterPopupOpened(5, now);
+
+        Assert.Equal(0, t.CountPopupsInGestureWindow(5, now.AddSeconds(2)));
+    }
+
+    [Fact]
+    public void TabUnder_PopupRecente_DetecteePendantTroisSecondes()
+    {
+        var t = new NavigationHealthTracker();
+        var now = DateTimeOffset.UtcNow;
+        t.RegisterPopupOpened(5, now);
+
+        Assert.True(t.HadRecentPopup(5, now.AddSeconds(2)));
+        Assert.False(t.HadRecentPopup(5, now.AddSeconds(4)));
+        Assert.False(t.HadRecentPopup(6, now.AddSeconds(2)));
+    }
+
+    [Fact]
+    public void ForgetTab_OublieAussiLesPopups()
+    {
+        var t = new NavigationHealthTracker();
+        var now = DateTimeOffset.UtcNow;
+        t.RegisterPopupOpened(5, now);
+        t.ForgetTab(5);
+
+        Assert.False(t.HadRecentPopup(5, now));
+        Assert.Equal(0, t.CountPopupsInGestureWindow(5, now));
+    }
+
     [Fact]
     public void ForgetTab_NettoieTout()
     {
