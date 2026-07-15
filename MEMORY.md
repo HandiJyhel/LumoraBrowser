@@ -5242,3 +5242,46 @@ parasite reproductible en test : a confirmer en usage reel. Installeur :
 Details : `logs/2026-07-15-anti-parasite-0-78-3-1.md`.
 
 **Version :** `0.78.3.1-dev`.
+
+## 2026-07-15 - Mode lecture et annotations de pages (0.78.3.2-dev)
+
+Reprise du module notes : le bloc-notes libre de 0.78.3 n'etait pas la
+demande reelle. Besoin exprime : annoter les pages web consultees (surligner,
+commenter), sauvegarder dans le logiciel et reprendre l'activite en revenant
+sur la page — un « mode lecture ameliore ». Le bouton « Note sur la page »
+(source de la confusion) est supprime ; le bloc-notes libre est conserve.
+
+- `AnnotationStore` (Models/Annotations.cs, pur, teste) : surlignage = extrait
+  exact + contexte avant/apres (TextQuoteSelector du W3C Web Annotation) +
+  commentaire, rattache a l'URL sans fragment. `annotations.lumora` chiffre
+  DPAPI, TSV percent-encode, mode invite en memoire. Vue groupee
+  `AnnotatedPages()`. Seul le commentaire est modifiable (l'extrait = l'ancre).
+- Mode lecture (Reader/ReaderMode.js + MainWindow.Reader.cs) : injection a la
+  demande, extraction heuristique locale (longueur de texte vs densite de
+  liens), SURCOUCHE par-dessus la page (rien n'est detruit ; quitter = retirer,
+  sans rechargement). Selection (souris/clavier/`selectionchange` debounce) ->
+  barre « Surligner / Commenter ». Reapplication automatique a l'ouverture.
+  Id definitif renvoye a la page (`confirmAdd`).
+- Bouton barre d'outils avec pastille (nombre d'annotations de la page),
+  rafraichi par `UpdateBookmarkStar` ; statut de fin de navigation « N
+  annotation(s) a retrouver » ; menus + palette de commandes.
+- Panneau Notes revu : liste mixte pages annotees (en tete) + notes libres ;
+  detail = lecteur d'annotations (suppression unitaire, « Oublier cette
+  page », « Reprendre en mode lecture » = navigation + ouverture auto du
+  lecteur) ou editeur de note inchange. Recherche etendue aux extraits.
+- Pieges appris : le CSS de la page s'applique a la surcouche (meme document)
+  -> `all: revert` + geometrie `!important` ; `WebView2Bootstrap` ecrasait
+  `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` (desormais conserve/combine) ; UIA2
+  ne voit pas le contenu WebView2 en hebergement visuel -> verification du DOM
+  par CDP (`--remote-debugging-port` + `Runtime.evaluate`) ; `getRangeAt` rend
+  une reference vivante (cloner avant le clic) ; reprise = API `open()`
+  garantie, pas un `toggle` aveugle qui fermait le lecteur deja ouvert.
+
+**Verification** : 436/436 tests verts (15 nouveaux AnnotationStore) ; builds
+Debug + Release 0 avert./0 err. ; live UIA + CDP de bout en bout (surlignage
+example.com -> `ann-1` -> panneau Notes -> reprise avec surlignage reapplique).
+Installeur : `artifacts\installer\LumoraSetup-0.78.3.2-dev-win-x64.exe`,
+SHA256 `3ab1ddffaecace55d73fa3a996e63a2e4879c9693ac8c3ba3b5036752d807429`.
+Details : `logs/2026-07-15-mode-lecture-annotations-0-78-3-2.md`.
+
+**Version :** `0.78.3.2-dev`.
