@@ -2754,14 +2754,43 @@
                         <SymbolIcon Symbol="Add" />
                     </Button>
                 </Grid>
-                <Grid Grid.Row="1" Margin="0,0,0,12">
-                    <TextBox x:Name="PasswordManagerSearchBox"
+                <Grid Grid.Row="1" Margin="0,0,0,12" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" x:Name="PasswordManagerSearchBox"
                              PlaceholderText="Rechercher un site, un identifiant ou un domaine"
                              TextChanged="PasswordManagerSearchBox_TextChanged" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <RadioButton x:Name="VaultSortRecentRadio" Content="Recent" GroupName="VaultSort"
+                                     IsChecked="True" Click="VaultSort_Click" />
+                        <RadioButton x:Name="VaultSortAlphabeticalRadio" Content="Alphabetique" GroupName="VaultSort"
+                                     Click="VaultSort_Click" />
+                    </StackPanel>
                 </Grid>
-                <ScrollViewer Grid.Row="2">
-                    <StackPanel x:Name="VaultPanelItems" Spacing="8" />
-                </ScrollViewer>
+                <Grid Grid.Row="2" ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ScrollViewer Grid.Column="0">
+                        <StackPanel x:Name="VaultPanelItems" Spacing="10" />
+                    </ScrollViewer>
+                    <Border Grid.Column="1"
+                            BorderThickness="1"
+                            BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}"
+                            CornerRadius="8"
+                            Padding="20">
+                        <Grid>
+                            <TextBlock x:Name="VaultDetailEmptyText"
+                                       Text="Selectionnez un identifiant dans la liste pour voir ses details."
+                                       Opacity="0.55" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <StackPanel x:Name="VaultDetailPanel" Spacing="12" Visibility="Collapsed" />
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
 
             <!-- Panneau Clés d'accès (Passkeys) -->

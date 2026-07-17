@@ -9,6 +9,9 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow
 {
+    private VaultSortMode _vaultSortMode = VaultSortMode.Recent;
+    private VaultCredential? _selectedVaultCredential;
+
     private async void VaultAddButton_Click(object sender, RoutedEventArgs e)
     {
         var (draft, cancelled) = await PromptNewCredentialAsync();
@@ -24,6 +27,17 @@ public sealed partial class MainWindow
         StatusText.Text = $"Identifiant enregistre : {draft.Username}";
     }
 
+    private void VaultSort_Click(object sender, RoutedEventArgs e)
+    {
+        _vaultSortMode = VaultSortAlphabeticalRadio.IsChecked == true
+            ? VaultSortMode.Alphabetical
+            : VaultSortMode.Recent;
+        RefreshVaultPanel();
+    }
+
+    // Regroupe par site (sous-domaines fusionnés) via VaultGroupingService, plutôt
+    // que l'ancien empilement plat carte par carte. Le détail (actions) vit dans le
+    // volet de droite, alimenté par la sélection courante.
     private void RefreshVaultPanel()
     {
         VaultPanelItems.Children.Clear();
@@ -40,66 +54,181 @@ public sealed partial class MainWindow
                 Opacity = 0.65,
                 Margin = new Thickness(0, 8, 0, 0)
             });
+            ShowVaultDetail(null);
             return;
         }
 
-        foreach (var cred in credentials)
+        foreach (var group in VaultGroupingService.Group(credentials, _vaultSortMode))
         {
-            VaultPanelItems.Children.Add(BuildVaultCard(cred));
+            VaultPanelItems.Children.Add(BuildVaultGroupHeader(group));
+            foreach (var cred in group.Credentials)
+            {
+                VaultPanelItems.Children.Add(BuildVaultRow(cred));
+            }
         }
+
+        // Garde la sélection si l'identifiant existe toujours (ex. après renommage
+        // ou fusion), sinon vide le volet de détail plutôt que de laisser un
+        // identifiant fantôme affiché.
+        var stillThere = _selectedVaultCredential is { } current
+            ? credentials.FirstOrDefault(c => c.Id == current.Id)
+            : null;
+        ShowVaultDetail(stillThere);
     }
 
-    private UIElement BuildVaultCard(VaultCredential cred)
+    private UIElement BuildVaultGroupHeader(VaultCredentialGroup group)
     {
-        var hasLabel = !string.IsNullOrWhiteSpace(cred.Label);
+        var row = new Grid { ColumnSpacing = 8, Margin = new Thickness(0, 6, 0, 2) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var headerGrid = new Grid();
-        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.Children.Add(BuildFaviconElement(group.Credentials[0].Origin, size: 16));
 
+        var title = group.Credentials.Count > 1
+            ? $"{group.DisplayName} ({group.Credentials.Count})"
+            : group.DisplayName;
         var titleBlock = new TextBlock
         {
-            Text = PasswordManagerService.DisplayName(cred),
+            Text = title,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = 13,
+            Opacity = 0.85,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(titleBlock, 0);
-        headerGrid.Children.Add(titleBlock);
+        Grid.SetColumn(titleBlock, 1);
+        row.Children.Add(titleBlock);
 
-        var openBtn = new Button
+        return row;
+    }
+
+    private UIElement BuildVaultRow(VaultCredential cred)
+    {
+        var isSelected = _selectedVaultCredential?.Id == cred.Id;
+        var hasUser = !string.IsNullOrWhiteSpace(cred.Username);
+
+        var button = new Button
         {
-            Padding = new Thickness(8, 4, 8, 4),
-            Margin = new Thickness(0, 0, 6, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Content = new FontIcon
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(10, 7, 10, 7),
+            Margin = new Thickness(0, 0, 0, 2),
+            Background = isSelected
+                ? RootShell.Resources["NovaAccentSoftBrush"] as Brush
+                : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            BorderThickness = new Thickness(0),
+            Tag = cred
+        };
+
+        button.Content = new TextBlock
+        {
+            Text = hasUser ? cred.Username : "(aucun identifiant enregistre)",
+            Opacity = hasUser ? 0.85 : 0.5,
+            FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+
+        button.Click += (_, _) =>
+        {
+            _selectedVaultCredential = cred;
+            RefreshVaultPanel();
+        };
+
+        return button;
+    }
+
+    // Icône de site à partir du cache favicon déjà alimenté par la navigation
+    // (MainWindow.Bookmarks.cs), en lecture seule : aucun téléchargement déclenché
+    // depuis le coffre. Repli sur un glyphe générique si rien n'est en cache.
+    private UIElement BuildFaviconElement(string origin, double size)
+    {
+        var path = CachedFaviconPathFor(origin);
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            try
             {
-                Glyph = "", // Globe
-                FontFamily = new FontFamily("Segoe MDL2 Assets"),
-                FontSize = 14
+                return new Image
+                {
+                    Width = size,
+                    Height = size,
+                    Stretch = Stretch.Uniform,
+                    Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(path))
+                };
             }
-        };
-        ToolTipService.SetToolTip(openBtn, "Ouvrir la page de connexion");
-        openBtn.Click += (_, _) => OpenVaultLoginPage(cred);
-        Grid.SetColumn(openBtn, 1);
-        headerGrid.Children.Add(openBtn);
+            catch { /* fichier corrompu ou illisible : repli glyphe */ }
+        }
 
-        var editBtn = new Button
+        return new FontIcon
         {
-            Padding = new Thickness(8, 4, 8, 4),
-            Margin = new Thickness(0, 0, 6, 0),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        editBtn.Content = new FontIcon
-        {
-            Glyph = "",
+            Glyph = "", // Globe
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
-            FontSize = 14
+            FontSize = size * 0.85,
+            Opacity = 0.55
         };
-        ToolTipService.SetToolTip(editBtn, "Renommer cet identifiant");
-        editBtn.Click += async (_, _) =>
+    }
+
+    // Alimente le volet de détail (colonne de droite) pour l'identifiant
+    // sélectionné : actions (copier, ouvrir, renommer, supprimer) regroupées au
+    // même endroit plutôt qu'empilées sur chaque carte de la liste.
+    private void ShowVaultDetail(VaultCredential? cred)
+    {
+        _selectedVaultCredential = cred;
+        VaultDetailPanel.Children.Clear();
+
+        if (cred is null)
+        {
+            VaultDetailPanel.Visibility = Visibility.Collapsed;
+            VaultDetailEmptyText.Visibility = Visibility.Visible;
+            return;
+        }
+
+        VaultDetailEmptyText.Visibility = Visibility.Collapsed;
+        VaultDetailPanel.Visibility = Visibility.Visible;
+
+        var headerRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        headerRow.Children.Add(BuildFaviconElement(cred.Origin, size: 28));
+        var titleStack = new StackPanel { Spacing = 2 };
+        titleStack.Children.Add(new TextBlock
+        {
+            Text = PasswordManagerService.DisplayName(cred),
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = 18,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        if (!string.IsNullOrWhiteSpace(cred.Label))
+        {
+            titleStack.Children.Add(new TextBlock { Text = cred.Origin, Opacity = 0.55, FontSize = 12 });
+        }
+        headerRow.Children.Add(titleStack);
+        VaultDetailPanel.Children.Add(headerRow);
+
+        var hasUser = !string.IsNullOrWhiteSpace(cred.Username);
+        VaultDetailPanel.Children.Add(new TextBlock
+        {
+            Text = hasUser ? cred.Username : "(aucun identifiant enregistre)",
+            Opacity = hasUser ? 0.8 : 0.45,
+            FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic
+        });
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+        var openBtn = new Button { Content = "Ouvrir la page de connexion" };
+        openBtn.Click += (_, _) => OpenVaultLoginPage(cred);
+        actions.Children.Add(openBtn);
+
+        var copyUser = new Button { Content = "Copier identifiant", IsEnabled = hasUser };
+        copyUser.Click += (_, _) => CopyPasswordManagerText(cred.Username, "Identifiant copie.");
+        actions.Children.Add(copyUser);
+
+        var copyPassword = new Button { Content = "Copier mot de passe" };
+        copyPassword.Click += (_, _) => CopyPasswordManagerText(cred.Password, "Mot de passe copie.");
+        actions.Children.Add(copyPassword);
+        VaultDetailPanel.Children.Add(actions);
+
+        var manageActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+
+        var renameBtn = new Button { Content = "Renommer" };
+        renameBtn.Click += async (_, _) =>
         {
             var box = new TextBox
             {
@@ -121,27 +250,15 @@ public sealed partial class MainWindow
             RefreshVaultPanel();
             StatusText.Text = "Nom mis a jour.";
         };
-        Grid.SetColumn(editBtn, 2);
-        headerGrid.Children.Add(editBtn);
+        manageActions.Children.Add(renameBtn);
 
-        var deleteBtn = new Button
-        {
-            Padding = new Thickness(8, 4, 8, 4),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        deleteBtn.Content = new FontIcon
-        {
-            Glyph = "",
-            FontFamily = new FontFamily("Segoe MDL2 Assets"),
-            FontSize = 14
-        };
-        ToolTipService.SetToolTip(deleteBtn, "Supprimer cet identifiant");
+        var deleteBtn = new Button { Content = "Supprimer" };
         deleteBtn.Click += async (_, _) =>
         {
             var confirm = new ContentDialog
             {
                 Title = "Supprimer cet identifiant ?",
-                Content = $"{(hasLabel ? cred.Label + "\n" : "")}{cred.Origin}\n\nCette action est definitive.",
+                Content = $"{(!string.IsNullOrWhiteSpace(cred.Label) ? cred.Label + "\n" : "")}{cred.Origin}\n\nCette action est definitive.",
                 PrimaryButtonText = "Supprimer",
                 CloseButtonText = "Annuler",
                 DefaultButton = ContentDialogButton.Close,
@@ -149,72 +266,19 @@ public sealed partial class MainWindow
             };
             if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
             _passwordManager.DeleteById(cred.Id);
+            _selectedVaultCredential = null;
             StatusText.Text = "Identifiant supprime.";
             RefreshVaultPanel();
         };
-        Grid.SetColumn(deleteBtn, 3);
-        headerGrid.Children.Add(deleteBtn);
+        manageActions.Children.Add(deleteBtn);
+        VaultDetailPanel.Children.Add(manageActions);
 
-        var body = new StackPanel();
-        body.Children.Add(headerGrid);
-
-        // Si un nom perso est défini, rappeler le site en dessous.
-        if (hasLabel)
-            body.Children.Add(new TextBlock
-            {
-                Text = cred.Origin,
-                Opacity = 0.55,
-                FontSize = 12,
-                Margin = new Thickness(0, 2, 0, 0)
-            });
-
-        // Identifiant, ou libellé propre si vide.
-        var hasUser = !string.IsNullOrWhiteSpace(cred.Username);
-        body.Children.Add(new TextBlock
-        {
-            Text = hasUser ? cred.Username : "(aucun identifiant enregistre)",
-            Opacity = hasUser ? 0.75 : 0.45,
-            FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
-
-        var actions = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            Margin = new Thickness(0, 10, 0, 0)
-        };
-
-        var copyUser = new Button
-        {
-            Content = "Copier identifiant",
-            IsEnabled = hasUser
-        };
-        copyUser.Click += (_, _) => CopyPasswordManagerText(cred.Username, "Identifiant copie.");
-        actions.Children.Add(copyUser);
-
-        var copyPassword = new Button { Content = "Copier mot de passe" };
-        copyPassword.Click += (_, _) => CopyPasswordManagerText(cred.Password, "Mot de passe copie.");
-        actions.Children.Add(copyPassword);
-
-        body.Children.Add(actions);
-
-        body.Children.Add(new TextBlock
+        VaultDetailPanel.Children.Add(new TextBlock
         {
             Text = $"Mis a jour : {DateTimeOffset.FromUnixTimeSeconds(cred.UpdatedAt).LocalDateTime:dd/MM/yyyy HH:mm}",
             Opacity = 0.5,
-            FontSize = 12,
-            Margin = new Thickness(0, 2, 0, 0)
+            FontSize = 12
         });
-
-        return new Border
-        {
-            BorderThickness = new Thickness(1),
-            BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(14, 10, 14, 10),
-            Child = body
-        };
     }
 
     // Ouvre la page de connexion mémorisée (repli sur l'origine pour les anciennes
