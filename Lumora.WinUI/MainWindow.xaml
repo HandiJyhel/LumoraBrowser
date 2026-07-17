@@ -57,6 +57,42 @@
                 <Setter Property="Foreground" Value="#FFFFF4E2" />
                 <Setter Property="BorderBrush" Value="#55E17818" />
             </Style>
+            <Style x:Key="NovaModuleIconButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaChromeIconButtonStyle}">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinWidth" Value="32" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="#FFEDE6DB" />
+            </Style>
+            <Style x:Key="NovaModulePuzzleButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaModuleIconButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource NovaChromeSurfaceRaisedBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaChromeStrokeBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource NovaTextMutedBrush}" />
+            </Style>
+            <Style x:Key="NovaModuleFlyoutActionStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="46" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+            <Style x:Key="NovaModulePinButtonStyle" TargetType="ToggleButton">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinWidth" Value="32" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{StaticResource NovaTextMutedBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
             <Style x:Key="NovaCompactButtonStyle" TargetType="Button">
                 <Setter Property="Height" Value="32" />
                 <Setter Property="MinHeight" Value="32" />
@@ -120,6 +156,10 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -172,41 +212,33 @@
                 <SymbolIcon Symbol="More" />
                 <Button.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedRight">
-                        <MenuFlyoutSubItem Text="Naviguer">
+                        <MenuFlyoutSubItem Text="Navigation">
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
-                            <MenuFlyoutItem Text="Nouvelle fenetre privee" Click="PrivateWindowMenu_Click" />
+                            <MenuFlyoutItem Text="Nouvelle fenêtre privée" Click="PrivateWindowMenu_Click" />
                             <MenuFlyoutItem Text="Rouvrir l'onglet ferme" Click="ReopenTabMenu_Click" />
                             <MenuFlyoutItem Text="Groupes enregistres" Click="SavedTabGroupsMenu_Click" />
                             <MenuFlyoutItem Text="Accueil Lumora" Click="HomeMenu_Click" />
-                            <MenuFlyoutItem Text="Arreter le chargement" Click="StopButton_Click" />
-                            <MenuFlyoutItem Text="Plein ecran" Click="CompactModeButton_Click" />
+                            <MenuFlyoutItem Text="Arrêter le chargement" Click="StopButton_Click" />
+                            <MenuFlyoutItem Text="Plein écran" Click="CompactModeButton_Click" />
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Controle du site">
-                            <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
-                            <MenuFlyoutItem Text="Sessions conservees" Click="SessionsManageLink_Click" />
-                        </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Donnees locales">
+                        <MenuFlyoutSubItem Text="Bibliothèque">
                             <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
                             <MenuFlyoutItem Text="Importer / exporter les favoris" Click="ImportMenu_Click" />
                             <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
-                            <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
-                            <MenuFlyoutItem Text="Notes" Click="NotesMenu_Click" />
+                            <MenuFlyoutItem Text="Téléchargements" Click="DownloadsMenu_Click" />
+                            <MenuFlyoutItem Text="Notes et annotations" Click="NotesMenu_Click" />
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Coffre local">
+                        <MenuFlyoutSubItem Text="Sécurité et données">
+                            <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
+                            <MenuFlyoutItem Text="Sessions conservées" Click="SessionsManageLink_Click" />
                             <MenuFlyoutItem Text="Mots de passe" Click="VaultMenu_Click" />
                             <MenuFlyoutItem Text="Importer des mots de passe" Click="ImportPasswordsMenu_Click" />
+                            <MenuFlyoutItem Text="Clés d'accès" Click="PasskeysMenu_Click" />
                             <MenuFlyoutItem Text="Portefeuille" Click="WalletMenu_Click" />
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Outils de page">
-                            <MenuFlyoutItem Text="Mode lecture (annoter la page)" Click="ReaderModeMenu_Click" />
-                            <MenuFlyoutItem Text="Applications web" Click="WebAppsMenu_Click" />
-                            <MenuFlyoutItem Text="Installer la page comme application" Click="InstallAppMenu_Click" />
-                            <MenuFlyoutItem Text="Detacher la video" Click="DetachVideoMenu_Click" />
-                            <MenuFlyoutItem Text="Telecharger la video" Click="VideoDownloadMenu_Click" />
-                        </MenuFlyoutSubItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
-                        <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />
+                        <MenuFlyoutItem Text="Paramètres" Click="SettingsMenu_Click" />
+                        <MenuFlyoutItem Text="À propos" Click="AboutMenu_Click" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>
@@ -247,6 +279,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -449,137 +483,433 @@
                     Click="CompactModeButton_Click">
                 <SymbolIcon Symbol="FullScreen" />
             </Button>
-            <Button x:Name="DetachVideoButton"
+            <Border x:Name="ModulesQuickBar"
                     Grid.Column="10"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    ToolTipService.ToolTip="Detacher la video (Picture-in-Picture)"
-                    AutomationProperties.Name="Detacher la video"
-                    Visibility="Collapsed"
-                    Click="DetachVideoMenu_Click">
-                <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-            </Button>
-            <Button x:Name="VideoDownloadButton"
-                    Grid.Column="11"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    ToolTipService.ToolTip="Telecharger la video"
-                    AutomationProperties.Name="Telecharger la video"
-                    Visibility="Collapsed">
-                <FontIcon Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-                <Button.Flyout>
-                    <Flyout x:Name="VideoDownloadFlyout"
-                            Opening="VideoDownloadFlyout_Opening"
-                            Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="320" Spacing="10">
-                            <TextBlock Text="Telecharger la video"
-                                       FontWeight="SemiBold"
-                                       FontSize="15" />
-                            <TextBlock x:Name="VideoDownloadTitleText"
-                                       TextWrapping="Wrap"
-                                       Opacity="0.78" />
-                            <TextBlock x:Name="VideoDownloadEngineText"
-                                       TextWrapping="Wrap"
-                                       FontSize="12"
-                                       Opacity="0.68" />
-                            <Border Height="1"
-                                    Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
-                            <TextBlock x:Name="VideoDownloadStatusText"
-                                       TextWrapping="Wrap"
-                                       FontSize="12"
-                                       Opacity="0.72" />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button x:Name="VideoDownloadStartButton"
-                                        Content="Telecharger"
-                                        Style="{StaticResource AccentButtonStyle}"
-                                        Click="VideoDownloadStartButton_Click" />
-                                <Button Content="Telechargements"
-                                        Click="DownloadsMenu_Click"
-                                        Style="{StaticResource NovaCompactButtonStyle}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-            <Button x:Name="ReadAloudButton"
-                    Grid.Column="12"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Lire la page a voix haute"
-                    ToolTipService.ToolTip="Lire la page a voix haute (traitement local, aucune donnee envoyee)"
-                    Visibility="Collapsed"
-                    Click="ReadAloudButton_Click">
-                <FontIcon x:Name="ReadAloudIcon" Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-                <Button.Flyout>
-                    <Flyout x:Name="ReadAloudFlyout" Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="220" Spacing="10">
-                            <TextBlock Text="Lecture a voix haute" FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock x:Name="ReadAloudStatusText" TextWrapping="Wrap" FontSize="12" Opacity="0.78" Text="Pret." />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button x:Name="ReadAloudPlayPauseButton" Content="Lire la page" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12" Click="ReadAloudPlayPauseButton_Click" />
-                                <Button Content="Arreter" Style="{StaticResource NovaCompactButtonStyle}" Click="ReadAloudStopButton_Click" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-            <!-- Mode lecture : article épuré, surlignage et commentaires ancrés
-                 dans le texte (annotations rejouées à chaque retour sur la page).
-                 La pastille indique le nombre d'annotations sur la page courante. -->
-            <Button x:Name="ReaderModeButton"
-                    Grid.Column="13"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Mode lecture - surligner et commenter cette page"
-                    ToolTipService.ToolTip="Mode lecture - surligner et commenter cette page"
-                    Visibility="Collapsed"
-                    Click="ReaderModeButton_Click">
-                <Grid>
-                    <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-                    <Border x:Name="ReaderAnnotationBadge"
-                            Background="{StaticResource NovaAccentBrush}"
-                            CornerRadius="7" MinWidth="14" Height="14"
-                            Padding="3,0"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="0,-6,-8,0"
-                            Visibility="Collapsed">
-                        <TextBlock x:Name="ReaderAnnotationBadgeText"
-                                   Text="0" FontSize="9" FontWeight="SemiBold"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                </Grid>
-            </Button>
-            <Button x:Name="SearchAssistButton"
-                    Grid.Column="14"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Preciser ma recherche"
-                    ToolTipService.ToolTip="Preciser ma recherche (IA locale, aucune donnee envoyee)"
-                    Visibility="Collapsed"
-                    Click="SearchAssistButton_Click">
-                <FontIcon Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-                <Button.Flyout>
-                    <Flyout x:Name="SearchAssistFlyout" Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="300" Spacing="10">
-                            <TextBlock Text="Requete precisee" FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock x:Name="SearchAssistSuggestionText" TextWrapping="Wrap" FontSize="13" />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button x:Name="SearchAssistUseButton" Content="Utiliser" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12" Click="SearchAssistUseButton_Click" />
-                                <Button Content="Ignorer" Style="{StaticResource NovaCompactButtonStyle}" Click="SearchAssistIgnoreButton_Click" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-            <Button x:Name="MicDictationButton"
-                    Grid.Column="15"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Dictee vocale"
-                    ToolTipService.ToolTip="Dictee vocale : cliquez dans un champ de texte puis appuyez sur Win+H (dictee Windows)"
-                    AllowFocusOnInteraction="False"
-                    IsTabStop="False"
-                    Visibility="Collapsed"
-                    Click="MicDictationButton_Click">
-                <FontIcon x:Name="MicDictationIcon" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-            </Button>
-            <Button x:Name="NavigationMenuButton"
+                    Grid.ColumnSpan="6"
+                    Padding="0"
+                    BorderThickness="0"
+                    Background="Transparent"
+                    VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Button x:Name="ReaderModeButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Mode lecture - surligner et commenter cette page"
+                            ToolTipService.ToolTip="Mode lecture - surligner et commenter cette page"
+                            Click="ReaderModeButton_Click">
+                        <Grid>
+                            <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                            <Border x:Name="ReaderAnnotationBadge"
+                                    Background="{StaticResource NovaAccentBrush}"
+                                    CornerRadius="7" MinWidth="14" Height="14"
+                                    Padding="3,0"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Margin="0,-6,-7,0"
+                                    Visibility="Collapsed">
+                                <TextBlock x:Name="ReaderAnnotationBadgeText"
+                                           Text="0" FontSize="9" FontWeight="SemiBold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </Button>
+                    <Button x:Name="NotesModuleButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Notes et annotations"
+                            ToolTipService.ToolTip="Notes et annotations"
+                            Click="NotesMenu_Click">
+                        <FontIcon Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                    </Button>
+                    <Button x:Name="ReadAloudButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Lire la page à voix haute"
+                            ToolTipService.ToolTip="Lire la page à voix haute (traitement local, aucune donnée envoyée)"
+                            Click="ReadAloudButton_Click">
+                        <FontIcon x:Name="ReadAloudIcon" Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                        <Button.Flyout>
+                            <Flyout x:Name="ReadAloudFlyout" Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="220" Spacing="10">
+                                    <TextBlock Text="Lecture à voix haute" FontWeight="SemiBold" FontSize="13" />
+                                    <TextBlock x:Name="ReadAloudStatusText" TextWrapping="Wrap" FontSize="12" Opacity="0.78" Text="Prêt." />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="ReadAloudPlayPauseButton" Content="Lire la page" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12" Click="ReadAloudPlayPauseButton_Click" />
+                                        <Button Content="Arrêter" Style="{StaticResource NovaCompactButtonStyle}" Click="ReadAloudStopButton_Click" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button x:Name="DetachVideoPinnedButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            ToolTipService.ToolTip="Détacher la vidéo"
+                            AutomationProperties.Name="Détacher la vidéo"
+                            Visibility="Collapsed"
+                            Click="DetachVideoMenu_Click">
+                        <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                    </Button>
+                    <Button x:Name="VideoDownloadButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            ToolTipService.ToolTip="Télécharger la vidéo"
+                            AutomationProperties.Name="Télécharger la vidéo">
+                        <FontIcon Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                        <Button.Flyout>
+                            <Flyout x:Name="VideoDownloadFlyout"
+                                    Opening="VideoDownloadFlyout_Opening"
+                                    Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="320" Spacing="10">
+                                    <TextBlock Text="Télécharger la vidéo"
+                                               FontWeight="SemiBold"
+                                               FontSize="15" />
+                                    <TextBlock x:Name="VideoDownloadTitleText"
+                                               TextWrapping="Wrap"
+                                               Opacity="0.78" />
+                                    <TextBlock x:Name="VideoDownloadEngineText"
+                                               TextWrapping="Wrap"
+                                               FontSize="12"
+                                               Opacity="0.68" />
+                                    <Border Height="1"
+                                            Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                    <TextBlock x:Name="VideoDownloadStatusText"
+                                               TextWrapping="Wrap"
+                                               FontSize="12"
+                                               Opacity="0.72" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="VideoDownloadStartButton"
+                                                Content="Télécharger"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Click="VideoDownloadStartButton_Click" />
+                                        <Button Content="Téléchargements"
+                                                Click="DownloadsMenu_Click"
+                                                Style="{StaticResource NovaCompactButtonStyle}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button x:Name="TranslatePinnedButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            ToolTipService.ToolTip="Traduction locale"
+                            AutomationProperties.Name="Traduction locale"
+                            Visibility="Collapsed"
+                            Click="ModulesTranslate_Click">
+                        <FontIcon Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                    </Button>
+                    <Button x:Name="WebAppsPinnedButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            ToolTipService.ToolTip="Applications web"
+                            AutomationProperties.Name="Applications web"
+                            Visibility="Collapsed"
+                            Click="WebAppsMenu_Click">
+                        <FontIcon Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                    </Button>
+                    <Button x:Name="SearchAssistButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Préciser ma recherche"
+                            ToolTipService.ToolTip="Préciser ma recherche (IA locale, aucune donnée envoyée)"
+                            Click="SearchAssistButton_Click">
+                        <FontIcon Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                        <Button.Flyout>
+                            <Flyout x:Name="SearchAssistFlyout" Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="300" Spacing="10">
+                                    <TextBlock Text="Requête précisée" FontWeight="SemiBold" FontSize="13" />
+                                    <TextBlock x:Name="SearchAssistSuggestionText" TextWrapping="Wrap" FontSize="13" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="SearchAssistUseButton" Content="Utiliser" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12" Click="SearchAssistUseButton_Click" />
+                                        <Button Content="Ignorer" Style="{StaticResource NovaCompactButtonStyle}" Click="SearchAssistIgnoreButton_Click" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button x:Name="DictationPinnedButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Dictee vocale"
+                            ToolTipService.ToolTip="Dictee vocale"
+                            AllowFocusOnInteraction="False"
+                            IsTabStop="False"
+                            Visibility="Collapsed"
+                            Click="MicDictationButton_Click">
+                        <FontIcon Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                    </Button>
+                </StackPanel>
+            </Border>
+            <Button x:Name="ModulesButton"
                     Grid.Column="16"
+                    Margin="8,0,2,0"
+                            Style="{StaticResource NovaModulePuzzleButtonStyle}"
+                            AutomationProperties.Name="Tous les modules Lumora"
+                            ToolTipService.ToolTip="Tous les modules Lumora">
+                        <FontIcon Glyph="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                        <Button.Flyout>
+                            <Flyout x:Name="ModulesFlyout" Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="430" Spacing="12">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Extensions Lumora" FontWeight="SemiBold" FontSize="18" />
+                                            <TextBlock Text="Modules locaux disponibles dans ce navigateur."
+                                                       TextWrapping="Wrap" FontSize="12" Opacity="0.68" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Style="{StaticResource NovaChromeIconButtonStyle}"
+                                                ToolTipService.ToolTip="Fermer"
+                                                Click="ModulesFlyoutCloseButton_Click">
+                                            <SymbolIcon Symbol="Cancel" />
+                                        </Button>
+                                    </Grid>
+                                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                    <ScrollViewer MaxHeight="440">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Acces direct"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="12"
+                                                       Opacity="0.84"
+                                                       Margin="0,0,0,2" />
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="ReaderModeMenu_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Mode lecture" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Lecture epuree et annotations" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="ReaderPinToggleButton" Grid.Column="2" Tag="reader" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="NotesMenu_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Notes et annotations" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Pages annotees et notes locales" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="NotesPinToggleButton" Grid.Column="2" Tag="notes" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="ModulesReadAloud_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Lecture à voix haute" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Synthese vocale Windows locale" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="ReadAloudPinToggleButton" Grid.Column="2" Tag="readAloud" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button x:Name="DetachVideoButton" Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="DetachVideoMenu_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Detacher la video" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Picture-in-Picture Lumora" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="DetachVideoPinToggleButton" Grid.Column="2" Tag="detachVideo" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="ModulesVideoDownload_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Telecharger la video" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Téléchargement média local" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="VideoDownloadPinToggleButton" Grid.Column="2" Tag="videoDownload" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="ModulesSearchAssist_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Recherche assistee" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Reformulation locale a valider" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="SearchAssistPinToggleButton" Grid.Column="2" Tag="searchAssist" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <TextBlock Text="Autres modules"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="12"
+                                                       Opacity="0.84"
+                                                       Margin="0,8,0,2" />
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button x:Name="TranslateModuleButton" Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="ModulesTranslate_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Traduction locale" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Traduction de page hors ligne" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="TranslatePinToggleButton" Grid.Column="2" Tag="translate" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button x:Name="WebAppsQuickButton" Grid.Column="1" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="WebAppsMenu_Click">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Applications web" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Sites ouverts comme applications" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="WebAppsPinToggleButton" Grid.Column="2" Tag="webApps" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" MinHeight="48">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="17" VerticalAlignment="Center" />
+                                                <Button x:Name="MicDictationButton"
+                                                        Grid.Column="1"
+                                                        Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                                        Click="MicDictationButton_Click"
+                                                        AllowFocusOnInteraction="False"
+                                                        IsTabStop="False">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Dictee vocale" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Rappel du flux Windows Win+H" FontSize="12" Opacity="0.68" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <ToggleButton x:Name="DictationPinToggleButton" Grid.Column="2" Tag="dictation" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler ou retirer de la barre">
+                                                    <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                                </ToggleButton>
+                                                <Button Grid.Column="3" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Gérer" Click="ModulesMenu_Click">
+                                                    <SymbolIcon Symbol="More" />
+                                                </Button>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Style="{StaticResource NovaCompactButtonStyle}" Click="ModulesMenu_Click" HorizontalAlignment="Stretch">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Setting" />
+                                                <TextBlock Text="Gérer les modules" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1" Style="{StaticResource NovaCompactButtonStyle}" Click="ModulesOpenCommandPalette_Click" HorizontalAlignment="Stretch">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                                <TextBlock Text="Actions rapides" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+            </Button>
+            <Border Grid.Column="17"
+                    Width="1"
+                    Height="22"
+                    Margin="5,0,3,0"
+                    VerticalAlignment="Center"
+                    Background="{StaticResource NovaChromeStrokeBrush}"
+                    Opacity="0.7" />
+            <Button x:Name="NavigationMenuButton"
+                    Grid.Column="18"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     AutomationProperties.Name="Menu Lumora"
                     ToolTipService.ToolTip="Menu Lumora">
@@ -588,34 +918,31 @@
                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                         <MenuFlyoutSubItem Text="Navigation">
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
-                            <MenuFlyoutItem Text="Nouvelle fenetre privee" Click="PrivateWindowMenu_Click" />
-                            <MenuFlyoutItem Text="Rouvrir l'onglet ferme" Click="ReopenTabMenu_Click" />
-                            <MenuFlyoutItem Text="Groupes enregistres" Click="SavedTabGroupsMenu_Click" />
-                            <MenuFlyoutItem Text="Accueil" Click="HomeMenu_Click" />
-                            <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
+                            <MenuFlyoutItem Text="Nouvelle fenêtre privée" Click="PrivateWindowMenu_Click" />
+                            <MenuFlyoutItem Text="Rouvrir l'onglet fermé" Click="ReopenTabMenu_Click" />
+                            <MenuFlyoutItem Text="Groupes enregistrés" Click="SavedTabGroupsMenu_Click" />
+                            <MenuFlyoutItem Text="Accueil Lumora" Click="HomeMenu_Click" />
+                            <MenuFlyoutItem Text="Arrêter le chargement" Click="StopButton_Click" />
+                            <MenuFlyoutItem Text="Plein écran" Click="CompactModeButton_Click" />
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Donnees locales">
+                        <MenuFlyoutSubItem Text="Bibliothèque">
                             <MenuFlyoutItem Text="Favoris" Click="BookmarksMenu_Click" />
                             <MenuFlyoutItem Text="Importer / exporter les favoris" Click="ImportMenu_Click" />
                             <MenuFlyoutItem Text="Historique" Click="HistoryMenu_Click" />
-                            <MenuFlyoutItem Text="Telechargements" Click="DownloadsMenu_Click" />
-                            <MenuFlyoutItem Text="Notes" Click="NotesMenu_Click" />
+                            <MenuFlyoutItem Text="Téléchargements" Click="DownloadsMenu_Click" />
+                            <MenuFlyoutItem Text="Notes et annotations" Click="NotesMenu_Click" />
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Coffre">
+                        <MenuFlyoutSubItem Text="Sécurité et données">
+                            <MenuFlyoutItem Text="Site actuel" Click="SiteControlMenu_Click" />
+                            <MenuFlyoutItem Text="Sessions conservées" Click="SessionsManageLink_Click" />
                             <MenuFlyoutItem Text="Mots de passe" Click="VaultMenu_Click" />
                             <MenuFlyoutItem Text="Importer des mots de passe" Click="ImportPasswordsMenu_Click" />
+                            <MenuFlyoutItem Text="Clés d'accès" Click="PasskeysMenu_Click" />
                             <MenuFlyoutItem Text="Portefeuille" Click="WalletMenu_Click" />
                         </MenuFlyoutSubItem>
-                        <MenuFlyoutSubItem Text="Outils">
-                            <MenuFlyoutItem Text="Mode lecture (annoter la page)" Click="ReaderModeMenu_Click" />
-                            <MenuFlyoutItem Text="Applications" Click="WebAppsMenu_Click" />
-                            <MenuFlyoutItem Text="Installer comme application" Click="InstallAppMenu_Click" />
-                            <MenuFlyoutItem Text="Detacher la video (Picture-in-Picture)" Click="DetachVideoMenu_Click" />
-                            <MenuFlyoutItem Text="Telecharger la video" Click="VideoDownloadMenu_Click" />
-                        </MenuFlyoutSubItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Parametres" Click="SettingsMenu_Click" />
-                        <MenuFlyoutItem Text="A propos" Click="AboutMenu_Click" />
+                        <MenuFlyoutItem Text="Paramètres" Click="SettingsMenu_Click" />
+                        <MenuFlyoutItem Text="À propos" Click="AboutMenu_Click" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>
@@ -1112,7 +1439,7 @@
                         BorderBrush="{StaticResource NovaChromeStrokeBrush}"
                         Background="{StaticResource NovaChromeSurfaceBrush}">
                     <StackPanel Padding="14,20,14,12" Spacing="4">
-                        <TextBlock Text="Parametres" FontSize="18" FontWeight="SemiBold" Margin="8,0,0,12" />
+                        <TextBlock Text="Paramètres" FontSize="18" FontWeight="SemiBold" Margin="8,0,0,12" />
                         <RadioButton x:Name="SettingsNavNavigation" Content="Navigation"
                                      GroupName="SettingsNav" IsChecked="True"
                                      Click="SettingsNav_Click" Tag="navigation" />
@@ -1710,9 +2037,8 @@
                 </Border>
             </Grid>
 
-            <Grid x:Name="AboutPanel" Grid.Column="2" Padding="24" Visibility="Collapsed">
+            <Grid x:Name="AboutPanel" Grid.Column="2" Padding="28,24" Visibility="Collapsed">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
@@ -1722,80 +2048,384 @@
                     <TextBlock x:Name="AboutVersionText" Opacity="0.72" />
                 </StackPanel>
 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,16,0,14">
-                    <RadioButton x:Name="AboutNavSummary" Content="Résumé" Tag="summary" IsChecked="True" Click="AboutNav_Click" />
-                    <RadioButton x:Name="AboutNavPrivacy" Content="Confidentialité" Tag="privacy" Click="AboutNav_Click" />
-                    <RadioButton x:Name="AboutNavAuthenticity" Content="Authenticité" Tag="authenticity" Click="AboutNav_Click" />
-                    <RadioButton x:Name="AboutNavTechnical" Content="Technique" Tag="technical" Click="AboutNav_Click" />
-                    <RadioButton x:Name="AboutNavProfile" Content="Profil local" Tag="profile" Click="AboutNav_Click" />
-                </StackPanel>
+                <Grid Grid.Row="1"
+                      MaxWidth="1080"
+                      HorizontalAlignment="Center"
+                      Margin="0,24,0,0"
+                      ColumnSpacing="22">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="230" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                <ScrollViewer Grid.Row="2">
-                    <Grid MaxWidth="820">
-                        <StackPanel x:Name="AboutSectionSummary" Spacing="12">
-                            <TextBlock Text="Résumé" FontSize="20" FontWeight="SemiBold" />
-                            <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22"
-                                       Text="Lumora est un navigateur local-first en développement actif. Il vise une navigation simple, moderne et sécurisée, sans envoyer vos données personnelles vers un serveur Lumora." />
-                            <TextBlock TextWrapping="Wrap" Opacity="0.84" LineHeight="22"
-                                       Text="Chaque version avance par petits pas vérifiables : interface, confidentialité, gestion des profils, mots de passe, téléchargements, permissions et maintenant authenticité des builds." />
+                    <Border Grid.Column="0"
+                            Style="{StaticResource NovaPanelCardStyle}"
+                            VerticalAlignment="Top">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="À propos"
+                                       Style="{StaticResource NovaPanelSectionTitleStyle}"
+                                       Margin="0,0,0,8" />
+                            <RadioButton x:Name="AboutNavSummary" Content="Vue d'ensemble" Tag="summary" IsChecked="True" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavModules" Content="Modules" Tag="modules" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavPrivacy" Content="Confidentialité" Tag="privacy" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavAuthenticity" Content="Authenticité" Tag="authenticity" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavCredits" Content="Dépendances" Tag="credits" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavTechnical" Content="Technique" Tag="technical" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavProfile" Content="Profil local" Tag="profile" Click="AboutNav_Click" />
                         </StackPanel>
+                    </Border>
 
-                        <StackPanel x:Name="AboutSectionPrivacy" Spacing="12" Visibility="Collapsed">
-                            <TextBlock Text="Confidentialité" FontSize="20" FontWeight="SemiBold" />
-                            <TextBlock TextWrapping="Wrap" Opacity="0.88" LineHeight="22"
-                                       Text="Pas de synchronisation vers un serveur Lumora. Pas de télémétrie cachée. Pas de profil publicitaire." />
-                            <TextBlock TextWrapping="Wrap" Opacity="0.84" LineHeight="22"
-                                       Text="Favoris, historique, données de session et informations sensibles restent sur votre machine. La sécurité doit protéger l'utilisateur sans rendre la navigation pénible." />
-                        </StackPanel>
+                    <ScrollViewer Grid.Column="1">
+                        <Grid MaxWidth="820">
+                            <StackPanel x:Name="AboutSectionSummary" Spacing="14">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Vue d'ensemble" FontSize="24" FontWeight="SemiBold" />
+                                    <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
+                                               Text="Lumora associe maintenant son idée de lumière à un symbole de navigation web : un cœur lumineux, des arcs de globe et une trajectoire locale, au service d'un navigateur clair et maîtrisable." />
+                                </StackPanel>
+                                <Grid ColumnSpacing="12" RowSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource NovaPanelCardStyle}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Local-first" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                       Text="Les favoris, l'historique, les sessions et les données sensibles restent sur cet ordinateur." />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource NovaPanelCardStyle}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Moteur web" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                       Text="Chromium via WebView2, dans une interface WinUI 3 propre à Lumora." />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource NovaPanelCardStyle}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Modules intégrés" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                       Text="Lecture, annotations, traduction, recherche assistée, vidéo et outils pratiques restent accessibles sans transformer le menu en fourre-tout." />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource NovaPanelCardStyle}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Transparence" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                       Text="Les dépendances open source, le build et le profil local sont détaillés dans les sections dédiées." />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Modules Lumora" Click="ModulesMenu_Click" />
+                                    <Button Content="Paramètres" Style="{StaticResource NovaCompactButtonStyle}" Click="SettingsMenu_Click" />
+                                </StackPanel>
+                            </StackPanel>
 
-                        <StackPanel x:Name="AboutSectionAuthenticity" Spacing="12" Visibility="Collapsed">
-                            <TextBlock Text="Authenticité du build" FontSize="20" FontWeight="SemiBold" />
-                            <TextBlock TextWrapping="Wrap" Opacity="0.78" LineHeight="20"
-                                       Text="Pendant le développement, Lumora peut être distribué sans certificat Windows payant. L'authenticité repose alors sur un build propre, une empreinte SHA256 vérifiable et, à terme, une signature open source Sigstore." />
-                            <Grid ColumnSpacing="12" RowSpacing="6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Canal" Opacity="0.68" />
-                                <TextBlock x:Name="AboutAuthenticityChannelText" Grid.Row="0" Grid.Column="1" TextWrapping="Wrap" />
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Empreinte SHA256" Opacity="0.68" />
-                                <TextBlock x:Name="AboutAuthenticityShaText" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Signature open source" Opacity="0.68" />
-                                <TextBlock x:Name="AboutAuthenticitySigstoreText" Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" />
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Signature Windows" Opacity="0.68" />
-                                <TextBlock x:Name="AboutAuthenticityWindowsText" Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" />
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Profil" Opacity="0.68" />
-                                <TextBlock x:Name="AboutAuthenticityProfileText" Grid.Row="4" Grid.Column="1" TextWrapping="Wrap" />
-                            </Grid>
-                            <TextBlock TextWrapping="Wrap" Opacity="0.72" LineHeight="20"
-                                       Text="Si Windows affiche Editeur inconnu, cela signifie que ce build n'a pas encore de signature Authenticode reconnue. Le fichier VERIFICATION.txt fourni avec un build propre permet de comparer l'empreinte du fichier reçu." />
-                        </StackPanel>
+                            <StackPanel x:Name="AboutSectionModules" Spacing="14" Visibility="Collapsed">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Modules Lumora" FontSize="24" FontWeight="SemiBold" />
+                                    <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
+                                               Text="Les modules sont des outils intégrés au navigateur : ils restent locaux, activables à la demande, et rangés comme de vraies fonctions de Lumora." />
+                                </StackPanel>
+                                <Grid RowSpacing="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Border Grid.Row="0" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Lecture et annotations" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="Mode lecture, surlignage, commentaires, reprise de page" Opacity="0.72" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="1" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Média" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="Picture-in-Picture, téléchargement vidéo local, applications web" Opacity="0.72" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="2" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Assistance locale" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="Actions rapides, recherche assistée, traduction locale, lecture vocale" Opacity="0.72" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
 
-                        <StackPanel x:Name="AboutSectionTechnical" Spacing="8" Visibility="Collapsed">
-                            <TextBlock Text="Informations techniques" FontSize="20" FontWeight="SemiBold" />
-                            <TextBlock Text="Interface : C# + WinUI 3" />
-                            <TextBlock Text="Moteur web : WebView2 (Chromium)" />
-                            <TextBlock Text="Stockage local : DPAPI + fichiers .lumora" />
-                            <TextBlock Text="Chiffrement : AES-256-GCM + Argon2id" />
-                            <TextBlock Text="Developpeur : H.J." />
-                        </StackPanel>
+                            <StackPanel x:Name="AboutSectionPrivacy" Spacing="14" Visibility="Collapsed">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Confidentialité" FontSize="24" FontWeight="SemiBold" />
+                                    <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
+                                               Text="Lumora doit protéger l'utilisateur sans rendre la navigation pénible." />
+                                </StackPanel>
+                                <Border Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Engagement local" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock TextWrapping="Wrap" Opacity="0.82" LineHeight="22"
+                                                   Text="Pas de synchronisation vers un serveur Lumora. Pas de télémétrie cachée. Pas de profil publicitaire." />
+                                        <TextBlock TextWrapping="Wrap" Opacity="0.72" LineHeight="20"
+                                                   Text="Favoris, historique, données de session et informations sensibles restent sur votre machine." />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
 
-                        <StackPanel x:Name="AboutSectionProfile" Spacing="10" Visibility="Collapsed">
-                            <TextBlock Text="Profil local" FontSize="20" FontWeight="SemiBold" />
-                            <TextBlock x:Name="AboutProfilePathText" TextWrapping="Wrap" Opacity="0.72" />
-                            <TextBlock TextWrapping="Wrap" Opacity="0.78" LineHeight="20"
-                                       Text="Ce chemin indique le profil réellement utilisé par l'application. Les installateurs propres doivent démarrer avec un profil vierge dédié, sans reprendre les profils de développement." />
-                        </StackPanel>
-                    </Grid>
-                </ScrollViewer>
+                            <StackPanel x:Name="AboutSectionAuthenticity" Spacing="14" Visibility="Collapsed">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Authenticité du build" FontSize="24" FontWeight="SemiBold" />
+                                    <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
+                                               Text="Pendant le développement, Lumora peut être distribué sans certificat Windows payant." />
+                                </StackPanel>
+                                <Border Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock TextWrapping="Wrap" Opacity="0.82" LineHeight="20"
+                                                   Text="L'authenticité repose alors sur un build propre, une empreinte SHA256 vérifiable et, à terme, une signature open source Sigstore." />
+                                        <Grid ColumnSpacing="12" RowSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Canal" Opacity="0.68" />
+                                            <TextBlock x:Name="AboutAuthenticityChannelText" Grid.Row="0" Grid.Column="1" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Empreinte SHA256" Opacity="0.68" />
+                                            <TextBlock x:Name="AboutAuthenticityShaText" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Signature open source" Opacity="0.68" />
+                                            <TextBlock x:Name="AboutAuthenticitySigstoreText" Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Signature Windows" Opacity="0.68" />
+                                            <TextBlock x:Name="AboutAuthenticityWindowsText" Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Profil" Opacity="0.68" />
+                                            <TextBlock x:Name="AboutAuthenticityProfileText" Grid.Row="4" Grid.Column="1" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock TextWrapping="Wrap" Opacity="0.66" LineHeight="20"
+                                           Text="Si Windows affiche Éditeur inconnu, cela signifie que ce build n'a pas encore de signature Authenticode reconnue. Le fichier VERIFICATION.txt fourni avec un build propre permet de comparer l'empreinte du fichier reçu." />
+                            </StackPanel>
+
+                            <StackPanel x:Name="AboutSectionCredits" Spacing="14" Visibility="Collapsed">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Dépendances open source" FontSize="24" FontWeight="SemiBold" />
+                                    <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
+                                               Text="Aucun de ces outils ou ressources n'est embarqué dans l'installateur. Lumora les récupère depuis leur source officielle, uniquement à la demande ou au moment où le module concerné est utilisé." />
+                                </StackPanel>
+
+                                <Grid RowSpacing="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Border Grid.Row="0" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="yt-dlp" FontWeight="SemiBold" />
+                                                <TextBlock Text="Unlicense" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Moteur de téléchargement vidéo. Installé uniquement sur clic explicite, vérifié par hash officiel avant exécution." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://github.com/yt-dlp/yt-dlp" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="1" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="FFmpeg" FontWeight="SemiBold" />
+                                                <TextBlock Text="LGPL / GPL" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Fusion audio/vidéo pour le téléchargement en haute qualité. Jamais distribué par Lumora, seulement détecté s'il existe déjà sur la machine." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://ffmpeg.org" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="2" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="EasyList / EasyPrivacy" FontWeight="SemiBold" />
+                                                <TextBlock Text="GPLv3" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Listes de filtrage utilisées par le bouclier anti-pub et anti-pistage, récupérées directement depuis easylist.to." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://easylist.to" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="3" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="uBlock Origin uAssets" FontWeight="SemiBold" />
+                                                <TextBlock Text="GPLv3" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Listes complémentaires du bouclier anti-pub." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://github.com/uBlockOrigin/uAssets" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="4" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="AdGuard Base Filter" FontWeight="SemiBold" />
+                                                <TextBlock Text="GPLv3" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Liste de filtrage complémentaire du bouclier anti-pub." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://adguard.com" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="5" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="ONNX Runtime / GenAI" FontWeight="SemiBold" />
+                                                <TextBlock Text="MIT" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Moteur d'inférence local utilisé par la traduction et l'assistant de recherche. Aucune donnée envoyée à un serveur." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://github.com/microsoft/onnxruntime" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="6" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="Phi-3-mini-4k-instruct" FontWeight="SemiBold" />
+                                                <TextBlock Text="MIT" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Modèle de l'assistant de recherche local. Récupéré depuis Hugging Face à la demande et exécuté sur la machine." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-onnx" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="7" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="OPUS-MT / Helsinki-NLP" FontWeight="SemiBold" />
+                                                <TextBlock Text="Fiche Hugging Face" Opacity="0.62" FontSize="12" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" TextWrapping="Wrap" Opacity="0.74" LineHeight="19"
+                                                       Text="Modèles de traduction neuronale locale utilisés par le module de traduction." />
+                                            <HyperlinkButton Grid.Column="2" Content="Source" NavigateUri="https://huggingface.co/Helsinki-NLP" Padding="0,2" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <TextBlock TextWrapping="Wrap" Opacity="0.62" FontSize="12" LineHeight="18"
+                                           Text="Licences indiquées d'après les sources officielles de chaque projet à la date de cette version. En cas de doute, se référer au fichier de licence publié par le projet concerné." />
+                            </StackPanel>
+
+                            <StackPanel x:Name="AboutSectionTechnical" Spacing="14" Visibility="Collapsed">
+                                <TextBlock Text="Informations techniques" FontSize="24" FontWeight="SemiBold" />
+                                <Grid RowSpacing="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Border Grid.Row="0" Style="{StaticResource NovaPanelCardStyle}">
+                                        <TextBlock Text="Interface : C# + WinUI 3" />
+                                    </Border>
+                                    <Border Grid.Row="1" Style="{StaticResource NovaPanelCardStyle}">
+                                        <TextBlock Text="Moteur web : WebView2 (Chromium)" />
+                                    </Border>
+                                    <Border Grid.Row="2" Style="{StaticResource NovaPanelCardStyle}">
+                                        <TextBlock Text="Stockage local : DPAPI + fichiers .lumora" />
+                                    </Border>
+                                    <Border Grid.Row="3" Style="{StaticResource NovaPanelCardStyle}">
+                                        <TextBlock Text="Chiffrement : AES-256-GCM + Argon2id" />
+                                    </Border>
+                                    <Border Grid.Row="4" Style="{StaticResource NovaPanelCardStyle}">
+                                        <TextBlock Text="Développeur : H.J." />
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel x:Name="AboutSectionProfile" Spacing="14" Visibility="Collapsed">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Profil local" FontSize="24" FontWeight="SemiBold" />
+                                    <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
+                                               Text="Ce chemin indique le profil réellement utilisé par l'application." />
+                                </StackPanel>
+                                <Border Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Emplacement du profil" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock x:Name="AboutProfilePathText" TextWrapping="Wrap" Opacity="0.78" FontFamily="Consolas" FontSize="12" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock TextWrapping="Wrap" Opacity="0.66" LineHeight="20"
+                                           Text="Les installateurs propres doivent démarrer avec un profil vierge dédié, sans reprendre les profils de développement." />
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
             </Grid>
 
             <Grid x:Name="HistoryPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
@@ -2156,6 +2786,162 @@
                 <ScrollViewer Grid.Row="2">
                     <StackPanel x:Name="WalletPanelItems" Spacing="8" />
                 </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Modules Lumora : hub des outils integres, pense comme des
+                 extensions locales. Les actions restent explicites et ne lancent
+                 rien en arriere-plan sans clic de l'utilisateur. -->
+            <Grid x:Name="ModulesPanel" Grid.Column="2" Padding="24,20,24,24" Visibility="Collapsed"
+                  Background="{StaticResource NovaPanelBackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Margin="0,0,0,18" ColumnSpacing="14" MaxWidth="980" HorizontalAlignment="Left">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="48" Height="48" CornerRadius="8"
+                            Background="{StaticResource NovaIdentityMarkBrush}">
+                        <FontIcon Glyph="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="24"
+                                  Foreground="White"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="Modules Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                        <TextBlock Text="Les outils integres de Lumora, regroupes comme des extensions locales : lecture, media, productivite et actions rapides."
+                                   Style="{StaticResource NovaPanelDescriptionStyle}" MaxWidth="760" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,18">
+                    <Button Style="{StaticResource AccentButtonStyle}" Click="ModulesOpenCommandPalette_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                            <TextBlock Text="Actions rapides" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource NovaCompactButtonStyle}" Click="SettingsMenu_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <SymbolIcon Symbol="Setting" />
+                            <TextBlock Text="Régler les modules" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource NovaCompactButtonStyle}" Click="AboutMenu_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                            <TextBlock Text="À propos" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="2">
+                    <StackPanel MaxWidth="980" Spacing="14" HorizontalAlignment="Left">
+                        <Border Style="{StaticResource NovaPanelCardStyle}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Modules épinglables" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                <TextBlock Text="Choisissez ce qui reste visible dans la barre. Les modules non épinglés restent disponibles dans le bouton puzzle."
+                                           Style="{StaticResource NovaPanelDescriptionStyle}" />
+
+                                <Grid ColumnSpacing="12" RowSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="34" />
+                                        <ColumnDefinition Width="220" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <FontIcon Grid.Row="0" Grid.Column="0" Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Mode lecture" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Article épuré, surlignage et commentaires ancrés." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="0" Grid.Column="3" Content="Lire" Click="ReaderModeMenu_Click" />
+                                    <ToggleButton x:Name="PanelReaderPinToggleButton" Grid.Row="0" Grid.Column="4" Tag="reader" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="1" Grid.Column="0" Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="Notes et annotations" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Pages annotées et notes libres du profil." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="1" Grid.Column="3" Content="Ouvrir" Click="NotesMenu_Click" />
+                                    <ToggleButton x:Name="PanelNotesPinToggleButton" Grid.Row="1" Grid.Column="4" Tag="notes" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="2" Grid.Column="0" Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Lecture à voix haute" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Synthèse vocale Windows, locale." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="2" Grid.Column="3" Content="Ouvrir" Click="ModulesReadAloud_Click" />
+                                    <ToggleButton x:Name="PanelReadAloudPinToggleButton" Grid.Row="2" Grid.Column="4" Tag="readAloud" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="3" Grid.Column="0" Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="Détacher la vidéo" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="3" Grid.Column="2" Text="Picture-in-Picture pour la vidéo active." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="3" Grid.Column="3" Content="Détacher" Click="DetachVideoMenu_Click" />
+                                    <ToggleButton x:Name="PanelDetachVideoPinToggleButton" Grid.Row="3" Grid.Column="4" Tag="detachVideo" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="4" Grid.Column="0" Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="Télécharger la vidéo" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="4" Grid.Column="2" Text="Module média local, avec historique des téléchargements." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="4" Grid.Column="3" Content="Télécharger" Click="ModulesVideoDownload_Click" />
+                                    <ToggleButton x:Name="PanelVideoDownloadPinToggleButton" Grid.Row="4" Grid.Column="4" Tag="videoDownload" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="5" Grid.Column="0" Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="Recherche assistée" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="5" Grid.Column="2" Text="Reformulation locale d'une requête avant validation." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="5" Grid.Column="3" Content="Préciser" Click="ModulesSearchAssist_Click" />
+                                    <ToggleButton x:Name="PanelSearchAssistPinToggleButton" Grid.Row="5" Grid.Column="4" Tag="searchAssist" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="6" Grid.Column="0" Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="6" Grid.Column="1" Text="Traduction locale" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="6" Grid.Column="2" Text="Vérification et traduction de la page compatible." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="6" Grid.Column="3" Content="Vérifier" Click="ModulesTranslate_Click" />
+                                    <ToggleButton x:Name="PanelTranslatePinToggleButton" Grid.Row="6" Grid.Column="4" Tag="translate" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="7" Grid.Column="0" Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="7" Grid.Column="1" Text="Applications web" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="7" Grid.Column="2" Text="Sites épinglés en fenêtre dédiée." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="7" Grid.Column="3" Content="Gérer" Click="WebAppsMenu_Click" />
+                                    <ToggleButton x:Name="PanelWebAppsPinToggleButton" Grid.Row="7" Grid.Column="4" Tag="webApps" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+
+                                    <FontIcon Grid.Row="8" Grid.Column="0" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="8" Grid.Column="1" Text="Dictée vocale" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="8" Grid.Column="2" Text="Raccourci vers la dictée Windows sans voler le focus." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Button Grid.Row="8" Grid.Column="3" Content="Aide dictée" Click="MicDictationButton_Click" />
+                                    <ToggleButton x:Name="PanelDictationPinToggleButton" Grid.Row="8" Grid.Column="4" Tag="dictation" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                                    </ToggleButton>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    </ScrollViewer>
             </Grid>
 
             <!-- Panneau Applications web Lumora -->

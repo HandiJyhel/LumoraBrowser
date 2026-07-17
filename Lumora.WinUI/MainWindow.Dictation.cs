@@ -20,9 +20,9 @@ public sealed partial class MainWindow
     private void UpdateDictationButtonVisibility()
     {
         if (MicDictationButton is null) return;
-        MicDictationButton.Visibility = _uiSettings.AccessibilityVoiceDictationEnabled
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        MicDictationButton.Opacity = _uiSettings.AccessibilityVoiceDictationEnabled ? 1 : 0.5;
+        DictationPinnedButton.Opacity = _uiSettings.AccessibilityVoiceDictationEnabled ? 1 : 0.5;
+        UpdateModulesPinUi();
     }
 
     private void MicDictationButton_Click(object sender, RoutedEventArgs e) =>

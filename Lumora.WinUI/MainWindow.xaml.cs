@@ -284,11 +284,11 @@ public sealed partial class MainWindow : Window
             BrowserHost.Children.Clear();
             BrowserHost.Children.Add(new TextBlock
             {
-                Text = "Moteur web desactive pour diagnostic.",
+                Text = "Moteur web désactivé pour diagnostic.",
                 Margin = new Thickness(24),
                 TextWrapping = TextWrapping.Wrap
             });
-            StatusText.Text = "Moteur web desactive pour diagnostic.";
+            StatusText.Text = "Moteur web désactivé pour diagnostic.";
             WinUiRuntimeTrace.Write("Browser surface skipped by environment");
             return;
         }
@@ -321,7 +321,7 @@ public sealed partial class MainWindow : Window
     {
         AboutNavSummary.IsChecked = true;
         ShowAboutSection("summary");
-        ShowPanel(AboutPanel, "A propos de Lumora");
+        ShowPanel(AboutPanel, "À propos de Lumora");
     }
 
     private void AboutNav_Click(object sender, RoutedEventArgs e)
@@ -333,8 +333,10 @@ public sealed partial class MainWindow : Window
     private void ShowAboutSection(string section)
     {
         AboutSectionSummary.Visibility = section == "summary" ? Visibility.Visible : Visibility.Collapsed;
+        AboutSectionModules.Visibility = section == "modules" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionPrivacy.Visibility = section == "privacy" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionAuthenticity.Visibility = section == "authenticity" ? Visibility.Visible : Visibility.Collapsed;
+        AboutSectionCredits.Visibility = section == "credits" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionTechnical.Visibility = section == "technical" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionProfile.Visibility = section == "profile" ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -352,7 +354,7 @@ public sealed partial class MainWindow : Window
     private void SettingsMenu_Click(object sender, RoutedEventArgs e)
     {
         StorageCurrentFolderText.Text = _profile.ProfileDir;
-        ShowPanel(SettingsPanel, "Parametres");
+        ShowPanel(SettingsPanel, "Paramètres");
         SettingsNav_Click(SettingsNavNavigation, new RoutedEventArgs());
     }
 
@@ -396,6 +398,138 @@ public sealed partial class MainWindow : Window
         ToggleCommandPalette();
     }
 
+    private void ModulesMenu_Click(object sender, RoutedEventArgs e)
+    {
+        ModulesFlyout.Hide();
+        ShowPanel(ModulesPanel, "Modules Lumora");
+    }
+
+    private void ModulesFlyoutCloseButton_Click(object sender, RoutedEventArgs e) =>
+        ModulesFlyout.Hide();
+
+    private void ModulesOpenCommandPalette_Click(object sender, RoutedEventArgs e)
+    {
+        ModulesFlyout.Hide();
+        if (!_uiSettings.CommandPaletteEnabled)
+        {
+            StatusText.Text = "Activez d'abord la palette de commande Ctrl+K.";
+            return;
+        }
+
+        ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+        ShowCommandPalette();
+    }
+
+    private void ModulesReadAloud_Click(object sender, RoutedEventArgs e)
+    {
+        ModulesFlyout.Hide();
+        if (!_uiSettings.ReadAloudEnabled)
+        {
+            StatusText.Text = "Activez la lecture à voix haute dans Paramètres > Accessibilité.";
+            return;
+        }
+
+        ReadAloudFlyout.ShowAt(sender as FrameworkElement ?? ModulesButton);
+    }
+
+    private void ModulesMedia_Click(object sender, RoutedEventArgs e)
+    {
+        ModulesFlyout.Hide();
+        ShowPanel(ModulesPanel, "Modules média Lumora");
+        StatusText.Text = "Modules média : détacher la vidéo ou télécharger depuis les tuiles vidéo.";
+    }
+
+    private void ModulesVideoDownload_Click(object sender, RoutedEventArgs e)
+    {
+        ModulesFlyout.Hide();
+        ShowVideoDownloadFlyout(sender as FrameworkElement ?? ModulesButton);
+    }
+
+    private void ModulesSearchAssist_Click(object sender, RoutedEventArgs e)
+    {
+        ModulesFlyout.Hide();
+        _ = RunSearchAssistAsync(sender as FrameworkElement ?? ModulesButton);
+    }
+
+    private async void ModulesTranslate_Click(object sender, RoutedEventArgs e)
+    {
+        ModulesFlyout.Hide();
+        var tab = CurrentTab();
+        var view = tab?.View;
+        var address = view?.Source?.ToString() ?? tab?.Address ?? string.Empty;
+        if (view is null || !BookmarkStore.IsWebUrl(address))
+        {
+            StatusText.Text = "Ouvrez une page web pour utiliser la traduction.";
+            return;
+        }
+
+        await OfferTranslationIfNeededAsync(view, address);
+        if (TranslateBar.Visibility != Visibility.Visible)
+        {
+            StatusText.Text = "Aucune traduction proposee pour cette page.";
+        }
+    }
+
+    private void ModulePinToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton { Tag: string moduleId } toggle)
+        {
+            return;
+        }
+
+        var pinned = _uiSettings.PinnedModuleIds;
+        if (toggle.IsChecked == true)
+        {
+            if (!pinned.Contains(moduleId, StringComparer.OrdinalIgnoreCase))
+            {
+                pinned.Add(moduleId);
+            }
+        }
+        else
+        {
+            pinned.RemoveAll(id => string.Equals(id, moduleId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        _uiSettings.Save(_profile.UiSettingsFile);
+        UpdateModulesPinUi();
+    }
+
+    private void UpdateModulesPinUi()
+    {
+        var pinned = _uiSettings.PinnedModuleIds;
+        bool IsPinned(string id) => pinned.Contains(id, StringComparer.OrdinalIgnoreCase);
+
+        ReaderModeButton.Visibility = IsPinned("reader") ? Visibility.Visible : Visibility.Collapsed;
+        NotesModuleButton.Visibility = IsPinned("notes") ? Visibility.Visible : Visibility.Collapsed;
+        ReadAloudButton.Visibility = IsPinned("readAloud") ? Visibility.Visible : Visibility.Collapsed;
+        VideoDownloadButton.Visibility = IsPinned("videoDownload") ? Visibility.Visible : Visibility.Collapsed;
+        SearchAssistButton.Visibility = IsPinned("searchAssist") ? Visibility.Visible : Visibility.Collapsed;
+        DetachVideoPinnedButton.Visibility = IsPinned("detachVideo") ? Visibility.Visible : Visibility.Collapsed;
+        TranslatePinnedButton.Visibility = IsPinned("translate") ? Visibility.Visible : Visibility.Collapsed;
+        WebAppsPinnedButton.Visibility = IsPinned("webApps") ? Visibility.Visible : Visibility.Collapsed;
+        DictationPinnedButton.Visibility = IsPinned("dictation") ? Visibility.Visible : Visibility.Collapsed;
+
+        ReaderPinToggleButton.IsChecked = IsPinned("reader");
+        NotesPinToggleButton.IsChecked = IsPinned("notes");
+        ReadAloudPinToggleButton.IsChecked = IsPinned("readAloud");
+        VideoDownloadPinToggleButton.IsChecked = IsPinned("videoDownload");
+        SearchAssistPinToggleButton.IsChecked = IsPinned("searchAssist");
+        DetachVideoPinToggleButton.IsChecked = IsPinned("detachVideo");
+        TranslatePinToggleButton.IsChecked = IsPinned("translate");
+        WebAppsPinToggleButton.IsChecked = IsPinned("webApps");
+        DictationPinToggleButton.IsChecked = IsPinned("dictation");
+
+        PanelReaderPinToggleButton.IsChecked = IsPinned("reader");
+        PanelNotesPinToggleButton.IsChecked = IsPinned("notes");
+        PanelReadAloudPinToggleButton.IsChecked = IsPinned("readAloud");
+        PanelVideoDownloadPinToggleButton.IsChecked = IsPinned("videoDownload");
+        PanelSearchAssistPinToggleButton.IsChecked = IsPinned("searchAssist");
+        PanelDetachVideoPinToggleButton.IsChecked = IsPinned("detachVideo");
+        PanelTranslatePinToggleButton.IsChecked = IsPinned("translate");
+        PanelWebAppsPinToggleButton.IsChecked = IsPinned("webApps");
+        PanelDictationPinToggleButton.IsChecked = IsPinned("dictation");
+    }
+
     private void SettingsStartupShortcutButton_Click(object sender, RoutedEventArgs e)
     {
         SettingsNavStartup.IsChecked = true;
@@ -421,6 +555,7 @@ public sealed partial class MainWindow : Window
         NotesPanel.Visibility = Visibility.Collapsed;
         VaultPanel.Visibility = Visibility.Collapsed;
         PasskeysPanel.Visibility = Visibility.Collapsed;
+        ModulesPanel.Visibility = Visibility.Collapsed;
         SiteControlPanel.Visibility = Visibility.Collapsed;
         SessionsPanel.Visibility = Visibility.Collapsed;
         WalletPanel.Visibility = Visibility.Collapsed;

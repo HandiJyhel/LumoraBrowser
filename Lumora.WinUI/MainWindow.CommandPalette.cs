@@ -170,6 +170,8 @@ public sealed partial class MainWindow
             () => HomeMenu_Click(this, new RoutedEventArgs())), 95);
         Add(new("Controle du site", "Site actuel", "Ouvre le centre du site visible", "\uE774",
             () => ShowSiteControlForCurrentPage()), 94);
+        Add(new("Lumora", "Modules Lumora", "Ouvre les outils integres : lecture, media, traduction, actions rapides", "\uE7B8",
+            () => ModulesMenu_Click(this, new RoutedEventArgs())), 93);
         Add(new("Lumora", "Parametres", "Ouvre les parametres de Lumora", "\uE713",
             () => SettingsMenu_Click(this, new RoutedEventArgs())), 90);
         Add(new("Coffre local", "Gestionnaire de mots de passe", "Ouvre le coffre local vault.lumora", "\uE72E",
@@ -186,15 +188,15 @@ public sealed partial class MainWindow
             () => DownloadsMenu_Click(this, new RoutedEventArgs())), 84);
         Add(new("Donnees locales", "Notes", "Notes libres et pages annotees en mode lecture", "\uE70B",
             () => NotesMenu_Click(this, new RoutedEventArgs())), 83);
-        Add(new("Outils de page", "Mode lecture", "Article epure - surligner et commenter la page active", "\uE736",
+        Add(new("Modules Lumora", "Mode lecture", "Article epure - surligner et commenter la page active", "\uE736",
             () => ReaderModeMenu_Click(this, new RoutedEventArgs())), 83);
         Add(new("Controle du site", "Sites connectes", "Gere les sessions et cookies conserves", "\uE8D4",
             () => SessionsMenu_Click(this, new RoutedEventArgs())), 82);
-        Add(new("Outils de page", "Applications", "Sites installes en fenetre dediee", "\uE71D",
+        Add(new("Modules Lumora", "Applications", "Sites installes en fenetre dediee", "\uE71D",
             () => WebAppsMenu_Click(this, new RoutedEventArgs())), 81);
-        Add(new("Outils de page", "Installer comme application", "Epingle la page active dans sa propre fenetre", "\uE710",
+        Add(new("Modules Lumora", "Installer comme application", "Epingle la page active dans sa propre fenetre", "\uE710",
             () => InstallAppMenu_Click(this, new RoutedEventArgs())), 79);
-        Add(new("Outils de page", "Detacher la video", "Picture-in-Picture pour la video active de la page", "\uE8B9",
+        Add(new("Modules Lumora", "Detacher la video", "Picture-in-Picture pour la video active de la page", "\uE8B9",
             () => DetachVideoMenu_Click(this, new RoutedEventArgs())), 77);
         Add(new("Coffre local", "Cles d'acces", "Ouvre les passkeys locales connues", "\uE8D7",
             () => PasskeysMenu_Click(this, new RoutedEventArgs())), 80);

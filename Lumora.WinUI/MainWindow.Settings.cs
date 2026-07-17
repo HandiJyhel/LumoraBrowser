@@ -628,6 +628,7 @@ public sealed partial class MainWindow
             CosmeticFilterSwitch.IsOn   = _uiSettings.CosmeticFilterEnabled;
             ConsentManagerSwitch.IsOn   = _uiSettings.ConsentManagerEnabled;
             RenderPrivacyWhitelist();
+            UpdateModulesPinUi();
         }
         finally
         {
@@ -807,7 +808,18 @@ public sealed partial class MainWindow
                      CompactModeButton,
                      FullScreenExitButton,
                      DetachVideoButton,
+                     DetachVideoPinnedButton,
                      VideoDownloadButton,
+                     ReadAloudButton,
+                     ReaderModeButton,
+                     SearchAssistButton,
+                     NotesModuleButton,
+                     TranslatePinnedButton,
+                     TranslateModuleButton,
+                     WebAppsPinnedButton,
+                     WebAppsQuickButton,
+                     ModulesButton,
+                     DictationPinnedButton,
                      VideoDownloadStartButton,
                      NavigationMenuButton,
                      MainMenuButton,

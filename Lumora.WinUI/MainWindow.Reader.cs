@@ -150,9 +150,13 @@ public sealed partial class MainWindow
 
         address ??= CurrentTab()?.Address;
         var isWeb = !string.IsNullOrWhiteSpace(address) && BookmarkStore.IsWebUrl(address);
-        ReaderModeButton.Visibility = isWeb ? Visibility.Visible : Visibility.Collapsed;
+        ReaderModeButton.Opacity = isWeb ? 1 : 0.5;
+        UpdateModulesPinUi();
         if (!isWeb)
         {
+            ReaderAnnotationBadge.Visibility = Visibility.Collapsed;
+            ToolTipService.SetToolTip(ReaderModeButton, "Mode lecture - ouvrez une page web pour annoter");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ReaderModeButton, "Mode lecture - ouvrez une page web pour annoter");
             return;
         }
 

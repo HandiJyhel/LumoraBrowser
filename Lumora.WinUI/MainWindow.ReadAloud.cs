@@ -30,9 +30,8 @@ public sealed partial class MainWindow
     private void UpdateReadAloudButtonVisibility()
     {
         if (ReadAloudButton is null) return;
-        ReadAloudButton.Visibility = _uiSettings.ReadAloudEnabled
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        ReadAloudButton.Opacity = _uiSettings.ReadAloudEnabled ? 1 : 0.5;
+        UpdateModulesPinUi();
     }
 
     private void OnReadAloudStateChanged(ReadAloudState state)

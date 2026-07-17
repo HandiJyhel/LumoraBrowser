@@ -90,6 +90,14 @@ internal sealed class UiSettings
     // explicite requise (contrairement a la traduction, poids nettement
     // plus lourd et fonctionnalite plus proche de l'experimental).
     public bool SearchAssistEnabled { get; set; }
+    public List<string> PinnedModuleIds { get; set; } =
+    [
+        "reader",
+        "notes",
+        "readAloud",
+        "videoDownload",
+        "searchAssist"
+    ];
     public bool SetupWizardCompleted    { get; set; }
     public List<string> PrivacyWhitelist { get; set; } = new();
     // Mode compatibilite connexion : domaines racines ou l'utilisateur autorise
