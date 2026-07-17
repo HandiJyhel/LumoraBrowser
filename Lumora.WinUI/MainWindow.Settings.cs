@@ -824,6 +824,7 @@ public sealed partial class MainWindow
                      NavigationMenuButton,
                      MainMenuButton,
                      ShieldButton,
+                     VaultQuickAccessButton,
                      MicDictationButton,
                      CredentialSaveAccept,
                      CredentialSaveDismiss,

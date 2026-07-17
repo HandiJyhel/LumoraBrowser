@@ -290,6 +290,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Retour" AutomationProperties.Name="Retour" Click="BackButton_Click">
@@ -463,7 +464,24 @@
             <Button Grid.Column="7" x:Name="AddBookmarkButton" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" AutomationProperties.Name="Ajouter aux favoris" Click="AddBookmarkButton_Click">
                 <FontIcon x:Name="BookmarkStarIcon" Glyph="&#xE734;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
             </Button>
-            <Button Grid.Column="8"
+            <!-- Acces rapide aux identifiants du site courant, sans ouvrir tout le
+                 panneau coffre (meme esprit que les extensions de gestionnaire de
+                 mots de passe type Proton Pass). -->
+            <Button x:Name="VaultQuickAccessButton"
+                    Grid.Column="8"
+                    Style="{StaticResource NovaChromeIconButtonStyle}"
+                    ToolTipService.ToolTip="Identifiants de ce site"
+                    AutomationProperties.Name="Identifiants de ce site">
+                <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                <Button.Flyout>
+                    <Flyout x:Name="VaultQuickAccessFlyout"
+                            Opening="VaultQuickAccessFlyout_Opening"
+                            Placement="BottomEdgeAlignedRight">
+                        <StackPanel x:Name="VaultQuickAccessPanel" Width="320" Spacing="10" />
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+            <Button Grid.Column="9"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Accueil"
                     AutomationProperties.Name="Accueil"
@@ -472,7 +490,7 @@
                 <SymbolIcon Symbol="Home" />
             </Button>
             <Button x:Name="CompactModeButton"
-                    Grid.Column="9"
+                    Grid.Column="10"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Interface compacte"
                     AutomationProperties.Name="Interface compacte"
@@ -481,7 +499,7 @@
                 <SymbolIcon Symbol="FullScreen" />
             </Button>
             <Border x:Name="ModulesQuickBar"
-                    Grid.Column="10"
+                    Grid.Column="11"
                     Grid.ColumnSpan="6"
                     Padding="0"
                     BorderThickness="0"
@@ -650,7 +668,7 @@
                 </StackPanel>
             </Border>
             <Button x:Name="ModulesButton"
-                    Grid.Column="16"
+                    Grid.Column="17"
                     Margin="8,0,2,0"
                             Style="{StaticResource NovaModulePuzzleButtonStyle}"
                             AutomationProperties.Name="Tous les modules Lumora"
@@ -918,7 +936,7 @@
                             </Flyout>
                         </Button.Flyout>
             </Button>
-            <Border Grid.Column="17"
+            <Border Grid.Column="18"
                     Width="1"
                     Height="22"
                     Margin="5,0,3,0"
@@ -926,7 +944,7 @@
                     Background="{StaticResource NovaChromeStrokeBrush}"
                     Opacity="0.7" />
             <Button x:Name="NavigationMenuButton"
-                    Grid.Column="18"
+                    Grid.Column="19"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     AutomationProperties.Name="Menu Lumora"
                     ToolTipService.ToolTip="Menu Lumora">
