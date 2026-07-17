@@ -55,23 +55,26 @@ public sealed partial class MainWindow
         UpdateToolbarPrivacyIndicator();
         StatusText.Text = verdict switch
         {
-            PopupVerdict.BlockAdDomain => $"Popup publicitaire bloquee : {DisplayTitle(popupUri ?? string.Empty)}",
-            PopupVerdict.BlockGestureFlood => "Rafale de popups bloquee (une seule fenetre par clic).",
-            PopupVerdict.BlockUnderAdPressure => $"Popup parasite bloquee : {DisplayTitle(popupUri ?? string.Empty)}",
-            _ => "Popup automatique bloquee."
+            PopupVerdict.BlockAdDomain => $"Popup publicitaire bloquée : {DisplayTitle(popupUri ?? string.Empty)}",
+            PopupVerdict.BlockGestureFlood => "Rafale de popups bloquée (une seule fenêtre par clic).",
+            PopupVerdict.BlockUnderAdPressure => $"Popup parasite bloquée : {DisplayTitle(popupUri ?? string.Empty)}",
+            _ => "Popup automatique bloquée."
         };
         WinUiRuntimeTrace.Write($"Popup blocked ({verdict}): {popupUri}");
     }
 
     // ── Détournements de l'onglet ────────────────────────────────────────────
 
-    private NavigationVerdict ClassifyNavigationForAdShield(int? tabId, string? fromUri, string toUri)
+    private NavigationVerdict ClassifyNavigationForAdShield(int? tabId, string? fromUri, string toUri, bool isUserInitiated)
     {
         var blocker = NetworkBlocker;
+        var userInitiatedChain = tabId is int navigationTabId &&
+                                 _navHealth.IsUserInitiatedNavigationChain(navigationTabId);
         return NavigationHijackPolicy.Decide(
             fromUri,
             toUri,
             wasExplicitlyRequested: _navHealth.TakeExplicitNavigation(toUri),
+            isUserInitiated: isUserInitiated || userInitiatedChain,
             strictBlockEnabled: _uiSettings.StrictAdBlockEnabled && blocker?.IsEnabled == true,
             host => blocker?.IsBlocked(host) == true,
             host => blocker?.IsWhitelisted(host) == true,
@@ -94,8 +97,8 @@ public sealed partial class MainWindow
         {
             var host = Uri.TryCreate(blockedUrl, UriKind.Absolute, out var parsed) ? parsed.Host : blockedUrl;
             StatusText.Text = isParasite
-                ? $"Redirection parasite bloquee : {host}"
-                : $"Navigation publicitaire bloquee : {host}";
+                ? $"Redirection parasite bloquée : {host}"
+                : $"Navigation publicitaire bloquée : {host}";
         }
 
         WinUiRuntimeTrace.Write($"Ad navigation blocked ({verdict}): {blockedUrl}");

@@ -81,10 +81,10 @@ public sealed partial class MainWindow
     {
         if (PrivacyBlockedCountText is not null)
         {
-            var telemetry = _telemetryBlocker?.BlockedCount ?? 0;
-            PrivacyBlockedCountText.Text = telemetry > 0
-                ? $"{_privacy.BlockedCount:N0} requêtes bloquées · dont {telemetry:N0} télémétrie"
-                : $"{_privacy.BlockedCount:N0} requêtes bloquées";
+            var counters = _privacy.GlobalCounters;
+            PrivacyBlockedCountText.Text = counters.Total == 0
+                ? "0 requête bloquée"
+                : $"{counters.Total:N0} requêtes bloquées · {counters.Ads:N0} pub(s), {counters.Trackers:N0} tracker(s)";
         }
 
         var cnameModule = _privacy.Get<CnameUncloakerModule>();
@@ -134,19 +134,24 @@ public sealed partial class MainWindow
 
     private void UpdateToolbarPrivacyIndicator()
     {
-        var telemetry = _telemetryBlocker?.PageBlockedCount ?? 0;
+        var counters = _privacy.PageCounters;
         if (TelemetryActivityBadge is not null)
         {
-            TelemetryActivityBadge.Visibility = telemetry > 0 ? Visibility.Visible : Visibility.Collapsed;
+            TelemetryActivityBadge.Visibility = counters.Total > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (ShieldBlockedBadgeText is not null)
+        {
+            ShieldBlockedBadgeText.Text = counters.Total > 99 ? "99+" : counters.Total.ToString();
         }
 
         if (ShieldButton is not null)
         {
             ToolTipService.SetToolTip(
                 ShieldButton,
-                telemetry > 0
-                    ? $"Confidentialite - {telemetry} telemetrie bloquee(s) sur cette page"
-                    : "Confidentialite");
+                counters.Total > 0
+                    ? $"Confidentialité - {counters.Ads} pub(s), {counters.Trackers} tracker(s) bloqué(s) sur cette page"
+                    : "Confidentialité");
         }
     }
 
@@ -391,7 +396,7 @@ public sealed partial class MainWindow
         await RegisterConsentScriptsAsync();
     }
 
-    // ── Compatibilite connexion ──────────────────────────────────────────────
+    // ── Compatibilité connexion ──────────────────────────────────────────────
 
     private async Task RegisterLoginCompatibilityScriptsAsync()
     {
@@ -453,12 +458,9 @@ public sealed partial class MainWindow
         }
 
         ShieldDomainText.Text = domain;
-        var count = _privacy.PageBlockedCount;
-        var telemetry = _telemetryBlocker?.PageBlockedCount ?? 0;
-        ShieldBlockedCountText.Text = count == 0
-            ? "Aucune requete bloquee sur cette page"
-            : $"{count} requete{(count > 1 ? "s" : "")} bloquee{(count > 1 ? "s" : "")} sur cette page" +
-              (telemetry > 0 ? $" · dont {telemetry} telemetrie" : string.Empty);
+        var pageCounters = _privacy.PageCounters;
+        var siteStats = _privacy.SiteStatsFor(domain);
+        ShieldBlockedCountText.Text = BuildShieldCounterText(pageCounters, siteStats);
         ShieldSiteSummaryText.Text = BuildShieldSiteSummary(domain);
         ShieldRecommendationText.Text = BuildShieldRecommendation(domain);
         RenderPrivacyBlockEvents(
@@ -507,7 +509,7 @@ public sealed partial class MainWindow
     {
         ShieldFlyout.Hide();
         StorageCurrentFolderText.Text = _profile.ProfileDir;
-        ShowPanel(SettingsPanel, "Parametres");
+        ShowPanel(SettingsPanel, "Paramètres");
         SettingsSectionNavigation.Visibility = Visibility.Collapsed;
         SettingsSectionStartup.Visibility    = Visibility.Collapsed;
         SettingsSectionVault.Visibility      = Visibility.Collapsed;

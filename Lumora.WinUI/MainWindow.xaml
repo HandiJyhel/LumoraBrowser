@@ -359,26 +359,37 @@
             <Button x:Name="ShieldButton"
                     Grid.Column="6"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Confidentialite du site"
-                    ToolTipService.ToolTip="Confidentialite">
+                    AutomationProperties.Name="Confidentialité du site"
+                    ToolTipService.ToolTip="Confidentialité">
                 <Grid Width="22" Height="22">
                     <FontIcon Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16"
                               HorizontalAlignment="Center" VerticalAlignment="Center" />
                     <Border x:Name="TelemetryActivityBadge"
-                            Width="8" Height="8"
-                            CornerRadius="4"
+                            MinWidth="16"
+                            Height="16"
+                            Padding="3,0"
+                            CornerRadius="8"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top"
+                            Margin="0,-5,-7,0"
                             Background="{StaticResource NovaCoolAccentBrush}"
                             BorderBrush="{StaticResource NovaChromeSurfaceBrush}"
                             BorderThickness="1"
-                            Visibility="Collapsed" />
+                            Visibility="Collapsed">
+                        <TextBlock x:Name="ShieldBlockedBadgeText"
+                                   Text="0"
+                                   FontSize="9"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                    </Border>
                 </Grid>
                 <Button.Flyout>
                     <Flyout x:Name="ShieldFlyout"
                             Opening="ShieldFlyout_Opening"
                             Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="270" Spacing="12">
+                        <StackPanel Width="330" Spacing="12">
                             <TextBlock x:Name="ShieldDomainText"
                                        FontWeight="SemiBold"
                                        FontSize="14"
@@ -406,7 +417,7 @@
                                     Content="Centre du site"
                                     HorizontalAlignment="Stretch"
                                     Click="ShieldSiteCenterButton_Click" />
-                            <HyperlinkButton Content="Parametres de confidentialite"
+                            <HyperlinkButton Content="Paramètres de confidentialité"
                                              Click="ShieldSettingsLink_Click"
                                              HorizontalAlignment="Left"
                                              Padding="0" />
@@ -1498,8 +1509,8 @@
                             </StackPanel>
 
                             <InfoBar x:Name="StorageImportBar"
-                                     Title="Restauration reussie"
-                                     Message="Les donnees ont ete importees. Redemarrez Lumora pour appliquer tous les changements."
+                                     Title="Restauration réussie"
+                                     Message="Les données ont été importées. Redémarrez Lumora pour appliquer tous les changements."
                                      Severity="Success"
                                      IsOpen="False">
                                 <InfoBar.ActionButton>
@@ -1508,19 +1519,19 @@
                             </InfoBar>
                         </StackPanel>
 
-                        <!-- Section : Confidentialite -->
+                        <!-- Section : Confidentialité -->
                         <StackPanel x:Name="SettingsSectionPrivacy" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Confidentialite" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Confidentialité" Style="{StaticResource NovaPanelPageTitleStyle}" />
 
                             <!-- Compteur de blocages -->
                             <Border Style="{StaticResource NovaPanelCardStyle}"
                                     Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}">
                                 <StackPanel Spacing="2">
                                     <TextBlock x:Name="PrivacyBlockedCountText"
-                                               Text="0 requetes bloquees"
+                                               Text="0 requête bloquée"
                                                FontSize="18" FontWeight="SemiBold" />
                                     <TextBlock x:Name="PrivacyRuleCountText"
-                                               Text="Chargement des regles..."
+                                               Text="Chargement des règles..."
                                                Opacity="0.7" FontSize="12" />
                                 </StackPanel>
                             </Border>
@@ -1536,7 +1547,7 @@
                                          Toggled="NetworkBlockerSwitch_Toggled" />
                             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left">
                                 <Button x:Name="UpdatePrivacyListsButton"
-                                        Content="Mettre a jour les listes maintenant"
+                                        Content="Mettre à jour les listes maintenant"
                                         Click="UpdatePrivacyListsButton_Click" />
                                 <TextBlock x:Name="PrivacyLastUpdateText"
                                            VerticalAlignment="Center"
@@ -1546,19 +1557,19 @@
                                        Style="{StaticResource NovaPanelDescriptionStyle}"
                                        FontStyle="Italic" />
                             <InfoBar x:Name="PrivacyListsUpdateBar"
-                                     Title="Listes mises a jour"
-                                     Message="Les nouvelles regles de filtrage sont actives."
+                                     Title="Listes mises à jour"
+                                     Message="Les nouvelles règles de filtrage sont actives."
                                      Severity="Success"
                                      IsOpen="False" IsClosable="True" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
 
-                            <!-- Anti-telemetrie -->
-                            <TextBlock Text="Anti-telemetrie" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                            <!-- Anti-télémétrie -->
+                            <TextBlock Text="Anti-télémétrie" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Bloque mesure d'audience, replay de session, crash reports et metriques produit des sites." />
+                                       Text="Bloque la mesure d'audience, le replay de session, les rapports de crash et les métriques produit des sites." />
                             <ToggleSwitch x:Name="TelemetryBlockerSwitch"
-                                         Header="Bloquer la telemetrie"
+                                         Header="Bloquer la télémétrie"
                                          Toggled="TelemetryBlockerSwitch_Toggled" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
@@ -1566,7 +1577,7 @@
                             <!-- Nettoyage URL -->
                             <TextBlock Text="Nettoyage des URL" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Retire les parametres de tracking avant navigation." />
+                                       Text="Retire les paramètres de tracking avant navigation." />
                             <ToggleSwitch x:Name="ParameterCleanerSwitch"
                                          Header="Nettoyer les URL"
                                          Toggled="ParameterCleanerSwitch_Toggled" />
@@ -1586,9 +1597,9 @@
                             <!-- CNAME uncloaker -->
                             <TextBlock Text="CNAME cloaking" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Detecte les trackers caches derriere un alias DNS." />
+                                       Text="Détecte les trackers cachés derrière un alias DNS." />
                             <ToggleSwitch x:Name="CnameUncloakerSwitch"
-                                         Header="Detecter le CNAME cloaking"
+                                         Header="Détecter le CNAME cloaking"
                                          Toggled="CnameUncloakerSwitch_Toggled" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
@@ -1596,7 +1607,7 @@
                             <!-- Filtre cosmétique -->
                             <TextBlock Text="Masquage visuel" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Masque les emplacements publicitaires vides apres filtrage reseau." />
+                                       Text="Masque les emplacements publicitaires vides après filtrage réseau." />
                             <ToggleSwitch x:Name="CosmeticFilterSwitch"
                                          Header="Masquer les emplacements pub"
                                          Toggled="CosmeticFilterSwitch_Toggled" />
@@ -1614,13 +1625,13 @@
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
 
                             <!-- Sessions éphémères -->
-                            <TextBlock Text="Sessions ephemeres" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                            <TextBlock Text="Sessions éphémères" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Purge les sessions au demarrage, sauf pour les sites que vous gardez connectes." />
+                                       Text="Purge les sessions au démarrage, sauf pour les sites que vous gardez connectés." />
                             <ToggleSwitch x:Name="SessionPurgeSwitch"
-                                         Header="Purger les sessions au demarrage"
+                                         Header="Purger les sessions au démarrage"
                                          Toggled="SessionPurgeSwitch_Toggled" />
-                            <HyperlinkButton Content="Gerer les sites connectes"
+                            <HyperlinkButton Content="Gérer les sites connectés"
                                              Click="SessionsManageLink_Click"
                                              HorizontalAlignment="Left"
                                              Padding="0" />
@@ -1630,14 +1641,14 @@
                             <!-- SmartScreen -->
                             <TextBlock Text="SmartScreen" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Protection Microsoft anti-phishing optionnelle. Desactivee par defaut." />
+                                       Text="Protection Microsoft anti-phishing optionnelle. Désactivée par défaut." />
                             <ToggleSwitch x:Name="SmartScreenSwitch"
-                                         Header="Activer SmartScreen (envoie les URL a Microsoft)"
+                                         Header="Activer SmartScreen (envoie les URL à Microsoft)"
                                          Toggled="SmartScreenSwitch_Toggled" />
 
-                            <!-- Renforcement anti-publicite (0.77) : popups et detournements -->
+                            <!-- Renforcement anti-publicité (0.77) : popups et détournements -->
                             <TextBlock Text="Popups et redirections" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,14,0,0" />
-                            <TextBlock Text="Les popups automatiques et les detournements de clic vers des domaines publicitaires sont bloques. Les fenetres de connexion (Google, OAuth...) restent toujours autorisees."
+                            <TextBlock Text="Les popups automatiques et les détournements de clic vers des domaines publicitaires sont bloqués. Les fenêtres de connexion (Google, OAuth...) restent toujours autorisées."
                                        Opacity="0.7" TextWrapping="Wrap" FontSize="12" Margin="0,2,0,6" />
                             <ToggleSwitch x:Name="PopupBlockerSwitch"
                                          Header="Bloquer les popups publicitaires et automatiques"
@@ -1651,7 +1662,7 @@
                             <!-- Whitelist utilisateur -->
                             <TextBlock Text="Exceptions" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Domaines ignores par le bloqueur de contenu." />
+                                       Text="Domaines ignorés par le bloqueur de contenu." />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBox x:Name="PrivacyWhitelistBox"
                                          PlaceholderText="exemple.com"

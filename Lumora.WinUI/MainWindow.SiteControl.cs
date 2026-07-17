@@ -139,21 +139,23 @@ public sealed partial class MainWindow
         SiteControlTitleText.Text = site.RootDomain;
         SiteControlAddressText.Text = site.Address;
 
-        var blocked = _privacy.PageBlockedCount;
+        var pageCounters = _privacy.PageCounters;
+        var blocked = pageCounters.Total;
+        var siteStats = _privacy.SiteStatsFor(site.RootDomain);
         var isWhitelisted = _uiSettings.PrivacyWhitelist.Contains(site.Host, StringComparer.OrdinalIgnoreCase) ||
                             _uiSettings.PrivacyWhitelist.Contains(site.RootDomain, StringComparer.OrdinalIgnoreCase);
         SiteControlPrivacyText.Text = isWhitelisted
             ? "Ce site est exclu du bloqueur de contenu."
             : blocked == 0
-                ? "Protection active. Aucune requete bloquee sur la page visible."
-                : $"Protection active. {blocked} requete{(blocked > 1 ? "s" : "")} bloquee{(blocked > 1 ? "s" : "")} sur la page visible.";
+                ? "Protection active. Aucune requête bloquée sur la page visible."
+                : $"Protection active. Page visible : {FormatPrivacyCounters(pageCounters)}. Site : {FormatPrivacyCounters(siteStats)}.";
 
         var recentBlocks = _privacy.RecentPageBlocks.Reverse().ToList();
         var compatibilityEnabled = IsLoginCompatibilitySite(site.RootDomain);
         var loginRelatedBlockSeen = recentBlocks.Any(IsLikelyLoginRelatedBlock);
         SiteControlProtectionAdviceText.Text = BuildSiteProtectionAdvice(
             blocked,
-            _telemetryBlocker?.PageBlockedCount ?? 0,
+            pageCounters.Trackers,
             compatibilityEnabled,
             loginRelatedBlockSeen);
         RenderPrivacyBlockEvents(SiteControlRecentBlocksPanel, recentBlocks, includeEmptyState: false);
@@ -161,8 +163,8 @@ public sealed partial class MainWindow
             loginRelatedBlockSeen && !compatibilityEnabled ? Visibility.Visible : Visibility.Collapsed;
 
         SiteControlCompatibilityText.Text = compatibilityEnabled
-            ? "Compatibilite active : Lumora autorise les ressources strictement necessaires a la connexion federée. Ads, analytics et telemetrie restent filtres."
-            : "Compatibilite desactivee : protections standard Lumora.";
+            ? "Compatibilité active : Lumora autorise les ressources strictement nécessaires à la connexion fédérée. Ads, analytics et télémétrie restent filtrés."
+            : "Compatibilité désactivée : protections standard Lumora.";
         _suppressSiteControlCompatibilityToggle = true;
         try
         {
@@ -175,7 +177,7 @@ public sealed partial class MainWindow
 
         var diagnosticEnabled = IsLoginDiagnosticSite(site.RootDomain);
         SiteControlDiagnosticText.Text = diagnosticEnabled
-            ? "Diagnostic actif : Lumora capture navigation, requetes de connexion, erreurs JS et compteurs cookies sans valeurs sensibles."
+            ? "Diagnostic actif : Lumora capture navigation, requêtes de connexion, erreurs JS et compteurs cookies sans valeurs sensibles."
             : "Diagnostic inactif.";
         _suppressSiteControlDiagnosticToggle = true;
         try
@@ -190,8 +192,8 @@ public sealed partial class MainWindow
 
         var cookieCount = await CountCookiesForRootDomainAsync(site.RootDomain);
         SiteControlSessionText.Text = cookieCount == 0
-            ? "Aucun cookie de session detecte pour ce domaine."
-            : $"{cookieCount} cookie(s) detecte(s) pour ce domaine.";
+            ? "Aucun cookie de session détecté pour ce domaine."
+            : $"{cookieCount} cookie(s) détecté(s) pour ce domaine.";
 
         _suppressSiteControlTrustToggle = true;
         try
@@ -238,7 +240,7 @@ public sealed partial class MainWindow
 
         SiteControlPermissionsText.Text = allowed == 0 && blocked == 0
             ? "Lumora demandera confirmation quand ce site réclame une permission sensible."
-            : $"{allowed} permission(s) autorisee(s), {blocked} permission(s) bloquee(s) pour ce site.";
+            : $"{allowed} permission(s) autorisée(s), {blocked} permission(s) bloquée(s) pour ce site.";
 
         _suppressSitePermissionUi = true;
         try
@@ -375,28 +377,28 @@ public sealed partial class MainWindow
 
     private string BuildSiteProtectionAdvice(
         int blockedCount,
-        int telemetryCount,
+        int trackerCount,
         bool compatibilityEnabled,
         bool loginRelatedBlockSeen)
     {
         if (loginRelatedBlockSeen && !compatibilityEnabled)
         {
-            return "Un blocage recent ressemble a une ressource de connexion. Si un bouton Connexion ne repond pas, autorisez seulement le flux de connexion pour ce site.";
+            return "Un blocage récent ressemble à une ressource de connexion. Si un bouton Connexion ne répond pas, autorisez seulement le flux de connexion pour ce site.";
         }
 
         if (compatibilityEnabled)
         {
-            return "Compatibilite connexion active : Lumora relache uniquement le strict necessaire pour l'authentification demandee.";
+            return "Compatibilité connexion active : Lumora relâche uniquement le strict nécessaire pour l'authentification demandée.";
         }
 
-        if (telemetryCount > 0)
+        if (trackerCount > 0)
         {
-            return "Lumora bloque surtout de la telemetrie sur cette page. Vous pouvez continuer sans action.";
+            return "Lumora bloque surtout des trackers ou de la télémétrie sur cette page. Vous pouvez continuer sans action.";
         }
 
         return blockedCount > 0
-            ? "Les blocages recents ne ressemblent pas a un flux de connexion critique."
-            : "Aucun signal de casse detecte sur cette page.";
+            ? "Les blocages récents ne ressemblent pas à un flux de connexion critique."
+            : "Aucun signal de casse détecté sur cette page.";
     }
 
     private string BuildShieldRecommendation(string domain)
@@ -412,14 +414,58 @@ public sealed partial class MainWindow
 
         if (compatibilityEnabled)
         {
-            return "Compatibilite connexion active pour ce site.";
+            return "Compatibilité connexion active pour ce site.";
         }
 
-        var telemetry = _telemetryBlocker?.PageBlockedCount ?? 0;
-        return telemetry > 0
-            ? "Blocage principalement lie a la telemetrie."
+        var counters = _privacy.PageCounters;
+        return counters.Trackers > 0
+            ? "Blocage principalement lié aux trackers et à la télémétrie."
             : "Protection standard active.";
     }
+
+    private static string BuildShieldCounterText(PrivacyBlockCounters pageCounters, PrivacySiteBlockStats siteStats)
+    {
+        var page = pageCounters.Total == 0
+            ? "Page visible : aucune pub ni aucun tracker bloqué."
+            : $"Page visible : {FormatPrivacyCounters(pageCounters)}.";
+
+        var site = siteStats.Total == 0
+            ? "Site : aucun blocage enregistré depuis l'ouverture."
+            : $"Site : {FormatPrivacyCounters(siteStats)} depuis l'ouverture.";
+
+        return page + Environment.NewLine + site;
+    }
+
+    private static string FormatPrivacyCounters(PrivacyBlockCounters counters)
+    {
+        if (counters.Total == 0)
+        {
+            return "0 blocage";
+        }
+
+        var parts = new List<string>();
+        if (counters.Ads > 0)
+        {
+            parts.Add($"{counters.Ads} pub{(counters.Ads > 1 ? "s" : string.Empty)}");
+        }
+
+        if (counters.Trackers > 0)
+        {
+            parts.Add($"{counters.Trackers} tracker{(counters.Trackers > 1 ? "s" : string.Empty)}");
+        }
+
+        if (counters.Other > 0)
+        {
+            parts.Add($"{counters.Other} autre{(counters.Other > 1 ? "s" : string.Empty)}");
+        }
+
+        return parts.Count == 0
+            ? $"{counters.Total} blocage{(counters.Total > 1 ? "s" : string.Empty)}"
+            : string.Join(", ", parts) + $" bloqué{(counters.Total > 1 ? "s" : string.Empty)}";
+    }
+
+    private static string FormatPrivacyCounters(PrivacySiteBlockStats stats) =>
+        FormatPrivacyCounters(new PrivacyBlockCounters(stats.Total, stats.Ads, stats.Trackers, stats.Other));
 
     private void RenderPrivacyBlockEvents(
         StackPanel panel,
@@ -453,13 +499,20 @@ public sealed partial class MainWindow
 
             panel.Children.Add(new TextBlock
             {
-                Text = $"{entry.ModuleName} : {host}{path}",
+                Text = $"{PrivacyCategoryLabel(entry.Category)} : {host}{path} · {entry.Reason}",
                 FontSize = 12,
                 Opacity = 0.68,
                 TextTrimming = TextTrimming.CharacterEllipsis
             });
         }
     }
+
+    private static string PrivacyCategoryLabel(PrivacyBlockCategory category) => category switch
+    {
+        PrivacyBlockCategory.Advertising => "Pub",
+        PrivacyBlockCategory.Tracker => "Tracker",
+        _ => "Protection"
+    };
 
     private static bool IsLikelyLoginRelatedBlock(PrivacyBlockEvent entry)
     {
@@ -501,8 +554,8 @@ public sealed partial class MainWindow
         _ = RegisterConsentScriptsAsync();
         _ = RegisterLoginCompatibilityScriptsAsync();
         StatusText.Text = enabled
-            ? $"Compatibilite connexion active pour {rootDomain}."
-            : $"Compatibilite connexion desactivee pour {rootDomain}.";
+            ? $"Compatibilité connexion active pour {rootDomain}."
+            : $"Compatibilité connexion désactivée pour {rootDomain}.";
     }
 
     private bool IsLoginDiagnosticSite(string? uriOrHost)
@@ -540,7 +593,7 @@ public sealed partial class MainWindow
         _ = RegisterLoginDiagnosticScriptsAsync();
         StatusText.Text = enabled
             ? $"Diagnostic connexion actif pour {rootDomain}."
-            : $"Diagnostic connexion desactive pour {rootDomain}.";
+            : $"Diagnostic connexion désactivé pour {rootDomain}.";
     }
 
     private CurrentSiteInfo? CurrentSite()
