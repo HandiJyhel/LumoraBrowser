@@ -44,6 +44,29 @@ public class NavigationHealthTrackerTests
     }
 
     [Fact]
+    public void Redirection_ConserveLeGesteUtilisateurDeDepart()
+    {
+        // Cas recherche Google : clic utilisateur vers /url, puis redirection
+        // technique vers le résultat final. Le dernier saut doit rester légitime.
+        var t = new NavigationHealthTracker();
+        t.TrackNavigationStart(3, "https://www.google.com/url?q=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FTintin", isRedirect: false, isUserInitiated: true);
+        t.TrackNavigationStart(3, "https://fr.wikipedia.org/wiki/Tintin", isRedirect: true);
+
+        Assert.True(t.IsUserInitiatedNavigationChain(3));
+    }
+
+    [Fact]
+    public void NouvelleNavigationAutomatique_OublieLeGesteUtilisateurPrecedent()
+    {
+        var t = new NavigationHealthTracker();
+        t.TrackNavigationStart(3, "https://www.google.com/url?q=https%3A%2F%2Ffr.wikipedia.org%2Fwiki%2FTintin", isRedirect: false, isUserInitiated: true);
+
+        t.TrackNavigationStart(3, "https://boutique-douteuse.example/", isRedirect: false, isUserInitiated: false);
+
+        Assert.False(t.IsUserInitiatedNavigationChain(3));
+    }
+
+    [Fact]
     public void NouvelleNavigation_OublieLancienneUri()
     {
         var t = new NavigationHealthTracker();

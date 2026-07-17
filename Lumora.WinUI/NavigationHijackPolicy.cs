@@ -23,6 +23,8 @@ namespace Lumora.WinUI;
 //    pression : le clic capturé vers une régie connue n'a pas d'excuse) ;
 //  - rester sur le même site racine est toujours permis (les sites normaux
 //    naviguent chez eux) ;
+//  - un clic utilisateur normal vers un autre site est permis : le bouclier ne
+//    doit jamais transformer une page de résultats en impasse de navigation ;
 //  - au-delà : cross-domaine + site sous pression publicitaire (ou popup
 //    ouverte à l'instant) = parasite → bloqué.
 public enum NavigationVerdict
@@ -38,6 +40,7 @@ public static class NavigationHijackPolicy
         string? fromUri,
         string toUri,
         bool wasExplicitlyRequested,
+        bool isUserInitiated,
         bool strictBlockEnabled,
         Func<string, bool> isAdHost,
         Func<string, bool> isWhitelistedHost,
@@ -73,6 +76,9 @@ public static class NavigationHijackPolicy
         // navigation qui reste sur le même site racine n'est jamais un
         // détournement.
         if (fromHost.Length == 0 || IsSameRootSite(fromHost, toHost))
+            return NavigationVerdict.Allow;
+
+        if (isUserInitiated && !openedPopupRecently)
             return NavigationVerdict.Allow;
 
         return pageUnderAdPressure || openedPopupRecently

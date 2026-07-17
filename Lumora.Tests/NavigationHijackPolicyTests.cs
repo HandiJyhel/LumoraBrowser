@@ -15,6 +15,7 @@ public class NavigationHijackPolicyTests
         string toUri,
         string? fromUri = From,
         bool wasExplicit = false,
+        bool userInitiated = false,
         bool strictEnabled = true,
         string[]? adHosts = null,
         string[]? whitelisted = null,
@@ -27,6 +28,7 @@ public class NavigationHijackPolicyTests
             fromUri,
             toUri,
             wasExplicit,
+            userInitiated,
             strictEnabled,
             host => ads.Contains(host, StringComparer.OrdinalIgnoreCase),
             host => allow.Contains(host, StringComparer.OrdinalIgnoreCase),
@@ -55,8 +57,8 @@ public class NavigationHijackPolicyTests
     [Fact]
     public void ClicDetourne_SousPression_BloqueParasite()
     {
-        // Le scénario utilisateur : on clique, l'onglet part vers une boutique
-        // douteuse. Site déjà pris en flagrant délit → parasite, bloqué net.
+        // Redirection automatique cross-domaine depuis un site déjà pris en
+        // flagrant délit publicitaire → parasite, bloqué net.
         Assert.Equal(
             NavigationVerdict.BlockParasite,
             Decide("https://boutique-douteuse.example/promo", pressure: true));
@@ -77,6 +79,46 @@ public class NavigationHijackPolicyTests
     {
         // Pas de pression, pas de popup récente : un lien externe normal.
         Assert.Equal(NavigationVerdict.Allow, Decide("https://wikipedia.org/article"));
+    }
+
+    [Fact]
+    public void ClicUtilisateurCrossDomaine_SousPression_Autorise()
+    {
+        // Régression 0.78.3.2 : depuis une page de résultats ou une page chargée
+        // en pubs, les clics légitimes vers un autre site étaient pris pour des
+        // redirections parasites. Lumora doit bloquer les détournements, pas la
+        // navigation normale.
+        Assert.Equal(
+            NavigationVerdict.Allow,
+            Decide(
+                "https://fr.wikipedia.org/wiki/Tintin",
+                fromUri: "https://www.google.com/search?q=tintin",
+                userInitiated: true,
+                pressure: true));
+    }
+
+    [Fact]
+    public void ClicUtilisateurVersDomainePublicitaire_EncoreBloque()
+    {
+        Assert.Equal(
+            NavigationVerdict.BlockAdDomain,
+            Decide(
+                "https://ads.regie.example/promo",
+                userInitiated: true,
+                adHosts: ["ads.regie.example"],
+                pressure: true));
+    }
+
+    [Fact]
+    public void TabUnderAvecGesteUtilisateur_EncoreBloque()
+    {
+        Assert.Equal(
+            NavigationVerdict.BlockParasite,
+            Decide(
+                "https://boutique-douteuse.example/",
+                userInitiated: true,
+                pressure: true,
+                recentPopup: true));
     }
 
     [Fact]

@@ -16,12 +16,14 @@ public sealed partial class MainWindow
     private void UpdateSearchAssistButtonVisibility()
     {
         if (SearchAssistButton is null) return;
-        SearchAssistButton.Visibility = _uiSettings.SearchAssistEnabled
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        SearchAssistButton.Opacity = _uiSettings.SearchAssistEnabled ? 1 : 0.5;
+        UpdateModulesPinUi();
     }
 
-    private async void SearchAssistButton_Click(object sender, RoutedEventArgs e)
+    private async void SearchAssistButton_Click(object sender, RoutedEventArgs e) =>
+        await RunSearchAssistAsync(SearchAssistButton);
+
+    private async Task RunSearchAssistAsync(FrameworkElement flyoutTarget)
     {
         if (_searchAssistInProgress || !_uiSettings.SearchAssistEnabled) return;
 
@@ -42,7 +44,7 @@ public sealed partial class MainWindow
             }
 
             SearchAssistSuggestionText.Text = suggestion;
-            SearchAssistFlyout.ShowAt(SearchAssistButton);
+            SearchAssistFlyout.ShowAt(flyoutTarget);
             StatusText.Text = "Suggestion prete.";
         }
         catch (Exception ex)

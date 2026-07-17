@@ -53,6 +53,12 @@ public sealed class NavigationHealthTracker
     // jamais bloquées par le filtre anti-redirection publicitaire.
     private readonly HashSet<string> _explicitNavigationUris = new(StringComparer.OrdinalIgnoreCase);
 
+    // Onglets dont la navigation courante a démarré par un vrai geste utilisateur.
+    // Les moteurs de recherche passent souvent par une redirection intermédiaire :
+    // le premier saut est un clic, les suivants sont des redirects techniques qui
+    // doivent garder cette légitimité jusqu'à la prochaine navigation.
+    private readonly HashSet<int> _userInitiatedNavigationTabs = new();
+
     // Horodatages des popups OUVERTES (autorisées) par onglet opener : sert au
     // plafond « une popup par geste » et à la détection de tab-under. L'heure
     // est injectée par l'appelant pour rester pur et testable.
@@ -76,7 +82,7 @@ public sealed class NavigationHealthTracker
     // isRedirect : un saut de redirection prolonge la navigation en cours — la
     // chaîne d'URIs est conservée, car la réponse 301 du saut précédent peut
     // arriver APRÈS le NavigationStarting suivant et doit encore être reconnue.
-    public void TrackNavigationStart(int? tabId, string uri, bool isRedirect)
+    public void TrackNavigationStart(int? tabId, string uri, bool isRedirect, bool isUserInitiated = false)
     {
         if (tabId is not int id) return;
         if (!isRedirect)
@@ -84,6 +90,12 @@ public sealed class NavigationHealthTracker
             RemoveNavigatingUrisOfTab(id);
             _mainDocumentHttpErrors.Remove(id);
             _pendingUnknownFailures.Remove(id);
+            _userInitiatedNavigationTabs.Remove(id);
+        }
+
+        if (isUserInitiated)
+        {
+            _userInitiatedNavigationTabs.Add(id);
         }
 
         _navigatingDocumentUris[DocumentUriKey(uri)] = id;
@@ -96,6 +108,7 @@ public sealed class NavigationHealthTracker
         _mainDocumentHttpErrors.Remove(tabId);
         _pendingUnknownFailures.Remove(tabId);
         _openedPopupsByTab.Remove(tabId);
+        _userInitiatedNavigationTabs.Remove(tabId);
     }
 
     public bool IsMainDocument(string? uri, out int tabId) =>
@@ -173,6 +186,9 @@ public sealed class NavigationHealthTracker
     // Consomme (une seule fois) le marqueur « demandé explicitement » pour cette URI.
     public bool TakeExplicitNavigation(string? uri) =>
         _explicitNavigationUris.Remove(DocumentUriKey(uri));
+
+    public bool IsUserInitiatedNavigationChain(int tabId) =>
+        _userInitiatedNavigationTabs.Contains(tabId);
 
     // ── Popups ouvertes et tab-under ─────────────────────────────────────────
 

@@ -375,14 +375,14 @@ public sealed partial class MainWindow
     private void BrowserView_NavigationStarting(WebView2 sender, CoreWebView2NavigationStartingEventArgs args)
     {
         RecordLoginDiagnosticForNavigation(sender.Source?.ToString(), "navigation-starting", args.Uri);
+        var startingTab = TabForView(sender);
 
         // Suivi du document principal (redirections comprises : l'événement est
         // relevé à chaque saut) pour la détection 5xx et la mémoire des
         // déménagements. Voir MainWindow.SiteNotFound.cs.
-        _navHealth.TrackNavigationStart(TabForView(sender)?.Id, args.Uri, args.IsRedirected);
+        _navHealth.TrackNavigationStart(startingTab?.Id, args.Uri, args.IsRedirected, args.IsUserInitiated);
 
-        if (TabForView(sender) is { } startingTab &&
-            IsFederatedIdentityIntermediary(args.Uri))
+        if (startingTab is not null && IsFederatedIdentityIntermediary(args.Uri))
         {
             _federatedIdentityPopupTabIds.Add(startingTab.Id);
             ReturnToPopupParentIfVisible(startingTab);
@@ -403,7 +403,9 @@ public sealed partial class MainWindow
 
             // La légitimité « demandé explicitement » suit l'URL nettoyée : sinon
             // un domaine tapé à la main serait re-vérifié (et bloqué) après nettoyage.
-            if (_navHealth.TakeExplicitNavigation(args.Uri))
+            var userInitiatedChain = startingTab is not null &&
+                                     _navHealth.IsUserInitiatedNavigationChain(startingTab.Id);
+            if (_navHealth.TakeExplicitNavigation(args.Uri) || args.IsUserInitiated || userInitiatedChain)
             {
                 _navHealth.RegisterExplicitNavigation(cleaned);
             }
@@ -418,7 +420,7 @@ public sealed partial class MainWindow
         // ou tab-under. Navigation annulée SILENCIEUSEMENT : l'utilisateur
         // reste sur sa page. Jamais pour une adresse demandée via l'UI.
         var adVerdict = ClassifyNavigationForAdShield(
-            TabForView(sender)?.Id, sender.Source?.ToString(), args.Uri);
+            startingTab?.Id, sender.Source?.ToString(), args.Uri, args.IsUserInitiated);
         if (adVerdict != NavigationVerdict.Allow)
         {
             args.Cancel = true;
@@ -950,15 +952,15 @@ public sealed partial class MainWindow
     }
 
     // Palette de couleurs de groupe : reprend les teintes de l'identité visuelle
-    // (orange/teal de l'accueil) complétées par des teintes distinguables.
+    // (lumiere/web) complétées par des teintes distinguables.
     private static readonly Windows.UI.Color[] TabGroupPalette =
     {
-        UiColor(225, 120, 24),
-        UiColor(102, 209, 190),
+        UiColor(255, 185, 53),
+        UiColor(67, 219, 209),
         UiColor(94, 156, 235),
         UiColor(219, 112, 147),
         UiColor(154, 140, 226),
-        UiColor(226, 187, 60)
+        UiColor(255, 127, 53)
     };
 
     private static Windows.UI.Color TabGroupColor(TabGroup group) =>
@@ -1716,9 +1718,9 @@ public sealed partial class MainWindow
         main{width:min(820px,100%);display:flex;flex-direction:column;align-items:center;gap:28px;position:relative}
         .brand{display:flex;flex-direction:column;align-items:center;gap:13px}
         .mark{display:flex;align-items:center;gap:14px}
-        .logo-icon{width:56px;height:56px;border-radius:12px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 16px 26px rgba(0,0,0,.28))}
+        .logo-icon{width:66px;height:66px;border-radius:15px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 18px 30px rgba(0,0,0,.32)) drop-shadow(0 0 22px rgba(255,185,53,.18))}
         .logo-name{font-size:42px;font-weight:650;line-height:1;letter-spacing:0;color:{{(_uiSettings.AccessibilityHighContrast ? "#fff" : NewTabLogoTextColorCss())}}}
-        .accent-line{width:132px;height:2px;border-radius:999px;background:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : NewTabAccentLineCss())}};opacity:.95}
+        .accent-line{width:168px;height:3px;border-radius:999px;background:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : NewTabAccentLineCss())}};opacity:.98;box-shadow:0 0 18px {{NewTabAccentGlowCss()}}}
         .search{width:min(660px,100%);height:{{(_uiSettings.AccessibilityLargeText ? "54px" : "50px")}};border-radius:25px;background:{{(_uiSettings.AccessibilityHighContrast ? "#fff" : "#fbf4e8")}};display:flex;align-items:center;gap:12px;padding:0 20px;border:{{(_uiSettings.AccessibilityVisibleFocus ? "2px" : "1px")}} solid {{(_uiSettings.AccessibilityHighContrast ? "#fff" : "rgba(255,248,235,.24)")}};box-shadow:0 14px 38px rgba(0,0,0,.24)}
         .search:focus-within{border-color:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : NewTabFocusBorderCss())}};box-shadow:0 14px 38px rgba(0,0,0,.27),0 0 0 3px {{NewTabFocusRingCss()}}}
         .search svg{width:18px;height:18px;color:#796f63;flex-shrink:0}
@@ -1855,7 +1857,7 @@ public sealed partial class MainWindow
             "ocean" => ("#5cbcff", "#89e2d6", "#14242b", "#f2fbff", "#f3fbff", "#f3fbff"),
             "forest" => ("#80cc7c", "#56d0c2", "#1a241c", "#f4fbef", "#f5faef", "#f5faef"),
             "ember" => ("#eb7e4a", "#f6ce68", "#29201c", "#fff6ee", "#fff5eb", "#fff5eb"),
-            _ => ("#48d2c6", "#b4da7a", "#1c2423", "#f3fbf9", "#f2fffb", "#f2fffb")
+            _ => ("#ffb935", "#43dbd1", "#0d1822", "#f8fbf8", "#fff8ea", "#fff8ea")
         };
     }
 
@@ -1880,8 +1882,8 @@ public sealed partial class MainWindow
         return NewTabStyleClass() switch
         {
             "calm" => $"linear-gradient(180deg,{palette.Ink} 0%,#171a1a 100%)",
-            "minimal" => $"linear-gradient(180deg,{palette.Ink} 0%,#151818 100%)",
-            _ => $"radial-gradient(circle at 22% 18%,{palette.Accent}33,transparent 30%),radial-gradient(circle at 78% 14%,{palette.Accent2}24,transparent 28%),linear-gradient(180deg,{palette.Ink} 0%,#151818 100%)"
+            "minimal" => $"linear-gradient(180deg,{palette.Ink} 0%,#101820 100%)",
+            _ => $"radial-gradient(circle at 48% 26%,{palette.Accent}33,transparent 23%),radial-gradient(circle at 72% 18%,{palette.Accent2}24,transparent 26%),radial-gradient(circle at 18% 72%,#ff7f3520,transparent 28%),linear-gradient(180deg,{palette.Ink} 0%,#101820 100%)"
         };
     }
 
@@ -1890,6 +1892,8 @@ public sealed partial class MainWindow
         var palette = NewTabPalette();
         return $"linear-gradient(90deg,{palette.Accent},{palette.Accent2})";
     }
+
+    private string NewTabAccentGlowCss() => NewTabPalette().Accent + "55";
 
     private string NewTabFocusBorderCss() => NewTabPalette().Accent;
 
