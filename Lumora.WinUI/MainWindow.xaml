@@ -7,35 +7,35 @@
     mc:Ignorable="d"
     Title="Lumora">
 
-    <Grid x:Name="RootShell" Background="#FF1F211F">
+    <Grid x:Name="RootShell" Background="#FF0D1822">
         <Grid.Resources>
-            <SolidColorBrush x:Key="NovaAppBackgroundBrush" Color="#FF1F211F" />
-            <SolidColorBrush x:Key="NovaChromeSurfaceBrush" Color="#FF242521" />
-            <SolidColorBrush x:Key="NovaChromeSurfaceAltBrush" Color="#FF2C2D28" />
-            <SolidColorBrush x:Key="NovaChromeSurfaceRaisedBrush" Color="#FF33342D" />
-            <SolidColorBrush x:Key="NovaChromeStrokeBrush" Color="#FF45453C" />
-            <SolidColorBrush x:Key="NovaChromeStrokeSoftBrush" Color="#FF30322D" />
-            <SolidColorBrush x:Key="NovaAddressBackgroundBrush" Color="#FF36372F" />
-            <SolidColorBrush x:Key="NovaAddressBorderBrush" Color="#FF575648" />
-            <SolidColorBrush x:Key="NovaAddressForegroundBrush" Color="#FFFFF8ED" />
-            <SolidColorBrush x:Key="NovaTextMutedBrush" Color="#FFB5AEA2" />
-            <SolidColorBrush x:Key="NovaAccentBrush" Color="#FFE17818" />
-            <SolidColorBrush x:Key="NovaAccentSoftBrush" Color="#33E17818" />
-            <SolidColorBrush x:Key="NovaCoolAccentBrush" Color="#FF66D1BE" />
-            <SolidColorBrush x:Key="NovaCoolAccentSoftBrush" Color="#2466D1BE" />
-            <SolidColorBrush x:Key="NovaFocusBrush" Color="#FFFFD95A" />
-            <SolidColorBrush x:Key="NovaFocusInnerBrush" Color="#FF1F211F" />
-            <SolidColorBrush x:Key="NovaInfoSurfaceBrush" Color="#FF2F302A" />
-            <SolidColorBrush x:Key="NovaPanelBackgroundBrush" Color="#FF22231F" />
+            <SolidColorBrush x:Key="NovaAppBackgroundBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="NovaChromeSurfaceBrush" Color="#FF14202A" />
+            <SolidColorBrush x:Key="NovaChromeSurfaceAltBrush" Color="#FF1A2731" />
+            <SolidColorBrush x:Key="NovaChromeSurfaceRaisedBrush" Color="#FF22313A" />
+            <SolidColorBrush x:Key="NovaChromeStrokeBrush" Color="#FF40545B" />
+            <SolidColorBrush x:Key="NovaChromeStrokeSoftBrush" Color="#FF24343C" />
+            <SolidColorBrush x:Key="NovaAddressBackgroundBrush" Color="#FF172834" />
+            <SolidColorBrush x:Key="NovaAddressBorderBrush" Color="#FF46616A" />
+            <SolidColorBrush x:Key="NovaAddressForegroundBrush" Color="#FFFFF8EA" />
+            <SolidColorBrush x:Key="NovaTextMutedBrush" Color="#FFC3B9A5" />
+            <SolidColorBrush x:Key="NovaAccentBrush" Color="#FFFFB935" />
+            <SolidColorBrush x:Key="NovaAccentSoftBrush" Color="#33FFB935" />
+            <SolidColorBrush x:Key="NovaCoolAccentBrush" Color="#FF43DBD1" />
+            <SolidColorBrush x:Key="NovaCoolAccentSoftBrush" Color="#2443DBD1" />
+            <SolidColorBrush x:Key="NovaFocusBrush" Color="#FFFFE668" />
+            <SolidColorBrush x:Key="NovaFocusInnerBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="NovaInfoSurfaceBrush" Color="#FF1D2E38" />
+            <SolidColorBrush x:Key="NovaPanelBackgroundBrush" Color="#FF101D26" />
             <LinearGradientBrush x:Key="NovaChromeGradientBrush" StartPoint="0,0" EndPoint="1,0">
-                <GradientStop Color="#FF25261F" Offset="0" />
-                <GradientStop Color="#FF2E2D26" Offset="0.62" />
-                <GradientStop Color="#FF24322F" Offset="1" />
+                <GradientStop Color="#FF121D27" Offset="0" />
+                <GradientStop Color="#FF182936" Offset="0.55" />
+                <GradientStop Color="#FF123731" Offset="1" />
             </LinearGradientBrush>
             <LinearGradientBrush x:Key="NovaIdentityMarkBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FFF08A24" Offset="0" />
-                <GradientStop Color="#FFE17818" Offset="0.58" />
-                <GradientStop Color="#FF66D1BE" Offset="1" />
+                <GradientStop Color="#FF43DBD1" Offset="0" />
+                <GradientStop Color="#FFFFB935" Offset="0.56" />
+                <GradientStop Color="#FFFF7F35" Offset="1" />
             </LinearGradientBrush>
             <Style x:Key="NovaChromeIconButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="32" />
@@ -163,13 +163,10 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Border Width="20" Height="20" CornerRadius="6" Background="{ThemeResource AccentFillColorDefaultBrush}">
-                    <TextBlock Text="L"
-                               Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                <Border Width="24" Height="24" CornerRadius="7">
+                    <Image Source="ms-appx:///Assets/LumoraApp.png"
+                           Width="24" Height="24"
+                           Stretch="Uniform" />
                 </Border>
                 <TextBlock Text="Lumora" FontWeight="SemiBold" VerticalAlignment="Center" />
             </StackPanel>
@@ -2063,9 +2060,31 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Spacing="3">
-                    <TextBlock Text="Lumora" FontSize="28" FontWeight="SemiBold" />
-                    <TextBlock x:Name="AboutVersionText" Opacity="0.72" />
+                <StackPanel Grid.Row="0" MaxWidth="1040" HorizontalAlignment="Center" Spacing="12">
+                    <Border Width="86" Height="86" CornerRadius="20"
+                            HorizontalAlignment="Center">
+                        <Image Source="ms-appx:///Assets/LumoraApp.png"
+                               Width="86" Height="86"
+                               Stretch="Uniform" />
+                    </Border>
+                    <TextBlock Text="Lumora" FontSize="34" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Lumière locale, navigation web claire"
+                               Opacity="0.74"
+                               HorizontalAlignment="Center" />
+                    <Border Padding="14,8"
+                            CornerRadius="8"
+                            Background="{StaticResource NovaCoolAccentSoftBrush}"
+                            BorderBrush="{StaticResource NovaCoolAccentBrush}"
+                            BorderThickness="1"
+                            HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <SymbolIcon Symbol="Accept" Foreground="{StaticResource NovaCoolAccentBrush}" />
+                            <TextBlock Text="Version de développement" FontWeight="SemiBold" />
+                            <TextBlock Text="•" Opacity="0.45" />
+                            <TextBlock x:Name="AboutVersionText" Opacity="0.82" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <Grid Grid.Row="1"
@@ -3358,10 +3377,9 @@
                         <!-- Logo -->
                         <StackPanel Orientation="Horizontal" Spacing="12"
                                     HorizontalAlignment="Center" Margin="0,0,0,28">
-                            <Border Width="40" Height="40" CornerRadius="10"
-                                    Background="{StaticResource NovaIdentityMarkBrush}">
+                            <Border Width="40" Height="40" CornerRadius="10">
                                 <Image Source="ms-appx:///Assets/LumoraApp.png"
-                                       Width="32" Height="32"
+                                       Width="40" Height="40"
                                        Stretch="Uniform" />
                             </Border>
                             <TextBlock Text="Lumora" FontSize="22" FontWeight="SemiBold"
@@ -3590,10 +3608,9 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <!-- Logo -->
                         <StackPanel Orientation="Horizontal" Spacing="12"
                                     HorizontalAlignment="Center" Margin="0,0,0,24">
-                            <Border Width="36" Height="36" CornerRadius="9"
-                                    Background="{StaticResource NovaIdentityMarkBrush}">
+                            <Border Width="36" Height="36" CornerRadius="9">
                                 <Image Source="ms-appx:///Assets/LumoraApp.png"
-                                       Width="29" Height="29"
+                                       Width="36" Height="36"
                                        Stretch="Uniform" />
                             </Border>
                             <TextBlock Text="Lumora" FontSize="20" FontWeight="SemiBold"

@@ -15,7 +15,7 @@
         sort du domaine de l'application (confinement doux, jamais de blocage dur pour
         ne pas casser les redirections de connexion type Google/Microsoft).
     -->
-    <Grid x:Name="RootGrid" Background="#FF1F211F">
+    <Grid x:Name="RootGrid" Background="#FF0D1822">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -27,8 +27,8 @@
                 Padding="12,6">
             <Border.Resources>
                 <LinearGradientBrush x:Key="LumoraAppWindowIdentityBrush" StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#FFE17818" Offset="0" />
-                    <GradientStop Color="#FF66D1BE" Offset="1" />
+                    <GradientStop Color="#FFFFB935" Offset="0" />
+                    <GradientStop Color="#FF43DBD1" Offset="1" />
                 </LinearGradientBrush>
             </Border.Resources>
             <Grid ColumnSpacing="10">

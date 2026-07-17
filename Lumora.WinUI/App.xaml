@@ -7,25 +7,25 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
-            <Color x:Key="SystemAccentColor">#FF48D2C6</Color>
-            <Color x:Key="SystemAccentColorLight1">#FF6DE8DE</Color>
-            <Color x:Key="SystemAccentColorLight2">#FF9EF3EC</Color>
-            <Color x:Key="SystemAccentColorLight3">#FFCFFAF6</Color>
-            <Color x:Key="SystemAccentColorDark1">#FF20AFA5</Color>
-            <Color x:Key="SystemAccentColorDark2">#FF0B817A</Color>
-            <Color x:Key="SystemAccentColorDark3">#FF075B56</Color>
-            <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FF48D2C6" />
-            <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#DD48D2C6" />
-            <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#B848D2C6" />
-            <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#5548D2C6" />
-            <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#FFFFFFFF" />
-            <SolidColorBrush x:Key="NovaFocusVisualPrimaryBrush" Color="#FFFFD95A" />
-            <SolidColorBrush x:Key="NovaFocusVisualSecondaryBrush" Color="#FF1F211F" />
-            <SolidColorBrush x:Key="NovaControlForegroundBrush" Color="#FFFFF8ED" />
-            <SolidColorBrush x:Key="NovaControlMutedForegroundBrush" Color="#FFB5AEA2" />
-            <SolidColorBrush x:Key="NovaControlSurfaceBrush" Color="#FF2C2D28" />
-            <SolidColorBrush x:Key="NovaControlSurfaceRaisedBrush" Color="#FF33342D" />
-            <SolidColorBrush x:Key="NovaControlStrokeBrush" Color="#FF575648" />
+            <Color x:Key="SystemAccentColor">#FFFFB935</Color>
+            <Color x:Key="SystemAccentColorLight1">#FFFFCA66</Color>
+            <Color x:Key="SystemAccentColorLight2">#FFFFDEA0</Color>
+            <Color x:Key="SystemAccentColorLight3">#FFFFF1CC</Color>
+            <Color x:Key="SystemAccentColorDark1">#FFE49B17</Color>
+            <Color x:Key="SystemAccentColorDark2">#FFB8750B</Color>
+            <Color x:Key="SystemAccentColorDark3">#FF7E4E08</Color>
+            <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FFFFB935" />
+            <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#DDFFB935" />
+            <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#B8FFB935" />
+            <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#55FFB935" />
+            <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="NovaFocusVisualPrimaryBrush" Color="#FFFFE668" />
+            <SolidColorBrush x:Key="NovaFocusVisualSecondaryBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="NovaControlForegroundBrush" Color="#FFFFF8EA" />
+            <SolidColorBrush x:Key="NovaControlMutedForegroundBrush" Color="#FFC3B9A5" />
+            <SolidColorBrush x:Key="NovaControlSurfaceBrush" Color="#FF1A2731" />
+            <SolidColorBrush x:Key="NovaControlSurfaceRaisedBrush" Color="#FF22313A" />
+            <SolidColorBrush x:Key="NovaControlStrokeBrush" Color="#FF40545B" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

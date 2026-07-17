@@ -766,23 +766,23 @@ public sealed partial class MainWindow
 
         RootShell.Background = translucent
             ? new SolidColorBrush(Microsoft.UI.Colors.Transparent)
-            : new SolidColorBrush(highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(34, 33, 31) : UiColor(250, 248, 245)));
-        SetBrush("NovaChromeSurfaceBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(38, 37, 34, translucent ? (byte)226 : (byte)255) : UiColor(255, 255, 255, translucent ? (byte)226 : (byte)255)));
-        SetBrush("NovaChromeSurfaceAltBrush", highContrast ? UiColor(18, 18, 18) : (isDark ? UiColor(45, 43, 40, translucent ? (byte)232 : (byte)255) : UiColor(242, 239, 234, translucent ? (byte)232 : (byte)255)));
-        SetBrush("NovaChromeStrokeBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(59, 56, 52) : UiColor(214, 209, 200)));
-        SetBrush("NovaChromeStrokeSoftBrush", highContrast ? UiColor(190, 190, 190) : (isDark ? UiColor(48, 46, 42) : UiColor(228, 224, 217)));
-        SetBrush("NovaAddressBackgroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(52, 49, 45, translucent ? (byte)236 : (byte)255) : UiColor(255, 255, 255, translucent ? (byte)236 : (byte)255)));
-        SetBrush("NovaAddressBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(81, 76, 69) : UiColor(198, 192, 182)));
-        SetBrush("NovaAddressForegroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(245, 241, 234) : UiColor(31, 29, 26)));
-        SetBrush("NovaTextMutedBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(169, 163, 154) : UiColor(120, 113, 102)));
+            : new SolidColorBrush(highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(13, 24, 34) : UiColor(250, 248, 244)));
+        SetBrush("NovaChromeSurfaceBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(20, 32, 42, translucent ? (byte)226 : (byte)255) : UiColor(255, 255, 255, translucent ? (byte)226 : (byte)255)));
+        SetBrush("NovaChromeSurfaceAltBrush", highContrast ? UiColor(18, 18, 18) : (isDark ? UiColor(26, 39, 49, translucent ? (byte)232 : (byte)255) : UiColor(242, 239, 234, translucent ? (byte)232 : (byte)255)));
+        SetBrush("NovaChromeStrokeBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(64, 84, 91) : UiColor(214, 209, 200)));
+        SetBrush("NovaChromeStrokeSoftBrush", highContrast ? UiColor(190, 190, 190) : (isDark ? UiColor(36, 52, 60) : UiColor(228, 224, 217)));
+        SetBrush("NovaAddressBackgroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(23, 40, 52, translucent ? (byte)236 : (byte)255) : UiColor(255, 255, 255, translucent ? (byte)236 : (byte)255)));
+        SetBrush("NovaAddressBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(70, 97, 106) : UiColor(198, 192, 182)));
+        SetBrush("NovaAddressForegroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(255, 248, 234) : UiColor(31, 29, 26)));
+        SetBrush("NovaTextMutedBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(195, 185, 165) : UiColor(120, 113, 102)));
         SetBrush("NovaAccentBrush", palette.Accent);
         SetBrush("NovaAccentSoftBrush", palette.AccentSoft);
         SetBrush("NovaCoolAccentBrush", palette.CoolAccent);
         SetBrush("NovaCoolAccentSoftBrush", palette.CoolAccentSoft);
         SetBrush("NovaFocusBrush", palette.Focus);
-        SetBrush("NovaFocusInnerBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(31, 33, 31) : UiColor(255, 255, 255)));
-        SetBrush("NovaInfoSurfaceBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(47, 48, 42, translucent ? (byte)238 : (byte)255) : UiColor(247, 245, 240, translucent ? (byte)238 : (byte)255)));
-        SetBrush("NovaPanelBackgroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(34, 35, 31) : UiColor(250, 248, 245)));
+        SetBrush("NovaFocusInnerBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(13, 24, 34) : UiColor(255, 255, 255)));
+        SetBrush("NovaInfoSurfaceBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(29, 46, 56, translucent ? (byte)238 : (byte)255) : UiColor(247, 245, 240, translucent ? (byte)238 : (byte)255)));
+        SetBrush("NovaPanelBackgroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(16, 29, 38) : UiColor(250, 248, 245)));
 
         var mainFontSize = largeText ? 16 : 14;
         var smallFontSize = largeText ? 14 : 12;
@@ -872,8 +872,8 @@ public sealed partial class MainWindow
                 ? (UiColor(235, 126, 74), UiColor(235, 126, 74, 48), UiColor(246, 206, 104), UiColor(246, 206, 104, 34), UiColor(255, 181, 108))
                 : (UiColor(181, 73, 40), UiColor(181, 73, 40, 38), UiColor(166, 126, 0), UiColor(166, 126, 0, 28), UiColor(160, 59, 30)),
             _ => isDark
-                ? (UiColor(72, 210, 198), UiColor(72, 210, 198, 48), UiColor(180, 218, 122), UiColor(180, 218, 122, 34), UiColor(109, 232, 222))
-                : (UiColor(0, 132, 128), UiColor(0, 132, 128, 38), UiColor(92, 142, 41), UiColor(92, 142, 41, 28), UiColor(0, 113, 117))
+                ? (UiColor(255, 185, 53), UiColor(255, 185, 53, 48), UiColor(67, 219, 209), UiColor(67, 219, 209, 34), UiColor(255, 230, 104))
+                : (UiColor(176, 111, 0), UiColor(176, 111, 0, 38), UiColor(0, 128, 122), UiColor(0, 128, 122, 28), UiColor(149, 92, 0))
         };
     }
 

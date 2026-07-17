@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.78.3.2-dev";
+    private const string Version = "0.79.0-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -600,17 +600,17 @@ public sealed partial class MainWindow : Window
         var translucent = IsTranslucentChromeEnabled();
         var titleBarBackgroundAlpha = translucent ? (byte)226 : (byte)255;
         var titleBar = _appWindow.TitleBar;
-        titleBar.BackgroundColor = UiColor(36, 37, 33, titleBarBackgroundAlpha);
-        titleBar.InactiveBackgroundColor = UiColor(36, 37, 33, titleBarBackgroundAlpha);
-        titleBar.ForegroundColor = UiColor(242, 238, 231);
-        titleBar.InactiveForegroundColor = UiColor(160, 154, 146);
-        titleBar.ButtonBackgroundColor = UiColor(36, 37, 33, titleBarBackgroundAlpha);
-        titleBar.ButtonInactiveBackgroundColor = UiColor(36, 37, 33, titleBarBackgroundAlpha);
-        titleBar.ButtonForegroundColor = UiColor(242, 238, 231);
-        titleBar.ButtonInactiveForegroundColor = UiColor(160, 154, 146);
-        titleBar.ButtonHoverBackgroundColor = UiColor(50, 48, 44, translucent ? (byte)238 : (byte)255);
+        titleBar.BackgroundColor = UiColor(20, 32, 42, titleBarBackgroundAlpha);
+        titleBar.InactiveBackgroundColor = UiColor(20, 32, 42, titleBarBackgroundAlpha);
+        titleBar.ForegroundColor = UiColor(255, 248, 234);
+        titleBar.InactiveForegroundColor = UiColor(195, 185, 165);
+        titleBar.ButtonBackgroundColor = UiColor(20, 32, 42, titleBarBackgroundAlpha);
+        titleBar.ButtonInactiveBackgroundColor = UiColor(20, 32, 42, titleBarBackgroundAlpha);
+        titleBar.ButtonForegroundColor = UiColor(255, 248, 234);
+        titleBar.ButtonInactiveForegroundColor = UiColor(195, 185, 165);
+        titleBar.ButtonHoverBackgroundColor = UiColor(34, 49, 58, translucent ? (byte)238 : (byte)255);
         titleBar.ButtonHoverForegroundColor = UiColor(255, 255, 255);
-        titleBar.ButtonPressedBackgroundColor = UiColor(68, 63, 56, translucent ? (byte)244 : (byte)255);
+        titleBar.ButtonPressedBackgroundColor = UiColor(50, 69, 76, translucent ? (byte)244 : (byte)255);
         titleBar.ButtonPressedForegroundColor = UiColor(255, 255, 255);
     }
 
@@ -620,9 +620,9 @@ public sealed partial class MainWindow : Window
     private void ApplyNovaControlAccessibility(Control control, string? automationName = null)
     {
         control.FocusVisualPrimaryBrush = RootShell.Resources["NovaFocusBrush"] as Brush
-            ?? new SolidColorBrush(UiColor(255, 217, 90));
+            ?? new SolidColorBrush(UiColor(255, 230, 104));
         control.FocusVisualSecondaryBrush = RootShell.Resources["NovaFocusInnerBrush"] as Brush
-            ?? new SolidColorBrush(UiColor(31, 33, 31));
+            ?? new SolidColorBrush(UiColor(13, 24, 34));
         control.UseSystemFocusVisuals = true;
 
         if (!string.IsNullOrWhiteSpace(automationName))

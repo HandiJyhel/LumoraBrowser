@@ -191,12 +191,12 @@ public sealed partial class LumoraPrivateWindow : Window
         <!doctype html><html lang="fr"><head><meta charset="utf-8">
         <title>Navigation privée</title>
         <style>
-        body{font-family:'Segoe UI',system-ui,sans-serif;background:#1e1830;color:#e8e2f5;
+        body{font-family:'Segoe UI',system-ui,sans-serif;background:radial-gradient(circle at 50% 28%,#ffb93533,transparent 25%),linear-gradient(180deg,#0d1822,#101820);color:#fff8ea;
              display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
         .card{max-width:560px;padding:0 32px;text-align:center}
         h1{font-size:26px;font-weight:600;margin:0 0 14px}
         p{opacity:.78;line-height:1.55;margin:0 0 10px}
-        .badge{font-size:40px;margin-bottom:18px}
+        .badge{font-size:40px;margin-bottom:18px;color:#43dbd1}
         </style></head><body><div class="card">
         <div class="badge">&#128373;&#65039;</div>
         <h1>Navigation privée</h1>
