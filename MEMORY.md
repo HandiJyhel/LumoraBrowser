@@ -5285,3 +5285,865 @@ SHA256 `3ab1ddffaecace55d73fa3a996e63a2e4879c9693ac8c3ba3b5036752d807429`.
 Details : `logs/2026-07-15-mode-lecture-annotations-0-78-3-2.md`.
 
 **Version :** `0.78.3.2-dev`.
+
+---
+
+## 2026-07-15 - Navigation depuis les recherches et anti-parasite (0.78.3.3-dev)
+
+Retour utilisateur critique : la recherche dans la barre d'adresse fonctionnait,
+mais cliquer un resultat (ex. recherche Tintin -> Wikipedia) finissait en
+« connexion echouee ». Le probleme etait general : les resultats de recherche
+etaient confondus avec des redirections parasites.
+
+Cause : le durcissement anti-parasite de `0.78.3.1-dev` bloquait les navigations
+cross-domaine depuis une page sous pression publicitaire. Trop large : un clic
+utilisateur normal depuis une page de resultats est une navigation legitime, pas
+un detournement.
+
+Correction : `NavigationHijackPolicy` distingue maintenant les clics utilisateur
+des redirections automatiques. Les domaines publicitaires connus restent bloques,
+les tab-under apres popup restent bloques, mais un clic utilisateur cross-domaine
+normal passe. `NavigationHealthTracker` conserve aussi le geste utilisateur sur
+toute la chaine de redirection du document principal, pour couvrir les moteurs
+de recherche qui passent par une URL intermediaire (`google.com/url` -> resultat
+final). Le nettoyage d'URL conserve cette legitimite sur l'URL nettoyee.
+
+**Verification** : `dotnet test` 441/441 tests verts ; `build-winui.cmd` OK ;
+publish Release autonome OK ; installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.3-dev-win-x64.exe`, SHA256
+`a2d19aa363540ec83c6e8a37053675ee7c3a08fdc31f33c2f6372344cb07dcf3`.
+Details : `logs/2026-07-15-navigation-recherche-anti-parasite-0-78-3-3.md`.
+
+**Version :** `0.78.3.3-dev`.
+
+---
+
+## 2026-07-15 - Modules Lumora, menus et A propos (0.78.3.4-dev)
+
+Reprise UX apres clarification utilisateur : les fonctions comme mode lecture,
+telechargement video, lecture vocale, recherche assistee ou applications web ne
+doivent pas etre seulement rangees dans des sous-menus. Elles doivent etre
+considerees comme des modules Lumora, proches du modele mental des extensions
+des navigateurs du marche, mais locales et integrees.
+
+- Ajout d'un bouton accentue `Modules Lumora` dans la barre principale et dans
+  la barre plein ecran.
+- Ajout d'un panneau `Modules Lumora` avec tuiles : mode lecture, notes/pages
+  annotees, lecture a voix haute, video, applications web, recherche assistee,
+  traduction locale, dictee et centre du site actuel.
+- Ajout d'un flyout compact sur le bouton Modules pour ouvrir rapidement le
+  panneau, `Ctrl+K`, le mode lecture, la lecture vocale et les modules media.
+- Reorganisation des menus `...` autour de `Navigation`, `Bibliotheque`,
+  `Securite et donnees`, puis `Modules Lumora`, `Parametres` et `A propos`.
+- La palette de commandes classe maintenant les outils concernes dans
+  `Modules Lumora`.
+- La page `A propos` presente mieux l'identite produit : Lumora local-first,
+  modules integres, confidentialite locale, authenticite/build, profil local et
+  details techniques.
+- Les modules dont les flyouts dependaient d'un bouton de barre potentiellement
+  masque peuvent aussi s'ouvrir depuis le hub Modules.
+
+**Verification** : `cmd /c .\build-winui.cmd` OK (0 avert./0 err.) ;
+`dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` 441/441 tests verts ;
+publish Release autonome OK via artefact propre ; installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4-dev-win-x64.exe`, SHA256
+`53378b29b0a7e25af9d388b8800498c7d8d99803f94cb88a5be9bab198500e52`.
+Details : `logs/2026-07-15-modules-menus-about-0-78-3-4.md`.
+
+**Version :** `0.78.3.4-dev`.
+
+---
+
+## 2026-07-15 - Barre modules type extensions sans redondance (0.78.3.4.1-dev)
+
+Micro-correction apres retour utilisateur : la premiere passe `0.78.3.4-dev`
+allait dans le bon sens avec les modules, mais elle dupliquait trop les acces.
+Direction finale retenue : comme dans un navigateur classique, le menu `...`
+reste le seul menu general, tandis que les modules Lumora vivent dans une petite
+barre separee proche d'une barre d'extensions.
+
+- Retrait des entrees modules du menu `...` : il garde uniquement Navigation,
+  Bibliotheque, Securite/donnees, Parametres et A propos.
+- Ajout d'une capsule `ModulesQuickBar` avant le menu `...` avec quelques
+  modules epingles : mode lecture, notes/annotations, lecture a voix haute,
+  telechargement video et recherche assistee.
+- Ajout d'un bouton puzzle `Tous les modules Lumora` : il regroupe le reste
+  des outils (video detachee, traduction locale, applications web, dictee),
+  l'acces au panneau complet des modules et les actions rapides `Ctrl+K`.
+- Conservation du panneau `Modules Lumora` comme espace de gestion complet,
+  accessible depuis le puzzle, sans devenir une entree de menu principale.
+- Le script d'installeur accepte les versions produit a cinq segments comme
+  `0.78.3.4.1-dev` en donnant une version technique compatible au projet Setup.
+
+**Verification** : `cmd /c .\build-winui.cmd` OK (0 avert./0 err.) ;
+`dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` 441/441 tests verts ;
+publish Release autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.1-dev-win-x64-clean-20260715-231946`,
+SHA256 exécutable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.1-dev-win-x64.exe`, SHA256
+`cdac8cb8564b0759f1bb11ade5f7517d1a1e5542ca5053043331c9987ee0d7d2`.
+Details : `logs/2026-07-15-barre-modules-extensions-0-78-3-4-1.md`.
+
+**Version :** `0.78.3.4.1-dev`.
+
+---
+
+## 2026-07-15 - Extensions Lumora epinglables (0.78.3.4.2-dev)
+
+Retour utilisateur avec captures : la barre modules `0.78.3.4.1-dev` etait
+fonctionnelle mais pas assez presentable. Elle ressemblait encore a une capsule
+de boutons et a une liste trop grossiere, alors que la reference attendue etait
+le modele Chrome : icones epinglees, puzzle, puis menu `...` separe.
+
+- La barre modules a ete refaite sans grosse capsule : icones libres avant le
+  puzzle, puis le menu `...` reste le seul menu general.
+- Le flyout du puzzle s'appelle `Extensions Lumora` et presente chaque module
+  comme une ligne compacte : icone, nom, description courte, bouton
+  d'epinglage/desepinglage et acces gestion.
+- L'epinglage est persistant dans `UiSettings.PinnedModuleIds` : les modules
+  epingles reviennent au demarrage.
+- Le panneau `Modules Lumora` devient une page de gestion plus proche d'un
+  gestionnaire d'extensions : liste structuree, action principale et
+  interrupteur d'epinglage pour chaque module.
+- Les modules epinglables couvrent : mode lecture, notes, lecture a voix haute,
+  video detachee, telechargement video, recherche assistee, traduction locale,
+  applications web et dictee.
+- Correction finale d'espacement : les modules epingles, le bouton puzzle et le
+  menu `...` sont maintenant separes par une vraie colonne et un separateur fin,
+  pour eviter l'effet "tout colle" signale sur capture.
+- Correction du script d'installeur : il ne nettoie plus tous les anciens exe
+  d'installation, seulement celui de la version courante, afin d'eviter un
+  blocage si un ancien installeur est verrouille.
+
+**Verification** : `cmd /c .\build-winui.cmd` OK (0 avert./0 err.) ;
+`dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` 441/441 tests verts ;
+publish Release autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.2-dev-win-x64-clean-20260715-235813`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+SHA256 DLL applicative `a82b33bf475726a2dbcd1478973af14549224a459ffe93a297da6d557761b231`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.2-dev-win-x64.exe`, SHA256
+`f345f3344c5fae564217cc2224faef24344874b58a6eff735792588df548afc3`.
+Details : `logs/2026-07-15-extensions-modules-epinglables-0-78-3-4-2.md`.
+
+**Version :** `0.78.3.4.2-dev`.
+
+---
+
+## 2026-07-16 - Bouclier avec compteurs et correction orthographique (0.78.3.4.3-dev)
+
+Micro-mise à jour demandée : corriger les libellés visibles qui manquaient de
+finition orthographique, puis rendre le bouclier de confidentialité plus utile
+sans durcir les règles de blocage.
+
+- Version passée à `0.78.3.4.3-dev`.
+- Correction de nombreux libellés visibles : menus, panneau confidentialité,
+  modules, messages de statut et textes du bouclier.
+- Ajout d'un badge numérique sur le bouclier pour afficher le nombre de
+  blocages sur la page visible.
+- `PrivacyEngine` expose maintenant des compteurs structurés : total, pubs,
+  trackers et autres blocages, pour la page courante, la session globale et le
+  site courant.
+- Les détails récents du bouclier indiquent ce qui a été bloqué : type
+  (`Pub`, `Tracker`, `Protection`), domaine, chemin sans paramètres sensibles
+  et raison lisible.
+- Les statistiques par site restent en mémoire, bornées, et ne déclenchent pas
+  de recalcul lourd.
+- Aucune nouvelle règle agressive de blocage n'a été ajoutée : la mise à jour
+  améliore l'explication et le comptage, pas la sévérité du filtrage.
+
+**Vérification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+442/442 tests verts ; `cmd /c .\build-winui.cmd` OK (0 avert./0 err.) ;
+publish Release autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.3-dev-win-x64-clean-20260716-002359`,
+SHA256 exécutable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`,
+SHA256 DLL applicative `b76179a975403b229323be9f2626b5c7a8ba0bf3cbd20638e4e3b8cba2627a70`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.3-dev-win-x64.exe`, SHA256
+`0c07227f227b099c4747a4877d5a0345d4a9fbca12bb7af52fb402ab11128106`.
+Details : `logs/2026-07-16-bouclier-compteurs-orthographe-0-78-3-4-3.md`.
+
+**Version :** `0.78.3.4.3-dev`.
+
+---
+
+## 2026-07-16 - Installeur connecté WebView2 (0.78.3.4.4-dev)
+
+Micro-mise à jour demandée après discussion sur le caractère local de Lumora :
+l'application et ses ressources utiles restent embarquées, mais l'installeur
+peut maintenant récupérer les composants système manquants au moment de
+l'installation.
+
+- Version passée à `0.78.3.4.4-dev`.
+- L'installeur propose une option cochée par défaut :
+  `Télécharger et installer WebView2 si le runtime manque`.
+- WebView2 est détecté via les clés registre EdgeUpdate.
+- Si le runtime manque, le setup télécharge le bootstrapper officiel Microsoft
+  puis refuse de le lancer si sa signature n'est pas Microsoft.
+- Le fichier `INSTALLATION.txt` généré par le setup indique l'état détecté de
+  WebView2 après installation.
+- Cette étape garde la logique produit voulue : Lumora reste local après
+  installation, même si l'installation peut être connectée pour récupérer un
+  runtime système absent.
+- Après retour utilisateur, l'interface de l'installeur a été agrandie et
+  réorganisée : titre plus propre, version visible, blocs `Dossier
+  d'installation`, `Contenu installé` et `Options`, textes corrigés et
+  explication explicite sur les modules inclus versus les données personnelles
+  non embarquées.
+- L'ancien dossier technique `artifacts\installer\staging-netfx`, issu d'un
+  ancien essai, est désormais supprimé pendant la génération de l'installeur.
+- Le script d'installeur est encodé en UTF-8 avec BOM pour que Windows
+  PowerShell génère correctement les accents dans l'interface et dans le fichier
+  `.VERIFICATION.txt`.
+
+**Vérification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+442/442 tests verts ; `cmd /c .\build-winui.cmd` OK (0 avert./0 err.) ;
+publish Release autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.4-dev-win-x64-clean-20260716-011304`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.4-dev-win-x64.exe`, SHA256
+`fc87e9364c72fc547ff440ea87a01a4da2b4c0e5807b0be97686bc6a25e15748`.
+Détails : `logs/2026-07-16-installeur-connecte-webview2-0-78-3-4-4.md`.
+
+**Version :** `0.78.3.4.4-dev`.
+
+---
+
+## 2026-07-16 - Installeur Lumora plus presentable (0.78.3.4.5-dev)
+
+Micro-mise a jour UX demandee : l'installateur fonctionnait, mais restait trop
+brut visuellement. Le setup WinForms genere par `scripts/build-installer.ps1`
+a ete rhabille sans changer de technologie ni le modele d'installation.
+
+- Version passee a `0.78.3.4.5-dev`.
+- Fenetre d'installation agrandie, entete Lumora plus identifiable avec logo,
+  version visible et badges (`Local-first`, modules inclus, WebView2 verifie).
+- Sections `Dossier d'installation`, `Contenu installe` et `Options`
+  reorganisees avec couleurs plus proches de Lumora.
+- Ajout d'une barre de progression raccordee aux etapes reelles :
+  detection/installation WebView2, preparation, extraction, copie, raccourcis et
+  enregistrement Windows.
+- Les garanties de `0.78.3.4.4-dev` sont conservees : aucun profil embarque,
+  aucun dossier de profil force, WebView2 seulement si absent et verification de
+  signature Microsoft.
+- Les valeurs par defaut de `build-clean-test-artifact.ps1` et
+  `build-installer.ps1` pointent maintenant vers la version courante.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+442/442 tests verts ; `cmd /c .\build-winui.cmd` OK apres relance autorisee
+hors sandbox (premiere tentative bloquee par `NU1301`) ; publish Release
+autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.5-dev-win-x64-clean-20260716-031121`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.5-dev-win-x64.exe`, SHA256
+`0626f2827a0522225631dad1ce8f58a50250f4d8e2aa430fa17c0ddd56380453`.
+Details : `logs/2026-07-16-installeur-ui-lumora-0-78-3-4-5.md`.
+
+**Version :** `0.78.3.4.5-dev`.
+
+---
+
+## 2026-07-16 - Installeur aligne sur la charte Lumora (0.78.3.4.6-dev)
+
+Reprise apres capture utilisateur : l'installateur `0.78.3.4.5-dev` etait
+moins brut qu'avant, mais pas encore assez Lumora. Le principal probleme visible
+etait la barre de titre Windows orange, puis des panneaux trop plats et une
+progression native blanche.
+
+- Version passee a `0.78.3.4.6-dev`.
+- L'installateur genere par `scripts/build-installer.ps1` utilise maintenant
+  une barre de titre personnalisee Lumora au lieu de la barre Windows.
+- Palette alignee sur le navigateur : fond charbon, surfaces chrome sombres,
+  texte creme, accent orange ponctuel et accent secondaire menthe/cyan.
+- Ajout de panneaux arrondis dessines dans le setup pour les sections.
+- Remplacement de la progression native par une barre Lumora dessinee maison,
+  remplie en degrade orange vers menthe.
+- Entete plus coherent : logo, titre, version, badges compacts et ligne
+  d'accent.
+- Textes de sections raccourcis pour plus de lisibilite.
+- La logique d'installation reste inchangee : WebView2 seulement si absent,
+  verification Microsoft, aucun profil embarque et aucun profil force.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+442/442 tests verts ; `cmd /c .\build-winui.cmd` OK apres relance autorisee
+hors sandbox (premiere tentative bloquee par `NU1301`) ; publish Release
+autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.6-dev-win-x64-clean-20260716-032429`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.6-dev-win-x64.exe`, SHA256
+`8e6f05a8845cdadeee636978865f8665d5f7a2ffdc925c0689aa72dd37e5ba85`.
+Details : `logs/2026-07-16-installeur-charte-lumora-0-78-3-4-6.md`.
+
+**Version :** `0.78.3.4.6-dev`.
+
+---
+
+## 2026-07-16 - Logo LumoraApp.png dans l'installateur (0.78.3.4.7-dev)
+
+Correction apres retour utilisateur : l'installateur aligne sur la charte
+Lumora utilisait encore une image issue de l'icone de l'executable de setup au
+lieu du logo PNG reel du navigateur visible sur le nouvel onglet.
+
+- Version passee a `0.78.3.4.7-dev`.
+- `scripts/build-installer.ps1` exige maintenant `Assets\LumoraApp.png` dans
+  l'artefact propre.
+- Le PNG est copie dans le projet temporaire de l'installateur et embarque comme
+  ressource `LumoraApp.png`.
+- `LoadInstallerLogo()` charge le PNG embarque via l'assembly de l'installateur.
+- `LumoraApp.ico` reste reserve a l'icone Windows de l'executable, tandis que le
+  visuel affiche dans l'interface de l'installateur vient du logo PNG du
+  navigateur.
+- Le resume de verification de l'installateur mentionne explicitement
+  `logo LumoraApp.png embarque`.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+442/442 tests verts ; `cmd /c .\build-winui.cmd` OK apres relance autorisee
+hors sandbox (premiere tentative bloquee par `NU1301`) ; publish Release
+autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.7-dev-win-x64-clean-20260716-033626`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.7-dev-win-x64.exe`, SHA256
+`b2a10e984db91d9907e854c97d39425b0f8640492509a93943e136459cab963a`.
+Details : `logs/2026-07-16-installeur-logo-lumora-0-78-3-4-7.md`.
+
+**Version :** `0.78.3.4.7-dev`.
+
+---
+
+## 2026-07-16 - Rendu logo et typographie de l'installateur (0.78.3.4.8-dev)
+
+Reprise qualitative apres retour utilisateur : meme avec le bon logo PNG, le
+rendu de l'installateur restait trop brut, avec un logo trop petit/etire par le
+controle standard et une hierarchie typographique insuffisamment soignee.
+
+- Version passee a `0.78.3.4.8-dev`.
+- Activation du DPI per-monitor dans le setup WinForms.
+- Ajout d'une resolution typographique qui privilegie `Segoe UI Variable` quand
+  elle est disponible, avec repli sur `Segoe UI`.
+- Reprise de l'en-tete : logo plus grand, titre Lumora plus net, baseline mieux
+  cale, version et badges repositionnes.
+- Remplacement du `PictureBox.StretchImage` par `LogoImageControl`.
+- `LogoImageControl` conserve le ratio du PNG `LumoraApp.png` et le dessine avec
+  `HighQualityBicubic`, anti-crenelage, composition haute qualite et
+  `PixelOffsetMode.HighQuality`.
+- Sections, progression, statut et boutons decales pour garder une respiration
+  correcte apres agrandissement de l'en-tete.
+- Le resume de verification mentionne maintenant le rendu haute qualite du logo
+  et la typographie d'en-tete reprise.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+442/442 tests verts ; `cmd /c .\build-winui.cmd` OK apres relance autorisee
+hors sandbox (premiere tentative bloquee par `NU1301` et acces temp refuse) ;
+publish Release autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.8-dev-win-x64-clean-20260716-034656`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.8-dev-win-x64.exe`, SHA256
+`475e4ff714e0c3e0160801ff0f9353bde98a0b9445980e9d2dd9e7a8eb725cd5`.
+Details : `logs/2026-07-16-installeur-rendu-logo-typo-0-78-3-4-8.md`.
+
+**Version :** `0.78.3.4.8-dev`.
+
+---
+
+## 2026-07-16 - Grille d'installateur sans chevauchement (0.78.3.4.9-dev)
+
+Correction apres retour utilisateur : la passe `0.78.3.4.8-dev` avait ameliore
+le logo, mais le resultat visible restait incorrect avec textes masques,
+elements qui se chevauchaient, options coupees et nom complet absent.
+
+- Version passee a `0.78.3.4.9-dev`.
+- L'installateur affiche maintenant `Lumora Browser` dans la barre de titre et
+  dans l'en-tete.
+- Les badges compacts de l'en-tete ont ete retires pour eviter les collisions
+  avec la version et le titre.
+- La typographie du setup revient a `Segoe UI` stable.
+- Le comportement DPI qui amplifiait les tailles sans grille adaptee a ete
+  retire ; `AutoScaleMode.None` verrouille la composition WinForms.
+- La version est affichee sur deux lignes.
+- En-tete, avertissement, sections, panneau d'options, progression et boutons
+  ont ete recales.
+- Le panneau `Options` est plus haut, avec colonnes reprises pour eviter les
+  textes tronques.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+442/442 tests verts ; `cmd /c .\build-winui.cmd` OK apres relance autorisee
+hors sandbox (premiere tentative bloquee par `NU1301` et acces temp refuse) ;
+publish Release autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.9-dev-win-x64-clean-20260716-040144`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.9-dev-win-x64.exe`, SHA256
+`4a8c889483a81858395ef4f47a0bf6cedfbadaa342b76374f2861e92edea839d`.
+Details : `logs/2026-07-16-installeur-grille-sans-chevauchement-0-78-3-4-9.md`.
+
+**Version :** `0.78.3.4.9-dev`.
+
+---
+
+## 2026-07-16 - Installeur reecrit en templates propres (0.78.3.4.10-dev)
+
+Nettoyage structurel apres les passes successives sur l'interface de
+l'installateur : le script monolithique a ete remplace par une organisation en
+orchestrateur + templates pour eviter les couches accumulees.
+
+- Version passee a `0.78.3.4.10-dev`.
+- `scripts/build-installer.ps1` est maintenant limite a l'orchestration :
+  selection de l'artefact propre, staging, zip de l'application, copie du logo,
+  generation des sources depuis templates, publish, verification et manifeste
+  SHA256.
+- Ajout de `scripts/installer/Lumora.Setup.csproj.template`.
+- Ajout de `scripts/installer/Program.cs.template`.
+- Le rendu corrige est conserve : `Lumora Browser`, logo `LumoraApp.png`, rendu
+  haute qualite, typographie `Segoe UI`, `AutoScaleMode.None`, grille sans
+  chevauchement et options non tronquees.
+- La generation lit maintenant les templates en UTF-8 explicitement, pour eviter
+  les accents casses dans l'installateur compile.
+- Le comportement d'installation est conserve : aucun profil embarque, dossier
+  par defaut sous `LOCALAPPDATA`, WebView2 optionnel depuis Microsoft si absent,
+  raccourci Bureau, installation propre et lancement apres installation.
+
+**Verification** : analyse PowerShell du script OK ;
+`dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` 442/442 tests
+verts ; `cmd /c .\build-winui.cmd` OK apres relance autorisee hors sandbox
+(premiere tentative bloquee par `NU1301` et acces temp refuse) ; publish Release
+autonome OK via artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.10-dev-win-x64-clean-20260716-041901`,
+SHA256 executable `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installeur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.10-dev-win-x64.exe`, SHA256
+`c77cedc93e60a5de820c551e798f5f937645f31717692db061b15830d0bb296f`.
+Controle visuel par capture ciblee :
+`artifacts\installer\LumoraSetup-0.78.3.4.10-dev-window-fixed.png` ; accents
+lisibles, nom complet visible, logo correct, sections et options sans
+chevauchement apparent.
+Details : `logs/2026-07-16-installeur-refactor-template-0-78-3-4-10.md`.
+
+**Version :** `0.78.3.4.10-dev`.
+
+---
+
+## 2026-07-16 - Installation a la demande du moteur yt-dlp (0.78.3.4.11-dev)
+
+Le module video detectait bien les pages YouTube mais le bouton
+`Telecharger` restait desactive faute de moteur `yt-dlp.exe` present sur la
+machine. Ajout d'une installation en un clic, sans rien faire de silencieux
+ni d'automatique.
+
+- Version passee a `0.78.3.4.11-dev`.
+- Ajout de `Lumora.WinUI/VideoDownload/YtDlpEngineProvider.cs` : recherche du
+  moteur local inchangee, plus `DownloadEngineAsync` qui telecharge
+  `yt-dlp.exe` depuis la release GitHub officielle (open source, licence
+  Unlicense), verifie son SHA256 face a `SHA2-256SUMS` avant de l'installer
+  dans `%LOCALAPPDATA%\Lumora\tools`.
+- Nouveau bouton « Installer le moteur yt-dlp (open source) » dans le flyout
+  video, visible seulement quand le moteur est absent, declenche uniquement
+  sur clic explicite.
+- Chemins manuels existants (variable d'env, dossier `tools`, `PATH`)
+  conserves pour les utilisateurs avances.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+448/448 tests verts (6 nouveaux pour `YtDlpEngineProviderTests`) ;
+`scripts\build-winui.ps1` reussi, 0 avertissement/erreur. Verification
+manuelle en conditions reelles faite (lancement de l'app, navigation vers
+une vraie page YouTube, ouverture du flyout, controle UIA + capture d'ecran) :
+titre detecte, texte moteur absent, bouton d'installation visible et actif,
+bouton `Telecharger` desactive, texte de statut correct. Le clic reel sur le
+bouton d'installation (qui declenche un vrai telechargement GitHub) n'a pas
+ete fait, en attente d'accord explicite.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.11-dev-win-x64-clean-20260716-220521`,
+SHA256 executable hote (lanceur natif, inchange par rapport aux versions
+precedentes) `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.11-dev-win-x64.exe`, SHA256
+`ea5c9a1fc31703e6a29691f6bf2def0a4198dc92fedd76119280c1429fb1b4f1`.
+Details : `logs/2026-07-16-module-video-installe-moteur-0-78-3-4-11.md`.
+
+**Version :** `0.78.3.4.11-dev`.
+
+---
+
+## 2026-07-16 - Clarification du principe sur les dependances externes
+
+A la suite de la discussion sur le module video, ajout d'une section
+`Dependances externes` dans `AGENTS.md` (apres `Principes de securite`) pour
+formaliser, une fois pour toutes, a quelles conditions Lumora peut s'appuyer
+sur un composant technique externe (moteur web, bibliotheque, outil en ligne
+de commande) : open source, aucune donnee utilisateur envoyee pour
+fonctionner, integrite verifiee avant execution si c'est un binaire, et
+aucun declenchement silencieux d'une action reseau non indispensable.
+
+Ce n'est pas un nouveau principe : c'est la formalisation explicite de ce que
+le projet appliquait deja de fait (WebView2/Chromium comme moteur, listes de
+filtrage EasyList/uBlock/AdGuard, modeles de traduction ONNX depuis
+HuggingFace), pour eviter toute ambiguite future sur ce sujet.
+
+Pas de changement de version : modification de gouvernance/documentation
+uniquement, aucun code livre.
+
+---
+
+## 2026-07-16 - GUID WebView2, qualite video et progression reelle (0.78.3.4.12-dev)
+
+Retour de test reel de la 0.78.3.4.11-dev : l'installeur n'a pas detecte un
+WebView2 deja present (echec apres tentative d'installation), et le module
+video telecharge dans une qualite plafonnee sans indicateur de progression.
+
+- Version passee a `0.78.3.4.12-dev`.
+- Corrige un GUID de registre tronque dans
+  `scripts/installer/Program.cs.template` qui empechait
+  `IsWebView2RuntimeInstalled()` de jamais detecter le runtime, installe ou
+  non.
+- Ajout de `Lumora.WinUI/VideoDownload/FfmpegLocator.cs` (recherche read-only,
+  meme esprit que `YtDlpEngineProvider`). Quand un ffmpeg local est trouve, le
+  telechargement utilise `bv*+ba/b` + fusion mp4 pour la vraie meilleure
+  qualite ; sinon conserve l'ancien comportement avec message clair.
+- Ajout de `Lumora.WinUI/VideoDownload/YtDlpProgress.cs` (parsing pur des
+  lignes de progression yt-dlp) et branchement en direct sur l'entree de
+  telechargement existante (`DownloadHistoryEntry.WithProgress`) et sur une
+  nouvelle `ProgressBar` dans le flyout video.
+- 10 nouveaux tests (`YtDlpProgressTests`, `FfmpegLocatorTests`).
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+456/456 tests verts ; `scripts\build-winui.ps1` 0 avertissement/erreur ;
+verification manuelle en conditions reelles sans regression (moteur et
+ffmpeg detectes sur la machine de test). Test reel d'un telechargement complet
+(barre de progression + qualite) laisse a l'utilisateur.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.12-dev-win-x64-clean-20260716-223911`,
+SHA256 executable hote `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.12-dev-win-x64.exe`, SHA256
+`144a7752e2dbbe932ce9784eb6a9e2b0b2836aebcaeb38a6365ceccea1008a63`.
+Details : `logs/2026-07-16-webview2-qualite-progression-0-78-3-4-12.md`.
+
+**Version :** `0.78.3.4.12-dev`.
+
+---
+
+## 2026-07-16 - Detection WebView2 corrigee et verifiee pour de vrai (0.78.3.4.13-dev)
+
+Le correctif de GUID de la 0.78.3.4.12-dev n'a pas suffi : l'utilisateur a
+reteste et obtenu la meme erreur. Le GUID utilise etait en fait invente/mal
+memorise, jamais verifie contre le vrai registre de la machine.
+
+- Version passee a `0.78.3.4.13-dev`.
+- Inspection directe du registre : le vrai GUID present
+  (`{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`) ne correspondait ni a l'original
+  tronque, ni au correctif precedent. Plutot que de deviner un troisieme
+  GUID, `IsWebView2RuntimeInstalled()` (`scripts/installer/Program.cs.template`)
+  a ete recrite pour detecter la presence via le `DisplayName` "Microsoft Edge
+  WebView2 Runtime" dans les entrees de desinstallation Windows (HKLM avec/sans
+  WOW6432Node, HKCU) — stable, verifiable, sans dependre d'un identifiant
+  interne Microsoft.
+- Verifie cette fois en compilant et executant un programme C# autonome
+  reprenant exactement le nouveau code, contre le vrai registre de la
+  machine : detection reussie ("Microsoft Edge WebView2 Runtime" trouve).
+- Aucun code applicatif touche : reutilise l'artefact propre de la
+  0.78.3.4.12-dev, seul l'installeur est reconstruit.
+
+**Verification** : reproduction PowerShell + programme C# autonome tous deux
+positifs sur la machine de test ; `dotnet test` 456/456 (inchange).
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.13-dev-win-x64.exe`, SHA256
+`70ea327d979cb1ec64a37f2dc171ee3ae338106c75aa296a61c75d0f0fc92aa0`.
+Test reel du flux d'installation (case WebView2 + clic Installer) laisse a
+l'utilisateur, car il modifie les programmes installes sur sa machine.
+Details : `logs/2026-07-16-webview2-guid-corrige-verifie-0-78-3-4-13.md`.
+
+**Version :** `0.78.3.4.13-dev`.
+
+---
+
+## 2026-07-16 - L'installeur detecte une instance de Lumora ouverte (0.78.3.4.14-dev)
+
+Apres la correction WebView2 (confirmee fonctionnelle, plus de plainte a ce
+sujet), l'installeur a echoue differemment : "Access to the path 'clrjit.dll'
+is denied." Cause reelle : Lumora Browser tournait encore depuis le dossier
+d'installation cible, donc Windows verrouillait ses fichiers pendant que
+l'installeur essayait de les ecraser.
+
+- Version passee a `0.78.3.4.14-dev`.
+- `scripts/installer/Program.cs.template` : nouvelle verification
+  `IsLumoraRunning()` en tout debut d'installation. Si Lumora tourne encore,
+  message clair immediat ("Ferme completement l'application, puis relance
+  l'installateur.") au lieu d'un echec .NET brut en cours de copie.
+- Aucun code applicatif touche : reutilise l'artefact propre de la
+  0.78.3.4.12-dev.
+
+**Verification** : nom de processus reel confirme (`Lumora.WinUI`) contre
+l'instance effectivement lancee sur la machine de test. Installateur
+construit : `artifacts\installer\LumoraSetup-0.78.3.4.14-dev-win-x64.exe`,
+SHA256 `081c7e6b60d24c735b2de03bfeb2f7b8877d5584aac3208112aa81104f0b3b80`.
+Test reel du flux d'installation laisse a l'utilisateur.
+Details : `logs/2026-07-16-installeur-detecte-instance-ouverte-0-78-3-4-14.md`.
+
+**Version :** `0.78.3.4.14-dev`.
+
+---
+
+## 2026-07-16 - Options d'installateur plus lisibles (code prepare)
+
+Correction demandee apres capture utilisateur : les cases cochees du panneau
+`Options` etaient trop discretes dans le theme sombre de l'installateur.
+
+- `scripts/installer/Program.cs.template` utilise maintenant un controle
+  `LumoraOptionCheckBox` dessine maison, tout en conservant l'heritage
+  `CheckBox` et les memes lectures `.Checked`.
+- Les options ont une surface cliquable plus large, un etat coche avec carre
+  arrondi accent menthe/orange, un etat non coche plus contraste, et des etats
+  hover/focus clavier visibles.
+- Le panneau `Options` est legerement agrandi pour eviter que ce rendu plus
+  graphique ne tasse les textes.
+- La logique d'installation n'a pas change : WebView2, installation propre,
+  raccourcis Bureau/Menu Demarrer et lancement apres installation conservent
+  les memes booleens.
+
+**Verification** : projet setup temporaire genere depuis les templates et
+compile en Release avec `dotnet build` : 0 avertissement, 0 erreur.
+`artifacts\installer` a refuse la suppression de
+`LumoraSetup-0.78.3.4.14-dev-win-x64.exe`, puis la creation du dossier
+`staging-dotnet`; la generation finale a donc ete relancee dans
+`artifacts\installer-options` apres autorisation reseau pour restaurer NuGet.
+Installateur construit :
+`artifacts\installer-options\LumoraSetup-0.78.3.4.15-dev-win-x64.exe`, SHA256
+`36e9be25017703cedfd4b10b68870d659345953780e282aafb19e4604455587d`.
+Details : `logs/2026-07-16-installeur-options-lisibles-code.md`.
+
+**Version :** `0.78.3.4.15-dev`.
+
+---
+
+## 2026-07-16 - Options d'installateur propres (0.78.3.4.16-dev)
+
+Correction immediate apres retour utilisateur : la version `0.78.3.4.15-dev`
+avait rendu les cases plus visibles, mais de maniere incorrecte, avec des
+textes superposes dans le panneau `Options`.
+
+- Cause identifiee : `LumoraOptionCheckBox` heritait encore de `CheckBox`; le
+  rendu maison et le rendu natif WinForms entraient en conflit.
+- `LumoraOptionCheckBox` herite maintenant de `Control`, conserve une propriete
+  `Checked`, gere lui-meme le clic, Espace et Entree, puis dessine un seul rendu
+  maitrise.
+- Le controle efface sa surface avant dessin pour eviter toute trace de rendu
+  precedent.
+- Les colonnes du panneau `Options` ont ete recalees pour afficher entierement
+  `Installation propre : supprimer le profil installe precedent`.
+- Le rendu a ete verifie par capture PNG avant generation finale :
+  `artifacts\installer-options\LumoraSetup-0.78.3.4.16-dev-window.png`.
+
+**Verification** : projet setup temporaire compile en Release avec `dotnet
+build` : 0 avertissement, 0 erreur ; capture visuelle inspectee, sans
+chevauchement visible ; installateur final construit apres autorisation reseau
+pour NuGet :
+`artifacts\installer-options\LumoraSetup-0.78.3.4.16-dev-win-x64.exe`, SHA256
+`173705aa9ea1aaa7b2b802ae7e1b5888e89620fd2c815557010c108e0b34417d`.
+Details : `logs/2026-07-16-installeur-options-propres-0-78-3-4-16.md`.
+
+**Version :** `0.78.3.4.16-dev`.
+
+---
+
+## 2026-07-17 - Qualite video reelle et bug « fichier introuvable » (0.78.3.4.17-dev)
+
+Retour utilisateur : le module video n'offrait toujours aucun choix reel de
+qualite (1080p/720p), et un telechargement pourtant reussi (exit code 0,
+video bien accessible sur YouTube) etait marque « fichier introuvable ».
+
+- Version passee a `0.78.3.4.17-dev`.
+- Cause reelle du bug : yt-dlp regle par defaut la date de modification du
+  fichier sur le `Last-Modified`/date d'upload de la video, pas sur l'heure
+  du telechargement ; le filtre par date de `FindDownloadedVideo` echouait
+  donc systematiquement, et le repli `ExtractLastExistingPath` ne
+  reconnaissait pas la ligne `[Merger] Merging formats into "..."` (seul
+  chemin valide apres fusion ffmpeg). Corrige par l'ajout de `--no-mtime` a
+  l'appel yt-dlp et par un nouveau `YtDlpOutputParser` qui priorise la ligne
+  de fusion.
+- Ajout d'un vrai selecteur de qualite dans le flyout (`ComboBox` : Meilleure
+  qualite disponible / 1080p / 720p / 480p), construit via le nouveau
+  `VideoDownloadFormat` (filtre `height<=X`, repli automatique yt-dlp si la
+  resolution demandee n'existe pas).
+- 13 nouveaux tests (`VideoDownloadFormatTests`, `YtDlpOutputParserTests`).
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+469/469 tests verts ; `scripts\build-winui.ps1` 0 avertissement/erreur ;
+verification manuelle en conditions reelles (build MSBuild Release, profil
+jetable, mode invite, pilotage UIA) sur une vraie page YouTube : ComboBox
+qualite present avec les 4 options attendues, active une fois le moteur
+detecte, capture d'ecran du menu deroulant sans chevauchement. Aucun clic sur
+« Telecharger » pendant cette verification (pas de vrai telechargement
+reseau declenche). Test reel d'un telechargement complet laisse a
+l'utilisateur.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.17-dev-win-x64-clean-20260717-015146`,
+SHA256 executable hote `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`
+(lanceur natif, inchange comme d'habitude).
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.17-dev-win-x64.exe`, SHA256
+`b81db26f2a3e67eaee01184238f0a5a69f0554d78ab4aace0d3e7c47ad41190a`.
+Details : `logs/2026-07-17-video-qualite-et-fichier-introuvable-0-78-3-4-17.md`.
+
+**Version :** `0.78.3.4.17-dev`.
+
+---
+
+## 2026-07-17 - Credits des dependances tierces et version affichee corrigee (0.78.3.4.18-dev)
+
+Avant la mise a disposition publique, l'utilisateur veut que les outils/listes
+open source utilises par Lumora (yt-dlp, ffmpeg, listes de filtrage, modeles
+de traduction) soient explicitement crediles dans l'application, par
+transparence.
+
+- Version passee a `0.78.3.4.18-dev`.
+- Nouvel onglet « Credits » dans la page A propos (`MainWindow.xaml` /
+  `ShowAboutSection`) : liste chaque dependance tierce avec sa licence et un
+  lien vers sa source officielle (yt-dlp, FFmpeg, EasyList/EasyPrivacy,
+  uBlock Origin uAssets, AdGuard Base Filter, ONNX Runtime, Phi-3-mini,
+  OPUS-MT/Helsinki-NLP). Precise qu'aucune n'est embarquee dans
+  l'installateur : toutes sont recuperees a la demande depuis leur source.
+- Bug decouvert au passage et corrige : la constante `Version` de
+  `MainWindow.xaml.cs` (titre de fenetre + page A propos) etait figee sur
+  `0.78.3.4.10-dev` depuis 7 versions, jamais synchronisee avec `AGENTS.md`.
+
+**Verification** : `dotnet test` 469/469 (inchange, pas de logique nouvelle) ;
+build MSBuild 0 avertissement/erreur ; verification manuelle en conditions
+reelles (profil jetable, mode invite) confirmant que le titre et la page
+d'accueil affichent bien `0.78.3.4.18-dev`, et capture d'ecran de l'onglet
+Credits montrant les 8 entrees correctement rendues avec licence et lien.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.18-dev-win-x64-clean-20260717-020955`,
+SHA256 executable hote `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`
+(lanceur natif, inchange comme d'habitude).
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.18-dev-win-x64.exe`, SHA256
+`26f290c799f20b68755f8358f449001e6884542041c5b040f8594557add84745`.
+Details : `logs/2026-07-17-credits-dependances-tierces-0-78-3-4-18.md`.
+
+**Version :** `0.78.3.4.18-dev`.
+
+---
+
+## 2026-07-17 - Reorganisation des onglets A propos et accents corriges (0.78.3.4.19-dev)
+
+Retour utilisateur : l'onglet Credits ajoute a la 0.78.3.4.18-dev etait mal
+range dans l'ordre des onglets de la page A propos.
+
+- Version passee a `0.78.3.4.19-dev`.
+- Onglet et section Credits deplaces juste apres Authenticite, regroupant
+  les trois onglets de confiance/transparence (Confidentialite,
+  Authenticite, Credits) avant les details techniques (Technique, Profil
+  local). Nouvel ordre : Resume / Modules / Confidentialite / Authenticite /
+  Credits / Technique / Profil local.
+- Faute corrigee au passage : tout le texte de la section Credits (ajoutee
+  en 0.78.3.4.18-dev) etait sans accents, contrairement au reste de la
+  page. Reecrit avec les accents corrects.
+
+**Verification** : `dotnet test` 469/469 (inchange) ; build MSBuild 0
+avertissement/erreur ; verification manuelle en conditions reelles (profil
+jetable, mode invite) confirmant l'ordre des onglets via enumeration UIA et
+le rendu correct des accents par capture d'ecran.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.78.3.4.19-dev-win-x64-clean-20260717-022301`,
+SHA256 executable hote `e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`
+(lanceur natif, inchange comme d'habitude).
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.78.3.4.19-dev-win-x64.exe`, SHA256
+`af2be9fa5e9c4928aac2f694e9af6d37d2b4287d17b651228cfc3ee9ef66aadc`.
+Details : `logs/2026-07-17-reorganisation-credits-accents-0-78-3-4-19.md`.
+
+**Version :** `0.78.3.4.19-dev`.
+
+---
+
+## 2026-07-17 - Page A propos style officiel (0.78.3.4.20-dev)
+
+Retour utilisateur : la page A propos contient maintenant beaucoup
+d'informations utiles, mais son rendu ressemblait trop a une page documentaire
+avec onglets techniques. L'objectif valide par `go` est de se rapprocher d'un
+style officiel de navigateur, dans l'esprit de la page A propos de
+Google/Chrome, sans supprimer les informations existantes.
+
+- Version passee a `0.78.3.4.20-dev`.
+- `Lumora.WinUI/MainWindow.xaml` : refonte du `AboutPanel` avec logo Lumora
+  centre, titre, phrase produit, badge de version de developpement et contenu
+  organise dans une mise en page plus calme.
+- La navigation A propos devient un sommaire vertical : Vue d'ensemble,
+  Modules, Confidentialite, Authenticite, Dependances, Technique, Profil local.
+- Les sections existantes restent disponibles : modules, principes de
+  confidentialite, authenticite du build, dependances open source, informations
+  techniques et chemin du profil local.
+- La section Dependances remplace le long texte vertical par des fiches
+  compactes indiquant nom, licence, usage et lien source pour yt-dlp, FFmpeg,
+  EasyList/EasyPrivacy, uBlock Origin uAssets, AdGuard Base Filter, ONNX
+  Runtime/GenAI, Phi-3-mini et OPUS-MT/Helsinki-NLP.
+- `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-clean-test-artifact.ps1` et
+  `scripts/build-installer.ps1` alignes sur `0.78.3.4.20-dev`.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+469/469 tests verts ; `scripts\build-winui.ps1` OK hors sandbox apres blocage
+attendu du restore NuGet dans le sandbox, compilation XAML/C# reussie avec 0
+avertissement/erreur. Artefact propre construit apres autorisation hors sandbox
+:
+`artifacts\clean-test\Lumora-0.78.3.4.20-dev-win-x64-clean-20260717-024142`,
+SHA256 executable hote
+`e94f299f13279fb76de4f892e136a1152d93c37d10e4621eac7616fbd3bce67f`.
+Installateur construit apres autorisation hors sandbox :
+`artifacts\installer\LumoraSetup-0.78.3.4.20-dev-win-x64.exe`, SHA256
+`efa2d4d6168ad0d318747f269e4534ba8d266ad89e260490ab2239b20d2de865`.
+Tentative de capture visuelle automatisee non retenue car la capture a pris la
+fenetre Codex/VS Code au lieu de Lumora ; aucun artefact de capture trompeur n'a
+ete conserve. Verification visuelle interactive finale encore a faire dans
+l'application lancee normalement.
+Details : `logs/2026-07-17-about-style-officiel-0-78-3-4-20.md`.
+
+**Version :** `0.78.3.4.20-dev`.
+
+---
+
+## 2026-07-17 - Identite graphique Lumora lumiere + internet (0.79.0-dev)
+
+Retour utilisateur : le nom `Lumora` evoque la lumiere, mais l'identite
+graphique ne symbolisait pas assez la lumiere ni internet. Validation par
+`Go` pour refaire le logo, l'icone et la charte visible du navigateur.
+
+- Version passee a `0.79.0-dev`.
+- `scripts/generate-app-icon.ps1` refondu pour generer un nouveau signe Lumora
+  reproductible : fond bleu-profond, coeur lumineux, arcs de globe et
+  trajectoire de navigation.
+- `Lumora.WinUI/Assets/LumoraApp.png` et `Lumora.WinUI/Assets/LumoraApp.ico`
+  regeneres.
+- Palette WinUI harmonisee : accent lumiere jaune, contrepoint cyan, surfaces
+  bleu-profond, focus lumineux et texte sur accent adapte.
+- Logo reel raccorde dans la barre plein ecran, la page A propos, les ecrans de
+  connexion et le wizard de premier lancement.
+- `lumora://accueil` adapte au nouveau logo avec ligne lumineuse, fond plus
+  coherent avec l'idee lumiere + web, et palette par defaut mise a jour.
+- Fenetre d'application web, accueil de navigation privee, couleurs de groupes
+  d'onglets et installateur actif alignes sur la nouvelle charte.
+- Ajout de `docs/IDENTITE_LUMORA_0_79.md` et
+  `logs/2026-07-17-identite-lumora-0-79.md`.
+
+**Verification** : generation des assets reussie, inspection visuelle du PNG
+effectuee, controle textuel sans ancienne version active ni anciennes couleurs
+ciblees dans les fichiers touches ; `dotnet test
+Lumora.Tests\Lumora.Tests.csproj --no-restore` : 469/469 tests verts ;
+`scripts\build-winui.ps1` reussi hors sandbox avec 0 avertissement/erreur.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.79.0-dev-win-x64-clean-20260717-122451`,
+SHA256 executable hote
+`2b61456e1034b9498c562cf65369748da6cfbd707192b6045e7ba66586cb84ad`.
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.79.0-dev-win-x64.exe`, SHA256
+`61a85e75757a67a4fdebe4842b9ddeba54366dc1bea5e696fbb181b6a2a445e1`.
+Assets : `LumoraApp.png` SHA256
+`2815A01358A8A39650A0EEC1CCFA93AA97D2FC184CC9D796AA3F724D14F8A40F`,
+`LumoraApp.ico` SHA256
+`28B4103EB20528713B94D474BFC75870D3E179E21EB2D87D60D61C8D03FDA00C`.
+
+**Version :** `0.79.0-dev`.
