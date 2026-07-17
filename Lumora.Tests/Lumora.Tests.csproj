@@ -51,6 +51,7 @@
     <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordManagerDecision.cs" Link="Product\PasswordManagerDecision.cs" />
     <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordManagerService.cs" Link="Product\PasswordManagerService.cs" />
     <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordManagerInteractionService.cs" Link="Product\PasswordManagerInteractionService.cs" />
+    <Compile Include="..\Lumora.WinUI\PasswordManager\VaultGroupingService.cs" Link="Product\VaultGroupingService.cs" />
     <Compile Include="..\Lumora.WinUI\Sessions\SessionKeepAdvisor.cs" Link="Product\SessionKeepAdvisor.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\WebAppLaunchArgs.cs" Link="Product\WebAppLaunchArgs.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\WebAppUrlPolicy.cs" Link="Product\WebAppUrlPolicy.cs" />
