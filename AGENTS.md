@@ -90,6 +90,8 @@ Toute modification de version doit respecter cette regle.
 17. Les decisions de release seront traitees plus tard.
 18. `MEMORY.md` doit etre mis a jour soigneusement apres chaque etape significative.
 19. A chaque nouvelle ouverture de session ou de chat sur Lumora, Codex doit lire `MEMORY.md` pour reprendre le contexte historique du projet avant d'agir.
+20. Ne plus faire d exécutable automatique, attendre que je le demande moi même.
+
 
 ## Direction technique actuelle
 
