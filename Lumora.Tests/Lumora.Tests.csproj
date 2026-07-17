@@ -27,6 +27,7 @@
   <!-- Classes pures du produit, compilées dans l'assembly de test (aucune UI). -->
   <ItemGroup>
     <Compile Include="..\Lumora.WinUI\Credentials\PasswordGenerator.cs"  Link="Product\PasswordGenerator.cs" />
+    <Compile Include="..\Lumora.WinUI\Credentials\TotpService.cs" Link="Product\TotpService.cs" />
     <Compile Include="..\Lumora.WinUI\Credentials\PublicSuffixService.cs" Link="Product\PublicSuffixService.cs" />
     <Compile Include="..\Lumora.WinUI\VaultStore.cs"                      Link="Product\VaultStore.cs" />
     <Compile Include="..\Lumora.WinUI\VaultCredential.cs"                 Link="Product\VaultCredential.cs" />
