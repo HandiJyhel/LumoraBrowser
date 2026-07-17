@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>LumoraApp.ico</ApplicationIcon>
+    <AssemblyName>LumoraSetup</AssemblyName>
+    <Version>__SETUP_PROJECT_VERSION__</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="app.zip" LogicalName="app.zip" />
+    <EmbeddedResource Include="LumoraApp.png" LogicalName="LumoraApp.png" />
+  </ItemGroup>
+</Project>

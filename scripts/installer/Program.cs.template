@@ -1,0 +1,1174 @@
+using System.Diagnostics;
+using System.Drawing.Drawing2D;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.Win32;
+
+namespace Lumora.Setup;
+
+internal sealed record InstallerOptions(
+    string InstallRoot,
+    bool EnsureWebView2Runtime,
+    bool CleanInstalledProfile,
+    bool CreateDesktopShortcut,
+    bool CreateStartMenuShortcut);
+
+internal static class Program
+{
+    [STAThread]
+    private static void Main()
+    {
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        Application.SetDefaultFont(LumoraTypography.Text(10f));
+        Application.Run(new InstallerForm());
+    }
+}
+
+internal sealed class InstallerForm : Form
+{
+    private const int FormWidth = 760;
+    private const int FormHeight = 800;
+    private const int WmNclButtonDown = 0xA1;
+    private const int HtCaption = 0x2;
+
+    private readonly Label _statusLabel = new();
+    private readonly LumoraProgressBar _progressBar = new();
+    private readonly TextBox _installPathTextBox = new();
+    private readonly Button _installButton = new();
+    private readonly Button _cancelButton = new();
+    private readonly Button _browseButton = new();
+    private readonly LumoraOptionCheckBox _webView2CheckBox = new();
+    private readonly LumoraOptionCheckBox _cleanProfileCheckBox = new();
+    private readonly LumoraOptionCheckBox _desktopShortcutCheckBox = new();
+    private readonly LumoraOptionCheckBox _startMenuShortcutCheckBox = new();
+    private readonly LumoraOptionCheckBox _launchCheckBox = new();
+
+    private string? _installedAppExe;
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+    public InstallerForm()
+    {
+        Text = "Installation de Lumora Browser";
+        StartPosition = FormStartPosition.CenterScreen;
+        FormBorderStyle = FormBorderStyle.None;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        ClientSize = new Size(FormWidth, FormHeight);
+        AutoScaleMode = AutoScaleMode.None;
+        BackColor = LumoraPalette.AppBackground;
+        ForeColor = LumoraPalette.Foreground;
+        Font = LumoraTypography.Text(10f);
+
+        var defaultInstallRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs",
+            "Lumora");
+
+        BuildTitleBar();
+        BuildHeader();
+        BuildWarning();
+        BuildPathSection(defaultInstallRoot);
+        BuildContentSection();
+        BuildOptionsSection();
+        BuildFooter();
+    }
+
+    private void BuildTitleBar()
+    {
+        var titleBar = new Panel
+        {
+            Location = new Point(0, 0),
+            Size = new Size(FormWidth, 42),
+            BackColor = LumoraPalette.ChromeSurface
+        };
+        titleBar.MouseDown += (_, e) => DragWindow(e);
+
+        var titleText = new Label
+        {
+            Text = "Installation de Lumora Browser",
+            AutoSize = false,
+            Location = new Point(20, 9),
+            Size = new Size(420, 24),
+            ForeColor = LumoraPalette.Foreground,
+            BackColor = LumoraPalette.ChromeSurface,
+            Font = LumoraTypography.Text(9.25f)
+        };
+        titleText.MouseDown += (_, e) => DragWindow(e);
+
+        var closeButton = new Button
+        {
+            Text = "×",
+            Location = new Point(710, 0),
+            Size = new Size(50, 40),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = LumoraPalette.ChromeSurface,
+            ForeColor = LumoraPalette.Foreground,
+            Font = LumoraTypography.Display(18f)
+        };
+        closeButton.FlatAppearance.BorderSize = 0;
+        closeButton.Click += (_, _) => Close();
+
+        var accent = new Panel
+        {
+            Location = new Point(0, 40),
+            Size = new Size(FormWidth, 2),
+            BackColor = LumoraPalette.CoolAccent
+        };
+
+        titleBar.Controls.Add(titleText);
+        titleBar.Controls.Add(closeButton);
+        titleBar.Controls.Add(accent);
+        Controls.Add(titleBar);
+    }
+
+    private void BuildHeader()
+    {
+        var panel = new GradientPanel
+        {
+            Location = new Point(22, 62),
+            Size = new Size(716, 138),
+            StartColor = LumoraPalette.ChromeSurface,
+            EndColor = Color.FromArgb(36, 50, 47),
+            BorderColor = LumoraPalette.Stroke,
+            AccentColor = LumoraPalette.CoolAccent,
+            Radius = 10
+        };
+
+        panel.Controls.Add(new LogoImageControl
+        {
+            Image = LoadInstallerLogo(),
+            Location = new Point(24, 24),
+            Size = new Size(76, 76),
+            BackColor = Color.Transparent
+        });
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Lumora Browser",
+            Font = LumoraTypography.Display(25f, FontStyle.Bold),
+            AutoSize = false,
+            Location = new Point(118, 24),
+            Size = new Size(380, 38),
+            ForeColor = LumoraPalette.Foreground,
+            BackColor = Color.Transparent
+        });
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Version\n__PRODUCT_VERSION__",
+            AutoSize = false,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Location = new Point(520, 26),
+            Size = new Size(164, 48),
+            BackColor = LumoraPalette.Accent,
+            ForeColor = LumoraPalette.Foreground,
+            Font = LumoraTypography.Text(8.25f, FontStyle.Bold)
+        });
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Navigateur local, modules intégrés, installation claire.",
+            AutoSize = false,
+            Location = new Point(120, 66),
+            Size = new Size(360, 24),
+            ForeColor = Color.FromArgb(239, 232, 219),
+            BackColor = Color.Transparent,
+            Font = LumoraTypography.Text(11.25f)
+        });
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Tes données personnelles ne sont pas copiées dans l'installateur.",
+            AutoSize = false,
+            Location = new Point(120, 94),
+            Size = new Size(560, 24),
+            ForeColor = LumoraPalette.MutedForeground,
+            BackColor = Color.Transparent,
+            Font = LumoraTypography.Text(9.5f)
+        });
+
+        Controls.Add(panel);
+    }
+
+    private void BuildWarning()
+    {
+        Controls.Add(new Label
+        {
+            Text = "Build de développement non signé. Windows peut afficher « Éditeur inconnu ». Le SHA256 est fourni avec Lumora.",
+            AutoSize = false,
+            Location = new Point(38, 214),
+            Size = new Size(686, 36),
+            ForeColor = LumoraPalette.Accent,
+            Font = LumoraTypography.Text(9.75f, FontStyle.Bold)
+        });
+    }
+
+    private void BuildPathSection(string defaultInstallRoot)
+    {
+        var panel = CreateSectionPanel(new Point(22, 262), new Size(716, 108));
+
+        panel.Controls.Add(CreateSectionTitle("Dossier d'installation"));
+
+        _installPathTextBox.Text = defaultInstallRoot;
+        _installPathTextBox.Location = new Point(20, 42);
+        _installPathTextBox.Size = new Size(522, 28);
+        _installPathTextBox.BorderStyle = BorderStyle.FixedSingle;
+        _installPathTextBox.BackColor = LumoraPalette.AddressSurface;
+        _installPathTextBox.ForeColor = LumoraPalette.Foreground;
+        panel.Controls.Add(_installPathTextBox);
+
+        _browseButton.Text = "Parcourir...";
+        _browseButton.Location = new Point(562, 40);
+        _browseButton.Size = new Size(126, 32);
+        _browseButton.FlatStyle = FlatStyle.Flat;
+        StyleSecondaryButton(_browseButton);
+        _browseButton.Click += (_, _) => BrowseInstallPath(defaultInstallRoot);
+        panel.Controls.Add(_browseButton);
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Pour installer dans Program Files, lance l'installateur en administrateur, puis choisis le dossier ici.",
+            AutoSize = false,
+            Location = new Point(20, 76),
+            Size = new Size(650, 24),
+            ForeColor = LumoraPalette.MutedForeground,
+            BackColor = LumoraPalette.PanelSurface
+        });
+
+        Controls.Add(panel);
+    }
+
+    private void BuildContentSection()
+    {
+        var panel = CreateSectionPanel(new Point(22, 390), new Size(716, 128));
+        panel.Controls.Add(CreateSectionTitle("Contenu installé"));
+
+        AddSectionLine(panel, "Inclus : application, modules Lumora et ressources du navigateur.", 44, LumoraPalette.BodyText);
+        AddSectionLine(panel, "Non inclus : profils, favoris, historique, mots de passe, cookies et données personnelles.", 70, LumoraPalette.BodyText);
+        AddSectionLine(panel, "WebView2 : téléchargé depuis Microsoft uniquement si le runtime manque.", 98, LumoraPalette.MutedForeground);
+
+        Controls.Add(panel);
+    }
+
+    private void BuildOptionsSection()
+    {
+        var panel = CreateSectionPanel(new Point(22, 532), new Size(716, 156));
+        panel.Controls.Add(CreateSectionTitle("Options"));
+
+        ConfigureCheckBox(
+            _webView2CheckBox,
+            "Télécharger et installer WebView2 si le runtime manque",
+            new Point(18, 40),
+            new Size(416, 30),
+            true);
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Téléchargement officiel Microsoft, vérifié par signature. Lumora reste local après installation.",
+            AutoSize = false,
+            Location = new Point(56, 72),
+            Size = new Size(360, 38),
+            ForeColor = LumoraPalette.MutedForeground,
+            BackColor = LumoraPalette.PanelSurface
+        });
+
+        ConfigureCheckBox(
+            _cleanProfileCheckBox,
+            "Installation propre : supprimer le profil installé précédent",
+            new Point(18, 116),
+            new Size(416, 30),
+            true);
+
+        ConfigureCheckBox(_desktopShortcutCheckBox, "Raccourci Bureau", new Point(444, 40), new Size(236, 30), true);
+        ConfigureCheckBox(_startMenuShortcutCheckBox, "Menu Démarrer", new Point(444, 78), new Size(236, 30), true);
+        ConfigureCheckBox(_launchCheckBox, "Lancer après installation", new Point(444, 116), new Size(236, 30), true);
+
+        panel.Controls.Add(_webView2CheckBox);
+        panel.Controls.Add(_cleanProfileCheckBox);
+        panel.Controls.Add(_desktopShortcutCheckBox);
+        panel.Controls.Add(_startMenuShortcutCheckBox);
+        panel.Controls.Add(_launchCheckBox);
+
+        Controls.Add(panel);
+    }
+
+    private void BuildFooter()
+    {
+        _progressBar.Location = new Point(26, 700);
+        _progressBar.Size = new Size(708, 12);
+        Controls.Add(_progressBar);
+
+        _statusLabel.Text = "Prêt à installer.";
+        _statusLabel.AutoSize = false;
+        _statusLabel.Location = new Point(26, 724);
+        _statusLabel.Size = new Size(430, 24);
+        _statusLabel.ForeColor = LumoraPalette.MutedForeground;
+        _statusLabel.Font = LumoraTypography.Text(9.75f);
+        Controls.Add(_statusLabel);
+
+        _installButton.Text = "Installer";
+        _installButton.Location = new Point(486, 748);
+        _installButton.Size = new Size(116, 36);
+        _installButton.FlatStyle = FlatStyle.Flat;
+        StyleAccentButton(_installButton);
+        _installButton.Click += InstallButton_Click;
+        Controls.Add(_installButton);
+
+        _cancelButton.Text = "Annuler";
+        _cancelButton.Location = new Point(618, 748);
+        _cancelButton.Size = new Size(116, 36);
+        _cancelButton.FlatStyle = FlatStyle.Flat;
+        StyleSecondaryButton(_cancelButton);
+        _cancelButton.Click += (_, _) => Close();
+        Controls.Add(_cancelButton);
+    }
+
+    private static RoundedPanel CreateSectionPanel(Point location, Size size) => new()
+    {
+        Location = location,
+        Size = size,
+        BackColor = LumoraPalette.PanelSurface,
+        BorderColor = LumoraPalette.Stroke,
+        Radius = 12
+    };
+
+    private static Label CreateSectionTitle(string text) => new()
+    {
+        Text = text,
+        AutoSize = false,
+        Location = new Point(18, 14),
+        Size = new Size(500, 24),
+        Font = LumoraTypography.Text(10.25f, FontStyle.Bold),
+        ForeColor = LumoraPalette.Foreground,
+        BackColor = LumoraPalette.PanelSurface
+    };
+
+    private static void AddSectionLine(Control parent, string text, int top, Color color)
+    {
+        parent.Controls.Add(new Label
+        {
+            Text = text,
+            AutoSize = false,
+            Location = new Point(20, top),
+            Size = new Size(650, 24),
+            ForeColor = color,
+            BackColor = LumoraPalette.PanelSurface
+        });
+    }
+
+    private static void ConfigureCheckBox(LumoraOptionCheckBox checkBox, string text, Point location, Size size, bool isChecked)
+    {
+        checkBox.Text = text;
+        checkBox.Checked = isChecked;
+        checkBox.AutoSize = false;
+        checkBox.Location = location;
+        checkBox.Size = size;
+        checkBox.BackColor = LumoraPalette.PanelSurface;
+        StyleCheckBox(checkBox);
+    }
+
+    private void BrowseInstallPath(string defaultInstallRoot)
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = "Choisir le dossier d'installation de Lumora",
+            UseDescriptionForTitle = true,
+            SelectedPath = Directory.Exists(_installPathTextBox.Text) ? _installPathTextBox.Text : defaultInstallRoot
+        };
+
+        if (dialog.ShowDialog(this) == DialogResult.OK && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
+        {
+            _installPathTextBox.Text = dialog.SelectedPath;
+        }
+    }
+
+    private async void InstallButton_Click(object? sender, EventArgs e)
+    {
+        _installButton.Enabled = false;
+        _cancelButton.Enabled = false;
+
+        try
+        {
+            var installRootInput = _installPathTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(installRootInput))
+            {
+                throw new InvalidOperationException("Choisis un dossier d'installation.");
+            }
+
+            var options = new InstallerOptions(
+                InstallRoot: Path.GetFullPath(installRootInput),
+                EnsureWebView2Runtime: _webView2CheckBox.Checked,
+                CleanInstalledProfile: _cleanProfileCheckBox.Checked,
+                CreateDesktopShortcut: _desktopShortcutCheckBox.Checked,
+                CreateStartMenuShortcut: _startMenuShortcutCheckBox.Checked);
+
+            SetStatus("Installation en cours...", 4);
+            await Task.Run(() => Install(options));
+            SetStatus("Installation terminée.", 100);
+
+            if (_launchCheckBox.Checked && _installedAppExe is not null)
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = _installedAppExe,
+                    WorkingDirectory = Path.GetDirectoryName(_installedAppExe),
+                    UseShellExecute = true
+                });
+            }
+
+            MessageBox.Show(
+                this,
+                "Lumora est installé.\n\nAucun profil utilisateur n'a été copié. Les modules Lumora sont inclus dans l'application, et tes données restent à toi.",
+                "Lumora Browser",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            Close();
+        }
+        catch (Exception ex)
+        {
+            _installButton.Enabled = true;
+            _cancelButton.Enabled = true;
+            SetStatus("Installation échouée.", 0);
+            MessageBox.Show(this, ex.Message, "Installation de Lumora Browser", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void Install(InstallerOptions options)
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        var installRoot = Path.GetFullPath(options.InstallRoot);
+        var appDir = Path.Combine(installRoot, "app");
+        var newAppDir = Path.Combine(installRoot, "_new_app");
+        var profileDir = Path.Combine(localAppData, "Lumora", "installed-profile");
+        var startMenuDir = Path.Combine(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Lumora");
+        var startMenuShortcut = Path.Combine(startMenuDir, "Lumora.lnk");
+        var desktopShortcut = Path.Combine(desktopDir, "Lumora.lnk");
+        var launcherVbs = Path.Combine(installRoot, "LumoraLauncher.vbs");
+        var traceLauncherCmd = Path.Combine(installRoot, "Lancer avec journal de diagnostic.cmd");
+        var uninstallPs1 = Path.Combine(installRoot, "uninstall.ps1");
+        var uninstallCmd = Path.Combine(installRoot, "Uninstall Lumora.cmd");
+        var installInfo = Path.Combine(installRoot, "INSTALLATION.txt");
+        var uninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\Lumora";
+
+        if (IsLumoraRunning())
+        {
+            throw new InvalidOperationException(
+                "Lumora Browser est actuellement ouvert. Ferme completement l'application, puis relance l'installateur.");
+        }
+
+        if (options.EnsureWebView2Runtime)
+        {
+            EnsureWebView2Runtime();
+        }
+
+        SetStatus("Préparation du dossier d'installation...", 18);
+        Directory.CreateDirectory(installRoot);
+        if (Directory.Exists(newAppDir))
+        {
+            Directory.Delete(newAppDir, recursive: true);
+        }
+        Directory.CreateDirectory(newAppDir);
+
+        SetStatus("Extraction de Lumora...", 30);
+        using (var payload = Assembly.GetExecutingAssembly().GetManifestResourceStream("app.zip")
+            ?? throw new InvalidOperationException("Le contenu Lumora intégré à l'installateur est introuvable."))
+        using (var archive = new ZipArchive(payload, ZipArchiveMode.Read))
+        {
+            archive.ExtractToDirectory(newAppDir, overwriteFiles: true);
+        }
+
+        SetStatus("Installation des fichiers...", 46);
+        if (Directory.Exists(appDir))
+        {
+            Directory.Delete(appDir, recursive: true);
+        }
+        Directory.Move(newAppDir, appDir);
+
+        if (options.CleanInstalledProfile && Directory.Exists(profileDir))
+        {
+            SetStatus("Nettoyage du profil installé précédent...", 58);
+            Directory.Delete(profileDir, recursive: true);
+        }
+
+        var appExe = Path.Combine(appDir, "Lumora.WinUI.exe");
+        var iconPath = Path.Combine(appDir, "Assets", "LumoraApp.ico");
+        _installedAppExe = appExe;
+
+        SetStatus("Nettoyage de l'ancien lanceur isolé...", 64);
+        if (File.Exists(launcherVbs))
+        {
+            File.Delete(launcherVbs);
+        }
+
+        SetStatus("Création du lanceur de diagnostic...", 70);
+        File.WriteAllLines(traceLauncherCmd, new[]
+        {
+            "@echo off",
+            "setlocal",
+            "set \"LUMORA_TRACE_STARTUP=1\"",
+            "start \"\" \"%~dp0app\\Lumora.WinUI.exe\""
+        });
+
+        SetStatus("Création de la désinstallation...", 76);
+        WriteUninstaller(uninstallPs1, uninstallCmd, installRoot, profileDir, startMenuShortcut, desktopShortcut);
+
+        SetStatus("Création des raccourcis...", 84);
+        UpdateShortcuts(options, startMenuDir, startMenuShortcut, desktopShortcut, appExe, appDir, iconPath);
+        WriteInstallInfo(installInfo, installRoot, appExe);
+
+        SetStatus("Enregistrement dans Windows...", 94);
+        using var key = Registry.CurrentUser.CreateSubKey(uninstallKey);
+        key?.SetValue("DisplayName", "Lumora Browser");
+        key?.SetValue("DisplayVersion", "__PRODUCT_VERSION__");
+        key?.SetValue("Publisher", "H.J.");
+        key?.SetValue("InstallLocation", installRoot);
+        key?.SetValue("DisplayIcon", appExe);
+        key?.SetValue("UninstallString", Quote(uninstallCmd));
+        key?.SetValue("NoModify", 1, RegistryValueKind.DWord);
+        key?.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+    }
+
+    private static void WriteUninstaller(
+        string uninstallPs1,
+        string uninstallCmd,
+        string installRoot,
+        string profileDir,
+        string startMenuShortcut,
+        string desktopShortcut)
+    {
+        File.WriteAllLines(uninstallPs1, new[]
+        {
+            "param([switch]$RemoveProfile)",
+            "$ErrorActionPreference = \"Stop\"",
+            "$installRoot = " + PsQuote(installRoot),
+            "$profileDir = " + PsQuote(profileDir),
+            "$startMenuShortcut = " + PsQuote(startMenuShortcut),
+            "$desktopShortcut = " + PsQuote(desktopShortcut),
+            "$uninstallKey = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Lumora\"",
+            "Remove-Item -LiteralPath $startMenuShortcut -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $desktopShortcut -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue",
+            "if ($RemoveProfile -and (Test-Path $profileDir)) { Remove-Item -LiteralPath $profileDir -Recurse -Force }",
+            "if (Test-Path $installRoot) { Remove-Item -LiteralPath $installRoot -Recurse -Force }"
+        });
+
+        File.WriteAllLines(uninstallCmd, new[]
+        {
+            "@echo off",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0uninstall.ps1\""
+        });
+    }
+
+    private static void UpdateShortcuts(
+        InstallerOptions options,
+        string startMenuDir,
+        string startMenuShortcut,
+        string desktopShortcut,
+        string appExe,
+        string appDir,
+        string iconPath)
+    {
+        var shortcutIcon = File.Exists(iconPath) ? iconPath : appExe;
+
+        if (options.CreateStartMenuShortcut)
+        {
+            Directory.CreateDirectory(startMenuDir);
+            CreateShortcut(startMenuShortcut, appExe, string.Empty, appDir, shortcutIcon);
+        }
+        else if (File.Exists(startMenuShortcut))
+        {
+            File.Delete(startMenuShortcut);
+        }
+
+        if (options.CreateDesktopShortcut)
+        {
+            CreateShortcut(desktopShortcut, appExe, string.Empty, appDir, shortcutIcon);
+        }
+        else if (File.Exists(desktopShortcut))
+        {
+            File.Delete(desktopShortcut);
+        }
+    }
+
+    private static void WriteInstallInfo(string installInfo, string installRoot, string appExe)
+    {
+        File.WriteAllText(installInfo,
+            "Lumora installé localement" + Environment.NewLine + Environment.NewLine +
+            "Emplacement : " + installRoot + Environment.NewLine +
+            "Exécutable : " + appExe + Environment.NewLine +
+            "Modules : modules Lumora intégrés à l'application." + Environment.NewLine +
+            "WebView2 : " + (IsWebView2RuntimeInstalled() ? "runtime détecté" : "runtime non détecté après installation") + Environment.NewLine +
+            "Profil : aucun profil imposé au lancement ; le choix se fait dans Lumora." + Environment.NewLine +
+            "Vérification : " + Path.Combine(Path.GetDirectoryName(appExe)!, "VERIFICATION.txt") + Environment.NewLine + Environment.NewLine +
+            "Ce programme d'installation ne copie aucun profil utilisateur." + Environment.NewLine +
+            "Les raccourcis lancent directement l'application, sans variable de profil forcée." + Environment.NewLine);
+    }
+
+    private void EnsureWebView2Runtime()
+    {
+        if (IsWebView2RuntimeInstalled())
+        {
+            SetStatus("Runtime WebView2 déjà présent.", 10);
+            return;
+        }
+
+        SetStatus("Runtime WebView2 absent : téléchargement Microsoft...", 6);
+        var tempInstaller = Path.Combine(Path.GetTempPath(), "Lumora-WebView2Setup.exe");
+        if (File.Exists(tempInstaller))
+        {
+            File.Delete(tempInstaller);
+        }
+
+        DownloadWebView2Bootstrapper(tempInstaller);
+
+        SetStatus("Vérification de la signature Microsoft...", 8);
+        if (!IsSignedByMicrosoft(tempInstaller))
+        {
+            File.Delete(tempInstaller);
+            throw new InvalidOperationException("Le programme WebView2 téléchargé n'est pas signé Microsoft. Installation arrêtée.");
+        }
+
+        SetStatus("Installation du runtime WebView2...", 12);
+        var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = tempInstaller,
+            Arguments = "/silent /install",
+            UseShellExecute = true,
+            Verb = "runas"
+        });
+
+        if (process is null)
+        {
+            throw new InvalidOperationException("Impossible de lancer l'installation WebView2.");
+        }
+
+        process.WaitForExit();
+        if (process.ExitCode != 0 && !IsWebView2RuntimeInstalled())
+        {
+            throw new InvalidOperationException($"Installation WebView2 incomplète (code {process.ExitCode}). Relance l'installateur ou installe WebView2 Runtime depuis Microsoft.");
+        }
+
+        if (!IsWebView2RuntimeInstalled())
+        {
+            throw new InvalidOperationException("WebView2 n'est toujours pas détecté après installation.");
+        }
+
+        SetStatus("Runtime WebView2 installé.", 16);
+    }
+
+    private static void DownloadWebView2Bootstrapper(string destinationPath)
+    {
+        const string url = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
+        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("LumoraSetup/1.0");
+        var bytes = http.GetByteArrayAsync(url).GetAwaiter().GetResult();
+        if (bytes.Length < 100_000)
+        {
+            throw new InvalidOperationException("Téléchargement WebView2 incomplet.");
+        }
+        File.WriteAllBytes(destinationPath, bytes);
+    }
+
+    private static bool IsSignedByMicrosoft(string filePath)
+    {
+        try
+        {
+            using var certificate = new X509Certificate2(X509Certificate.CreateFromSignedFile(filePath));
+            return certificate.Subject.Contains("Microsoft Corporation", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    // Evite l'echec brut ("Access to the path '...' is denied") quand
+    // l'installateur essaie d'ecraser les fichiers d'une instance de Lumora
+    // encore ouverte : verifie et previent clairement avant de commencer.
+    private static bool IsLumoraRunning()
+    {
+        foreach (var process in Process.GetProcessesByName("Lumora.WinUI"))
+        {
+            using (process)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Detection par nom d'affichage dans les entrees de desinstallation Windows,
+    // plutot que par un GUID de client EdgeUpdate fige : ce GUID n'est pas un
+    // identifiant stable et documente de facon fiable (une premiere tentative
+    // basee sur un GUID suppose s'est revelee fausse a l'usage). Le nom
+    // d'affichage "Microsoft Edge WebView2 Runtime" est ce que Windows montre
+    // lui-meme dans "Applications installees" : verifiable, stable, sans
+    // dependre d'un identifiant interne a Microsoft.
+    private static bool IsWebView2RuntimeInstalled()
+    {
+        return HasWebView2UninstallEntry(Registry.LocalMachine, @"Software\Microsoft\Windows\CurrentVersion\Uninstall") ||
+               HasWebView2UninstallEntry(Registry.LocalMachine, @"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall") ||
+               HasWebView2UninstallEntry(Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\Uninstall");
+    }
+
+    private static bool HasWebView2UninstallEntry(RegistryKey root, string uninstallSubKey)
+    {
+        using var uninstallKey = root.OpenSubKey(uninstallSubKey);
+        if (uninstallKey is null)
+        {
+            return false;
+        }
+
+        foreach (var name in uninstallKey.GetSubKeyNames())
+        {
+            using var entry = uninstallKey.OpenSubKey(name);
+            var displayName = entry?.GetValue("DisplayName") as string;
+            if (displayName is not null && displayName.Contains("WebView2", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void CreateShortcut(string shortcutPath, string targetPath, string arguments, string workingDirectory, string iconLocation)
+    {
+        var shellType = Type.GetTypeFromProgID("WScript.Shell")
+            ?? throw new InvalidOperationException("WScript.Shell indisponible.");
+        dynamic shell = Activator.CreateInstance(shellType)!;
+        dynamic shortcut = shell.CreateShortcut(shortcutPath);
+        shortcut.TargetPath = targetPath;
+        shortcut.Arguments = arguments;
+        shortcut.WorkingDirectory = workingDirectory;
+        shortcut.IconLocation = iconLocation;
+        shortcut.Description = "Lumora Browser";
+        shortcut.Save();
+    }
+
+    private void SetStatus(string text, int? progress = null)
+    {
+        if (InvokeRequired)
+        {
+            BeginInvoke(new Action<string, int?>(SetStatus), text, progress);
+            return;
+        }
+
+        _statusLabel.Text = text;
+        if (progress.HasValue)
+        {
+            _progressBar.Progress = Math.Max(0, Math.Min(100, progress.Value));
+        }
+    }
+
+    private static string Quote(string value) => "\"" + value + "\"";
+
+    private static string PsQuote(string value) => "'" + value.Replace("'", "''") + "'";
+
+    private static Image? LoadInstallerLogo()
+    {
+        try
+        {
+            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("LumoraApp.png");
+            if (stream is null)
+            {
+                return null;
+            }
+
+            using var image = Image.FromStream(stream);
+            return new Bitmap(image);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void DragWindow(MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left)
+        {
+            return;
+        }
+
+        ReleaseCapture();
+        SendMessage(Handle, WmNclButtonDown, HtCaption, 0);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        using var border = new Pen(LumoraPalette.Stroke, 1f);
+        e.Graphics.DrawRectangle(border, 0, 0, Width - 1, Height - 1);
+    }
+
+    private static void StyleAccentButton(Button button)
+    {
+        button.BackColor = LumoraPalette.Accent;
+        button.ForeColor = Color.White;
+        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(239, 139, 36);
+        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(190, 94, 18);
+    }
+
+    private static void StyleSecondaryButton(Button button)
+    {
+        button.BackColor = LumoraPalette.ChromeSurfaceRaised;
+        button.ForeColor = LumoraPalette.Foreground;
+        button.FlatAppearance.BorderColor = LumoraPalette.Stroke;
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(61, 64, 56);
+        button.FlatAppearance.MouseDownBackColor = LumoraPalette.ChromeSurface;
+    }
+
+    private static void StyleCheckBox(LumoraOptionCheckBox checkBox)
+    {
+        checkBox.ForeColor = LumoraPalette.Foreground;
+        checkBox.Font = LumoraTypography.Text(9.5f, FontStyle.Bold);
+        checkBox.Cursor = Cursors.Hand;
+    }
+}
+
+internal static class LumoraPalette
+{
+    public static readonly Color AppBackground = Color.FromArgb(13, 24, 34);
+    public static readonly Color ChromeSurface = Color.FromArgb(20, 32, 42);
+    public static readonly Color ChromeSurfaceRaised = Color.FromArgb(34, 49, 58);
+    public static readonly Color PanelSurface = Color.FromArgb(16, 29, 38);
+    public static readonly Color AddressSurface = Color.FromArgb(23, 40, 52);
+    public static readonly Color Stroke = Color.FromArgb(64, 84, 91);
+    public static readonly Color Foreground = Color.FromArgb(255, 248, 234);
+    public static readonly Color BodyText = Color.FromArgb(232, 224, 208);
+    public static readonly Color MutedForeground = Color.FromArgb(195, 185, 165);
+    public static readonly Color Accent = Color.FromArgb(255, 185, 53);
+    public static readonly Color CoolAccent = Color.FromArgb(67, 219, 209);
+    public static readonly Color OptionHoverSurface = Color.FromArgb(27, 45, 55);
+    public static readonly Color OptionFocusSurface = Color.FromArgb(30, 55, 61);
+    public static readonly Color OptionEmptySurface = Color.FromArgb(34, 49, 58);
+    public static readonly Color OptionEmptyBorder = Color.FromArgb(126, 142, 145);
+}
+
+internal static class LumoraTypography
+{
+    private const string FontFamilyName = "Segoe UI";
+
+    public static Font Display(float size, FontStyle style = FontStyle.Regular) =>
+        new(FontFamilyName, size, style, GraphicsUnit.Point);
+
+    public static Font Text(float size, FontStyle style = FontStyle.Regular) =>
+        new(FontFamilyName, size, style, GraphicsUnit.Point);
+}
+
+internal class RoundedPanel : Panel
+{
+    public int Radius { get; set; } = 12;
+    public Color BorderColor { get; set; } = LumoraPalette.Stroke;
+
+    public RoundedPanel()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using var path = CreateRoundRect(new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f), Radius);
+        using var fill = new SolidBrush(BackColor);
+        using var border = new Pen(BorderColor, 1f);
+        e.Graphics.FillPath(fill, path);
+        e.Graphics.DrawPath(border, path);
+    }
+
+    public static GraphicsPath CreateRoundRect(RectangleF bounds, float radius)
+    {
+        var diameter = radius * 2f;
+        var path = new GraphicsPath();
+        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+}
+
+internal sealed class GradientPanel : RoundedPanel
+{
+    public Color StartColor { get; set; } = LumoraPalette.ChromeSurface;
+    public Color EndColor { get; set; } = Color.FromArgb(36, 50, 47);
+    public Color AccentColor { get; set; } = LumoraPalette.CoolAccent;
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using var path = CreateRoundRect(new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f), Radius);
+        using var fill = new LinearGradientBrush(ClientRectangle, StartColor, EndColor, LinearGradientMode.ForwardDiagonal);
+        using var border = new Pen(BorderColor, 1f);
+        e.Graphics.FillPath(fill, path);
+        e.Graphics.DrawPath(border, path);
+
+        using var accent = new Pen(AccentColor, 2f);
+        e.Graphics.DrawLine(accent, 18, Height - 10, 154, Height - 10);
+    }
+}
+
+internal sealed class LogoImageControl : Control
+{
+    public Image? Image { get; set; }
+
+    public LogoImageControl()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        e.Graphics.CompositingQuality = CompositingQuality.HighQuality;
+        e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+        var plateBounds = new RectangleF(2.5f, 2.5f, Width - 5f, Height - 5f);
+        using var plate = RoundedPanel.CreateRoundRect(plateBounds, 18f);
+        using var plateFill = new SolidBrush(Color.FromArgb(38, 255, 185, 53));
+        using var plateBorder = new Pen(Color.FromArgb(110, 67, 219, 209), 1.2f);
+        e.Graphics.FillPath(plateFill, plate);
+        e.Graphics.DrawPath(plateBorder, plate);
+
+        if (Image is null)
+        {
+            return;
+        }
+
+        var imageBounds = FitImage(Image.Size, RectangleF.Inflate(plateBounds, -9f, -9f));
+        e.Graphics.DrawImage(Image, imageBounds);
+    }
+
+    private static RectangleF FitImage(Size sourceSize, RectangleF target)
+    {
+        if (sourceSize.Width <= 0 || sourceSize.Height <= 0)
+        {
+            return target;
+        }
+
+        var scale = Math.Min(target.Width / sourceSize.Width, target.Height / sourceSize.Height);
+        var width = sourceSize.Width * scale;
+        var height = sourceSize.Height * scale;
+        return new RectangleF(
+            target.Left + (target.Width - width) / 2f,
+            target.Top + (target.Height - height) / 2f,
+            width,
+            height);
+    }
+}
+
+internal sealed class LumoraOptionCheckBox : Control
+{
+    private bool _isHovering;
+    private bool _checked;
+
+    public bool Checked
+    {
+        get => _checked;
+        set
+        {
+            if (_checked == value)
+            {
+                return;
+            }
+
+            _checked = value;
+            Invalidate();
+        }
+    }
+
+    public LumoraOptionCheckBox()
+    {
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.ResizeRedraw |
+            ControlStyles.UserPaint |
+            ControlStyles.Selectable,
+            true);
+
+        BackColor = LumoraPalette.PanelSurface;
+        Padding = Padding.Empty;
+        TabStop = true;
+        AccessibleRole = AccessibleRole.CheckButton;
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        base.OnClick(e);
+        Checked = !Checked;
+    }
+
+    protected override bool IsInputKey(Keys keyData)
+    {
+        return keyData is Keys.Space or Keys.Enter || base.IsInputKey(keyData);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.KeyCode is Keys.Space or Keys.Enter)
+        {
+            Checked = !Checked;
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnGotFocus(EventArgs e)
+    {
+        base.OnGotFocus(e);
+        Invalidate();
+    }
+
+    protected override void OnLostFocus(EventArgs e)
+    {
+        base.OnLostFocus(e);
+        Invalidate();
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        base.OnMouseEnter(e);
+        _isHovering = true;
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _isHovering = false;
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        e.Graphics.Clear(BackColor);
+
+        var rowBounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        if (_isHovering || Focused)
+        {
+            using var rowPath = RoundedPanel.CreateRoundRect(rowBounds, 8f);
+            using var rowFill = new SolidBrush(_isHovering ? LumoraPalette.OptionHoverSurface : LumoraPalette.OptionFocusSurface);
+            e.Graphics.FillPath(rowFill, rowPath);
+        }
+
+        var boxSize = Math.Min(22f, Height - 8f);
+        var boxBounds = new RectangleF(4.5f, (Height - boxSize) / 2f, boxSize, boxSize);
+        using var boxPath = RoundedPanel.CreateRoundRect(boxBounds, 5f);
+
+        if (Checked)
+        {
+            using var checkedFill = new LinearGradientBrush(boxBounds, LumoraPalette.CoolAccent, LumoraPalette.Accent, LinearGradientMode.ForwardDiagonal);
+            using var checkedBorder = new Pen(Color.FromArgb(220, 161, 240, 224), 1.4f);
+            e.Graphics.FillPath(checkedFill, boxPath);
+            e.Graphics.DrawPath(checkedBorder, boxPath);
+
+            using var checkPen = new Pen(Color.FromArgb(25, 32, 29), 2.6f)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+            var left = boxBounds.Left + 5.4f;
+            var middle = boxBounds.Left + 9.4f;
+            var right = boxBounds.Right - 4.6f;
+            var low = boxBounds.Top + 12.6f;
+            var high = boxBounds.Top + 7.2f;
+            e.Graphics.DrawLines(checkPen, new[]
+            {
+                new PointF(left, low - 1f),
+                new PointF(middle, low + 3.2f),
+                new PointF(right, high)
+            });
+        }
+        else
+        {
+            using var emptyFill = new SolidBrush(LumoraPalette.OptionEmptySurface);
+            using var emptyBorder = new Pen(LumoraPalette.OptionEmptyBorder, 1.4f);
+            e.Graphics.FillPath(emptyFill, boxPath);
+            e.Graphics.DrawPath(emptyBorder, boxPath);
+
+            var innerBounds = RectangleF.Inflate(boxBounds, -5.5f, -5.5f);
+            using var innerPath = RoundedPanel.CreateRoundRect(innerBounds, 3f);
+            using var innerFill = new SolidBrush(Color.FromArgb(38, 255, 248, 237));
+            e.Graphics.FillPath(innerFill, innerPath);
+        }
+
+        var textBounds = new Rectangle(36, 0, Math.Max(0, Width - 38), Height);
+        TextRenderer.DrawText(
+            e.Graphics,
+            Text,
+            Font,
+            textBounds,
+            Enabled ? ForeColor : LumoraPalette.MutedForeground,
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+
+        if (Focused)
+        {
+            using var focusPath = RoundedPanel.CreateRoundRect(RectangleF.Inflate(rowBounds, -1.5f, -1.5f), 7f);
+            using var focusPen = new Pen(Color.FromArgb(170, 67, 219, 209), 1.2f);
+            e.Graphics.DrawPath(focusPen, focusPath);
+        }
+    }
+}
+
+internal sealed class LumoraProgressBar : Control
+{
+    private int _progress;
+
+    public int Progress
+    {
+        get => _progress;
+        set
+        {
+            _progress = Math.Max(0, Math.Min(100, value));
+            Invalidate();
+        }
+    }
+
+    public LumoraProgressBar()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var bounds = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        using var background = RoundedPanel.CreateRoundRect(bounds, Height / 2f);
+        using var backgroundBrush = new SolidBrush(LumoraPalette.ChromeSurfaceRaised);
+        using var border = new Pen(LumoraPalette.Stroke, 1f);
+        e.Graphics.FillPath(backgroundBrush, background);
+        e.Graphics.DrawPath(border, background);
+
+        var fillWidth = Math.Max(0f, (Width - 1f) * Progress / 100f);
+        if (fillWidth < 2f)
+        {
+            return;
+        }
+
+        using var fillPath = RoundedPanel.CreateRoundRect(new RectangleF(0.5f, 0.5f, fillWidth, Height - 1f), Height / 2f);
+        using var fill = new LinearGradientBrush(ClientRectangle, LumoraPalette.Accent, LumoraPalette.CoolAccent, LinearGradientMode.Horizontal);
+        e.Graphics.FillPath(fill, fillPath);
+    }
+}

@@ -30,6 +30,17 @@ L'ambition initiale du projet visait Rust pour le coeur local et Chromium via CE
 - Les logs ne doivent jamais contenir de mots de passe, tokens, cookies de session, cles secretes, donnees bancaires ou informations personnelles inutiles.
 - Toute fonctionnalite de synchronisation, telemetrie ou service distant est exclue tant qu'elle n'a pas ete explicitement discutee et validee.
 
+## Dependances externes
+
+Lumora peut s'appuyer sur des composants techniques externes (moteur web, bibliotheques, outils en ligne de commande) des lors que ce choix reste coherent avec les principes de securite ci-dessus. Une dependance externe est acceptable si elle respecte ces conditions :
+
+- Elle est open source, avec un code source verifiable.
+- Aucune donnee utilisateur n'est envoyee vers un service tiers pour la faire fonctionner (un simple GET vers une ressource publique reste acceptable).
+- Si c'est un binaire execute localement, son integrite est verifiee (empreinte cryptographique) avant toute execution.
+- Son installation ou son telechargement ne se declenche jamais silencieusement : un geste explicite de l'utilisateur est requis pour toute action reseau qui n'est pas indispensable au fonctionnement de base du navigateur.
+
+Le moteur web (WebView2/Chromium) reste la seule dependance structurante du projet ; les autres restent des briques ponctuelles au service d'un module precis, remplacables sans remettre en cause l'identite de Lumora.
+
 ## Versionnement
 
 La version de depart du projet est:
