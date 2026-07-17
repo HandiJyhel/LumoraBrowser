@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json.Nodes;
+using Lumora.WinUI.VideoDownload;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -15,15 +16,22 @@ public sealed partial class MainWindow
 
     private VideoDownloadCandidate? _videoDownloadCandidate;
     private bool _videoDownloadInProgress;
+    private bool _videoEngineInstallInProgress;
+    private VideoQuality _videoDownloadQuality = VideoQuality.Best;
 
-    private void VideoDownloadMenu_Click(object sender, RoutedEventArgs e)
+    private void VideoDownloadMenu_Click(object sender, RoutedEventArgs e) =>
+        ShowVideoDownloadFlyout(VideoDownloadButton);
+
+    private void ShowVideoDownloadFlyout(FrameworkElement flyoutTarget)
     {
-        VideoDownloadFlyout.ShowAt(VideoDownloadButton);
+        VideoDownloadFlyout.ShowAt(flyoutTarget);
     }
 
     private async void VideoDownloadFlyout_Opening(object sender, object e)
     {
         VideoDownloadStartButton.IsEnabled = false;
+        VideoDownloadQualityCombo.IsEnabled = false;
+        VideoDownloadInstallEngineButton.Visibility = Visibility.Collapsed;
         VideoDownloadTitleText.Text = "Analyse de la page...";
         VideoDownloadStatusText.Text = string.Empty;
         _videoDownloadCandidate = null;
@@ -31,10 +39,7 @@ public sealed partial class MainWindow
         var candidate = await DetectVideoDownloadCandidateAsync();
         _videoDownloadCandidate = candidate;
 
-        var enginePath = FindYouTubeDownloadEngine();
-        VideoDownloadEngineText.Text = enginePath is null
-            ? "Moteur YouTube local introuvable. Place yt-dlp.exe dans le dossier de Lumora, dans %LOCALAPPDATA%\\Lumora\\tools, ou dans le PATH."
-            : $"Moteur local detecte : {Path.GetFileName(enginePath)}";
+        RefreshVideoEngineState();
 
         if (candidate is null)
         {
@@ -50,10 +55,40 @@ public sealed partial class MainWindow
             return;
         }
 
+        var enginePath = YtDlpEngineProvider.FindLocalEngine();
         VideoDownloadStartButton.IsEnabled = enginePath is not null && !_videoDownloadInProgress;
+        VideoDownloadQualityCombo.IsEnabled = enginePath is not null && !_videoDownloadInProgress;
         VideoDownloadStatusText.Text = enginePath is null
-            ? "Le bouton est pret, mais il manque le moteur local de telechargement."
-            : "Pret a telecharger cette video YouTube dans le dossier Telechargements.";
+            ? "Installe le moteur pour activer le telechargement de cette video."
+            : FfmpegLocator.FindLocalFfmpeg() is null
+                ? "Pret a telecharger (qualite limitee : ffmpeg absent pour fusionner les flux au-dela de 720p)."
+                : "Pret a telecharger cette video YouTube dans la qualite choisie ci-dessous.";
+    }
+
+    private void VideoDownloadQualityCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (VideoDownloadQualityCombo.SelectedItem is ComboBoxItem item
+            && item.Tag is string tag
+            && Enum.TryParse<VideoQuality>(tag, out var quality))
+        {
+            _videoDownloadQuality = quality;
+        }
+    }
+
+    // Met a jour l'affichage (texte moteur + bouton d'installation) sans relancer
+    // la detection de la page. Appelee a l'ouverture du flyout et apres une
+    // installation reussie du moteur.
+    private void RefreshVideoEngineState()
+    {
+        var enginePath = YtDlpEngineProvider.FindLocalEngine();
+        VideoDownloadEngineText.Text = enginePath is null
+            ? "Moteur YouTube local introuvable."
+            : $"Moteur local detecte : {Path.GetFileName(enginePath)}";
+
+        VideoDownloadInstallEngineButton.Visibility = enginePath is null
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        VideoDownloadInstallEngineButton.IsEnabled = !_videoEngineInstallInProgress;
     }
 
     private async void VideoDownloadStartButton_Click(object sender, RoutedEventArgs e)
@@ -71,15 +106,47 @@ public sealed partial class MainWindow
             return;
         }
 
-        var enginePath = FindYouTubeDownloadEngine();
+        var enginePath = YtDlpEngineProvider.FindLocalEngine();
         if (enginePath is null)
         {
             VideoDownloadStartButton.IsEnabled = false;
-            VideoDownloadStatusText.Text = "Moteur local introuvable : ajoute yt-dlp.exe dans le dossier de Lumora ou dans le PATH.";
+            VideoDownloadStatusText.Text = "Moteur local introuvable : installe-le d'abord avec le bouton ci-dessus.";
+            RefreshVideoEngineState();
             return;
         }
 
-        await StartYouTubeDownloadAsync(candidate, enginePath);
+        await StartYouTubeDownloadAsync(candidate, enginePath, _videoDownloadQuality);
+    }
+
+    private async void VideoDownloadInstallEngine_Click(object sender, RoutedEventArgs e)
+    {
+        if (_videoEngineInstallInProgress)
+        {
+            return;
+        }
+
+        _videoEngineInstallInProgress = true;
+        VideoDownloadInstallEngineButton.IsEnabled = false;
+        var progress = new Progress<string>(text => VideoDownloadStatusText.Text = text);
+
+        try
+        {
+            await YtDlpEngineProvider.DownloadEngineAsync(progress);
+            RefreshVideoEngineState();
+            VideoDownloadStatusText.Text = "Moteur installe. Pret a telecharger cette video YouTube.";
+            VideoDownloadStartButton.IsEnabled = _videoDownloadCandidate is not null
+                && _videoDownloadCandidate.IsYouTube
+                && !_videoDownloadInProgress;
+        }
+        catch (Exception ex)
+        {
+            VideoDownloadStatusText.Text = $"Installation du moteur impossible : {ex.Message}";
+        }
+        finally
+        {
+            _videoEngineInstallInProgress = false;
+            VideoDownloadInstallEngineButton.IsEnabled = true;
+        }
     }
 
     private async Task<VideoDownloadCandidate?> DetectVideoDownloadCandidateAsync()
@@ -122,10 +189,13 @@ public sealed partial class MainWindow
         return new VideoDownloadCandidate(title, $"https://www.youtube.com/watch?v={youtubeId}", true, youtubeId);
     }
 
-    private async Task StartYouTubeDownloadAsync(VideoDownloadCandidate candidate, string enginePath)
+    private async Task StartYouTubeDownloadAsync(VideoDownloadCandidate candidate, string enginePath, VideoQuality quality)
     {
         _videoDownloadInProgress = true;
         VideoDownloadStartButton.IsEnabled = false;
+        VideoDownloadProgressBar.Value = 0;
+        VideoDownloadProgressBar.IsIndeterminate = true;
+        VideoDownloadProgressBar.Visibility = Visibility.Visible;
 
         var downloadsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -150,23 +220,57 @@ public sealed partial class MainWindow
         _historyPanel.Downloads.Upsert(initialEntry);
         RenderDownloads();
 
+        var outputLines = new List<string>();
+        var errorLines = new List<string>();
+
         try
         {
-            VideoDownloadStatusText.Text = "Telechargement YouTube en cours...";
+            var qualityLabel = VideoDownloadFormat.Label(quality);
+            VideoDownloadStatusText.Text = $"Telechargement YouTube en cours ({qualityLabel})...";
             StatusText.Text = $"Telechargement video demarre: {candidate.Title}";
 
             var process = new Process
             {
-                StartInfo = BuildYouTubeDownloadStartInfo(enginePath, candidate.Url, outputTemplate),
+                StartInfo = BuildYouTubeDownloadStartInfo(enginePath, candidate.Url, outputTemplate, FfmpegLocator.FindLocalFfmpeg(), quality),
                 EnableRaisingEvents = true
             };
 
+            process.OutputDataReceived += (_, args) =>
+            {
+                if (args.Data is null)
+                {
+                    return;
+                }
+
+                outputLines.Add(args.Data);
+                if (YtDlpProgress.TryParse(args.Data, out var percent, out var totalBytes))
+                {
+                    var receivedBytes = totalBytes > 0 ? (long)(percent / 100.0 * totalBytes) : 0;
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        _historyPanel.Downloads.Upsert(initialEntry.WithProgress(receivedBytes, totalBytes));
+                        RenderDownloads();
+                        VideoDownloadProgressBar.IsIndeterminate = totalBytes <= 0;
+                        VideoDownloadProgressBar.Value = percent;
+                        VideoDownloadStatusText.Text = $"Telechargement... {percent:0.0}%";
+                    });
+                }
+            };
+            process.ErrorDataReceived += (_, args) =>
+            {
+                if (args.Data is not null)
+                {
+                    errorLines.Add(args.Data);
+                }
+            };
+
             process.Start();
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask = process.StandardError.ReadToEndAsync();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
             await process.WaitForExitAsync();
-            var output = await outputTask;
-            var error = await errorTask;
+
+            var output = string.Join('\n', outputLines);
+            var error = string.Join('\n', errorLines);
 
             if (process.ExitCode == 0)
             {
@@ -211,11 +315,12 @@ public sealed partial class MainWindow
         finally
         {
             _videoDownloadInProgress = false;
-            VideoDownloadStartButton.IsEnabled = _videoDownloadCandidate is not null && FindYouTubeDownloadEngine() is not null;
+            VideoDownloadProgressBar.Visibility = Visibility.Collapsed;
+            VideoDownloadStartButton.IsEnabled = _videoDownloadCandidate is not null && YtDlpEngineProvider.FindLocalEngine() is not null;
         }
     }
 
-    private static ProcessStartInfo BuildYouTubeDownloadStartInfo(string enginePath, string url, string outputTemplate)
+    private static ProcessStartInfo BuildYouTubeDownloadStartInfo(string enginePath, string url, string outputTemplate, string? ffmpegPath, VideoQuality quality)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -229,46 +334,25 @@ public sealed partial class MainWindow
         startInfo.ArgumentList.Add("--no-playlist");
         startInfo.ArgumentList.Add("--windows-filenames");
         startInfo.ArgumentList.Add("--restrict-filenames");
+        startInfo.ArgumentList.Add("--newline");
+        // yt-dlp regle par defaut la date de modification du fichier sur le
+        // Last-Modified/upload date de la video, pas sur l'heure reelle du
+        // telechargement : sans --no-mtime, FindDownloadedVideo (filtre par
+        // date >= debut du telechargement) ne retrouve jamais le fichier ecrit.
+        startInfo.ArgumentList.Add("--no-mtime");
         startInfo.ArgumentList.Add("-f");
-        startInfo.ArgumentList.Add("best[ext=mp4]/best");
+        startInfo.ArgumentList.Add(VideoDownloadFormat.BuildFormatSelector(quality, ffmpegPath is not null));
+        if (ffmpegPath is not null)
+        {
+            startInfo.ArgumentList.Add("--merge-output-format");
+            startInfo.ArgumentList.Add("mp4");
+            startInfo.ArgumentList.Add("--ffmpeg-location");
+            startInfo.ArgumentList.Add(ffmpegPath);
+        }
         startInfo.ArgumentList.Add("-o");
         startInfo.ArgumentList.Add(outputTemplate);
         startInfo.ArgumentList.Add(url);
         return startInfo;
-    }
-
-    private static string? FindYouTubeDownloadEngine()
-    {
-        var candidates = new[]
-        {
-            Environment.GetEnvironmentVariable("LUMORA_YTDLP_PATH") ?? string.Empty,
-            Path.Combine(AppContext.BaseDirectory, "tools", "yt-dlp.exe"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lumora", "tools", "yt-dlp.exe")
-        };
-
-        foreach (var candidate in candidates)
-        {
-            if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        foreach (var dir in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            try
-            {
-                var candidate = Path.Combine(dir.Trim(), "yt-dlp.exe");
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
-            catch { }
-        }
-
-        return null;
     }
 
     private static bool IsYouTubeHost(string host) =>
@@ -355,16 +439,8 @@ public sealed partial class MainWindow
 
     private static string? ExtractLastExistingPath(string output)
     {
-        foreach (var line in output.Split('\n').Reverse())
+        foreach (var path in YtDlpOutputParser.CandidatePaths(output))
         {
-            var marker = "Destination: ";
-            var index = line.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (index < 0)
-            {
-                continue;
-            }
-
-            var path = line[(index + marker.Length)..].Trim();
             if (File.Exists(path))
             {
                 return path;

@@ -86,6 +86,11 @@
     <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\NetworkBlockerModule.cs" Link="Product\NetworkBlockerModule.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\SeedList.cs" Link="Product\SeedList.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\FilterListManager.cs" Link="Product\FilterListManager.cs" />
+    <Compile Include="..\Lumora.WinUI\VideoDownload\YtDlpEngineProvider.cs" Link="Product\YtDlpEngineProvider.cs" />
+    <Compile Include="..\Lumora.WinUI\VideoDownload\FfmpegLocator.cs" Link="Product\FfmpegLocator.cs" />
+    <Compile Include="..\Lumora.WinUI\VideoDownload\YtDlpProgress.cs" Link="Product\YtDlpProgress.cs" />
+    <Compile Include="..\Lumora.WinUI\VideoDownload\VideoDownloadFormat.cs" Link="Product\VideoDownloadFormat.cs" />
+    <Compile Include="..\Lumora.WinUI\VideoDownload\YtDlpOutputParser.cs" Link="Product\YtDlpOutputParser.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameUncloakerModule.cs" Link="Product\CnameUncloakerModule.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameResolver.cs" Link="Product\CnameResolver.cs" />
     <EmbeddedResource Include="..\Lumora.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
