@@ -6147,3 +6147,63 @@ Assets : `LumoraApp.png` SHA256
 `28B4103EB20528713B94D474BFC75870D3E179E21EB2D87D60D61C8D03FDA00C`.
 
 **Version :** `0.79.0-dev`.
+
+---
+
+## 2026-07-17 - Refonte du coffre en module autonome (0.79.1-dev)
+
+Troisieme volet des priorites (0.78.2 = anti-pub + etoile de favori,
+0.78.3 = bloc-notes) : refonte du coffre de mots de passe en vrai module,
+ergonomie revue, deux options nouvelles choisies avec l'utilisateur.
+Session lancee sur branche dediee `feature/refonte-coffre-0-79-1`.
+
+- Version passee a `0.79.1-dev`.
+- Extraction de `MainWindow.Vault.cs` (1351 lignes) en partiels a
+  responsabilite unique : `MainWindow.VaultCapture.cs`,
+  `MainWindow.VaultAccess.cs`, `MainWindow.VaultImportExport.cs`,
+  `MainWindow.VaultPanel.cs`, `MainWindow.Passkeys.cs` (sujet distinct
+  sorti du fichier coffre) et `MainWindow.WebMessaging.cs` (dispatch
+  generique de messages web qui n'avait jamais ete propre au coffre).
+  Aucune logique modifiee.
+- Nouveau `VaultGroupingService` pur et teste : regroupement des
+  identifiants par site (sous-domaines fusionnes), tri Recent/
+  Alphabetique. Panneau reconstruit : liste compacte groupee avec
+  favicon (cache local existant, lecture seule) a gauche, volet de
+  detail a droite (ouvrir, copier, renommer, supprimer) au lieu de
+  cartes empilees avec tous les boutons visibles.
+- Generateur de mot de passe configurable : nouveau mode phrase de passe
+  (`PasswordGenerator.GeneratePassphrase`, liste locale d'environ 270
+  mots, aucune ressource externe) en plus du mode aleatoire existant
+  (longueur, symboles). Reglages persistes dans `UiSettings`, partages
+  entre le dialogue "Nouvel identifiant" et la barre de suggestion
+  automatique sur les champs "nouveau mot de passe" detectes.
+- Authentification a deux facteurs (TOTP) locale : nouveau `TotpService`
+  pur (RFC 6238/HOTP RFC 4226, SHA-1, decodeur base32 local, saisie
+  secret colle ou URI `otpauth://`), verifie contre les vecteurs de test
+  publies par la RFC. `VaultCredential` gagne un TOTP optionnel (secret
+  chiffre comme le reste du coffre) ; volet de detail avec ajout,
+  code a 6 chiffres rotatif rafraichi chaque seconde, decompte, copie,
+  suppression. Saisie manuelle uniquement pour cette version, pas de
+  scan de QR code (nouvelle dependance a discuter separement si voulue).
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj
+--no-restore` : 507/507 tests verts (38 nouveaux). `scripts\build-winui.ps1`
+reussi a chaque etape, 0 avertissement / 0 erreur. Verification visuelle
+live tentee via le skill verify (profil de test dedie `TestCoffre`,
+distinct du profil reel `H.J.`) : la selection de profil entre dans une
+boucle de redemarrage sous pilotage UIA (ecran non touche par cette
+refonte), non resolue malgre plusieurs approches ; verification manuelle
+laissee a l'utilisateur.
+Artefact propre :
+`artifacts\clean-test\Lumora-0.79.1-dev-win-x64-clean-20260717-170345`,
+SHA256 executable hote
+`0f7499bdb73769fd56d67e7b078ef056ee960e5f29d1b67507246d686038742e`.
+Installateur construit :
+`artifacts\installer\LumoraSetup-0.79.1-dev-win-x64.exe`, SHA256
+`b63e63f64c2d052b523f0215fba41ae2fae9dd41d84c13298442e0e5d773f4c2`.
+Details : `logs/2026-07-17-refonte-coffre-module-0-79-1.md`.
+
+Travail sur branche dediee `feature/refonte-coffre-0-79-1`, pas encore
+fusionnee sur `main`.
+
+**Version :** `0.79.1-dev`.
