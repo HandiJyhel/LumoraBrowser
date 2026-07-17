@@ -98,6 +98,12 @@ internal sealed class UiSettings
         "videoDownload",
         "searchAssist"
     ];
+    // Préférences du générateur de mots de passe du coffre, partagées entre le
+    // dialogue "Nouvel identifiant" et la barre de suggestion automatique.
+    public int VaultGeneratorLength { get; set; } = 20;
+    public bool VaultGeneratorUseSymbols { get; set; } = true;
+    public string VaultGeneratorMode { get; set; } = "random"; // "random" ou "passphrase"
+    public int VaultGeneratorPassphraseWords { get; set; } = 5;
     public bool SetupWizardCompleted    { get; set; }
     public List<string> PrivacyWhitelist { get; set; } = new();
     // Mode compatibilite connexion : domaines racines ou l'utilisateur autorise

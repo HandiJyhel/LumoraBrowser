@@ -352,6 +352,14 @@ public sealed partial class MainWindow
         timer.Start();
     }
 
+    // Génère un mot de passe selon les préférences persistées de l'utilisateur
+    // (aléatoire configurable ou phrase de passe), partagées entre le dialogue
+    // "Nouvel identifiant" et la barre de suggestion automatique.
+    private string GeneratePasswordFromSettings() =>
+        _uiSettings.VaultGeneratorMode == "passphrase"
+            ? PasswordGenerator.GeneratePassphrase(_uiSettings.VaultGeneratorPassphraseWords)
+            : PasswordGenerator.Generate(_uiSettings.VaultGeneratorLength, _uiSettings.VaultGeneratorUseSymbols);
+
     private async Task<(PasswordManagerEntryDraft draft, bool cancelled)> PromptNewCredentialAsync()
     {
         var labelBox    = new TextBox { PlaceholderText = "Nom optionnel (ex. Micromania perso)", MinWidth = 340 };
@@ -360,24 +368,73 @@ public sealed partial class MainWindow
         var usernameBox = new TextBox { PlaceholderText = "utilisateur@email.com" };
         var passwordBox = new PasswordBox { PlaceholderText = "Mot de passe" };
 
-        // Générateur intégré : longueur réglable + tirage crypto-sûr, révélé après génération.
+        // Générateur intégré : mode aléatoire (longueur/symboles) ou phrase de
+        // passe (nombre de mots), tirage crypto-sûr. Les réglages choisis ici
+        // sont mémorisés et réutilisés par la barre de suggestion automatique.
+        var isPassphrase = _uiSettings.VaultGeneratorMode == "passphrase";
+        var modeRandomRadio = new RadioButton { Content = "Aleatoire", GroupName = "PwGenMode", IsChecked = !isPassphrase };
+        var modePassphraseRadio = new RadioButton { Content = "Phrase de passe", GroupName = "PwGenMode", IsChecked = isPassphrase };
+        var modeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        modeRow.Children.Add(modeRandomRadio);
+        modeRow.Children.Add(modePassphraseRadio);
+
         var lengthBox = new NumberBox
         {
-            Value = 20,
+            Value = _uiSettings.VaultGeneratorLength,
             Minimum = PasswordGenerator.MinLength,
             Maximum = 64,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-            Width = 120
+            Width = 100,
+            Visibility = isPassphrase ? Visibility.Collapsed : Visibility.Visible
         };
+        var symbolsCheck = new CheckBox
+        {
+            Content = "Symboles",
+            IsChecked = _uiSettings.VaultGeneratorUseSymbols,
+            Visibility = isPassphrase ? Visibility.Collapsed : Visibility.Visible
+        };
+        var wordCountBox = new NumberBox
+        {
+            Value = _uiSettings.VaultGeneratorPassphraseWords,
+            Minimum = PasswordGenerator.MinPassphraseWords,
+            Maximum = PasswordGenerator.MaxPassphraseWords,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+            Width = 100,
+            Visibility = isPassphrase ? Visibility.Visible : Visibility.Collapsed
+        };
+
+        void UpdateGeneratorOptionsVisibility()
+        {
+            var passphraseMode = modePassphraseRadio.IsChecked == true;
+            lengthBox.Visibility = passphraseMode ? Visibility.Collapsed : Visibility.Visible;
+            symbolsCheck.Visibility = passphraseMode ? Visibility.Collapsed : Visibility.Visible;
+            wordCountBox.Visibility = passphraseMode ? Visibility.Visible : Visibility.Collapsed;
+        }
+        modeRandomRadio.Checked += (_, _) => UpdateGeneratorOptionsVisibility();
+        modePassphraseRadio.Checked += (_, _) => UpdateGeneratorOptionsVisibility();
+
         var generateButton = new Button { Content = "Générer" };
         generateButton.Click += (_, _) =>
         {
-            passwordBox.Password = PasswordGenerator.Generate((int)lengthBox.Value);
+            _uiSettings.VaultGeneratorMode = modePassphraseRadio.IsChecked == true ? "passphrase" : "random";
+            _uiSettings.VaultGeneratorLength = (int)lengthBox.Value;
+            _uiSettings.VaultGeneratorUseSymbols = symbolsCheck.IsChecked == true;
+            _uiSettings.VaultGeneratorPassphraseWords = (int)wordCountBox.Value;
+            _uiSettings.Save(_profile.UiSettingsFile);
+
+            passwordBox.Password = GeneratePasswordFromSettings();
             passwordBox.PasswordRevealMode = PasswordRevealMode.Visible;
         };
-        var generatorRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        generatorRow.Children.Add(lengthBox);
-        generatorRow.Children.Add(generateButton);
+
+        var generatorOptionsRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        generatorOptionsRow.Children.Add(lengthBox);
+        generatorOptionsRow.Children.Add(symbolsCheck);
+        generatorOptionsRow.Children.Add(wordCountBox);
+        generatorOptionsRow.Children.Add(generateButton);
+
+        var generatorRow = new StackPanel { Spacing = 6 };
+        generatorRow.Children.Add(modeRow);
+        generatorRow.Children.Add(generatorOptionsRow);
 
         var panel = new StackPanel { Spacing = 6 };
         panel.Children.Add(new TextBlock { Text = "Nom" });

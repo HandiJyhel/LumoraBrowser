@@ -216,7 +216,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        _pendingGeneratedPassword = PasswordGenerator.Generate(20);
+        _pendingGeneratedPassword = GeneratePasswordFromSettings();
         SuggestPasswordValueText.Text = _pendingGeneratedPassword;
         SuggestPasswordBar.Visibility = Visibility.Visible;
     }
@@ -234,7 +234,7 @@ public sealed partial class MainWindow
 
     private void SuggestPasswordRegenerate_Click(object sender, RoutedEventArgs e)
     {
-        _pendingGeneratedPassword = PasswordGenerator.Generate(20);
+        _pendingGeneratedPassword = GeneratePasswordFromSettings();
         SuggestPasswordValueText.Text = _pendingGeneratedPassword;
     }
 

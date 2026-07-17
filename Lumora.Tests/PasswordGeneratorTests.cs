@@ -74,4 +74,58 @@ public class PasswordGeneratorTests
         // Collision quasi impossible sur un espace aussi large : on tolère de rares doublons.
         Assert.True(set.Count > 490);
     }
+
+    [Theory]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(10)]
+    public void GeneratePassphrase_respecte_le_nombre_de_mots_demande(int wordCount)
+    {
+        var phrase = PasswordGenerator.GeneratePassphrase(wordCount);
+        Assert.Equal(wordCount, phrase.Split('-').Length);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    public void GeneratePassphrase_borne_le_minimum(int tooFew)
+    {
+        var phrase = PasswordGenerator.GeneratePassphrase(tooFew);
+        Assert.Equal(PasswordGenerator.MinPassphraseWords, phrase.Split('-').Length);
+    }
+
+    [Fact]
+    public void GeneratePassphrase_borne_le_maximum()
+    {
+        var phrase = PasswordGenerator.GeneratePassphrase(999);
+        Assert.Equal(PasswordGenerator.MaxPassphraseWords, phrase.Split('-').Length);
+    }
+
+    [Fact]
+    public void GeneratePassphrase_utilise_le_separateur_fourni()
+    {
+        var phrase = PasswordGenerator.GeneratePassphrase(4, separator: " ");
+        Assert.Equal(4, phrase.Split(' ').Length);
+        Assert.DoesNotContain('-', phrase);
+    }
+
+    [Fact]
+    public void GeneratePassphrase_ne_contient_que_des_mots_minuscules()
+    {
+        var phrase = PasswordGenerator.GeneratePassphrase(6);
+        Assert.All(phrase, c => Assert.True(char.IsLower(c) || c == '-'));
+    }
+
+    [Fact]
+    public void GeneratePassphrase_produit_des_valeurs_distinctes()
+    {
+        var set = new HashSet<string>();
+        for (var i = 0; i < 300; i++)
+        {
+            set.Add(PasswordGenerator.GeneratePassphrase(6));
+        }
+
+        // ~270 mots ^ 6 : espace largement suffisant pour eviter des collisions frequentes.
+        Assert.True(set.Count > 295);
+    }
 }
