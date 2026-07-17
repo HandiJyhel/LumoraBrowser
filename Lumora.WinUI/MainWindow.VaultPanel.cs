@@ -11,6 +11,7 @@ public sealed partial class MainWindow
 {
     private VaultSortMode _vaultSortMode = VaultSortMode.Recent;
     private VaultCredential? _selectedVaultCredential;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _totpTimer;
 
     private async void VaultAddButton_Click(object sender, RoutedEventArgs e)
     {
@@ -173,6 +174,8 @@ public sealed partial class MainWindow
     private void ShowVaultDetail(VaultCredential? cred)
     {
         _selectedVaultCredential = cred;
+        _totpTimer?.Stop();
+        _totpTimer = null;
         VaultDetailPanel.Children.Clear();
 
         if (cred is null)
@@ -273,12 +276,136 @@ public sealed partial class MainWindow
         manageActions.Children.Add(deleteBtn);
         VaultDetailPanel.Children.Add(manageActions);
 
+        VaultDetailPanel.Children.Add(BuildTotpSection(cred));
+
         VaultDetailPanel.Children.Add(new TextBlock
         {
             Text = $"Mis a jour : {DateTimeOffset.FromUnixTimeSeconds(cred.UpdatedAt).LocalDateTime:dd/MM/yyyy HH:mm}",
             Opacity = 0.5,
             FontSize = 12
         });
+    }
+
+    // Authentification a deux facteurs (TOTP) locale, type Google Authenticator :
+    // secret chiffre dans vault.lumora, code calcule sur l'appareil, rien envoye
+    // nulle part. Saisie manuelle (secret colle ou URI otpauth://) pour cette
+    // version, sans scan de QR code.
+    private UIElement BuildTotpSection(VaultCredential cred)
+    {
+        var container = new StackPanel { Spacing = 8, Margin = new Thickness(0, 6, 0, 0) };
+        container.Children.Add(new TextBlock
+        {
+            Text = "Authentification a deux facteurs",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = 13,
+            Opacity = 0.8
+        });
+
+        if (string.IsNullOrWhiteSpace(cred.TotpSecret))
+        {
+            var addBtn = new Button { Content = "Ajouter un code TOTP" };
+            addBtn.Click += async (_, _) => await PromptAddTotpAsync(cred);
+            container.Children.Add(addBtn);
+            return container;
+        }
+
+        var codeText = new TextBlock
+        {
+            FontSize = 26,
+            FontFamily = new FontFamily("Consolas"),
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        };
+        var countdownText = new TextBlock { Opacity = 0.6, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+
+        void Tick()
+        {
+            var now = DateTimeOffset.UtcNow;
+            codeText.Text = TotpService.GenerateCode(cred.TotpSecret, now, cred.TotpDigits, cred.TotpPeriod);
+            countdownText.Text = $"Expire dans {TotpService.SecondsRemaining(now, cred.TotpPeriod)}s";
+        }
+        Tick();
+
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromSeconds(1);
+        timer.IsRepeating = true;
+        timer.Tick += (_, _) => Tick();
+        timer.Start();
+        _totpTimer = timer;
+
+        var codeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        codeRow.Children.Add(codeText);
+        codeRow.Children.Add(countdownText);
+        container.Children.Add(codeRow);
+
+        var totpActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var copyCodeBtn = new Button { Content = "Copier le code" };
+        copyCodeBtn.Click += (_, _) => CopyPasswordManagerText(codeText.Text, "Code TOTP copie.");
+        totpActions.Children.Add(copyCodeBtn);
+
+        var removeTotpBtn = new Button { Content = "Supprimer le TOTP" };
+        removeTotpBtn.Click += (_, _) =>
+        {
+            _passwordManager.SetTotpById(cred.Id, null);
+            StatusText.Text = "TOTP supprime.";
+            RefreshVaultPanel();
+        };
+        totpActions.Children.Add(removeTotpBtn);
+        container.Children.Add(totpActions);
+
+        return container;
+    }
+
+    private async Task PromptAddTotpAsync(VaultCredential cred)
+    {
+        var box = new TextBox
+        {
+            PlaceholderText = "Secret TOTP ou URI otpauth://...",
+            MinWidth = 380
+        };
+        var errorText = new TextBlock
+        {
+            Text = "Secret invalide. Verifiez qu'il s'agit bien d'un secret TOTP (base32) ou d'une URI otpauth://.",
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed
+        };
+
+        var panel = new StackPanel { Spacing = 8 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Collez le secret fourni par le site (affiche generalement sous le QR code lors de l'activation), ou l'URI otpauth:// complete si vous l'avez exportee.",
+            Opacity = 0.7,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(box);
+        panel.Children.Add(errorText);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Ajouter un code TOTP",
+            Content = panel,
+            PrimaryButtonText = "Enregistrer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+
+        dialog.PrimaryButtonClick += (_, args) =>
+        {
+            if (TotpService.ParseSecretInput(box.Text) is not null) return;
+            args.Cancel = true;
+            errorText.Visibility = Visibility.Visible;
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+
+        var account = TotpService.ParseSecretInput(box.Text);
+        if (account is null) return; // garde-fou : déjà validé par PrimaryButtonClick
+
+        _passwordManager.SetTotpById(cred.Id, account.Secret, account.Digits, account.Period);
+        StatusText.Text = "Code TOTP ajoute.";
+        RefreshVaultPanel();
     }
 
     // Ouvre la page de connexion mémorisée (repli sur l'origine pour les anciennes

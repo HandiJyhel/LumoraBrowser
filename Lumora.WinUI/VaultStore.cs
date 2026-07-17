@@ -119,7 +119,8 @@ internal sealed class VaultStore
                 Id = Guid.NewGuid().ToString("N"),
                 Origin = c.Origin, Username = c.Username, Password = c.Password,
                 Label = c.Label, LoginUrl = c.LoginUrl,
-                CreatedAt = c.CreatedAt, UpdatedAt = c.UpdatedAt
+                CreatedAt = c.CreatedAt, UpdatedAt = c.UpdatedAt,
+                TotpSecret = c.TotpSecret, TotpDigits = c.TotpDigits, TotpPeriod = c.TotpPeriod
             };
             changed = true;
         }
@@ -144,7 +145,8 @@ internal sealed class VaultStore
                 Origin = origin, Username = username, Password = password,
                 Label = old.Label,
                 LoginUrl = string.IsNullOrWhiteSpace(loginUrl) ? old.LoginUrl : loginUrl,
-                CreatedAt = old.CreatedAt, UpdatedAt = now
+                CreatedAt = old.CreatedAt, UpdatedAt = now,
+                TotpSecret = old.TotpSecret, TotpDigits = old.TotpDigits, TotpPeriod = old.TotpPeriod
             };
         }
         else
@@ -188,7 +190,28 @@ internal sealed class VaultStore
         {
             Id = old.Id, Origin = old.Origin, Username = old.Username, Password = old.Password,
             Label = label?.Trim() ?? string.Empty, LoginUrl = old.LoginUrl,
-            CreatedAt = old.CreatedAt, UpdatedAt = old.UpdatedAt
+            CreatedAt = old.CreatedAt, UpdatedAt = old.UpdatedAt,
+            TotpSecret = old.TotpSecret, TotpDigits = old.TotpDigits, TotpPeriod = old.TotpPeriod
+        };
+        Save();
+    }
+
+    // Définit (secret non vide) ou efface (secret vide/null) le TOTP associé à
+    // un identifiant. Digits/Period par défaut (6/30) si non précisés.
+    public void SetTotpById(string id, string? secret, int digits = 6, int period = 30)
+    {
+        if (IsLocked) return;
+        var idx = _credentials.FindIndex(c => c.Id == id);
+        if (idx < 0) return;
+
+        var old = _credentials[idx];
+        _credentials[idx] = new VaultCredential
+        {
+            Id = old.Id, Origin = old.Origin, Username = old.Username, Password = old.Password,
+            Label = old.Label, LoginUrl = old.LoginUrl,
+            CreatedAt = old.CreatedAt, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            TotpSecret = secret?.Trim() ?? string.Empty,
+            TotpDigits = digits, TotpPeriod = period
         };
         Save();
     }
@@ -475,7 +498,9 @@ internal sealed class VaultStore
                     Origin = _credentials[idx].Origin, Username = _credentials[idx].Username,
                     Password = password, Label = _credentials[idx].Label,
                     LoginUrl = _credentials[idx].LoginUrl,
-                    CreatedAt = _credentials[idx].CreatedAt, UpdatedAt = now
+                    CreatedAt = _credentials[idx].CreatedAt, UpdatedAt = now,
+                    TotpSecret = _credentials[idx].TotpSecret,
+                    TotpDigits = _credentials[idx].TotpDigits, TotpPeriod = _credentials[idx].TotpPeriod
                 };
             else
                 _credentials.Add(new VaultCredential
@@ -517,7 +542,8 @@ internal sealed class VaultStore
                     Label = string.IsNullOrWhiteSpace(cleanLabel) ? old.Label : cleanLabel,
                     LoginUrl = string.IsNullOrWhiteSpace(cleanLoginUrl) ? old.LoginUrl : cleanLoginUrl,
                     CreatedAt = old.CreatedAt,
-                    UpdatedAt = now
+                    UpdatedAt = now,
+                    TotpSecret = old.TotpSecret, TotpDigits = old.TotpDigits, TotpPeriod = old.TotpPeriod
                 };
             }
             else

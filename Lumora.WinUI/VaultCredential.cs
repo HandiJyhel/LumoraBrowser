@@ -17,5 +17,11 @@ public sealed class VaultCredential
     [JsonPropertyName("login_url")] public string LoginUrl { get; init; } = string.Empty;
     [JsonPropertyName("created_at")] public long CreatedAt { get; init; }
     [JsonPropertyName("updated_at")] public long UpdatedAt { get; init; }
+    // Authentification à double facteur (TOTP, RFC 6238) optionnelle, associée à
+    // cet identifiant. Vide = pas de TOTP configuré. Chiffré comme le reste du
+    // coffre : ne fait pas exception au stockage vault.lumora.
+    [JsonPropertyName("totp_secret")] public string TotpSecret { get; init; } = string.Empty;
+    [JsonPropertyName("totp_digits")] public int TotpDigits { get; init; } = 6;
+    [JsonPropertyName("totp_period")] public int TotpPeriod { get; init; } = 30;
 }
 
