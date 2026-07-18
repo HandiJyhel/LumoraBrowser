@@ -11,6 +11,8 @@ using Lumora.Privacy.CnameUncloaker;
 using Lumora.Privacy.CosmeticFilter;
 using Lumora.Privacy.ConsentManager;
 using Lumora.Privacy.LoginCompatibility;
+using Lumora.Privacy.GeolocationSpoofing;
+using Lumora.Privacy.FingerprintProtection;
 
 namespace Lumora.WinUI;
 

@@ -321,6 +321,13 @@ public sealed partial class MainWindow
         SaveUiSettings();
         RenderSitePermissions(selection.RootDomain);
         StatusText.Text = $"{SitePermissionPolicy.StateLabel(state)} : {selection.Kind} pour {selection.RootDomain}.";
+
+        // La liste des sites exemptes de la position fictive depend des regles
+        // "geolocation" : la rafraichir des qu'une regle de ce type change.
+        if (string.Equals(SitePermissionPolicy.NormalizeKind(selection.Kind), "geolocation", StringComparison.OrdinalIgnoreCase))
+        {
+            await RegisterGeolocationSpoofScriptsAsync();
+        }
     }
 
     private void CoreWebView2_PermissionRequested(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)

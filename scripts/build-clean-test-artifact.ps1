@@ -2,7 +2,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
-    [string]$Version = "0.83.18-dev",
+    [string]$Version = "0.83.19-dev",
     [string]$OutputRoot = "artifacts\clean-test",
     [switch]$NoRestore
 )

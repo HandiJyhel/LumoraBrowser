@@ -321,6 +321,8 @@ public sealed partial class MainWindow
         await Task.WhenAll(
             RegisterCosmeticScriptOnCoreAsync(sender.CoreWebView2),
             RegisterConsentScriptOnCoreAsync(sender.CoreWebView2),
+            RegisterGeolocationSpoofScriptOnCoreAsync(sender.CoreWebView2),
+            RegisterFingerprintProtectionScriptOnCoreAsync(sender.CoreWebView2),
             RegisterLoginCompatibilityScriptOnCoreAsync(sender.CoreWebView2),
             RegisterLoginDiagnosticScriptOnCoreAsync(sender.CoreWebView2),
             RegisterPasskeyMonitorAsync(sender.CoreWebView2),
