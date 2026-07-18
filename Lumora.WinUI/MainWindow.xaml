@@ -2141,6 +2141,46 @@
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
 
+                            <!-- Anti-fuite WebRTC -->
+                            <TextBlock Text="WebRTC" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                       Text="Empêche les sites de révéler votre IP locale/publique réelle via WebRTC (utile même sans VPN actif). Nécessite un redémarrage de Lumora pour s'appliquer." />
+                            <ToggleSwitch x:Name="WebRtcLeakProtectionSwitch"
+                                         Header="Bloquer les fuites d'IP WebRTC"
+                                         Toggled="WebRtcLeakProtectionSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Position fictive (geolocalisation) -->
+                            <TextBlock Text="Geolocalisation" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                       Text="Renvoie une position fixe aux sites qui demandent votre localisation (cartes, meteo, recherche « pres de moi ») au lieu de la position reelle de l'appareil. Sans effet sur le catalogue des services de streaming, qui se base sur l'adresse IP, pas sur cette API. Un site autorise explicitement (onglet Site actuel) recoit toujours la vraie position." />
+                            <ToggleSwitch x:Name="GeolocationSpoofingSwitch"
+                                         Header="Position fictive"
+                                         Toggled="GeolocationSpoofingSwitch_Toggled" />
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="GeolocationLatitudeBox" Grid.Column="0" Header="Latitude" PlaceholderText="48.8566" />
+                                <TextBox x:Name="GeolocationLongitudeBox" Grid.Column="1" Header="Longitude" PlaceholderText="2.3522" />
+                                <Button Grid.Column="2" Content="Appliquer" VerticalAlignment="Bottom" Click="GeolocationSpoofApplyButton_Click" />
+                            </Grid>
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- Anti-fingerprinting -->
+                            <TextBlock Text="Empreinte du navigateur" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                       Text="Ajoute un leger bruit a la lecture du Canvas, du WebGL et de l'AudioContext (les techniques de fingerprinting les plus courantes) pour rendre le pistage inter-sites plus difficile, sans casser l'affichage ni ralentir la navigation." />
+                            <ToggleSwitch x:Name="FingerprintProtectionSwitch"
+                                         Header="Brouiller l'empreinte du navigateur"
+                                         Toggled="FingerprintProtectionSwitch_Toggled" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
                             <!-- Filtre cosmétique -->
                             <TextBlock Text="Masquage visuel" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"

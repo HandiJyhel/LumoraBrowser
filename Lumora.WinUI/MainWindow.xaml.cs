@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.83.17-dev";
+    private const string Version = "0.83.18-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -150,13 +150,19 @@ public sealed partial class MainWindow : Window
     {
         WinUiRuntimeTrace.Write("MainWindow constructor start");
 
+        // Chargé avant ConfigureOnce : le drapeau anti-fuite WebRTC est un argument
+        // Chromium figé au démarrage du moteur WebView2, donc il faut connaître le
+        // réglage AVANT cette étape (un ApplyUiSettings ultérieur ne pourrait plus
+        // le faire prendre effet pour cette session).
+        _uiSettings = UiSettings.Load(_profile.UiSettingsFile, _profile.LegacyUiSettingsFile);
+
         // WebView2 stocke ses cookies/sessions dans le profil Lumora plutôt que dans un
         // dossier collé à l'exe (Lumora.WinUI.exe.WebView2). Conséquence : changer
         // ou supprimer un profil déconnecte réellement des sites, et la purge est complète.
         // Doit être fait AVANT toute création de moteur WebView2 dans le process. Partagé
         // avec les fenêtres d'application web (WebView2Bootstrap), qui doivent pointer
         // vers le même profil pour partager cookies et sessions.
-        WebView2Bootstrap.ConfigureOnce(_profile.BrowserDataDir);
+        WebView2Bootstrap.ConfigureOnce(_profile.BrowserDataDir, _uiSettings.WebRtcLeakProtectionEnabled);
 
         InitializeComponent();
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");

@@ -77,6 +77,24 @@ internal sealed class UiSettings
     public bool ParameterCleanerEnabled { get; set; } = true;
     public bool HttpsEnforcerEnabled { get; set; } = true;
     public bool CnameUncloakerEnabled { get; set; } = true;
+    // Empeche WebRTC de reveler l'IP locale/publique reelle via des candidats ICE
+    // non proxifies, meme quand un site utilise WebRTC sans rapport avec un appel
+    // video (fingerprinting). Drapeau Chromium fixe au demarrage du moteur
+    // WebView2 : un changement ne s'applique qu'au redemarrage de Lumora.
+    public bool WebRtcLeakProtectionEnabled { get; set; } = true;
+    // Position fictive renvoyee a navigator.geolocation (cartes, meteo, recherche
+    // "pres de moi") au lieu de la vraie position de l'appareil. Contrairement au
+    // reglage WebRTC, s'applique immediatement aux onglets ouverts (simple script
+    // injecte, pas un drapeau de demarrage du moteur). Paris par defaut.
+    public bool GeolocationSpoofingEnabled { get; set; } = true;
+    public double GeolocationSpoofLatitude { get; set; } = 48.8566;
+    public double GeolocationSpoofLongitude { get; set; } = 2.3522;
+    // Bruit leger sur Canvas/WebGL/AudioContext + normalisation
+    // hardwareConcurrency/deviceMemory : rend le pistage par empreinte
+    // (fingerprinting) inter-sites plus difficile. Aucun intermediaire
+    // reseau, aucun cout de vitesse, actif par defaut comme les autres
+    // protections gratuites.
+    public bool FingerprintProtectionEnabled { get; set; } = true;
     public bool CosmeticFilterEnabled   { get; set; } = true;
     public bool ConsentManagerEnabled   { get; set; } = true;
     public bool AccessibilityHighContrast { get; set; }

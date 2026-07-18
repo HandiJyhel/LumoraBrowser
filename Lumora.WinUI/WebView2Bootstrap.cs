@@ -21,9 +21,16 @@ internal static class WebView2Bootstrap
             // vérification pilotée) sont CONSERVÉS : on ajoute nos drapeaux
             // anti-télémétrie au lieu d'écraser la variable.
             var external = Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
-            var antiTelemetry = "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings";
+            var flags = "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings";
+            // Anti-fuite WebRTC : interdit les candidats ICE UDP non proxifies, qui
+            // reveleraient sinon l'IP locale/publique reelle a n'importe quel site
+            // utilisant WebRTC (appel video ou simple fingerprinting).
+            if (webRtcLeakProtectionEnabled)
+            {
+                flags += " --force-webrtc-ip-handling-policy=disable_non_proxied_udp";
+            }
             Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                string.IsNullOrWhiteSpace(external) ? antiTelemetry : $"{antiTelemetry} {external.Trim()}");
+                string.IsNullOrWhiteSpace(external) ? flags : $"{flags} {external.Trim()}");
         }
         catch { }
     }
