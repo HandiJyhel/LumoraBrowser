@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.83.20-dev";
+    private const string Version = "0.83.21-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -128,6 +128,13 @@ public sealed partial class MainWindow : Window
     // Identifiants des scripts privacy enregistrés, PAR moteur (un WebView2 par onglet).
     private readonly Dictionary<CoreWebView2, string> _cosmeticScriptIds = new();
     private readonly Dictionary<CoreWebView2, string> _consentScriptIds = new();
+    private readonly Dictionary<CoreWebView2, string> _geolocationSpoofScriptIds = new();
+    private readonly Dictionary<CoreWebView2, string> _fingerprintProtectionScriptIds = new();
+    // Fixe une fois par lancement de Lumora : le bruit anti-fingerprinting reste
+    // stable pour toute la session (une page qui redessine son canvas plusieurs
+    // fois ne doit pas voir une empreinte differente a chaque fois), mais change
+    // d'un lancement a l'autre pour ne pas devenir lui-meme un identifiant stable.
+    private readonly long _fingerprintSessionSeed = Random.Shared.NextInt64(1, int.MaxValue);
     private readonly Dictionary<CoreWebView2, string> _loginCompatibilityScriptIds = new();
     private readonly Dictionary<CoreWebView2, string> _loginDiagnosticScriptIds = new();
     private readonly SiteLoginDiagnosticRecorder _loginDiagnostics = new();
