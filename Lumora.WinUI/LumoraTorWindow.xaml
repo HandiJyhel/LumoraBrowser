@@ -1,0 +1,89 @@
+<Window
+    x:Class="Lumora.WinUI.LumoraTorWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Navigation anonyme - Lumora">
+
+    <!--
+        Fenetre de navigation anonyme (Tor) : masque l'adresse IP reelle en
+        routant le trafic de CETTE fenetre uniquement via le reseau Tor (moteur
+        externe, jamais telecharge automatiquement). Architecture posee ici ;
+        l'acquisition du moteur (bouton "Installer") est une etape separee, pas
+        encore cablee dans cette version.
+    -->
+    <Grid x:Name="RootGrid" Background="#FF17131F">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Padding="10,8" ColumnSpacing="8" Background="#FF241C33">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <FontIcon Grid.Column="0" Glyph="&#xE726;" FontFamily="Segoe MDL2 Assets"
+                      FontSize="16" Foreground="#FF8E7BD6" VerticalAlignment="Center"
+                      Margin="2,0,4,0" />
+
+            <Button x:Name="TorBackButton" Grid.Column="1" Padding="8,5"
+                    Click="TorBackButton_Click" IsEnabled="False"
+                    AutomationProperties.Name="Page precedente"
+                    ToolTipService.ToolTip="Page precedente">
+                <FontIcon Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+            <Button x:Name="TorForwardButton" Grid.Column="2" Padding="8,5"
+                    Click="TorForwardButton_Click" IsEnabled="False"
+                    AutomationProperties.Name="Page suivante"
+                    ToolTipService.ToolTip="Page suivante">
+                <FontIcon Glyph="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+            <Button x:Name="TorReloadButton" Grid.Column="3" Padding="8,5"
+                    Click="TorReloadButton_Click"
+                    AutomationProperties.Name="Recharger la page"
+                    ToolTipService.ToolTip="Recharger la page">
+                <FontIcon Glyph="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+
+            <TextBox x:Name="TorAddressBox" Grid.Column="4"
+                     PlaceholderText="Rechercher ou saisir une URL (navigation anonyme)"
+                     KeyDown="TorAddressBox_KeyDown"
+                     AutomationProperties.Name="Barre d'adresse de la navigation anonyme"
+                     VerticalAlignment="Center" />
+
+            <TextBlock Grid.Column="5" Text="Tor" Foreground="#FF8E7BD6"
+                       FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                       Margin="4,0,2,0" />
+        </Grid>
+
+        <!-- Ecran d'etat : affiche tant que le moteur Tor n'est pas connecte -->
+        <Grid x:Name="SetupPanel" Grid.Row="1" Padding="32">
+            <StackPanel MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+                <FontIcon Glyph="&#xE726;" FontFamily="Segoe MDL2 Assets" FontSize="40"
+                          Foreground="#FF8E7BD6" HorizontalAlignment="Center" />
+                <TextBlock Text="Navigation anonyme" FontSize="24" FontWeight="SemiBold"
+                           Foreground="White" HorizontalAlignment="Center" />
+                <TextBlock TextWrapping="Wrap" Opacity="0.78" Foreground="White" HorizontalAlignment="Center" TextAlignment="Center"
+                           Text="Cette fenetre route son trafic via le reseau Tor (relais independants, aucun serveur Lumora) : votre adresse IP reelle n'est visible ni du site visite ni d'un relais unique. Seule cette fenetre est concernee, pas le reste de la navigation." />
+                <TextBlock x:Name="TorStatusText" TextWrapping="Wrap" FontWeight="SemiBold"
+                           Foreground="#FF8E7BD6" HorizontalAlignment="Center" TextAlignment="Center"
+                           Text="Moteur Tor non installe." />
+                <Button x:Name="TorInstallButton" Content="Installer le moteur Tor" HorizontalAlignment="Center"
+                        Click="TorInstallButton_Click" />
+                <TextBlock TextWrapping="Wrap" Opacity="0.6" FontSize="12" Foreground="White"
+                           HorizontalAlignment="Center" TextAlignment="Center"
+                           Text="Le moteur (Tor Expert Bundle, torproject.org) n'est jamais installe automatiquement : ce bouton reste sans effet tant que le telechargement n'est pas cable dans une prochaine version." />
+            </StackPanel>
+        </Grid>
+
+        <Grid x:Name="TorWebViewHost" Grid.Row="1" Visibility="Collapsed" />
+    </Grid>
+</Window>

@@ -256,6 +256,7 @@
                         <MenuFlyoutSubItem Text="Navigation">
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
                             <MenuFlyoutItem Text="Nouvelle fenêtre privée" Click="PrivateWindowMenu_Click" />
+                            <MenuFlyoutItem Text="Navigation anonyme (Tor)" Click="TorWindowMenu_Click" />
                             <MenuFlyoutItem Text="Rouvrir l'onglet ferme" Click="ReopenTabMenu_Click" />
                             <MenuFlyoutItem Text="Groupes enregistres" Click="SavedTabGroupsMenu_Click" />
                             <MenuFlyoutItem Text="Accueil Lumora" Click="HomeMenu_Click" />
@@ -1036,6 +1037,7 @@
                         <MenuFlyoutSubItem Text="Navigation">
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
                             <MenuFlyoutItem Text="Nouvelle fenêtre privée" Click="PrivateWindowMenu_Click" />
+                            <MenuFlyoutItem Text="Navigation anonyme (Tor)" Click="TorWindowMenu_Click" />
                             <MenuFlyoutItem Text="Rouvrir l'onglet fermé" Click="ReopenTabMenu_Click" />
                             <MenuFlyoutItem Text="Groupes enregistrés" Click="SavedTabGroupsMenu_Click" />
                             <MenuFlyoutItem Text="Accueil Lumora" Click="HomeMenu_Click" />
