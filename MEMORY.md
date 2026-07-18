@@ -7193,3 +7193,49 @@ de Parametres.
   emplacements.
 
 **Version :** `0.83.22-dev`.
+
+
+## 2026-07-18 - Authentification du pont web<->natif (0.83.23-dev)
+
+Suite a un audit complet du projet demande par l'utilisateur : le pont
+`BrowserCore_WebMessageReceived` (partage par tous les onglets, y compris
+les sites web arbitraires) traitait certains messages en faisant confiance
+a des donnees auto-declarees par la page elle-meme, sans que rien ne
+verifie qui parlait reellement. Deux failles concretes corrigees.
+
+- Version passee a `0.83.23-dev`.
+- Passkeys (`passkey_created`/`passkey_used`) : l'origine du site n'est
+  plus lue dans le champ JSON `o` (rempli par `location.origin` cote page,
+  donc falsifiable par un `postMessage` direct qui n'emprunte pas le
+  script de capture de Lumora). Elle est desormais derivee de
+  `CoreWebView2WebMessageReceivedEventArgs.Source`, attestee par WebView2
+  et impossible a mentir depuis le JS de la page. Nouveau helper
+  `OriginFromSource` (`MainWindow.WebMessaging.cs`) qui normalise vers le
+  meme format que `location.origin` (port par defaut omis).
+- Messages `newtab_*` (raccourcis, memoire du compagnon Lumie, ouverture
+  de panneaux) : desormais rejetes si l'onglet emetteur n'est pas la page
+  d'accueil interne (`lumora://accueil`), via l'aiguillage `TabForCore`
+  deja existant. Un site web quelconque ne peut plus forger ces messages
+  pour supprimer un raccourci de l'utilisateur ou injecter une fausse note
+  dans la memoire du compagnon.
+- Perimetre volontairement restreint a ces deux categories : les autres
+  messages (`nova.loginDiagnostic`, `nova.payment.form`,
+  `nova.fullscreenExit`, `lumora.annotation`) sont concus pour venir de
+  n'importe quel site par nature et ne persistent rien de sensible sans
+  action explicite de l'utilisateur (ex. le portefeuille exige un
+  deverrouillage manuel avant tout remplissage).
+- Mise a jour du test de garde-fou d'alignement de version vers
+  `0.83.23-dev` (`Lumora.Tests/UsageModeVisualIdentityTests.cs`,
+  `AGENTS.md`, `scripts/build-clean-test-artifact.ps1`,
+  `scripts/build-installer.ps1`).
+- Log ajoute : `logs/2026-07-18-authentification-pont-web-natif-0-83-23.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora en dehors de la verification.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 517/517
+  tests reussis.
+- Build WinUI MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.23-dev`.

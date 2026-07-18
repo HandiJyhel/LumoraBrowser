@@ -8,6 +8,26 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow
 {
+    // Un message web n'atteste jamais lui-même son origine de façon fiable :
+    // tout champ JSON envoyé par la page (ex. un ancien "o":location.origin)
+    // est falsifiable par la page elle-même via un postMessage direct, sans
+    // passer par le script Lumora prévu. Les seules sources dignes de
+    // confiance sont celles attestées par WebView2 : e.Source (l'URL réelle
+    // du document qui a posté le message, impossible à mentir côté JS) et
+    // l'adresse logique que Lumora suit lui-même pour chaque onglet
+    // (TabForCore(...).Address, jamais dérivée d'une donnée web).
+    private static string? OriginFromSource(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source)) return null;
+        if (!Uri.TryCreate(source, UriKind.Absolute, out var uri)) return null;
+        if (uri.Scheme is not ("http" or "https")) return null;
+
+        var isDefaultPort =
+            (uri.Scheme == "http" && uri.Port == 80) ||
+            (uri.Scheme == "https" && uri.Port == 443);
+        return isDefaultPort ? $"{uri.Scheme}://{uri.Host}" : $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+    }
+
     private async void BrowserCore_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
@@ -21,6 +41,24 @@ public sealed partial class MainWindow
             if (json is not JsonObject obj) return;
             var type = obj["t"]?.GetValue<string>();
 
+            // Les messages newtab_* pilotent l'UI locale de Lumora (raccourcis,
+            // memoire du compagnon, ouverture de panneaux) et ne doivent jamais
+            // pouvoir etre declenches par un site web quelconque qui appellerait
+            // directement window.chrome.webview.postMessage : seule la page
+            // d'accueil interne de Lumora (lumora://accueil, chargee via
+            // NavigateToString) est legitime pour les envoyer.
+            var isNewTabMessage = type is "newtab_add_shortcut" or "newtab_edit_shortcut" or "newtab_delete_shortcut"
+                or "newtab_personalize" or "newtab_modules" or "newtab_mode_intro_dismiss"
+                or "newtab_mode_quick_note" or "newtab_mode_action";
+            if (isNewTabMessage)
+            {
+                var originTab = TabForCore(sender as CoreWebView2);
+                if (originTab is null || !originTab.Address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+
             if (type == "nova.loginDiagnostic")
             {
                 HandleLoginDiagnosticMessage(obj);
@@ -30,7 +68,7 @@ public sealed partial class MainWindow
             if (type == "passkey_created" || type == "passkey_used")
             {
                 if (_isGuestMode) return;
-                var pkOrigin = obj["o"]?.GetValue<string>() ?? string.Empty;
+                var pkOrigin = OriginFromSource(e.Source);
                 if (string.IsNullOrWhiteSpace(pkOrigin)) return;
                 if (type == "passkey_created")
                     RecordPasskeyCreated(pkOrigin);
