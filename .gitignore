@@ -11,6 +11,7 @@ target/
 !/artifacts/signatures/
 /artifacts/signatures/*
 !/artifacts/signatures/.gitkeep
+Lumora.WinUI/artifacts/
 
 # Runtime logs
 /logs/*.log
@@ -19,6 +20,11 @@ target/
 # WebView2 user data (runtime profiles)
 **/EBWebView/
 **/WebView2/
+
+# Configs locaux d'outils IA (personnels, pas partages projet)
+/.codex/
+/.claude/settings.json
+/.claude/settings.local.json
 
 # OS cruft
 Thumbs.db

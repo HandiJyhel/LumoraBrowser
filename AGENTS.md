@@ -73,8 +73,8 @@ Toute modification de version doit respecter cette regle.
 
 1. Attendre une validation explicite par `Go` avant toute action importante, implementation, installation ou modification structurante.
 2. L'utilisateur autorise l'installation des outils necessaires, mais les installations doivent rester justifiees.
-3. Codex peut creer tous les fichiers, dossiers, scripts, modules ou documents necessaires au projet, en nombre suffisant, si cela sert une architecture propre et lisible.
-4. Codex peut utiliser ou ajouter une technologie, dependance, outil ou runtime particulier sans redemander une autorisation projet a chaque fois, si ce choix est utile, justifie et coherent avec Lumora.
+3. L'assistant IA du projet peut creer tous les fichiers, dossiers, scripts, modules ou documents necessaires au projet, en nombre suffisant, si cela sert une architecture propre et lisible.
+4. L'assistant IA du projet peut utiliser ou ajouter une technologie, dependance, outil ou runtime particulier sans redemander une autorisation projet a chaque fois, si ce choix est utile, justifie et coherent avec Lumora.
 5. Les demandes d'autorisation imposees par l'environnement d'execution, le systeme ou le bac a sable restent possibles meme si l'autorisation projet est generale.
 6. Il est autorise de contredire l'utilisateur si un choix technique semble fragile ou risque.
 7. Il est autorise de proposer des idees, tant qu'elles restent au service du cadre donne.
@@ -89,7 +89,7 @@ Toute modification de version doit respecter cette regle.
 16. Respecter scrupuleusement la numerotation de developpement.
 17. Les decisions de release seront traitees plus tard.
 18. `MEMORY.md` doit etre mis a jour soigneusement apres chaque etape significative.
-19. A chaque nouvelle ouverture de session ou de chat sur Lumora, Codex doit lire `MEMORY.md` pour reprendre le contexte historique du projet avant d'agir.
+19. A chaque nouvelle ouverture de session ou de chat sur Lumora, l'assistant IA du projet doit lire `MEMORY.md` pour reprendre le contexte historique du projet avant d'agir.
 20. Ne plus faire d exécutable automatique, attendre que je le demande moi même.
 
 
