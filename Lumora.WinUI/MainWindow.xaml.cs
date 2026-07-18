@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.83.21-dev";
+    private const string Version = "0.83.22-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -386,16 +386,69 @@ public sealed partial class MainWindow : Window
         if (section == "privacy") UpdatePrivacyUi();
     }
 
+    private void SettingsNavigateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string section })
+        {
+            return;
+        }
+
+        var target = section switch
+        {
+            "overview" => SettingsNavOverview,
+            "appearance" => SettingsNavAppearance,
+            "profile" => SettingsNavProfile,
+            "accessibility" => SettingsNavAccessibility,
+            "navigation" => SettingsNavNavigation,
+            "startup" => SettingsNavStartup,
+            "privacy" => SettingsNavPrivacy,
+            "vault" => SettingsNavVault,
+            "storage" => SettingsNavStorage,
+            _ => null
+        };
+
+        if (target is null)
+        {
+            return;
+        }
+
+        target.IsChecked = true;
+        SettingsNav_Click(target, new RoutedEventArgs());
+    }
+
+    // Le hub Modules est un panneau distinct de Parametres : contrairement aux
+    // liens de SettingsNavigateButton_Click (utilises DEPUIS Parametres, ou
+    // le panneau est deja visible), il faut ici afficher explicitement le
+    // panneau Parametres avant de selectionner la section.
+    private void ModulesProtectionsSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        ShowPanel(SettingsPanel, "Paramètres");
+        SettingsNavigateButton_Click(sender, e);
+    }
+
     private void OpenPersonalizationSettings()
     {
         StorageCurrentFolderText.Text = _profile.ProfileDir;
-        ShowPanel(SettingsPanel, "Personnalisation");
+        ShowPanel(SettingsPanel, "Mon Lumora");
         SettingsNavAppearance.IsChecked = true;
         SettingsNav_Click(SettingsNavAppearance, new RoutedEventArgs());
     }
 
-    private void ProfileStatusButton_Click(object sender, RoutedEventArgs e) =>
-        OpenPersonalizationSettings();
+    private void OpenProfileSettings()
+    {
+        StorageCurrentFolderText.Text = _profile.ProfileDir;
+        ShowPanel(SettingsPanel, "Profils locaux");
+        SettingsNavProfile.IsChecked = true;
+        SettingsNav_Click(SettingsNavProfile, new RoutedEventArgs());
+    }
+
+    private void ProfileStatusButton_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateProfileFlyoutUi();
+        StatusText.Text = _isGuestMode
+            ? "Menu profil invite disponible."
+            : "Menu profil Lumora disponible.";
+    }
 
     private void OpenPersonalizationFromProfileButton_Click(object sender, RoutedEventArgs e) =>
         OpenPersonalizationSettings();

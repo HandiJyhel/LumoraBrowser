@@ -3145,6 +3145,47 @@
                     <StackPanel MaxWidth="980" Spacing="14" HorizontalAlignment="Left">
                         <Border Style="{StaticResource NovaPanelCardStyle}">
                             <StackPanel Spacing="12">
+                                <TextBlock Text="Mode d'usage" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                <TextBlock Text="Changez rapidement le rythme de Lumora sans quitter le hub des modules."
+                                           Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                <ComboBox x:Name="ModulesUsageModeCombo"
+                                          Header="Mode actuel"
+                                          Width="280"
+                                          SelectionChanged="ModulesUsageModeCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Neutre" Tag="neutral" />
+                                    <ComboBoxItem Content="Équilibre" Tag="balanced" />
+                                    <ComboBoxItem Content="Focus" Tag="focus" />
+                                    <ComboBoxItem Content="Lecture" Tag="reading" />
+                                    <ComboBoxItem Content="Création" Tag="creative" />
+                                    <ComboBoxItem Content="Recherche" Tag="research" />
+                                    <ComboBoxItem Content="Nuit" Tag="night" />
+                                </ComboBox>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource NovaPanelCardStyle}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Protections" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                <TextBlock Text="Securite active en arriere-plan, sans intermediaire reseau ni cout de vitesse. Detail et reglages fins dans Confidentialite."
+                                           Style="{StaticResource NovaPanelDescriptionStyle}" />
+
+                                <ToggleSwitch x:Name="ModulesWebRtcSwitch"
+                                             Header="Bloquer les fuites d'IP WebRTC"
+                                             Toggled="ModulesWebRtcSwitch_Toggled" />
+                                <ToggleSwitch x:Name="ModulesGeolocationSwitch"
+                                             Header="Position fictive (geolocalisation)"
+                                             Toggled="ModulesGeolocationSwitch_Toggled" />
+                                <ToggleSwitch x:Name="ModulesFingerprintSwitch"
+                                             Header="Brouiller l'empreinte du navigateur"
+                                             Toggled="ModulesFingerprintSwitch_Toggled" />
+
+                                <Button Content="Reglages avances" Tag="privacy" Click="ModulesProtectionsSettingsButton_Click"
+                                        Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource NovaPanelCardStyle}">
+                            <StackPanel Spacing="12">
                                 <TextBlock Text="Modules épinglables" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                 <TextBlock Text="Choisissez ce qui reste visible dans la barre. Les modules non épinglés restent disponibles dans le bouton puzzle."
                                            Style="{StaticResource NovaPanelDescriptionStyle}" />

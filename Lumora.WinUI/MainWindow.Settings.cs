@@ -647,10 +647,20 @@ public sealed partial class MainWindow
             ParameterCleanerSwitch.IsOn = _uiSettings.ParameterCleanerEnabled;
             HttpsEnforcerSwitch.IsOn    = _uiSettings.HttpsEnforcerEnabled;
             CnameUncloakerSwitch.IsOn   = _uiSettings.CnameUncloakerEnabled;
+            WebRtcLeakProtectionSwitch.IsOn = _uiSettings.WebRtcLeakProtectionEnabled;
+            GeolocationSpoofingSwitch.IsOn = _uiSettings.GeolocationSpoofingEnabled;
+            GeolocationLatitudeBox.Text = _uiSettings.GeolocationSpoofLatitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            GeolocationLongitudeBox.Text = _uiSettings.GeolocationSpoofLongitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            FingerprintProtectionSwitch.IsOn = _uiSettings.FingerprintProtectionEnabled;
+            ModulesWebRtcSwitch.IsOn = _uiSettings.WebRtcLeakProtectionEnabled;
+            ModulesGeolocationSwitch.IsOn = _uiSettings.GeolocationSpoofingEnabled;
+            ModulesFingerprintSwitch.IsOn = _uiSettings.FingerprintProtectionEnabled;
             CosmeticFilterSwitch.IsOn   = _uiSettings.CosmeticFilterEnabled;
             ConsentManagerSwitch.IsOn   = _uiSettings.ConsentManagerEnabled;
             RenderPrivacyWhitelist();
             UpdateModulesPinUi();
+            UpdateUsageModeButtonUi();
+            UpdateModeCompanionUi();
         }
         finally
         {

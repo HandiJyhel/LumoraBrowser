@@ -231,6 +231,178 @@ public sealed partial class MainWindow
         ApplyPrivacySettings();
     }
 
+    // Drapeau Chromium fixe au demarrage du moteur WebView2 (WebView2Bootstrap) :
+    // contrairement aux autres protections, un changement ici ne peut pas
+    // s'appliquer a la session en cours, d'ou le message de redemarrage.
+    // Reglage duplique dans le hub Modules (plus visible) et dans
+    // Parametres > Vie privee locale (detail) : les deux bascules restent
+    // synchronisees via SetWebRtcLeakProtection.
+    private void WebRtcLeakProtectionSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SetWebRtcLeakProtection(WebRtcLeakProtectionSwitch.IsOn);
+    }
+
+    private void ModulesWebRtcSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SetWebRtcLeakProtection(ModulesWebRtcSwitch.IsOn);
+    }
+
+    private void SetWebRtcLeakProtection(bool enabled)
+    {
+        _uiSettings.WebRtcLeakProtectionEnabled = enabled;
+        SaveUiSettings();
+        SyncTogglePair(WebRtcLeakProtectionSwitch, ModulesWebRtcSwitch, enabled);
+        StatusText.Text = enabled
+            ? "Anti-fuite WebRTC activee : redemarrez Lumora pour l'appliquer."
+            : "Anti-fuite WebRTC desactivee : redemarrez Lumora pour l'appliquer.";
+    }
+
+    // Bascule deux ToggleSwitch representant le meme reglage (hub Modules +
+    // Parametres) sans redeclencher leurs propres gestionnaires Toggled.
+    private void SyncTogglePair(ToggleSwitch a, ToggleSwitch b, bool value)
+    {
+        var wasSuppressed = _suppressUiSettingsSave;
+        _suppressUiSettingsSave = true;
+        try
+        {
+            a.IsOn = value;
+            b.IsOn = value;
+        }
+        finally
+        {
+            _suppressUiSettingsSave = wasSuppressed;
+        }
+    }
+
+    // ── Position fictive (geolocalisation) ────────────────────────────────────
+    // Simple script injecte (pas un drapeau de demarrage) : s'applique tout de
+    // suite aux onglets deja ouverts, contrairement au reglage WebRTC.
+
+    private async Task RegisterGeolocationSpoofScriptsAsync()
+    {
+        foreach (var core in AttachedCores().ToList())
+            await RegisterGeolocationSpoofScriptOnCoreAsync(core);
+    }
+
+    private async Task RegisterGeolocationSpoofScriptOnCoreAsync(CoreWebView2 core)
+    {
+        if (_geolocationSpoofScriptIds.TryGetValue(core, out var oldId))
+        {
+            try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
+            _geolocationSpoofScriptIds.Remove(core);
+        }
+
+        if (!_uiSettings.GeolocationSpoofingEnabled) return;
+
+        var exemptRootDomains = _uiSettings.SitePermissions
+            .Where(rule => string.Equals(SitePermissionPolicy.NormalizeKind(rule.Kind), "geolocation", StringComparison.OrdinalIgnoreCase)
+                        && SitePermissionPolicy.NormalizeState(rule.State) == SitePermissionPolicy.Allow)
+            .Select(rule => SitePermissionPolicy.NormalizeRootDomain(rule.RootDomain))
+            .Where(root => root.Length > 0)
+            .Distinct()
+            .ToList();
+
+        var script = GeolocationSpoofScript.Build(
+            _uiSettings.GeolocationSpoofLatitude,
+            _uiSettings.GeolocationSpoofLongitude,
+            exemptRootDomains);
+
+        _geolocationSpoofScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
+    }
+
+    private async void GeolocationSpoofingSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        await SetGeolocationSpoofing(GeolocationSpoofingSwitch.IsOn);
+    }
+
+    private async void ModulesGeolocationSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        await SetGeolocationSpoofing(ModulesGeolocationSwitch.IsOn);
+    }
+
+    private async Task SetGeolocationSpoofing(bool enabled)
+    {
+        _uiSettings.GeolocationSpoofingEnabled = enabled;
+        SaveUiSettings();
+        await RegisterGeolocationSpoofScriptsAsync();
+        SyncTogglePair(GeolocationSpoofingSwitch, ModulesGeolocationSwitch, enabled);
+        StatusText.Text = enabled
+            ? "Position fictive activee pour la geolocalisation."
+            : "Position fictive desactivee : les sites autorises recoivent la vraie position.";
+    }
+
+    private async void GeolocationSpoofApplyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!double.TryParse(GeolocationLatitudeBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) ||
+            lat is < -90 or > 90)
+        {
+            StatusText.Text = "Latitude invalide : valeur attendue entre -90 et 90.";
+            return;
+        }
+
+        if (!double.TryParse(GeolocationLongitudeBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var lon) ||
+            lon is < -180 or > 180)
+        {
+            StatusText.Text = "Longitude invalide : valeur attendue entre -180 et 180.";
+            return;
+        }
+
+        _uiSettings.GeolocationSpoofLatitude = lat;
+        _uiSettings.GeolocationSpoofLongitude = lon;
+        SaveUiSettings();
+        await RegisterGeolocationSpoofScriptsAsync();
+        StatusText.Text = "Position fictive mise a jour et appliquee aux onglets ouverts.";
+    }
+
+    // ── Anti-fingerprinting ────────────────────────────────────────────────────
+
+    private async Task RegisterFingerprintProtectionScriptsAsync()
+    {
+        foreach (var core in AttachedCores().ToList())
+            await RegisterFingerprintProtectionScriptOnCoreAsync(core);
+    }
+
+    private async Task RegisterFingerprintProtectionScriptOnCoreAsync(CoreWebView2 core)
+    {
+        if (_fingerprintProtectionScriptIds.TryGetValue(core, out var oldId))
+        {
+            try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
+            _fingerprintProtectionScriptIds.Remove(core);
+        }
+
+        if (!_uiSettings.FingerprintProtectionEnabled) return;
+
+        var script = FingerprintProtectionScript.Build(_fingerprintSessionSeed);
+        _fingerprintProtectionScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
+    }
+
+    private async void FingerprintProtectionSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        await SetFingerprintProtection(FingerprintProtectionSwitch.IsOn);
+    }
+
+    private async void ModulesFingerprintSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        await SetFingerprintProtection(ModulesFingerprintSwitch.IsOn);
+    }
+
+    private async Task SetFingerprintProtection(bool enabled)
+    {
+        _uiSettings.FingerprintProtectionEnabled = enabled;
+        SaveUiSettings();
+        await RegisterFingerprintProtectionScriptsAsync();
+        SyncTogglePair(FingerprintProtectionSwitch, ModulesFingerprintSwitch, enabled);
+        StatusText.Text = enabled
+            ? "Protection anti-fingerprinting activee."
+            : "Protection anti-fingerprinting desactivee.";
+    }
+
     private async void UpdatePrivacyListsButton_Click(object sender, RoutedEventArgs e)
     {
         if (_networkBlocker is null) return;
