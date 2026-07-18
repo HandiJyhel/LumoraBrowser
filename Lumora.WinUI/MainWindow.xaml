@@ -600,6 +600,13 @@
                             </Flyout>
                         </Button.Flyout>
                     </Button>
+                    <Button x:Name="ReadingLensButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Loupe de lecture"
+                            ToolTipService.ToolTip="Loupe de lecture - agrandir la page pour mieux lire (captcha deforme, texte minuscule)"
+                            Click="ReadingLensButton_Click">
+                        <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                    </Button>
                     <Button x:Name="DetachVideoPinnedButton"
                             Style="{StaticResource NovaModuleIconButtonStyle}"
                             ToolTipService.ToolTip="Détacher la vidéo"
@@ -1865,6 +1872,9 @@
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="ReadAloudEnabledSwitch" Header="Lire les pages a voix haute" Toggled="ReadAloudEnabledSwitch_Toggled" />
                             <TextBlock Text="Ajoute un bouton dans la barre d'outils pour faire lire le texte de la page a voix haute (utile en cas de difficulte de lecture). Synthese vocale 100% locale (Windows), aucun texte de page envoye a un serveur externe."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ToggleSwitch x:Name="ReadingLensEnabledSwitch" Header="Loupe de lecture" Toggled="ReadingLensEnabledSwitch_Toggled" />
+                            <TextBlock Text="Ajoute un bouton dans la barre d'outils qui capture la page dans un panneau zoomable, utile pour un captcha visuel deforme ou un texte minuscule. Aucune resolution automatique : une image locale agrandie, vous lisez et repondez vous-meme."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
@@ -3193,6 +3203,37 @@
                         </Border>
                     </StackPanel>
                     </ScrollViewer>
+            </Grid>
+
+            <!-- Panneau Loupe de lecture (accessibilite) -->
+            <Grid x:Name="ReadingLensPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="0,0,0,16" Spacing="4">
+                    <TextBlock Text="Loupe de lecture" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.68" MaxWidth="720" HorizontalAlignment="Left"
+                               Text="Capture agrandie de la page pour mieux lire un texte minuscule ou deforme (par exemple un captcha visuel). Molette + Ctrl (ou pincer) pour zoomer, barres de defilement pour naviguer dans l'image. Rien n'est transmis : c'est une image locale, vous lisez et repondez vous-meme." />
+                    <Button x:Name="ReadingLensRefreshButton" Content="Actualiser la capture"
+                            HorizontalAlignment="Left" Margin="0,4,0,0" Click="ReadingLensRefreshButton_Click" />
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1"
+                              ZoomMode="Enabled"
+                              MinZoomFactor="0.25"
+                              MaxZoomFactor="6"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollMode="Enabled"
+                              VerticalScrollMode="Enabled"
+                              Background="{ThemeResource SystemControlBackgroundChromeMediumLowBrush}">
+                    <Image x:Name="ReadingLensImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                </ScrollViewer>
+                <TextBlock x:Name="ReadingLensEmptyText" Grid.Row="1"
+                           Text="Ouvrez une page web puis cliquez sur la loupe dans la barre d'outils."
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" />
             </Grid>
 
             <!-- Panneau Applications web Lumora -->

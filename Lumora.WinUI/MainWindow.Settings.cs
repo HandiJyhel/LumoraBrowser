@@ -383,6 +383,14 @@ public sealed partial class MainWindow
         StatusText.Text = ReadAloudEnabledSwitch.IsOn ? "Lecture a voix haute activee." : "Lecture a voix haute desactivee.";
     }
 
+    private void ReadingLensEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        UpdateReadingLensButtonVisibility();
+        StatusText.Text = ReadingLensEnabledSwitch.IsOn ? "Loupe de lecture activee." : "Loupe de lecture desactivee.";
+    }
+
     private void AddressSuggestionsSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
@@ -581,6 +589,8 @@ public sealed partial class MainWindow
             AccessibilityVoiceDictationSwitch.IsOn = _uiSettings.AccessibilityVoiceDictationEnabled;
             ReadAloudEnabledSwitch.IsOn = _uiSettings.ReadAloudEnabled;
             UpdateReadAloudButtonVisibility();
+            ReadingLensEnabledSwitch.IsOn = _uiSettings.AccessibilityReadingLensEnabled;
+            UpdateReadingLensButtonVisibility();
             TranslationEnabledSwitch.IsOn = _uiSettings.TranslationEnabled;
             SearchAssistEnabledSwitch.IsOn = _uiSettings.SearchAssistEnabled;
             AddressSuggestionsSwitch.IsOn = _uiSettings.AddressBarSuggestionsEnabled;
@@ -737,6 +747,7 @@ public sealed partial class MainWindow
         _uiSettings.AccessibilityVisibleFocus = AccessibilityVisibleFocusSwitch.IsOn;
         _uiSettings.AccessibilityVoiceDictationEnabled = AccessibilityVoiceDictationSwitch.IsOn;
         _uiSettings.ReadAloudEnabled = ReadAloudEnabledSwitch.IsOn;
+        _uiSettings.AccessibilityReadingLensEnabled = ReadingLensEnabledSwitch.IsOn;
         _uiSettings.TranslationEnabled = TranslationEnabledSwitch.IsOn;
         _uiSettings.SearchAssistEnabled = SearchAssistEnabledSwitch.IsOn;
         _uiSettings.AddressBarSuggestionsEnabled = AddressSuggestionsSwitch.IsOn;

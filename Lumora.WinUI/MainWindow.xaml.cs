@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.83.16-dev";
+    private const string Version = "0.83.17-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -1017,6 +1017,7 @@ public sealed partial class MainWindow : Window
         SessionsPanel.Visibility = Visibility.Collapsed;
         WalletPanel.Visibility = Visibility.Collapsed;
         WebAppsPanel.Visibility = Visibility.Collapsed;
+        ReadingLensPanel.Visibility = Visibility.Collapsed;
 
         visiblePanel.Visibility = Visibility.Visible;
         StatusText.Text = status;

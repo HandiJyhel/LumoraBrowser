@@ -94,6 +94,12 @@ internal sealed class UiSettings
     // protections (bloqueur pub/traqueurs, HTTPS, cookies...) restent, elles,
     // actives par defaut. L'utilisateur active la lecture dans les Reglages.
     public bool ReadAloudEnabled { get; set; }
+    // Loupe de lecture : capture de la page affichee dans un panneau zoomable,
+    // pour les contenus difficiles a lire (captcha visuel deforme, texte
+    // minuscule...). Aucune transcription, aucune resolution automatique :
+    // une image locale agrandie, l'utilisateur lit et agit lui-meme. Opt-in
+    // comme les autres aides de confort.
+    public bool AccessibilityReadingLensEnabled { get; set; }
     // Traduction neuronale locale des pages (modele telecharge une fois puis
     // traduction 100% hors ligne). Activee par defaut : simple telechargement
     // generique, pas de donnee personnelle envoyee, sur le meme principe que
