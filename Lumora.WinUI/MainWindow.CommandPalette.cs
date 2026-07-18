@@ -160,8 +160,8 @@ public sealed partial class MainWindow
 
         Add(new("Naviguer", "Nouvel onglet", "Ouvre un nouvel onglet Lumora", "\uE710",
             () => AddTab("Nouvel onglet", "lumora://accueil", select: true)), 100);
-        Add(new("Naviguer", "Nouvelle fenetre privee", "Session ephemere, rien n'est ecrit dans le profil (Ctrl+Shift+N)", "\uE727",
-            () => OpenPrivateWindow()), 98);
+        Add(new("Naviguer", "Incognito", "Session ephemere, IP masquee en option via Tor (Ctrl+Shift+N)", "\uE727",
+            () => OpenIncognitoWindow()), 98);
         Add(new("Naviguer", "Rouvrir l'onglet ferme", "Restaure le dernier onglet ferme (Ctrl+Shift+T)", "\uE7A7",
             () => ReopenLastClosedTab()), 97);
         Add(new("Naviguer", "Groupes enregistres", "Retrouver et rouvrir vos groupes d'onglets ranges", "\uE7C1",

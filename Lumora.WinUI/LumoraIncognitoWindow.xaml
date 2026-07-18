@@ -1,0 +1,88 @@
+<Window
+    x:Class="Lumora.WinUI.LumoraIncognitoWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Incognito - Lumora">
+
+    <!--
+        Fenetre Incognito : fusionne l'ancienne navigation privee et l'ancienne
+        navigation anonyme (Tor) en un seul mode, pour eviter la confusion entre
+        deux entrees qui se marchaient dessus. Deux promesses toujours tenues
+        separement, jamais fusionnees en un seul message :
+        - session ephemere (IsInPrivateModeEnabled, profil en memoire) :
+          TOUJOURS active, que Tor soit active ou non ;
+        - IP masquee via Tor : desactivee par defaut (latence du reseau Tor non
+          imposee a tout le monde), activable via la bascule ci-dessous, avec un
+          etat toujours visible pour qu'il n'y ait jamais de doute sur ce qui est
+          reellement actif.
+        Volontairement minimale : pas de hub Modules, pas de compagnon, pas de
+        raccourcis, pas d'onglets (chaque page cible ouvre une nouvelle fenetre
+        Incognito qui herite de l'etat Tor courant). Les protections reseau de
+        fond (bloqueur pubs/trackers, anti-telemetrie, HTTPS, CNAME) restent
+        actives sans bouton dedie, comme dans les anciennes fenetres.
+    -->
+    <Grid x:Name="RootGrid" Background="#FF1A1626">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Padding="10,8" ColumnSpacing="8" Background="#FF241C33">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <FontIcon Grid.Column="0" Glyph="&#xE727;" FontFamily="Segoe MDL2 Assets"
+                      FontSize="16" Foreground="#FFB9A7E8" VerticalAlignment="Center"
+                      Margin="2,0,4,0" />
+
+            <Button x:Name="IncognitoBackButton" Grid.Column="1" Padding="8,5"
+                    Click="IncognitoBackButton_Click" IsEnabled="False"
+                    AutomationProperties.Name="Page precedente"
+                    ToolTipService.ToolTip="Page precedente">
+                <FontIcon Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+            <Button x:Name="IncognitoForwardButton" Grid.Column="2" Padding="8,5"
+                    Click="IncognitoForwardButton_Click" IsEnabled="False"
+                    AutomationProperties.Name="Page suivante"
+                    ToolTipService.ToolTip="Page suivante">
+                <FontIcon Glyph="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+            <Button x:Name="IncognitoReloadButton" Grid.Column="3" Padding="8,5"
+                    Click="IncognitoReloadButton_Click"
+                    AutomationProperties.Name="Recharger la page"
+                    ToolTipService.ToolTip="Recharger la page">
+                <FontIcon Glyph="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+            </Button>
+
+            <TextBox x:Name="IncognitoAddressBox" Grid.Column="4"
+                     PlaceholderText="Rechercher ou saisir une URL (Incognito)"
+                     KeyDown="IncognitoAddressBox_KeyDown"
+                     AutomationProperties.Name="Barre d'adresse Incognito"
+                     VerticalAlignment="Center" />
+
+            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <TextBlock x:Name="IncognitoTorStatusText" Text="IP masquee : non" Foreground="#FFB9A7E8"
+                           FontSize="12" VerticalAlignment="Center" />
+                <ToggleSwitch x:Name="IncognitoTorSwitch" OnContent="Tor" OffContent="Tor"
+                              Toggled="IncognitoTorSwitch_Toggled"
+                              AutomationProperties.Name="Masquer l'adresse IP via Tor" />
+            </StackPanel>
+
+            <TextBlock Grid.Column="6" Text="Incognito" Foreground="#FFB9A7E8"
+                       FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                       Margin="4,0,2,0" />
+        </Grid>
+
+        <Grid x:Name="IncognitoWebViewHost" Grid.Row="1" />
+    </Grid>
+</Window>

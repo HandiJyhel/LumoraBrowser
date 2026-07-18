@@ -7239,3 +7239,123 @@ verifie qui parlait reellement. Deux failles concretes corrigees.
 - Build WinUI MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
 
 **Version :** `0.83.23-dev`.
+
+
+## 2026-07-18/19 - Mode Incognito : fusion navigation privee + Tor (0.83.24-dev)
+
+Discussion produit avec l'utilisateur partie d'un constat : le mode prive
+classique ne protege jamais du reseau (FAI, site visite), seulement de la
+persistance locale - confusion frequente chez tous les navigateurs. Plutot
+que garder deux fonctionnalites qui se marchent dessus ("Nouvelle fenetre
+privee" et "Navigation anonyme (Tor)"), fusion en un seul mode Incognito
+qui porte les deux garanties, toujours annoncees separement pour ne jamais
+laisser de doute sur ce qui est reellement actif. Session marquee par un
+vrai bug bloquant trouve, diagnostique et corrige (voir plus bas) : la
+premiere version ouvrait bien une fenetre mais son contenu ne s'affichait
+jamais, sur cette machine ET sur celle de l'utilisateur.
+
+- Version passee a `0.83.24-dev`.
+- Nouveau `LumoraIncognitoWindow` (xaml + code-behind), remplace
+  `LumoraPrivateWindow` et `LumoraTorWindow` (supprimes). Session
+  ephemere TOUJOURS active (dossier de donnees temporaire dans
+  `%TEMP%\LumoraIncognito\<guid>`, supprime a la fermeture + nettoyage
+  des dossiers residuels d'une session precedente qui aurait plante, au
+  demarrage de la suivante).
+- Tor optionnel dans ce mode, desactive par defaut (latence du reseau Tor
+  non imposee a tout le monde ; l'anonymat reseau est un besoin plus rare
+  et plus cible que "ne garde pas cette session"). Bascule `ToggleSwitch`
+  toujours visible dans l'en-tete de la fenetre, jamais cachee.
+- **Fenetre deplacee dans un process Windows dedie** (`IncognitoProcessLauncher`
+  relance `Lumora.WinUI.exe` avec `--incognito`/`--incognito-tor`/
+  `--incognito-url=...`, lus par `IncognitoLaunchArgs` dans `App.xaml.cs`),
+  au lieu d'une fenetre in-process comme avant. Cause : voir le bloquant
+  ci-dessous. Chaque fenetre Incognito (y compris celles ouvertes depuis
+  un lien `target=_blank`) est donc son propre process, avec son propre
+  `TorProcessManager` et un port SOCKS libre choisi dynamiquement (evite
+  un conflit si plusieurs fenetres Incognito+Tor tournent en meme temps).
+- Le proxy Tor et le dossier de session etant fixes une seule fois au
+  demarrage du process (variables d'environnement
+  `WEBVIEW2_USER_DATA_FOLDER`/`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`,
+  lues une seule fois par `EnsureCoreWebView2Async()`), basculer Tor ne
+  peut plus se faire a chaud : ca ferme la fenetre courante et en rouvre
+  une neuve (nouveau process) dans l'etat souhaite.
+- Page d'accueil de la fenetre : deux phrases separees, jamais fusionnees
+  - "cette session ne sera jamais sauvegardee" (toujours vraie) et "votre
+  IP est masquee" (vraie seulement si Tor est active, avec rappel du
+  bouton sinon).
+- Fenetre volontairement minimale (deja le cas avant) : pas de hub
+  Modules, pas de compagnon, pas de raccourcis, pas d'onglets. Les
+  protections reseau de fond (bloqueur pubs/trackers, anti-telemetrie,
+  HTTPS, CNAME, anti-fuite WebRTC si active dans les reglages) restent
+  actives sans bouton dedie, comme avant.
+- Menu : les deux entrees "Nouvelle fenetre privee" et "Navigation
+  anonyme (Tor)" (barre haute et barre basse) remplacees par une seule
+  entree "Incognito". Meme raccourci clavier (Ctrl+Shift+N). Entree de la
+  palette de commandes mise a jour.
+- **Retour utilisateur pris en compte** : Incognito ajoute aussi comme
+  entree du selecteur de mode (`UsageModeFlyout`, a cote de Neutre/
+  Equilibre/Focus/Lecture/Creation/Recherche/Nuit), separee par un trait
+  et une infobulle expliquant qu'elle ouvre une fenetre a part plutot que
+  de changer le mode courant - ce n'est pas un vrai "mode" au sens de
+  `UiSettings.UsageMode` (rien n'est persiste), juste un raccourci place
+  la ou l'utilisateur s'attend a le trouver.
+- Mise a jour du test de garde-fou d'alignement de version vers
+  `0.83.24-dev` (`Lumora.Tests/UsageModeVisualIdentityTests.cs`,
+  `AGENTS.md`, `scripts/build-clean-test-artifact.ps1`,
+  `scripts/build-installer.ps1`).
+- Log ajoute : `logs/2026-07-18-mode-incognito-fusion-tor-0-83-24.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora en dehors de la verification.
+
+**Bug bloquant trouve et corrige.** La toute premiere version (environnement
+WebView2 explicite via `CoreWebView2Environment.CreateWithOptionsAsync` +
+`EnsureCoreWebView2Async(environment, controllerOptions)`, avec
+`IsInPrivateModeEnabled`) ouvrait une fenetre au chrome fonctionnel mais dont
+le contenu ne s'affichait jamais - `CoreWebView2` restait `null` sans
+exception, de facon deterministe, quelle que soit la combinaison testee
+(dossier partage/dedie, avec/sans `IsInPrivateModeEnabled`, avec/sans
+`ControllerOptions`, avec tentatives repetees, y compris en process
+totalement neuf sans aucun autre moteur actif, et apres mise a jour du SDK
+WebView2 1.0.2903.40 -> 1.0.4078.44). L'utilisateur a confirme le meme
+symptome exact sur sa propre machine (capture d'ecran a l'appui), ecartant
+l'hypothese d'un probleme specifique a l'environnement de verification.
+
+Cause identifiee : **toute creation explicite d'un `CoreWebView2Environment`
+suivie de `EnsureCoreWebView2Async(environment, ...)` echoue silencieusement
+sur cette installation** (raison plateforme exacte non confirmee), alors que
+`EnsureCoreWebView2Async()` SANS argument (configuration par variables
+d'environnement `WEBVIEW2_USER_DATA_FOLDER`/`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`,
+deja utilisee avec succes par `MainWindow` et `LumoraAppWindow`) fonctionne de
+facon fiable. Comme `LumoraPrivateWindow`/`LumoraTorWindow` (supprimes par
+cette version) utilisaient exactement le mecanisme casse, il s'agissait
+tres probablement d'un defaut preexistant, jamais detecte faute d'avoir
+verifie une capture d'ecran du contenu de ces fenetres.
+
+Correction : `LumoraIncognitoWindow` utilise desormais exclusivement
+`EnsureCoreWebView2Async()` sans argument, avec dossier de donnees et
+arguments Chromium (dont le proxy Tor) poses via variables d'environnement
+avant le premier appel - exactement le meme mecanisme que
+`WebView2Bootstrap.ConfigureOnce` pour `MainWindow`. Consequence
+architecturale assumee : chaque fenetre Incognito vit dans son propre
+process (voir plus haut), et Tor ne peut plus se basculer a chaud.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 517/517
+  tests reussis.
+- Build WinUI MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
+- Verification en conditions reelles (pilotage UIA, captures d'ecran),
+  deux fois : ouverture via le sous-menu Navigation puis via la nouvelle
+  entree du selecteur de mode. Contenu de la page reellement affiche
+  (page d'accueil Incognito, puis navigation vers example.com confirmee a
+  l'ecran), titre de fenetre correct ("Incognito - Lumora", sans
+  doublon), bascule Tor avec message honnete quand le moteur est absent,
+  fermeture propre du process, aucune exception dans la trace runtime.
+  **Confirme egalement sur la machine reelle de l'utilisateur, avant ET
+  apres correction** : meme bug reproduit avant, puis capture d'ecran a
+  l'appui apres correction montrant une navigation reelle (recherche
+  Google) chargee et affichee. Tor reste honnetement indisponible sur
+  cette machine (moteur non installe, comportement attendu : le
+  telechargement automatique n'est pas cable, volontairement).
+
+**Version :** `0.83.24-dev`.

@@ -255,8 +255,7 @@
                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                         <MenuFlyoutSubItem Text="Navigation">
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
-                            <MenuFlyoutItem Text="Nouvelle fenêtre privée" Click="PrivateWindowMenu_Click" />
-                            <MenuFlyoutItem Text="Navigation anonyme (Tor)" Click="TorWindowMenu_Click" />
+                            <MenuFlyoutItem Text="Incognito" Click="IncognitoWindowMenu_Click" />
                             <MenuFlyoutItem Text="Rouvrir l'onglet ferme" Click="ReopenTabMenu_Click" />
                             <MenuFlyoutItem Text="Groupes enregistres" Click="SavedTabGroupsMenu_Click" />
                             <MenuFlyoutItem Text="Accueil Lumora" Click="HomeMenu_Click" />
@@ -1036,8 +1035,7 @@
                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                         <MenuFlyoutSubItem Text="Navigation">
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click" />
-                            <MenuFlyoutItem Text="Nouvelle fenêtre privée" Click="PrivateWindowMenu_Click" />
-                            <MenuFlyoutItem Text="Navigation anonyme (Tor)" Click="TorWindowMenu_Click" />
+                            <MenuFlyoutItem Text="Incognito" Click="IncognitoWindowMenu_Click" />
                             <MenuFlyoutItem Text="Rouvrir l'onglet fermé" Click="ReopenTabMenu_Click" />
                             <MenuFlyoutItem Text="Groupes enregistrés" Click="SavedTabGroupsMenu_Click" />
                             <MenuFlyoutItem Text="Accueil Lumora" Click="HomeMenu_Click" />
@@ -3779,6 +3777,17 @@
                                         <StackPanel Spacing="2">
                                             <TextBlock Text="Nuit" FontWeight="SemiBold" />
                                             <TextBlock Text="Interface sombre, compacte et plus douce." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                <Button x:Name="UsageModeIncognitoButton" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeIncognitoButton_Click"
+                                        ToolTipService.ToolTip="Ouvre une fenetre a part, dans un autre processus : ne remplace pas ce mode-ci.">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE727;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Incognito" FontWeight="SemiBold" />
+                                            <TextBlock Text="Session ephemere, IP masquee en option via Tor (Ctrl+Shift+N)." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Button>

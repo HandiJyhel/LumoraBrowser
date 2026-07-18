@@ -21,7 +21,20 @@ public partial class App : Application
     {
         WinUiRuntimeTrace.Write("OnLaunched start");
 
-        var appId = WebAppLaunchArgs.TryParseAppId(Environment.GetCommandLineArgs());
+        var commandLineArgs = Environment.GetCommandLineArgs();
+
+        if (IncognitoLaunchArgs.IsIncognitoLaunch(commandLineArgs, out var torEnabled, out var incognitoUrl))
+        {
+            var profile = LumoraProfilePaths.Default();
+            var incognitoWindow = new LumoraIncognitoWindow(profile, incognitoUrl, torEnabled);
+            _window = incognitoWindow;
+            incognitoWindow.Activate();
+            incognitoWindow.InitializeWindow();
+            WinUiRuntimeTrace.Write("Standalone Incognito window activated");
+            return;
+        }
+
+        var appId = WebAppLaunchArgs.TryParseAppId(commandLineArgs);
         if (appId is not null && TryLaunchWebApp(appId))
         {
             return;

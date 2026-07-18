@@ -218,10 +218,10 @@ public sealed class UsageModeVisualIdentityTests
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.83.23-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.83.23-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.83.23-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.83.23-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.83.24-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.83.24-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.83.24-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.83.24-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

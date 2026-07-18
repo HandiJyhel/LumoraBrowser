@@ -35,7 +35,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.83.23-dev";
+    private const string Version = "0.83.24-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -219,13 +219,13 @@ public sealed partial class MainWindow : Window
         };
         commandPaletteAccelerator.Invoked += CommandPaletteAccelerator_Invoked;
         Content.KeyboardAccelerators.Add(commandPaletteAccelerator);
-        var privateWindowAccelerator = new KeyboardAccelerator
+        var incognitoWindowAccelerator = new KeyboardAccelerator
         {
             Key = VirtualKey.N,
             Modifiers = VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift
         };
-        privateWindowAccelerator.Invoked += PrivateWindowAccelerator_Invoked;
-        Content.KeyboardAccelerators.Add(privateWindowAccelerator);
+        incognitoWindowAccelerator.Invoked += IncognitoWindowAccelerator_Invoked;
+        Content.KeyboardAccelerators.Add(incognitoWindowAccelerator);
         var reopenTabAccelerator = new KeyboardAccelerator
         {
             Key = VirtualKey.T,
