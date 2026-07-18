@@ -62,8 +62,176 @@ public sealed partial class MainWindow
                 await HandleNewTabShortcutMessageAsync(type, obj);
                 return;
             }
+
+            if (type == "newtab_personalize")
+            {
+                OpenPersonalizationSettings();
+                StatusText.Text = "Personnalisez votre mode, votre accueil et vos reperes Lumora.";
+                return;
+            }
+
+            if (type == "newtab_modules")
+            {
+                ShowPanel(ModulesPanel, "Modules Lumora");
+                StatusText.Text = "Choisissez les modules a epingler dans la barre Lumora.";
+                return;
+            }
+
+            if (type == "newtab_mode_intro_dismiss")
+            {
+                var mode = NormalizeUsageMode(obj["mode"]?.GetValue<string>() ?? _uiSettings.UsageMode);
+                _uiSettings.LastIntroducedUsageMode = mode;
+                _uiSettings.Save(_profile.UiSettingsFile);
+                RefreshNovaHomePages();
+                StatusText.Text = $"Presentation du mode {UsageModeLabel(mode)} masquee.";
+                return;
+            }
+
+            if (type == "newtab_mode_quick_note")
+            {
+                HandleNewTabModeQuickNote(obj);
+                return;
+            }
+
+            if (type == "newtab_mode_action")
+            {
+                await HandleNewTabModeActionAsync(obj["action"]?.GetValue<string>() ?? string.Empty);
+                return;
+            }
         }
         catch { }
+    }
+
+    private void HandleNewTabModeQuickNote(JsonObject obj)
+    {
+        var mode = NormalizeUsageMode(obj["mode"]?.GetValue<string>() ?? _uiSettings.UsageMode);
+        var content = (obj["content"]?.GetValue<string>() ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            StatusText.Text = "La note rapide est vide.";
+            return;
+        }
+
+        if (content.Length > 4000)
+        {
+            content = content[..4000];
+        }
+
+        SetCompanionMemory(mode, content);
+        _uiSettings.Save(_profile.UiSettingsFile);
+        UpdateModeCompanionUi();
+        RefreshNovaHomePages();
+        StatusText.Text = $"Lumie garde {NewTabModeQuickNoteTitle(mode).ToLowerInvariant()}.";
+    }
+
+    private static string NormalizeUsageMode(string? usageMode) =>
+        (usageMode ?? "neutral").ToLowerInvariant() switch
+        {
+            "neutral" => "neutral",
+            "balanced" => "balanced",
+            "focus" => "focus",
+            "reading" => "reading",
+            "creative" => "creative",
+            "research" => "research",
+            "night" => "night",
+            _ => "neutral"
+        };
+
+    private static string NewTabModeQuickNoteTitle(string usageMode) =>
+        usageMode switch
+        {
+            "neutral" => "Note neutre",
+            "focus" => "Objectif Focus",
+            "reading" => "Note de lecture",
+            "creative" => "Post-it Creation",
+            "research" => "Piste de recherche",
+            "night" => "Rappel Nuit",
+            _ => "Note rapide Lumora"
+        };
+
+    private async Task HandleNewTabModeActionAsync(string action)
+    {
+        switch (action)
+        {
+            case "modules":
+                ShowPanel(ModulesPanel, "Modules Lumora");
+                StatusText.Text = "Modules Lumora ouverts.";
+                break;
+
+            case "personalize":
+                OpenPersonalizationSettings();
+                StatusText.Text = "Personnalisation Lumora ouverte.";
+                break;
+
+            case "add_shortcut":
+                await HandleNewTabShortcutMessageAsync("newtab_add_shortcut", new JsonObject());
+                break;
+
+            case "command_palette":
+                if (!_uiSettings.CommandPaletteEnabled)
+                {
+                    StatusText.Text = "Palette Ctrl+K désactivée. Activez-la dans Mon Lumora.";
+                    return;
+                }
+
+                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+                ShowCommandPalette();
+                break;
+
+            case "fullscreen":
+                ToggleFullScreenMode();
+                break;
+
+            case "reader":
+                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+                await ToggleReaderModeAsync(ensureOpen: true);
+                break;
+
+            case "notes":
+                NotesMenu_Click(this, new Microsoft.UI.Xaml.RoutedEventArgs());
+                StatusText.Text = "Notes Lumora ouvertes.";
+                break;
+
+            case "read_aloud":
+                if (!_uiSettings.ReadAloudEnabled)
+                {
+                    StatusText.Text = "Lecture à voix haute désactivée. Le mode Lecture ou Nuit peut l'activer.";
+                    return;
+                }
+
+                ReadAloudFlyout.ShowAt(ReadAloudButton.Visibility == Microsoft.UI.Xaml.Visibility.Visible
+                    ? ReadAloudButton
+                    : ModulesButton);
+                StatusText.Text = "Lecture à voix haute prête.";
+                break;
+
+            case "search_assist":
+                if (!_uiSettings.SearchAssistEnabled)
+                {
+                    StatusText.Text = "Assistant IA désactivé. Le mode Création ou Recherche peut l'activer.";
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(AddressBox.Text))
+                {
+                    AddressBox.Text = "idées à explorer";
+                }
+
+                await RunSearchAssistAsync(SearchAssistButton.Visibility == Microsoft.UI.Xaml.Visibility.Visible
+                    ? SearchAssistButton
+                    : ModulesButton);
+                break;
+
+            case "history":
+                HistoryMenu_Click(this, new Microsoft.UI.Xaml.RoutedEventArgs());
+                StatusText.Text = "Historique local ouvert.";
+                break;
+
+            case "bookmarks":
+                BookmarksMenu_Click(this, new Microsoft.UI.Xaml.RoutedEventArgs());
+                StatusText.Text = "Favoris Lumora ouverts.";
+                break;
+        }
     }
 
     private async Task HandleNewTabShortcutMessageAsync(string type, JsonObject obj)

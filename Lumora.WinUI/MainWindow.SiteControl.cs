@@ -306,7 +306,7 @@ public sealed partial class MainWindow
         return row;
     }
 
-    private void SitePermissionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void SitePermissionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressSitePermissionUi) return;
         if (sender is not ComboBox combo ||

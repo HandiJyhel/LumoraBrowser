@@ -42,6 +42,20 @@ internal sealed class UiSettings
     public bool CommandPaletteOpenFromTextFields { get; set; }
     public string NewTabTitle { get; set; } = BrandingText.ProductName;
     public string NewTabStyle { get; set; } = "signature";
+    // "neutral", "balanced", "focus", "reading", "creative", "research", "night".
+    // Sert a donner a Lumora une posture d'usage visible, sans creer encore des
+    // espaces separes avec leurs propres onglets.
+    public string UsageMode { get; set; } = "neutral";
+    public string LastIntroducedUsageMode { get; set; } = string.Empty;
+    public string CompanionBalancedMemo { get; set; } = string.Empty;
+    public string CompanionFocusObjective { get; set; } = string.Empty;
+    public string CompanionReadingNote { get; set; } = string.Empty;
+    public string CompanionCreativePostIt { get; set; } = string.Empty;
+    public string CompanionResearchTrail { get; set; } = string.Empty;
+    public string CompanionNightReminder { get; set; } = string.Empty;
+    // "subtle", "luminous" ou "dynamic". Le reglage accessibilite
+    // AccessibilityReduceMotion garde toujours la priorite au rendu statique.
+    public string PersonalizationMotionStyle { get; set; } = "luminous";
     public bool NewTabFocusSearchOnOpen { get; set; }
     public bool NewTabShortcutsVisible { get; set; }
     public List<NewTabShortcut> NewTabShortcuts { get; set; } = [];
@@ -90,14 +104,7 @@ internal sealed class UiSettings
     // explicite requise (contrairement a la traduction, poids nettement
     // plus lourd et fonctionnalite plus proche de l'experimental).
     public bool SearchAssistEnabled { get; set; }
-    public List<string> PinnedModuleIds { get; set; } =
-    [
-        "reader",
-        "notes",
-        "readAloud",
-        "videoDownload",
-        "searchAssist"
-    ];
+    public List<string> PinnedModuleIds { get; set; } = [];
     // Préférences du générateur de mots de passe du coffre, partagées entre le
     // dialogue "Nouvel identifiant" et la barre de suggestion automatique.
     public int VaultGeneratorLength { get; set; } = 20;
@@ -134,8 +141,10 @@ internal sealed class UiSettings
                 // Migration depuis .json legacy
                 if (legacyPath is not null && File.Exists(legacyPath))
                 {
-                    var migrated = JsonSerializer.Deserialize<UiSettings>(File.ReadAllText(legacyPath), JsonOptions) ?? Default();
+                    var legacyJson = File.ReadAllText(legacyPath);
+                    var migrated = JsonSerializer.Deserialize<UiSettings>(legacyJson, JsonOptions) ?? Default();
                     migrated.ApplyLegacyBrandingMigration();
+                    migrated.ApplyPinnedModulesMigration(legacyJson);
                     migrated.RemoveLegacyDefaultShortcuts();
                     migrated.Save(path);
                     try { File.Delete(legacyPath); } catch { }
@@ -149,6 +158,7 @@ internal sealed class UiSettings
             if (json is null) return Default();
             var settings = JsonSerializer.Deserialize<UiSettings>(json, JsonOptions) ?? Default();
             settings.ApplyLegacyBrandingMigration();
+            settings.ApplyPinnedModulesMigration(json);
             settings.RemoveLegacyDefaultShortcuts();
             return settings;
         }
@@ -194,6 +204,32 @@ internal sealed class UiSettings
 
         NewTabShortcuts.Clear();
         NewTabShortcutsVisible = false;
+    }
+
+    private void ApplyPinnedModulesMigration(string json)
+    {
+        if (HasJsonProperty(json, nameof(PinnedModuleIds))) return;
+
+        PinnedModuleIds =
+        [
+            "reader",
+            "notes",
+            "readAloud",
+            "videoDownload",
+            "searchAssist"
+        ];
+    }
+
+    private static bool HasJsonProperty(string json, string propertyName)
+    {
+        try
+        {
+            return JsonNode.Parse(json) is JsonObject obj && obj.ContainsKey(propertyName);
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     private void ApplyLegacyBrandingMigration()

@@ -167,20 +167,80 @@ public sealed partial class MainWindow
     private void ShowProfilePickerButton_Click(object sender, RoutedEventArgs e) =>
         ShowProfilePicker();
 
-    private void OpenProfilePickerFromSettingsButton_Click(object sender, RoutedEventArgs e)
+    private void ShowProfileOverlay()
     {
         BrowserHost.IsHitTestVisible = false;
         LoginOverlay.Visibility = Visibility.Visible;
         LoginOverlay.Focus(FocusState.Programmatic);
+    }
+
+    private void ShowProfilePickerOverlay()
+    {
+        ShowProfileOverlay();
         ShowProfilePicker();
+    }
+
+    private void ShowCreateProfileOverlay()
+    {
+        ShowProfileOverlay();
+        CreateAnotherProfileButton_Click(this, new RoutedEventArgs());
+    }
+
+    private void OpenProfilePickerFromSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        ShowProfilePickerOverlay();
     }
 
     private void CreateAnotherProfileFromSettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        BrowserHost.IsHitTestVisible = false;
-        LoginOverlay.Visibility = Visibility.Visible;
-        LoginOverlay.Focus(FocusState.Programmatic);
-        CreateAnotherProfileButton_Click(sender, e);
+        ShowCreateProfileOverlay();
+    }
+
+    private void UpdateProfileFlyoutUi()
+    {
+        if (_isGuestMode)
+        {
+            ProfileFlyoutTitleText.Text = "Mode invite";
+            ProfileFlyoutSubtitleText.Text = "Aucune donnee persistante n'est gardee a la fermeture tant qu'aucun profil n'est choisi.";
+            ProfileFlyoutCurrentUserText.Text = "Session sans profil";
+            ProfileFlyoutCurrentStateText.Text = "Creer un utilisateur ou choisir un profil local pour retrouver vos donnees ensuite.";
+            return;
+        }
+
+        var currentName = _userProfile?.Name?.Trim();
+        if (!string.IsNullOrWhiteSpace(currentName))
+        {
+            ProfileFlyoutTitleText.Text = currentName;
+            ProfileFlyoutSubtitleText.Text = "Ce menu regroupe les actions de profil, de compte local et de gestion d'utilisateurs.";
+            ProfileFlyoutCurrentUserText.Text = $"Connecte : {currentName}";
+            ProfileFlyoutCurrentStateText.Text = "Changer d'utilisateur, ouvrir les parametres du profil ou en creer un nouveau.";
+            return;
+        }
+
+        ProfileFlyoutTitleText.Text = "Profil Lumora";
+        ProfileFlyoutSubtitleText.Text = "Choisissez un profil local pour separer vos donnees, sessions et reglages.";
+        ProfileFlyoutCurrentUserText.Text = "Aucun profil actif";
+        ProfileFlyoutCurrentStateText.Text = "Creer ou choisir un profil local pour garder vos donnees sur cet appareil.";
+    }
+
+    private void ProfileFlyoutSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        ProfileStatusFlyout.Hide();
+        OpenProfileSettings();
+    }
+
+    private void ProfileFlyoutSwitchButton_Click(object sender, RoutedEventArgs e)
+    {
+        ProfileStatusFlyout.Hide();
+        ShowProfilePickerOverlay();
+        StatusText.Text = "Choisissez un autre utilisateur Lumora.";
+    }
+
+    private void ProfileFlyoutCreateButton_Click(object sender, RoutedEventArgs e)
+    {
+        ProfileStatusFlyout.Hide();
+        ShowCreateProfileOverlay();
+        StatusText.Text = "Creation d'un nouvel utilisateur Lumora.";
     }
 
     private void DismissLoginOverlay()

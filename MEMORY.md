@@ -6207,3 +6207,709 @@ Travail sur branche dediee `feature/refonte-coffre-0-79-1`, pas encore
 fusionnee sur `main`.
 
 **Version :** `0.79.1-dev`.
+
+---
+
+## 2026-07-17 - Personnalisation et animations Lumora (0.80.0-dev)
+
+Retour utilisateur : Lumora devenait riche en modules et options, mais restait
+trop basique dans sa personnalisation, proche d'un navigateur generique type
+Google. L'utilisateur veut une personnalisation plus proche de l'esprit Opera
+ou Zen : un navigateur que l'on peut vraiment adapter pour se sentir a l'aise
+et travailler plus efficacement, sans copier leur interface.
+
+- Version passee a `0.80.0-dev`.
+- Ajout de `UiSettings.PersonalizationMotionStyle`, persiste par profil.
+- Ajout du bloc `Personnalite Lumora` dans
+  `Parametres > Personnalisation`.
+- Nouveau reglage `Animations et reactions` avec trois rythmes :
+  `Discret`, `Lumineux` et `Dynamique`.
+- Raccordement au flux existant de personnalisation : le choix est charge,
+  marque en attente, puis applique via le bouton global
+  `Appliquer les changements`.
+- `lumora://accueil` devient plus vivant : entree douce de la marque, ligne de
+  lumiere animee, respiration du logo, trace lumineuse modulee par le style et
+  apparition progressive des raccourcis.
+- Le reglage d'accessibilite `Reduire les animations` et le contraste renforce
+  gardent la priorite et forcent un rendu statique.
+- Documentation ajoutee :
+  `docs/PERSONNALISATION_ANIMATION_0_80.md`.
+- Log ajoute :
+  `logs/2026-07-17-personnalisation-animation-0-80.md`.
+- Aucun installateur ni executable de release genere, conformement a la regle
+  demandant d'attendre une demande explicite de l'utilisateur.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj
+--no-restore` : 507/507 tests verts ; `powershell -ExecutionPolicy Bypass
+-File scripts\build-winui.ps1` : build WinUI reussi, 0 avertissement,
+0 erreur.
+
+**Version :** `0.80.0-dev`.
+
+---
+
+## 2026-07-17 - Centre Lumora pour les paramètres (0.81.0-dev)
+
+Retour utilisateur : les paramètres de Lumora restaient trop proches d'une
+interface de navigateur classique type Google/Chrome. L'utilisateur veut
+s'eloigner au maximum de cette logique quand c'est possible, avec une
+organisation plus Lumora.
+
+- Version passee a `0.81.0-dev`.
+- Le panneau `Parametres` s'ouvre maintenant sur `Centre Lumora` au lieu
+  d'arriver directement dans une section technique.
+- Ajout d'une section `Vue d'ensemble` avec cartes d'acces rapide :
+  `Mon Lumora`, `Espace de travail`, `Vie privee locale`,
+  `Coffre et donnees`, `Profils locaux`, `Confort`.
+- La navigation laterale est regroupee par intention utilisateur :
+  `Espace personnel`, `Travail quotidien`, `Donnees locales`.
+- Renommage visible des anciennes categories pour une logique plus produit :
+  `Personnalisation` devient `Mon Lumora`, `Navigation` devient
+  `Espace de travail`, `Demarrage` devient `Ouverture`,
+  `Confidentialite` devient `Vie privee locale`, `Coffre` devient
+  `Coffre et donnees`, `Profil` devient `Profils locaux`,
+  `Stockage` devient `Stockage local`, `Accessibilite` devient `Confort`.
+- Les tags et handlers internes existants sont conserves pour limiter le
+  risque de regression.
+- Documentation ajoutee :
+  `docs/CENTRE_LUMORA_SETTINGS_0_81.md`.
+- Log ajoute :
+  `logs/2026-07-17-centre-lumora-parametres-0-81.md`.
+- Aucun installateur ni executable de release genere.
+
+**Verification** : `dotnet test Lumora.Tests\Lumora.Tests.csproj
+--no-restore` : 507/507 tests verts ; `powershell -ExecutionPolicy Bypass
+-File scripts\build-winui.ps1` : build WinUI reussi hors sandbox apres blocage
+NuGet attendu dans le sandbox, 0 avertissement, 0 erreur.
+
+**Version :** `0.81.0-dev`.
+
+---
+
+## 2026-07-17 - Modes d'usage et accueil vivant (0.82.0-dev)
+
+Suite au retour utilisateur demandant des idees plus originales apres le
+`Centre Lumora`, ajout d'une premiere brique de personnalisation
+comportementale : Lumora ne change plus seulement de couleur ou de section,
+il adopte une posture d'usage visible sur l'accueil.
+
+- Version passee a `0.82.0-dev`.
+- Ajout de `UiSettings.UsageMode`, persiste dans le profil local.
+- Ajout du selecteur `Mode d'usage` dans `Parametres > Mon Lumora`.
+- Modes disponibles : `Equilibre`, `Focus`, `Lecture`, `Creation`,
+  `Recherche`, `Nuit`.
+- `lumora://accueil` affiche une capsule de mode avec salutation locale,
+  nom du mode, intention et actions suggerees.
+- La capsule utilise les reglages existants de theme, palette, contraste et
+  reduction des animations.
+- Documentation ajoutee :
+  `docs/MODES_USAGE_ACCUEIL_VIVANT_0_82.md`.
+- Log ajoute :
+  `logs/2026-07-17-modes-usage-accueil-vivant-0-82.md`.
+- Aucun installateur ni executable de release genere.
+
+**Verification** :
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 507/507 tests verts.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` : build WinUI reussi hors sandbox apres blocage NuGet/obj attendu dans le sandbox, 0 avertissement, 0 erreur.
+
+**Version :** `0.82.0-dev`.
+
+## 2026-07-17 - Premiere personnalisation de profil (0.83.1-dev)
+
+Suite au retour utilisateur indiquant qu'un compte neuf devrait demarrer sans
+modules visibles imposes, Lumora adopte une logique de premiere personnalisation
+plus proche de son identite produit : le navigateur propose de construire
+l'experience au lieu d'imposer une barre d'outils deja remplie.
+
+- Version passee a `0.83.1-dev`.
+- Correction de numerotation : cette etape prolonge la personnalisation deja
+  lancee et doit rester une mise a jour mineure `0.83.1-dev`, pas
+  `0.83.0-dev`.
+- Les nouveaux profils ont `PinnedModuleIds` vide par defaut.
+- Les anciens profils qui ne contenaient pas encore la cle `PinnedModuleIds`
+  sont migres vers les modules historiques afin de ne pas vider leur interface
+  existante.
+- Le wizard premier lancement passe de 3 a 4 etapes.
+- Nouvelle etape `Votre Lumora` : choix du mode d'usage et des modules visibles.
+- Tous les modules de cette etape restent decoches par defaut sur un profil neuf.
+- `lumora://accueil` affiche une invitation `Construisez votre Lumora` quand le
+  profil n'a aucun module epingle ni raccourci visible.
+- Les boutons de l'invitation ouvrent directement `Mon Lumora` ou
+  `Modules Lumora`.
+- Documentation ajoutee :
+  `docs/PREMIERE_PERSONNALISATION_0_83.md`.
+- Log ajoute :
+  `logs/2026-07-17-premiere-personnalisation-0-83.md`.
+- Aucun installateur ni executable de release genere.
+
+**Verification** :
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 507/507 tests verts.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` : build WinUI reussi hors sandbox apres blocage NuGet/obj attendu dans le sandbox, 0 avertissement, 0 erreur.
+- `run-winui.cmd` : restore/build reussis, fenetre lancee avec titre
+  `Lumora 0.83.1-dev` et handle principal non nul.
+
+**Version :** `0.83.1-dev`.
+
+## 2026-07-17 - Mode d'usage dans Modules et reset Bob (0.83.2-dev)
+
+Suite au retour utilisateur, ajout d'un accès direct au changement de mode
+d'usage dans le hub `Modules Lumora`, pour éviter que le réglage soit caché
+uniquement dans `Mon Lumora`.
+
+- Version passée à `0.83.2-dev`.
+- Ajout d'un sélecteur `Mode d'usage` au début du panneau `Modules Lumora`.
+- Le changement de mode depuis le hub Modules s'applique immédiatement :
+  sauvegarde locale, synchronisation du sélecteur `Mon Lumora`, rafraîchissement
+  des pages `lumora://accueil`.
+- Le profil actif local `default`, utilisé comme profil test Bob, a été remis
+  en état d'interface neuve : `PinnedModuleIds` vide, raccourcis du nouvel
+  onglet vidés et masqués, `UsageMode` remis à `balanced`,
+  `SetupWizardCompleted` remis à `false`.
+- Documentation ajoutée :
+  `docs/MODULES_MODE_USAGE_0_83_2.md`.
+- Log ajouté :
+  `logs/2026-07-17-modules-mode-usage-bob-reset-0-83-2.md`.
+- Aucun installateur ni exécutable de release généré.
+
+**Vérification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 507 tests
+  réussis.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` : build
+  WinUI réussi, 0 avertissement, 0 erreur.
+- `run-winui.cmd` : restore/build réussis, fenêtre lancée avec le titre
+  `Lumora 0.83.2-dev`, handle principal non nul et application répondante.
+
+**Version :** `0.83.2-dev`.
+
+## 2026-07-17 - Modes avec avantages et reset Bob (0.83.3-dev)
+
+Suite au retour utilisateur, les modes d'usage Lumora ne doivent plus etre de
+simples libelles : chaque mode applique maintenant une posture visible et utile.
+
+- Version passee a `0.83.3-dev`.
+- Les changements de mode appliquent des presets non destructifs :
+  - `Focus` : accueil minimal, recherche focalisee, interface compacte, palette
+    de commande activee.
+  - `Lecture` : accueil calme, modules lecture/notes/voix locale rapproches.
+  - `Creation` : animations dynamiques, notes, assistant de recherche et
+    raccourcis rapides.
+  - `Recherche` : onglets verticaux, favoris visibles, suggestions locales et
+    outils de collecte.
+  - `Nuit` : theme sombre, interface compacte, rendu calme et outils de lecture.
+  - `Equilibre` : retour a une posture standard.
+- `lumora://accueil` affiche une zone d'avantages propre au mode actif, avec
+  des boutons relies aux panneaux ou modules utiles.
+- Le profil local actif `default`, utilise comme profil test Bob, a ete supprime
+  de `%LOCALAPPDATA%\Lumora\profiles`.
+- Le profil `testcoffre` n'a pas ete supprime.
+- Documentation ajoutee :
+  `docs/MODES_USAGE_AVANTAGES_0_83_3.md`.
+- Log ajoute :
+  `logs/2026-07-17-modes-avantages-bob-reset-0-83-3.md`.
+- Aucun installateur ni executable de release genere.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 507 tests
+  reussis.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` : build
+  WinUI reussi, 0 avertissement, 0 erreur.
+- `run-winui.cmd` avec `LUMORA_PROFILE_DIR` temporaire isole : restore/build
+  reussis, fenetre lancee avec le titre `Lumora 0.83.3-dev`, handle principal
+  non nul et application repondante.
+- Profil temporaire de verification supprime.
+- Profil Bob `default` toujours absent de `%LOCALAPPDATA%\Lumora\profiles`.
+
+**Version :** `0.83.3-dev`.
+
+## 2026-07-17 - Icône de mode et accueil Équilibre (0.83.4-dev)
+
+Suite au retour utilisateur, l'accueil en mode `Équilibre` est simplifié et le
+changement de mode devient accessible en permanence depuis la barre principale.
+
+- Version passée à `0.83.4-dev`.
+- Suppression des cartes d'actions artificielles en mode `Équilibre`.
+- Les cartes d'avantages restent visibles uniquement pour les modes spécialisés.
+- Ajout d'un bouton permanent `Mode d'usage` à côté du bouton modules.
+- L'icône du bouton change selon le mode actif.
+- Le bouton ouvre un sélecteur rapide avec `Équilibre`, `Focus`, `Lecture`,
+  `Création`, `Recherche` et `Nuit`.
+- Le changement de mode par ce bouton applique les mêmes presets que les autres
+  sélecteurs et synchronise les contrôles existants.
+- Documentation ajoutée :
+  `docs/MODE_ICON_ACCUEIL_0_83_4.md`.
+- Log ajouté :
+  `logs/2026-07-17-mode-icon-accueil-equilibre-0-83-4.md`.
+- Aucun profil local supprimé pendant cette étape.
+- Aucun installateur ni exécutable de release généré.
+
+**Vérification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 507 tests
+  réussis.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` : build
+  WinUI réussi, 0 avertissement, 0 erreur.
+- `run-winui.cmd` avec `LUMORA_PROFILE_DIR` temporaire isolé : restore/build
+  réussis, fenêtre lancée avec le titre `Lumora 0.83.4-dev`, handle principal
+  non nul et application répondante.
+- Profil temporaire de vérification supprimé.
+
+**Version :** `0.83.4-dev`.
+
+## 2026-07-17 - Identité visuelle des modes (0.83.5-dev)
+
+Suite au retour utilisateur, les modes d'usage Lumora doivent etre
+identifiables visuellement des la premiere seconde : pas seulement par leurs
+options, mais par une ambiance, une densite et des micro-animations propres.
+
+- Version passee a `0.83.5-dev`.
+- `lumora://accueil` gagne une signature visuelle propre a chaque mode :
+  barre de mode, motif de panneau, indicateur graphique et densite differente.
+- Les fonds d'accueil sont differencies pour `Focus`, `Lecture`, `Creation`,
+  `Recherche` et `Nuit`.
+- Ajout de micro-animations propres aux modes : rythme serre pour `Focus`, flux
+  calme pour `Lecture`, reaction plus vive pour `Creation`, balayage structurel
+  pour `Recherche`, pulsation douce pour `Nuit`.
+- Les reglages d'accessibilite `Reduire les animations` et contraste renforce
+  gardent la priorite et coupent les animations.
+- Documentation ajoutee :
+  `docs/MODES_IDENTITE_VISUELLE_0_83_5.md`.
+- Log ajoute :
+  `logs/2026-07-17-modes-identite-visuelle-0-83-5.md`.
+- Aucun installateur ni executable de release genere.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 509/509 tests reussis.
+- `scripts\build-winui.ps1` bloque dans le sandbox par NuGet/ACL, puis hors
+  sandbox par l'executable Debug deja ouvert (`Lumora.WinUI (2272)`).
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.5-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.5-dev`.
+
+## 2026-07-17 - Chrome visuel des modes (0.83.6-dev)
+
+Suite au retour utilisateur, l'identite des modes ne doit pas rester limitee a
+la page d'accueil. Le chrome permanent de Lumora doit aussi porter la posture
+du mode actif.
+
+- Version passee a `0.83.6-dev`.
+- Ajout d'une couche `ApplyUsageModeChrome` qui applique une palette par mode
+  aux ressources partagees du chrome : fond app, barre principale, barre
+  d'adresse, onglets, rail vertical, trait d'identite et bouton `Mode d'usage`.
+- La title bar Windows lit maintenant les ressources du chrome Lumora au lieu
+  de rester sur des couleurs fixes.
+- Le contraste renforce garde la priorite et force une palette lisible
+  noir/blanc/accent.
+- Ajout d'un test de regression pour verrouiller l'existence de cette couche de
+  chrome par mode.
+- Documentation ajoutee :
+  `docs/CHROME_MODES_VISUELS_0_83_6.md`.
+- Log ajoute :
+  `logs/2026-07-17-chrome-modes-visuels-0-83-6.md`.
+- Aucun installateur ni executable de release genere.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 510/510 tests reussis.
+- Restore MSBuild WinUI : reussie, 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.6-debug\` : 0 avertissement, 0 erreur.
+- Aucun lancement visuel automatique effectue, conformement a la regle projet.
+
+**Version :** `0.83.6-dev`.
+
+## 2026-07-17 - Modes avec outils contextuels (0.83.7-dev)
+
+Suite au retour utilisateur, les modes Lumora ne doivent pas seulement changer
+d'ambiance : chacun doit proposer une fonction visible et une courte
+presentation de ce qu'il apporte.
+
+- Version passee a `0.83.7-dev`.
+- Ajout d'une presentation de mode sur `lumora://accueil`.
+- La presentation peut etre masquee par `Compris` et reste memorisee par mode
+  dans les preferences locales (`LastIntroducedUsageMode`).
+- Changer de mode remet la presentation a afficher pour le nouveau contexte.
+- Ajout d'un outil contextuel sur l'accueil pour chaque mode :
+  `Equilibre`, `Focus`, `Lecture`, `Creation`, `Recherche`, `Nuit`.
+- Le mode `Creation` affiche un post-it local de capture d'idee.
+- Les autres modes proposent aussi une saisie utile : objectif, note de
+  lecture, piste de recherche ou rappel calme.
+- Les notes rapides sont enregistrees via le module Notes Lumora et le
+  `NoteStore` local du profil.
+- Ajout d'un retour `aria-live`, de libelles accessibles et du respect du
+  rendu statique quand les animations sont reduites.
+- Documentation ajoutee :
+  `docs/MODES_OUTILS_CONTEXTUELS_0_83_7.md`.
+- Log ajoute :
+  `logs/2026-07-17-modes-outils-contextuels-0-83-7.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 511/511 tests reussis.
+- Restore MSBuild WinUI : reussie, 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.7-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.7-dev`.
+
+## 2026-07-17 - Modes compagnons et accueil aere (0.83.8-dev)
+
+Suite au retour utilisateur, l'accueil des modes etait trop centre et compacte.
+Le besoin clarifie est aussi de faire evoluer les modes vers des compagnons
+disponibles pendant la navigation, pas seulement sur `lumora://accueil`.
+
+- Version passee a `0.83.8-dev`.
+- `lumora://accueil` passe d'un empilement central a une composition en deux
+  zones sur desktop : marque/recherche/reperes a gauche, mode/outil a droite.
+- Le responsive garde une colonne simple sur petite largeur.
+- Ajout d'un bouton permanent `Compagnon du mode` dans le chrome, a cote du
+  bouton `Mode d'usage`.
+- Le compagnon adapte son icone, ses textes et ses actions au mode actif.
+- Actions raccordees :
+  - `Equilibre` : modules et palette de commande.
+  - `Focus` : palette de commande et plein ecran.
+  - `Lecture` : mode lecture et notes.
+  - `Creation` : notes/post-it et assistant de recherche si actif.
+  - `Recherche` : historique local et favoris.
+  - `Nuit` : mode lecture et voix locale.
+- Le compagnon utilise les modules locaux existants et n'ajoute aucun service
+  distant.
+- Le bouton compagnon est relie aux traitements d'accessibilite et a la palette
+  visuelle du mode actif.
+- Documentation ajoutee :
+  `docs/MODES_COMPAGNONS_ACCUEIL_AERE_0_83_8.md`.
+- Log ajoute :
+  `logs/2026-07-17-modes-compagnons-accueil-aere-0-83-8.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 512/512 tests reussis.
+- Restore MSBuild WinUI : reussie, 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.8-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.8-dev`.
+
+## 2026-07-17 - Modes compagnons Lumie (0.83.9-dev)
+
+Suite au retour utilisateur, la premiere version des compagnons etait encore
+trop proche d'un panneau de boutons : boutons trop similaires, changement de
+mode pas assez visible, accueil encore trop compacte et objectif/post-it trop
+penible a retrouver via le module Notes.
+
+- Version passee a `0.83.9-dev`.
+- Le compagnon permanent prend le nom visible `Lumie` et utilise un bouton
+  pilule distinct du selecteur de mode.
+- Le bouton de mode affiche maintenant un libelle explicite du type
+  `Mode Focus`, afin que le changement de mode ne semble plus cache.
+- Ajout d'une memoire locale par mode dans les preferences du profil :
+  memo Equilibre, objectif Focus, note Lecture, post-it Creation, piste
+  Recherche et rappel Nuit.
+- Le champ de l'accueil et le champ du flyout Lumie partagent la meme memoire
+  locale : enregistrer un objectif ou un post-it ne force plus a passer par
+  Notes pour le retrouver.
+- Les actions contextuelles du compagnon restent adaptees au mode actif.
+- L'accueil `lumora://accueil` est encore elargi et espace sur desktop pour
+  reduire l'effet compact.
+- Les nouveaux controles Lumie sont integres aux traitements d'accessibilite.
+- Documentation ajoutee :
+  `docs/MODES_COMPAGNONS_LUMIE_0_83_9.md`.
+- Log ajoute :
+  `logs/2026-07-17-modes-compagnons-lumie-0-83-9.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 512/512 tests
+  reussis.
+- Restore MSBuild WinUI hors sandbox apres blocage NuGet/ACL attendu dans le
+  sandbox : 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.9-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.9-dev`.
+
+## 2026-07-17 - Chrome Lumie premium (0.83.10-dev)
+
+Suite au retour utilisateur sur la capture du chrome, les boutons `Lumie` et
+`Mode Equilibre` etaient lisibles mais trop retro : contours trop forts, rendu
+trop proche d'un bouton arcade et manque de finesse moderne.
+
+- Version passee a `0.83.10-dev`.
+- Refonte visuelle du bouton `Lumie` en capsule plus douce :
+  fond verre mat, point d'activite, separation discrete entre `Lumie` et le
+  mode actif.
+- Refonte visuelle du bouton `Mode` :
+  fine barre d'accent, libelle `Mode` discret, nom du mode separe et chevron
+  moins present.
+- Suppression de l'effet carre interne epais autour de l'icone Lumie.
+- Ajout de ressources dediees au chrome moderne :
+  `NovaCompanionGlassBrush`, `NovaCompanionStrokeBrush`,
+  `NovaModeSelectorGlassBrush` et `NovaModeSelectorStrokeBrush`.
+- Ajout de `ChromeTint` pour teinter les boutons avec les surfaces du chrome au
+  lieu d'appliquer des aplats cyan/or trop forts.
+- Conservation du rendu contraste renforce et des traitements d'accessibilite.
+- Documentation ajoutee :
+  `docs/CHROME_LUMIE_PREMIUM_0_83_10.md`.
+- Log ajoute :
+  `logs/2026-07-17-chrome-lumie-premium-0-83-10.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 512/512 tests reussis.
+- Restore MSBuild WinUI hors sandbox : 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.10-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.10-dev`.
+
+## 2026-07-18 - Hub Modules chrome (0.83.11-dev)
+
+Suite au retour utilisateur, le bouton Modules gardait le bon role, comparable
+au bouton extensions des autres navigateurs, mais son icone et son habillage
+faisaient tache par rapport a la direction artistique Lumora. Le menu principal
+Lumora n'etait plus visible.
+
+- Version passee a `0.83.11-dev`.
+- Remplacement du bouton modules visuellement sommaire par un mini hub Lumora :
+  quatre blocs de modules, un bloc accentue et un point central.
+- Ajout du style `NovaModuleHubButtonStyle`.
+- Ajout des ressources de chrome :
+  `NovaModuleHubGlassBrush`, `NovaModuleHubStrokeBrush`,
+  `NovaModuleHubNodeBrush` et `NovaModuleHubAccentBrush`.
+- Le bouton Modules est maintenant teinte avec la palette du mode actif, comme
+  Lumie et le selecteur de mode.
+- Correction du bug de grille : la barre de navigation contient maintenant 22
+  colonnes, afin que le separateur en colonne 20 et `NavigationMenuButton` en
+  colonne 21 soient valides.
+- Les colonnes finales sont nommees `NavigationMenuDividerColumn` et
+  `NavigationMenuButtonColumn` pour verrouiller l'intention.
+- Documentation ajoutee :
+  `docs/MODULES_HUB_CHROME_0_83_11.md`.
+- Log ajoute :
+  `logs/2026-07-18-modules-hub-chrome-0-83-11.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 512/512 tests reussis.
+- Restore MSBuild WinUI hors sandbox : 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.11-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.11-dev`.
+
+## 2026-07-18 - Mode Neutre (0.83.12-dev)
+
+Suite au retour utilisateur, Lumora avait besoin d'un mode de base plus nu :
+pas un mode compagnon, pas une page compacte remplie de panneaux, mais un
+accueil simple avec l'heure, la recherche et les outils essentiels.
+
+- Version passee a `0.83.12-dev`.
+- Ajout du mode `neutral` dans le selecteur de mode, les parametres, le hub
+  Modules et le wizard.
+- Passage du mode par defaut des nouveaux profils de `balanced` a `neutral`.
+- Ajout d'un rendu d'accueil dedie : `neutral-home`, `neutral-clock` et barre
+  de recherche partageant la navigation existante.
+- Masquage des panneaux de presentation, du workbench de mode et de
+  l'invitation a personnaliser en mode neutre.
+- Masquage de Lumie en mode neutre pour garder une base propre.
+- Le preset neutre retire les modules optionnels epingles, conserve les favoris,
+  garde la palette de commande et les suggestions locales, et laisse les outils
+  noyau visibles : coffre, favoris, protection publicitaire.
+- Ajout d'une palette chrome neutre plus discrete.
+- Tests de garde-fou ajoutes pour le bouton Neutre, le wizard, le fallback
+  `neutral`, l'accueil minimal et le masquage du compagnon.
+- Documentation ajoutee :
+  `docs/MODE_NEUTRE_0_83_12.md`.
+- Log ajoute :
+  `logs/2026-07-18-mode-neutre-0-83-12.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test` hors sandbox apres blocage NuGet/ACL local : 513/513 tests
+  reussis.
+- Restore MSBuild WinUI hors sandbox : 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.12-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.12-dev`.
+
+## 2026-07-18 - Modes Neutre et Equilibre distincts (0.83.13-dev)
+
+Suite au retour utilisateur, le mode Neutre et le mode Equilibre etaient trop
+proches visuellement. Le logo Lumora avait aussi ete trop retire du mode
+Neutre.
+
+- Version passee a `0.83.13-dev`.
+- Correction de normalisation : `balanced` est maintenant reconnu explicitement
+  par l'accueil et par les messages WebView2.
+- Le mode Neutre affiche de nouveau le logo Lumora, de maniere discrete, avec
+  le nom, l'heure et la recherche.
+- Ajout d'un accueil dedie au mode Equilibre :
+  `balanced-home`, `balanced-lead`, `balanced-dock`.
+- Equilibre affiche une surface quotidienne plus identifiable :
+  marque Lumora, recherche, raccourcis, presentation de mode et actions
+  Favoris / Historique / Modules.
+- Les animations et transitions tiennent compte des nouvelles classes
+  `balanced-*` et `neutral-*`.
+- Tests ajoutes pour verrouiller la distinction entre `neutral` et `balanced`.
+- Documentation ajoutee :
+  `docs/MODE_NEUTRE_EQUILIBRE_DISTINCTS_0_83_13.md`.
+- Log ajoute :
+  `logs/2026-07-18-modes-neutre-equilibre-distincts-0-83-13.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test` hors sandbox apres blocage NuGet/ACL local : 514/514 tests
+  reussis.
+- Restore MSBuild WinUI hors sandbox : 0 avertissement, 0 erreur.
+- Build WinUI valide avec sortie alternative
+  `artifacts\build-verify\winui-0.83.13-debug\` : 0 avertissement, 0 erreur.
+
+**Version :** `0.83.13-dev`.
+
+## 2026-07-18 - Actions de chrome bas (0.83.14-dev)
+
+Suite au retour utilisateur, la barre du haut etait trop chargee apres les
+ajouts des boutons de mode et de compagnon. L'idee retenue et validee par `Go`
+etait de reutiliser la zone basse, deja amorcee avec le profil, pour y placer
+les actions d'environnement Lumora.
+
+- Version passee a `0.83.14-dev`.
+- Deplacement du bouton `Mode d'usage` de la barre haute vers la barre basse.
+- Deplacement du bouton `Lumie` de la barre haute vers la barre basse.
+- Regroupement de `Lumie`, `Mode d'usage` et `Profil` dans `StatusBarRow`.
+- Les flyouts `Lumie` et `Mode d'usage` s'ouvrent maintenant depuis le bas vers
+  le haut.
+- Le haut garde les commandes de navigation et le hub `Modules`, afin de mieux
+  separer navigation et environnement.
+- Ajout d'un test de garde-fou pour verifier que `Mode` et `Lumie` ne sont plus
+  dans `NavigationToolbar` mais bien dans `StatusBarRow`.
+- Documentation ajoutee :
+  `docs/CHROME_ACTIONS_BAS_0_83_14.md`.
+- Log ajoute :
+  `logs/2026-07-18-chrome-actions-bas-0-83-14.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 515/515 tests reussis.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` hors
+  sandbox : restore WinUI reussi, build WinUI reussi, 0 avertissement, 0
+  erreur.
+
+**Version :** `0.83.14-dev`.
+
+
+## 2026-07-18 - Accueil et modes alleges (0.83.15-dev)
+
+Suite au nouveau retour utilisateur, le deplacement des actions en bas allait
+dans le bon sens, mais le rendu restait trop massif et la composition de
+l'accueil etait jugee trop lourde, surtout en mode Equilibre. La correction
+attendue etait de garder l'idee, mais de la rendre plus discrete, plus aeree
+et plus coherent sur tous les modes.
+
+- Version passee a `0.83.15-dev`.
+- Les boutons bas `Lumie` et `Mode d'usage` ont ete redesignes dans une
+  variante plus discrete : gabarit reduit, accent plus fin, espacement allégé
+  et poids visuel baisse.
+- Le mode `Neutre` reste la base par defaut et garde maintenant un acces rapide
+  visible a l'ajout de raccourci.
+- Le compagnon bas n'est plus masque en mode `Neutre` et propose une action
+  rapide orientee vers les raccourcis.
+- Les raccourcis rapides sont reintegres dans l'accueil `Neutre` sous la
+  recherche.
+- La composition generale de l'accueil a ete reequilibree avec une grille plus
+  large et une colonne laterale moins etouffante.
+- La carte de mode a ete reprise pour eviter le texte tasse et mieux separer
+  copie, visuel et actions.
+- Le mode `Equilibre` a ete simplifie : suppression du bloc d'introduction en
+  doublon, dock repense sur deux colonnes et surfaces allegées.
+- Les styles responsives ont ete ajustes pour suivre cette nouvelle
+  composition.
+- Les tests visuels textuels ont ete mis a jour pour verrouiller :
+  - la presence des raccourcis dans `Neutre` ;
+  - la visibilite permanente du compagnon ;
+  - l'allegement structurel du mode `Equilibre`.
+- Documentation ajoutee :
+  `docs/ACCUEIL_MODES_ALLEGES_0_83_15.md`.
+- Log ajoute :
+  `logs/2026-07-18-accueil-modes-alleges-0-83-15.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 516/516 tests reussis.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` hors
+  sandbox : restore WinUI reussi, build WinUI reussi, 0 avertissement, 0
+  erreur.
+
+**Version :** `0.83.15-dev`.
+
+
+## 2026-07-18 - Menu profil bas (0.83.16-dev)
+
+Suite au retour utilisateur, le nom d'utilisateur dans la barre basse ne devait
+plus ouvrir directement une page. Cette zone devait devenir un vrai menu de
+profil avec des actions claires pour gerer les utilisateurs locaux.
+
+- Version passee a `0.83.16-dev`.
+- Le bouton bas du profil ouvre maintenant un flyout dedie au lieu de renvoyer
+  directement vers une page.
+- Le flyout affiche un resume du contexte courant : profil actif, absence de
+  profil ou mode invite.
+- Ajout d'une entree `Parametres utilisateur` qui ouvre directement
+  `Profils locaux` dans les parametres.
+- Ajout d'une entree `Changer d'utilisateur` qui ouvre le selecteur de profils
+  locaux.
+- Ajout d'une entree `Creer un utilisateur` qui ouvre directement le flux de
+  creation de profil.
+- Refactorisation des ouvertures d'overlay profil pour reutiliser des helpers
+  communs : affichage de l'overlay, ouverture du selecteur, ouverture de la
+  creation.
+- Test ajoute pour verrouiller la presence du menu profil bas, de ses actions
+  et de sa navigation vers les reglages de profil.
+- Documentation ajoutee :
+  `docs/MENU_PROFIL_BAS_0_83_16.md`.
+- Log ajoute :
+  `logs/2026-07-18-menu-profil-bas-0-83-16.md`.
+- Aucun installateur ni executable de release genere.
+- Aucun lancement automatique de Lumora effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` hors sandbox
+  apres blocage ACL local : 517/517 tests reussis.
+- `powershell -ExecutionPolicy Bypass -File scripts\build-winui.ps1` hors
+  sandbox : restore WinUI reussi, build WinUI reussi, 0 avertissement, 0
+  erreur.
+
+**Version :** `0.83.16-dev`.
+
+

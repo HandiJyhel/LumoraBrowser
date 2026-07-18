@@ -443,7 +443,16 @@ public sealed partial class MainWindow
             return;
         }
 
+        var previousUsageMode = _uiSettings.UsageMode;
         SaveUiSettings();
+        if (!string.Equals(previousUsageMode, _uiSettings.UsageMode, StringComparison.OrdinalIgnoreCase))
+        {
+            _uiSettings.LastIntroducedUsageMode = string.Empty;
+            ApplyUsageModePreset(_uiSettings.UsageMode);
+            _uiSettings.Save(_profile.UiSettingsFile);
+            ApplyUiSettings();
+        }
+
         ApplyAccessibilitySettings();
         ApplyBookmarksBarVisibility();
         ApplyCompactModeLayout();
@@ -557,6 +566,9 @@ public sealed partial class MainWindow
             NewTabTitleBox.Text = BrandingText.NormalizeLegacyProductTitle(_uiSettings.NewTabTitle);
             SelectComboByTag(AccentPaletteCombo, _uiSettings.AccentPalette, "lumora");
             SelectComboByTag(NewTabStyleCombo, _uiSettings.NewTabStyle, "signature");
+            SelectComboByTag(UsageModeCombo, _uiSettings.UsageMode, "neutral");
+            SelectComboByTag(ModulesUsageModeCombo, _uiSettings.UsageMode, "neutral");
+            SelectComboByTag(PersonalizationMotionCombo, _uiSettings.PersonalizationMotionStyle, "luminous");
             NewTabFocusSearchSwitch.IsOn = _uiSettings.NewTabFocusSearchOnOpen;
             NewTabShortcutsSwitch.IsOn = _uiSettings.NewTabShortcutsVisible;
             NewTabShortcutsBox.Text = NewTabShortcutsToText(_uiSettings.NewTabShortcuts);
@@ -711,6 +723,11 @@ public sealed partial class MainWindow
         _uiSettings.NewTabTitle = BrandingText.NormalizeLegacyProductTitle(NewTabTitleBox.Text);
         if (NewTabStyleCombo.SelectedItem is ComboBoxItem newTabStyleItem)
             _uiSettings.NewTabStyle = newTabStyleItem.Tag?.ToString() ?? "signature";
+        if (UsageModeCombo.SelectedItem is ComboBoxItem usageModeItem)
+            _uiSettings.UsageMode = usageModeItem.Tag?.ToString() ?? "neutral";
+        SelectComboByTag(ModulesUsageModeCombo, _uiSettings.UsageMode, "neutral");
+        if (PersonalizationMotionCombo.SelectedItem is ComboBoxItem motionItem)
+            _uiSettings.PersonalizationMotionStyle = motionItem.Tag?.ToString() ?? "luminous";
         _uiSettings.NewTabFocusSearchOnOpen = NewTabFocusSearchSwitch.IsOn;
         _uiSettings.NewTabShortcutsVisible = NewTabShortcutsSwitch.IsOn;
         _uiSettings.NewTabShortcuts = ParseNewTabShortcuts(NewTabShortcutsBox.Text);
@@ -779,10 +796,19 @@ public sealed partial class MainWindow
         SetBrush("NovaAccentSoftBrush", palette.AccentSoft);
         SetBrush("NovaCoolAccentBrush", palette.CoolAccent);
         SetBrush("NovaCoolAccentSoftBrush", palette.CoolAccentSoft);
+        SetBrush("NovaCompanionGlassBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(25, 39, 49, 214) : UiColor(255, 255, 255, 228)));
+        SetBrush("NovaCompanionStrokeBrush", highContrast ? UiColor(255, 255, 255) : palette.CoolAccentSoft);
+        SetBrush("NovaModeSelectorGlassBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(22, 35, 45, 208) : UiColor(255, 255, 255, 224)));
+        SetBrush("NovaModeSelectorStrokeBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(52, 68, 76, 160) : UiColor(214, 209, 200, 180)));
+        SetBrush("NovaModuleHubGlassBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(22, 35, 45, 214) : UiColor(255, 255, 255, 226)));
+        SetBrush("NovaModuleHubStrokeBrush", highContrast ? UiColor(255, 255, 255) : palette.CoolAccentSoft);
+        SetBrush("NovaModuleHubNodeBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(195, 185, 165) : UiColor(84, 78, 70)));
+        SetBrush("NovaModuleHubAccentBrush", highContrast ? UiColor(255, 213, 0) : palette.CoolAccent);
         SetBrush("NovaFocusBrush", palette.Focus);
         SetBrush("NovaFocusInnerBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(13, 24, 34) : UiColor(255, 255, 255)));
         SetBrush("NovaInfoSurfaceBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(29, 46, 56, translucent ? (byte)238 : (byte)255) : UiColor(247, 245, 240, translucent ? (byte)238 : (byte)255)));
         SetBrush("NovaPanelBackgroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(16, 29, 38) : UiColor(250, 248, 245)));
+        ApplyUsageModeChrome(isDark, highContrast, translucent);
 
         var mainFontSize = largeText ? 16 : 14;
         var smallFontSize = largeText ? 14 : 12;
@@ -819,6 +845,12 @@ public sealed partial class MainWindow
                      WebAppsPinnedButton,
                      WebAppsQuickButton,
                      ModulesButton,
+                     ModeCompanionButton,
+                     ModeCompanionMemoryBox,
+                     ModeCompanionSaveButton,
+                     ModeCompanionPrimaryButton,
+                     ModeCompanionSecondaryButton,
+                     UsageModeButton,
                      DictationPinnedButton,
                      VideoDownloadStartButton,
                      NavigationMenuButton,
@@ -843,6 +875,7 @@ public sealed partial class MainWindow
         }
 
         UpdateDictationButtonVisibility();
+        ApplyWindowTitleBarColors();
     }
 
     private void SetBrush(string key, Windows.UI.Color color)
@@ -851,6 +884,208 @@ public sealed partial class MainWindow
         {
             brush.Color = color;
         }
+    }
+
+    private void ApplyUsageModeChrome(bool isDark, bool highContrast, bool translucent)
+    {
+        if (highContrast)
+        {
+            ModeChromeAccentStrip.Height = 3;
+            ModeChromeAccentStrip.Opacity = 1;
+            UsageModeButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            UsageModeButton.BorderBrush = new SolidColorBrush(UiColor(255, 255, 255));
+            UsageModeButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
+            ModeCompanionButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            ModeCompanionButton.BorderBrush = new SolidColorBrush(UiColor(255, 255, 255));
+            ModeCompanionButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
+            UsageModeAccentBar.Background = new SolidColorBrush(UiColor(255, 213, 0));
+            ModeCompanionAccentDot.Background = new SolidColorBrush(UiColor(0, 255, 226));
+            ModeCompanionGlow.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            ModulesButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            ModulesButton.BorderBrush = new SolidColorBrush(UiColor(255, 255, 255));
+            ModulesButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
+            SetIdentityGradient(UiColor(255, 213, 0), UiColor(255, 255, 255), UiColor(0, 255, 226));
+            NavigationToolbar.Opacity = 1;
+            VerticalTabsRail.Opacity = 1;
+            return;
+        }
+
+        var alpha = translucent ? (byte)232 : (byte)255;
+        var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
+        var chrome = ResolveModeChromePalette(mode, isDark, alpha);
+
+        RootShell.Background = new SolidColorBrush(chrome.AppBackground);
+        SetBrush("NovaChromeSurfaceBrush", chrome.Surface);
+        SetBrush("NovaChromeSurfaceAltBrush", chrome.SurfaceAlt);
+        SetBrush("NovaChromeSurfaceRaisedBrush", chrome.SurfaceRaised);
+        SetBrush("NovaChromeStrokeBrush", chrome.Stroke);
+        SetBrush("NovaChromeStrokeSoftBrush", chrome.StrokeSoft);
+        SetBrush("NovaAddressBackgroundBrush", chrome.AddressBackground);
+        SetBrush("NovaAddressBorderBrush", chrome.AddressBorder);
+        SetBrush("NovaAddressForegroundBrush", chrome.Text);
+        SetBrush("NovaTextMutedBrush", chrome.MutedText);
+        SetBrush("NovaAccentBrush", chrome.Accent);
+        SetBrush("NovaAccentSoftBrush", chrome.AccentSoft);
+        SetBrush("NovaCoolAccentBrush", chrome.CoolAccent);
+        SetBrush("NovaCoolAccentSoftBrush", chrome.CoolAccentSoft);
+        SetBrush("NovaCompanionGlassBrush", ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.10, translucent ? (byte)218 : (byte)236));
+        SetBrush("NovaCompanionStrokeBrush", ChromeTint(chrome.StrokeSoft, chrome.CoolAccent, 0.24, 190));
+        SetBrush("NovaModeSelectorGlassBrush", ChromeTint(chrome.Surface, chrome.Accent, 0.055, translucent ? (byte)214 : (byte)232));
+        SetBrush("NovaModeSelectorStrokeBrush", ChromeTint(chrome.StrokeSoft, chrome.Accent, 0.13, 178));
+        SetBrush("NovaModuleHubGlassBrush", ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.07, translucent ? (byte)212 : (byte)232));
+        SetBrush("NovaModuleHubStrokeBrush", ChromeTint(chrome.StrokeSoft, chrome.CoolAccent, 0.18, 178));
+        SetBrush("NovaModuleHubNodeBrush", chrome.MutedText);
+        SetBrush("NovaModuleHubAccentBrush", chrome.CoolAccent);
+        SetBrush("NovaFocusBrush", chrome.Focus);
+        SetBrush("NovaFocusInnerBrush", isDark ? UiColor(13, 24, 34) : UiColor(255, 255, 255));
+        SetIdentityGradient(chrome.CoolAccent, chrome.Accent, chrome.WarmAccent);
+
+        ModeChromeAccentStrip.Height = mode switch
+        {
+            "neutral" => 1,
+            "focus" => 3,
+            "research" => 3,
+            "night" => 1.5,
+            _ => 2
+        };
+        ModeChromeAccentStrip.Opacity = mode switch
+        {
+            "neutral" => 0.42,
+            "night" => 0.68,
+            _ => 0.95
+        };
+        UsageModeButton.Background = new SolidColorBrush(ChromeTint(chrome.Surface, chrome.Accent, 0.055, translucent ? (byte)214 : (byte)232));
+        UsageModeButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.Accent, 0.13, 178));
+        UsageModeButton.Foreground = new SolidColorBrush(chrome.Text);
+        UsageModeAccentBar.Background = new SolidColorBrush(chrome.Accent);
+        ModeCompanionButton.Background = new SolidColorBrush(ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.10, translucent ? (byte)218 : (byte)236));
+        ModeCompanionButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.CoolAccent, 0.24, 190));
+        ModeCompanionButton.Foreground = new SolidColorBrush(chrome.Text);
+        ModeCompanionAccentDot.Background = new SolidColorBrush(chrome.CoolAccent);
+        ModeCompanionGlow.Background = new SolidColorBrush(ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.18, translucent ? (byte)160 : (byte)190));
+        ModulesButton.Background = new SolidColorBrush(ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.07, translucent ? (byte)212 : (byte)232));
+        ModulesButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.CoolAccent, 0.18, 178));
+        ModulesButton.Foreground = new SolidColorBrush(chrome.Text);
+
+        NavigationToolbar.Opacity = mode == "night" ? 0.94 : 1;
+        VerticalTabsRail.Opacity = mode == "night" ? 0.95 : 1;
+    }
+
+    private void SetIdentityGradient(Windows.UI.Color first, Windows.UI.Color second, Windows.UI.Color third)
+    {
+        if (RootShell.Resources["NovaIdentityMarkBrush"] is LinearGradientBrush identity && identity.GradientStops.Count >= 3)
+        {
+            identity.GradientStops[0].Color = first;
+            identity.GradientStops[1].Color = second;
+            identity.GradientStops[2].Color = third;
+        }
+
+        if (RootShell.Resources["NovaChromeGradientBrush"] is LinearGradientBrush chrome && chrome.GradientStops.Count >= 3)
+        {
+            chrome.GradientStops[0].Color = BlendForChrome(first, 0.14);
+            chrome.GradientStops[1].Color = BlendForChrome(second, 0.18);
+            chrome.GradientStops[2].Color = BlendForChrome(third, 0.16);
+        }
+    }
+
+    private static Windows.UI.Color BlendForChrome(Windows.UI.Color color, double weight)
+    {
+        byte Blend(byte baseValue, byte accentValue) =>
+            (byte)Math.Clamp((int)Math.Round(baseValue * (1 - weight) + accentValue * weight), 0, 255);
+
+        return UiColor(Blend(18, color.R), Blend(29, color.G), Blend(39, color.B), 255);
+    }
+
+    private static Windows.UI.Color ChromeTint(Windows.UI.Color surface, Windows.UI.Color accent, double weight, byte alpha)
+    {
+        byte Blend(byte baseValue, byte accentValue) =>
+            (byte)Math.Clamp((int)Math.Round(baseValue * (1 - weight) + accentValue * weight), 0, 255);
+
+        return UiColor(Blend(surface.R, accent.R), Blend(surface.G, accent.G), Blend(surface.B, accent.B), alpha);
+    }
+
+    private static ModeChromePalette ResolveModeChromePalette(string mode, bool isDark, byte alpha)
+    {
+        if (!isDark)
+        {
+            return mode switch
+            {
+                "neutral" => new(
+                    UiColor(248, 248, 246), UiColor(255, 255, 253, alpha), UiColor(242, 242, 238, alpha), UiColor(255, 255, 255, alpha),
+                    UiColor(207, 209, 205), UiColor(228, 229, 224), UiColor(255, 255, 255, 246), UiColor(188, 190, 185),
+                    UiColor(99, 137, 134), UiColor(99, 137, 134, 26), UiColor(180, 134, 42), UiColor(180, 134, 42, 20),
+                    UiColor(134, 150, 148), UiColor(69, 93, 91), UiColor(118, 119, 113), UiColor(30, 31, 28)),
+                "focus" => new(
+                    UiColor(247, 248, 246), UiColor(250, 250, 248, alpha), UiColor(239, 242, 240, alpha), UiColor(255, 255, 255, alpha),
+                    UiColor(190, 198, 196), UiColor(224, 229, 226), UiColor(255, 255, 255, 246), UiColor(93, 130, 129),
+                    UiColor(87, 176, 168), UiColor(87, 176, 168, 40), UiColor(255, 185, 53), UiColor(255, 185, 53, 34),
+                    UiColor(235, 126, 74), UiColor(0, 96, 90), UiColor(86, 120, 116), UiColor(23, 32, 34)),
+                "reading" => new(
+                    UiColor(250, 247, 240), UiColor(255, 252, 246, alpha), UiColor(246, 241, 232, alpha), UiColor(255, 253, 249, alpha),
+                    UiColor(213, 202, 184), UiColor(234, 226, 212), UiColor(255, 252, 246, 246), UiColor(176, 136, 79),
+                    UiColor(216, 166, 93), UiColor(216, 166, 93, 42), UiColor(115, 162, 143), UiColor(115, 162, 143, 30),
+                    UiColor(245, 204, 145), UiColor(118, 79, 28), UiColor(128, 108, 82), UiColor(36, 31, 25)),
+                "creative" => new(
+                    UiColor(249, 246, 251), UiColor(255, 251, 255, alpha), UiColor(244, 238, 249, alpha), UiColor(255, 255, 255, alpha),
+                    UiColor(208, 196, 218), UiColor(230, 224, 236), UiColor(255, 255, 255, 246), UiColor(153, 103, 173),
+                    UiColor(205, 111, 214), UiColor(205, 111, 214, 42), UiColor(255, 185, 53), UiColor(255, 185, 53, 34),
+                    UiColor(67, 219, 209), UiColor(112, 57, 137), UiColor(123, 96, 137), UiColor(34, 24, 42)),
+                "research" => new(
+                    UiColor(244, 249, 250), UiColor(249, 253, 253, alpha), UiColor(237, 246, 247, alpha), UiColor(255, 255, 255, alpha),
+                    UiColor(184, 209, 211), UiColor(219, 232, 233), UiColor(255, 255, 255, 246), UiColor(42, 137, 145),
+                    UiColor(67, 180, 190), UiColor(67, 180, 190, 42), UiColor(255, 185, 53), UiColor(255, 185, 53, 30),
+                    UiColor(112, 206, 215), UiColor(0, 94, 105), UiColor(82, 124, 128), UiColor(18, 35, 38)),
+                "night" => new(
+                    UiColor(235, 239, 247), UiColor(246, 248, 252, alpha), UiColor(232, 237, 247, alpha), UiColor(250, 252, 255, alpha),
+                    UiColor(184, 194, 214), UiColor(218, 225, 239), UiColor(248, 250, 255, 246), UiColor(88, 111, 158),
+                    UiColor(118, 145, 205), UiColor(118, 145, 205, 38), UiColor(154, 193, 255), UiColor(154, 193, 255, 28),
+                    UiColor(82, 103, 158), UiColor(50, 72, 122), UiColor(98, 111, 138), UiColor(24, 31, 48)),
+                _ => new(
+                    UiColor(250, 248, 244), UiColor(255, 255, 255, alpha), UiColor(242, 239, 234, alpha), UiColor(255, 255, 255, alpha),
+                    UiColor(214, 209, 200), UiColor(228, 224, 217), UiColor(255, 255, 255, 246), UiColor(198, 192, 182),
+                    UiColor(176, 111, 0), UiColor(176, 111, 0, 38), UiColor(0, 128, 122), UiColor(0, 128, 122, 28),
+                    UiColor(235, 126, 74), UiColor(149, 92, 0), UiColor(120, 113, 102), UiColor(31, 29, 26))
+            };
+        }
+
+        return mode switch
+        {
+            "neutral" => new(
+                UiColor(10, 17, 23), UiColor(16, 25, 31, alpha), UiColor(19, 30, 37, alpha), UiColor(24, 37, 44, alpha),
+                UiColor(48, 62, 68), UiColor(31, 43, 49), UiColor(21, 34, 42, 242), UiColor(62, 82, 88),
+                UiColor(107, 157, 150), UiColor(107, 157, 150, 28), UiColor(193, 148, 60), UiColor(193, 148, 60, 20),
+                UiColor(128, 146, 142), UiColor(185, 210, 205), UiColor(168, 176, 171), UiColor(242, 246, 240)),
+            "focus" => new(
+                UiColor(8, 14, 20), UiColor(12, 19, 26, alpha), UiColor(14, 23, 30, alpha), UiColor(17, 27, 35, alpha),
+                UiColor(52, 75, 84), UiColor(25, 39, 47), UiColor(15, 26, 34, 242), UiColor(63, 112, 119),
+                UiColor(67, 219, 209), UiColor(67, 219, 209, 36), UiColor(255, 185, 53), UiColor(255, 185, 53, 24),
+                UiColor(235, 126, 74), UiColor(128, 232, 220), UiColor(165, 189, 188), UiColor(255, 248, 234)),
+            "reading" => new(
+                UiColor(18, 24, 23), UiColor(24, 30, 28, alpha), UiColor(31, 38, 34, alpha), UiColor(37, 45, 40, alpha),
+                UiColor(77, 81, 66), UiColor(45, 52, 44), UiColor(31, 40, 36, 242), UiColor(112, 96, 65),
+                UiColor(245, 199, 122), UiColor(245, 199, 122, 34), UiColor(122, 197, 171), UiColor(122, 197, 171, 24),
+                UiColor(255, 225, 162), UiColor(255, 218, 150), UiColor(203, 192, 166), UiColor(255, 248, 234)),
+            "creative" => new(
+                UiColor(16, 17, 31), UiColor(22, 24, 41, alpha), UiColor(31, 31, 52, alpha), UiColor(39, 37, 62, alpha),
+                UiColor(84, 71, 107), UiColor(47, 45, 68), UiColor(29, 29, 48, 242), UiColor(115, 91, 138),
+                UiColor(204, 118, 226), UiColor(204, 118, 226, 38), UiColor(255, 185, 53), UiColor(255, 185, 53, 28),
+                UiColor(67, 219, 209), UiColor(238, 177, 255), UiColor(203, 188, 217), UiColor(255, 248, 234)),
+            "research" => new(
+                UiColor(8, 20, 25), UiColor(12, 29, 35, alpha), UiColor(15, 38, 45, alpha), UiColor(18, 47, 54, alpha),
+                UiColor(50, 96, 103), UiColor(24, 57, 64), UiColor(13, 42, 50, 242), UiColor(57, 135, 146),
+                UiColor(67, 219, 209), UiColor(67, 219, 209, 42), UiColor(255, 185, 53), UiColor(255, 185, 53, 26),
+                UiColor(115, 231, 255), UiColor(128, 242, 255), UiColor(169, 207, 210), UiColor(255, 248, 234)),
+            "night" => new(
+                UiColor(4, 7, 12), UiColor(7, 11, 19, alpha), UiColor(10, 15, 25, alpha), UiColor(14, 20, 33, alpha),
+                UiColor(42, 54, 80), UiColor(20, 27, 42), UiColor(11, 16, 27, 242), UiColor(78, 94, 132),
+                UiColor(116, 145, 208), UiColor(116, 145, 208, 32), UiColor(154, 193, 255), UiColor(154, 193, 255, 22),
+                UiColor(82, 103, 158), UiColor(192, 212, 255), UiColor(159, 174, 205), UiColor(235, 240, 255)),
+            _ => new(
+                UiColor(13, 24, 34), UiColor(20, 32, 42, alpha), UiColor(26, 39, 49, alpha), UiColor(34, 49, 58, alpha),
+                UiColor(64, 84, 91), UiColor(36, 52, 60), UiColor(23, 40, 52, 242), UiColor(70, 97, 106),
+                UiColor(255, 185, 53), UiColor(255, 185, 53, 48), UiColor(67, 219, 209), UiColor(67, 219, 209, 34),
+                UiColor(235, 126, 74), UiColor(255, 230, 104), UiColor(195, 185, 165), UiColor(255, 248, 234))
+        };
     }
 
     private (Windows.UI.Color Accent, Windows.UI.Color AccentSoft, Windows.UI.Color CoolAccent, Windows.UI.Color CoolAccentSoft, Windows.UI.Color Focus)
@@ -1321,4 +1556,21 @@ public sealed partial class MainWindow
     private static List<NewTabShortcut> ParseNewTabShortcuts(string text) =>
         Settings.NewTabShortcutText.Parse(text).Select(s => new NewTabShortcut(s.Title, s.Url)).ToList();
 
+    private sealed record ModeChromePalette(
+        Windows.UI.Color AppBackground,
+        Windows.UI.Color Surface,
+        Windows.UI.Color SurfaceAlt,
+        Windows.UI.Color SurfaceRaised,
+        Windows.UI.Color Stroke,
+        Windows.UI.Color StrokeSoft,
+        Windows.UI.Color AddressBackground,
+        Windows.UI.Color AddressBorder,
+        Windows.UI.Color Accent,
+        Windows.UI.Color AccentSoft,
+        Windows.UI.Color CoolAccent,
+        Windows.UI.Color CoolAccentSoft,
+        Windows.UI.Color WarmAccent,
+        Windows.UI.Color Focus,
+        Windows.UI.Color MutedText,
+        Windows.UI.Color Text);
 }

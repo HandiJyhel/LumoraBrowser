@@ -8,7 +8,7 @@ internal static class WebView2Bootstrap
 {
     private static bool _configured;
 
-    public static void ConfigureOnce(string browserDataDir)
+    public static void ConfigureOnce(string browserDataDir, bool webRtcLeakProtectionEnabled = true)
     {
         if (_configured) return;
         _configured = true;

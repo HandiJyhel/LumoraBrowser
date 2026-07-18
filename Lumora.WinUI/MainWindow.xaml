@@ -23,6 +23,14 @@
             <SolidColorBrush x:Key="NovaAccentSoftBrush" Color="#33FFB935" />
             <SolidColorBrush x:Key="NovaCoolAccentBrush" Color="#FF43DBD1" />
             <SolidColorBrush x:Key="NovaCoolAccentSoftBrush" Color="#2443DBD1" />
+            <SolidColorBrush x:Key="NovaCompanionGlassBrush" Color="#331A2731" />
+            <SolidColorBrush x:Key="NovaCompanionStrokeBrush" Color="#3343DBD1" />
+            <SolidColorBrush x:Key="NovaModeSelectorGlassBrush" Color="#331A2731" />
+            <SolidColorBrush x:Key="NovaModeSelectorStrokeBrush" Color="#3340545B" />
+            <SolidColorBrush x:Key="NovaModuleHubGlassBrush" Color="#331A2731" />
+            <SolidColorBrush x:Key="NovaModuleHubStrokeBrush" Color="#3343DBD1" />
+            <SolidColorBrush x:Key="NovaModuleHubNodeBrush" Color="#FFC3B9A5" />
+            <SolidColorBrush x:Key="NovaModuleHubAccentBrush" Color="#FF43DBD1" />
             <SolidColorBrush x:Key="NovaFocusBrush" Color="#FFFFE668" />
             <SolidColorBrush x:Key="NovaFocusInnerBrush" Color="#FF0D1822" />
             <SolidColorBrush x:Key="NovaInfoSurfaceBrush" Color="#FF1D2E38" />
@@ -65,11 +73,42 @@
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Foreground" Value="#FFEDE6DB" />
             </Style>
-            <Style x:Key="NovaModulePuzzleButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaModuleIconButtonStyle}">
-                <Setter Property="Background" Value="{StaticResource NovaChromeSurfaceRaisedBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource NovaChromeStrokeBrush}" />
+            <Style x:Key="NovaModuleHubButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaModuleIconButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource NovaModuleHubGlassBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaModuleHubStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource NovaTextMutedBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+            </Style>
+            <Style x:Key="NovaModePillButtonStyle" TargetType="Button">
+                <Setter Property="Height" Value="34" />
+                <Setter Property="MinHeight" Value="34" />
+                <Setter Property="MinWidth" Value="118" />
+                <Setter Property="Padding" Value="11,0" />
+                <Setter Property="CornerRadius" Value="17" />
+                <Setter Property="Background" Value="{StaticResource NovaModeSelectorGlassBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaModeSelectorStrokeBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="NovaCompanionPillButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaModePillButtonStyle}">
+                <Setter Property="MinWidth" Value="136" />
+                <Setter Property="Background" Value="{StaticResource NovaCompanionGlassBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaCompanionStrokeBrush}" />
+            </Style>
+            <Style x:Key="NovaFooterPillButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaModePillButtonStyle}">
+                <Setter Property="Height" Value="30" />
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Padding" Value="9,0" />
+                <Setter Property="CornerRadius" Value="15" />
+            </Style>
+            <Style x:Key="NovaFooterCompanionPillButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaFooterPillButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource NovaCompanionGlassBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaCompanionStrokeBrush}" />
             </Style>
             <Style x:Key="NovaModuleFlyoutActionStyle" TargetType="Button">
                 <Setter Property="MinHeight" Value="46" />
@@ -152,6 +191,11 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -259,7 +303,8 @@
             TabCloseRequested="BrowserTabs_TabCloseRequested"
             Tapped="BrowserTabs_Tapped" />
 
-        <Border Grid.Row="1"
+        <Border x:Name="ModeChromeAccentStrip"
+                Grid.Row="1"
                 Height="2"
                 VerticalAlignment="Top"
                 Background="{StaticResource NovaIdentityMarkBrush}"
@@ -291,6 +336,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition x:Name="NavigationMenuDividerColumn" Width="Auto" />
+                <ColumnDefinition x:Name="NavigationMenuButtonColumn" Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Retour" AutomationProperties.Name="Retour" Click="BackButton_Click">
@@ -670,10 +717,45 @@
             <Button x:Name="ModulesButton"
                     Grid.Column="17"
                     Margin="8,0,2,0"
-                            Style="{StaticResource NovaModulePuzzleButtonStyle}"
-                            AutomationProperties.Name="Tous les modules Lumora"
-                            ToolTipService.ToolTip="Tous les modules Lumora">
-                        <FontIcon Glyph="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                    Style="{StaticResource NovaModuleHubButtonStyle}"
+                    AutomationProperties.Name="Tous les modules Lumora"
+                    ToolTipService.ToolTip="Tous les modules Lumora">
+                        <Grid Width="18" Height="18" AutomationProperties.AccessibilityView="Raw">
+                            <Border Width="7"
+                                    Height="7"
+                                    CornerRadius="2"
+                                    Background="{StaticResource NovaModuleHubNodeBrush}"
+                                    Opacity="0.78"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top" />
+                            <Border Width="7"
+                                    Height="7"
+                                    CornerRadius="2"
+                                    Background="{StaticResource NovaModuleHubAccentBrush}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top" />
+                            <Border Width="7"
+                                    Height="7"
+                                    CornerRadius="2"
+                                    Background="{StaticResource NovaModuleHubNodeBrush}"
+                                    Opacity="0.72"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom" />
+                            <Border Width="7"
+                                    Height="7"
+                                    CornerRadius="2"
+                                    BorderBrush="{StaticResource NovaModuleHubAccentBrush}"
+                                    BorderThickness="1.4"
+                                    Background="Transparent"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom" />
+                            <Border Width="2"
+                                    Height="2"
+                                    CornerRadius="1"
+                                    Background="{StaticResource NovaAccentBrush}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                        </Grid>
                         <Button.Flyout>
                             <Flyout x:Name="ModulesFlyout" Placement="BottomEdgeAlignedRight">
                                 <StackPanel Width="430" Spacing="12">
@@ -936,15 +1018,8 @@
                             </Flyout>
                         </Button.Flyout>
             </Button>
-            <Border Grid.Column="18"
-                    Width="1"
-                    Height="22"
-                    Margin="5,0,3,0"
-                    VerticalAlignment="Center"
-                    Background="{StaticResource NovaChromeStrokeBrush}"
-                    Opacity="0.7" />
             <Button x:Name="NavigationMenuButton"
-                    Grid.Column="19"
+                    Grid.Column="21"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     AutomationProperties.Name="Menu Lumora"
                     ToolTipService.ToolTip="Menu Lumora">
@@ -1455,11 +1530,11 @@
                 </StackPanel>
             </Grid>
 
-            <!-- SettingsPanel : sidebar gauche + contenu à droite -->
+            <!-- SettingsPanel : centre de pilotage Lumora -->
             <Grid x:Name="SettingsPanel" Grid.Column="2" Visibility="Collapsed"
                   Background="{StaticResource NovaPanelBackgroundBrush}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="248" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
@@ -1467,38 +1542,45 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Barre de navigation des paramètres -->
+                <!-- Navigation du centre Lumora -->
                 <Border Grid.RowSpan="2"
                         Grid.Column="0"
                         BorderThickness="0,0,1,0"
                         BorderBrush="{StaticResource NovaChromeStrokeBrush}"
                         Background="{StaticResource NovaChromeSurfaceBrush}">
-                    <StackPanel Padding="14,20,14,12" Spacing="4">
-                        <TextBlock Text="Paramètres" FontSize="18" FontWeight="SemiBold" Margin="8,0,0,12" />
-                        <RadioButton x:Name="SettingsNavNavigation" Content="Navigation"
+                    <StackPanel Padding="14,20,14,12" Spacing="5">
+                        <TextBlock Text="Centre Lumora" FontSize="18" FontWeight="SemiBold" Margin="8,0,0,2" />
+                        <TextBlock Text="Personnaliser, organiser, protéger" Style="{StaticResource NovaPanelDescriptionStyle}" Margin="8,0,0,14" />
+                        <RadioButton x:Name="SettingsNavOverview" Content="Vue d'ensemble"
                                      GroupName="SettingsNav" IsChecked="True"
-                                     Click="SettingsNav_Click" Tag="navigation" />
-                        <RadioButton x:Name="SettingsNavAppearance" Content="Personnalisation"
+                                     Click="SettingsNav_Click" Tag="overview" />
+                        <TextBlock Text="Espace personnel" Opacity="0.55" FontSize="11" Margin="8,10,0,0" />
+                        <RadioButton x:Name="SettingsNavAppearance" Content="Mon Lumora"
                                      GroupName="SettingsNav"
                                      Click="SettingsNav_Click" Tag="appearance" />
-                        <RadioButton x:Name="SettingsNavProfile" Content="Profil"
+                        <RadioButton x:Name="SettingsNavProfile" Content="Profils locaux"
                                      GroupName="SettingsNav"
                                      Click="SettingsNav_Click" Tag="profile" />
-                        <RadioButton x:Name="SettingsNavPrivacy" Content="Confidentialite"
-                                     GroupName="SettingsNav"
-                                     Click="SettingsNav_Click" Tag="privacy" />
-                        <RadioButton x:Name="SettingsNavVault" Content="Coffre"
-                                     GroupName="SettingsNav"
-                                     Click="SettingsNav_Click" Tag="vault" />
-                        <RadioButton x:Name="SettingsNavAccessibility" Content="Accessibilite"
+                        <RadioButton x:Name="SettingsNavAccessibility" Content="Confort"
                                      GroupName="SettingsNav"
                                      Click="SettingsNav_Click" Tag="accessibility" />
-                        <RadioButton x:Name="SettingsNavStorage" Content="Stockage"
+                        <TextBlock Text="Travail quotidien" Opacity="0.55" FontSize="11" Margin="8,10,0,0" />
+                        <RadioButton x:Name="SettingsNavNavigation" Content="Espace de travail"
                                      GroupName="SettingsNav"
-                                     Click="SettingsNav_Click" Tag="storage" />
-                        <RadioButton x:Name="SettingsNavStartup" Content="Demarrage"
+                                     Click="SettingsNav_Click" Tag="navigation" />
+                        <RadioButton x:Name="SettingsNavStartup" Content="Ouverture"
                                      GroupName="SettingsNav"
                                      Click="SettingsNav_Click" Tag="startup" />
+                        <TextBlock Text="Données locales" Opacity="0.55" FontSize="11" Margin="8,10,0,0" />
+                        <RadioButton x:Name="SettingsNavPrivacy" Content="Vie privée locale"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="privacy" />
+                        <RadioButton x:Name="SettingsNavVault" Content="Coffre et données"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="vault" />
+                        <RadioButton x:Name="SettingsNavStorage" Content="Stockage local"
+                                     GroupName="SettingsNav"
+                                     Click="SettingsNav_Click" Tag="storage" />
                     </StackPanel>
                 </Border>
 
@@ -1506,10 +1588,72 @@
                 <ScrollViewer Grid.Row="0" Grid.Column="1" Padding="28,22,28,18">
                     <StackPanel Spacing="18" MaxWidth="760">
 
-                        <!-- Section : Navigation -->
-                        <StackPanel x:Name="SettingsSectionNavigation" Spacing="12">
-                            <TextBlock Text="Navigation" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Choisissez le moteur de recherche, le comportement des onglets et les raccourcis clavier utiles au quotidien."
+                        <!-- Section : Vue d'ensemble -->
+                        <StackPanel x:Name="SettingsSectionOverview" Spacing="14">
+                            <TextBlock Text="Centre Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Un point d'entrée pour façonner votre navigateur : ambiance, organisation, confidentialité locale et données du profil."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <Grid ColumnSpacing="12" RowSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Mon Lumora" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock Text="Avatar, thème, accueil, rythme visuel et confort de l'interface." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                        <Button Content="Personnaliser" Tag="appearance" Click="SettingsNavigateButton_Click" Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Espace de travail" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock Text="Recherche, onglets, barre verticale, commandes rapides et outils de productivité." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                        <Button Content="Organiser" Tag="navigation" Click="SettingsNavigateButton_Click" Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Vie privée locale" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock Text="Protections actives, sessions, cookies, listes de filtrage et exceptions." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                        <Button Content="Protéger" Tag="privacy" Click="SettingsNavigateButton_Click" Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Coffre et données" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock Text="Mots de passe, portefeuille, sauvegardes et stockage local du profil." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                        <Button Content="Gérer" Tag="vault" Click="SettingsNavigateButton_Click" Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Profils locaux" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock Text="Identité, verrouillage, PIN, récupération et profils sur cet ordinateur." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                        <Button Content="Ouvrir" Tag="profile" Click="SettingsNavigateButton_Click" Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource NovaPanelCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Confort" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                        <TextBlock Text="Lisibilité, focus clavier, réduction des animations, voix et lecture à haute voix." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                        <Button Content="Adapter" Tag="accessibility" Click="SettingsNavigateButton_Click" Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                            <TextBlock Text="Lumora garde ces choix dans votre profil local. Aucun tableau de bord distant, aucune synchronisation forcée."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                        </StackPanel>
+
+                        <!-- Section : Espace de travail -->
+                        <StackPanel x:Name="SettingsSectionNavigation" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Espace de travail" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Organisez les repères qui vous servent tous les jours : recherche, onglets, commandes rapides et modules utiles."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <TextBlock Text="Recherche" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
@@ -1545,10 +1689,10 @@
                                         <Button Content="Ouvrir Ctrl+K"
                                                 Style="{StaticResource NovaCompactButtonStyle}"
                                                 Click="SettingsOpenCommandPaletteButton_Click" />
-                                        <Button Content="Demarrage"
+                                        <Button Content="Ouverture"
                                                 Style="{StaticResource NovaCompactButtonStyle}"
                                                 Click="SettingsStartupShortcutButton_Click" />
-                                        <Button Content="Accessibilite"
+                                        <Button Content="Confort"
                                                 Style="{StaticResource NovaCompactButtonStyle}"
                                                 Click="SettingsAccessibilityShortcutButton_Click" />
                                     </StackPanel>
@@ -1569,8 +1713,8 @@
 
                         <!-- Section : Personnalisation -->
                         <StackPanel x:Name="SettingsSectionAppearance" Spacing="12" Visibility="Collapsed">
-                            <TextBlock Text="Personnalisation" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Adaptez l'apparence, la densite et le comportement des surfaces Lumora sans changer la logique locale du navigateur."
+                            <TextBlock Text="Mon Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Choisissez l'ambiance, le rythme et les repères visuels qui rendent Lumora confortable pour vous."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <Grid ColumnSpacing="14">
@@ -1639,6 +1783,27 @@
                                 <ComboBoxItem Content="Calme" Tag="calm" />
                                 <ComboBoxItem Content="Minimal" Tag="minimal" />
                             </ComboBox>
+                            <TextBlock Text="Personnalité Lumora" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <ComboBox x:Name="UsageModeCombo" Header="Mode d'usage" Width="280"
+                                      SelectionChanged="AppearanceOption_Changed">
+                                <ComboBoxItem Content="Neutre" Tag="neutral" />
+                                <ComboBoxItem Content="Équilibre" Tag="balanced" />
+                                <ComboBoxItem Content="Focus" Tag="focus" />
+                                <ComboBoxItem Content="Lecture" Tag="reading" />
+                                <ComboBoxItem Content="Création" Tag="creative" />
+                                <ComboBoxItem Content="Recherche" Tag="research" />
+                                <ComboBoxItem Content="Nuit" Tag="night" />
+                            </ComboBox>
+                            <TextBlock Text="Le mode d'usage adapte l'accueil Lumora et prépare la logique des futurs espaces de travail."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ComboBox x:Name="PersonalizationMotionCombo" Header="Animations et réactions" Width="280"
+                                      SelectionChanged="AppearanceOption_Changed">
+                                <ComboBoxItem Content="Discret" Tag="subtle" />
+                                <ComboBoxItem Content="Lumineux" Tag="luminous" />
+                                <ComboBoxItem Content="Dynamique" Tag="dynamic" />
+                            </ComboBox>
+                            <TextBlock Text="Ce réglage module l'accueil, les effets lumineux et les réactions visuelles. L'option d'accessibilité Réduire les animations reste prioritaire."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="NewTabFocusSearchSwitch"
                                           Header="Placer le curseur dans la recherche du nouvel onglet"
                                           Toggled="NewTabFocusSearchSwitch_Toggled" />
@@ -1665,8 +1830,8 @@
 
                         <!-- Section : Accessibilite -->
                         <StackPanel x:Name="SettingsSectionAccessibility" Spacing="12" Visibility="Collapsed">
-                            <TextBlock Text="Accessibilite" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Ces reglages facilitent la lecture, le reperage au clavier et l'usage avec des aides techniques. Ils restent locaux a ce profil."
+                            <TextBlock Text="Confort" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Réglez la lisibilité, le repérage au clavier, les animations et les aides vocales. Tout reste local à ce profil."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <TextBlock Text="Affichage" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
@@ -1715,10 +1880,10 @@
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                         </StackPanel>
 
-                        <!-- Section : Démarrage -->
+                        <!-- Section : Ouverture -->
                         <StackPanel x:Name="SettingsSectionStartup" Spacing="12" Visibility="Collapsed">
-                            <TextBlock Text="Demarrage" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <RadioButtons x:Name="StartupModeRadio" Header="Page au demarrage" SelectionChanged="StartupModeRadio_SelectionChanged">
+                            <TextBlock Text="Ouverture" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <RadioButtons x:Name="StartupModeRadio" Header="Quand Lumora s'ouvre" SelectionChanged="StartupModeRadio_SelectionChanged">
                                 <RadioButton x:Name="StartupRestoreRadio" Content="Restaurer la session precedente" Tag="restore" />
                                 <RadioButton x:Name="StartupHomeRadio" Content="Accueil Lumora" Tag="home" />
                                 <RadioButton x:Name="StartupCustomRadio" Content="URL personnalisee" Tag="custom" />
@@ -1728,9 +1893,9 @@
                                      TextChanged="StartupUrlBox_TextChanged" MaxWidth="400" HorizontalAlignment="Left" />
                         </StackPanel>
 
-                        <!-- Section : Coffre -->
+                        <!-- Section : Coffre et données -->
                         <StackPanel x:Name="SettingsSectionVault" Spacing="12" Visibility="Collapsed">
-                            <TextBlock Text="Coffre" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Coffre et données" Style="{StaticResource NovaPanelPageTitleStyle}" />
                             <TextBlock Text="vault.lumora reste local, chiffre et lie a votre profil."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
@@ -1767,9 +1932,9 @@
                             </Button>
                         </StackPanel>
 
-                        <!-- Section : Profil -->
+                        <!-- Section : Profils locaux -->
                         <StackPanel x:Name="SettingsSectionProfile" Spacing="12" Visibility="Collapsed">
-                            <TextBlock Text="Profil" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Profils locaux" Style="{StaticResource NovaPanelPageTitleStyle}" />
                             <TextBlock x:Name="ProfileNameDisplay" Opacity="0.78" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="6">
@@ -1830,9 +1995,9 @@
                                     Click="ResetProfileButton_Click" />
                         </StackPanel>
 
-                        <!-- Section : Stockage -->
+                        <!-- Section : Stockage local -->
                         <StackPanel x:Name="SettingsSectionStorage" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Stockage" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Stockage local" Style="{StaticResource NovaPanelPageTitleStyle}" />
 
                             <TextBlock Text="Dossier actuel" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBox x:Name="StorageCurrentFolderText"
@@ -1881,9 +2046,9 @@
                             </InfoBar>
                         </StackPanel>
 
-                        <!-- Section : Confidentialité -->
+                        <!-- Section : Vie privée locale -->
                         <StackPanel x:Name="SettingsSectionPrivacy" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Confidentialité" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <TextBlock Text="Vie privée locale" Style="{StaticResource NovaPanelPageTitleStyle}" />
 
                             <!-- Compteur de blocages -->
                             <Border Style="{StaticResource NovaPanelCardStyle}"
@@ -3266,26 +3431,322 @@
                     <TextBlock Text="Retour au site" FontSize="12" />
                 </StackPanel>
             </Button>
-            <Button x:Name="ProfileStatusButton"
-                    Grid.Column="2"
-                    Padding="10,2"
-                    Margin="6,3,8,3"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    CornerRadius="6"
-                    ToolTipService.ToolTip="Ouvrir la personnalisation du profil"
-                    AutomationProperties.Name="Profil Lumora"
-                    Click="ProfileStatusButton_Click">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Ellipse x:Name="ProfileStatusAvatar" Width="18" Height="18" Visibility="Collapsed">
-                        <Ellipse.Fill>
-                            <ImageBrush x:Name="ProfileStatusAvatarBrush" Stretch="UniformToFill" />
-                        </Ellipse.Fill>
-                    </Ellipse>
-                    <TextBlock x:Name="ProfileStatusText" FontSize="12" VerticalAlignment="Center"
-                               Opacity="0.85" />
-                </StackPanel>
-            </Button>
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="6"
+                        Margin="6,3,8,3"
+                        VerticalAlignment="Center">
+                <Button x:Name="ModeCompanionButton"
+                        MinHeight="30"
+                        Padding="10,0"
+                        Style="{StaticResource NovaFooterCompanionPillButtonStyle}"
+                        Click="ModeCompanionButton_Click"
+                        AutomationProperties.Name="Compagnon du mode"
+                        ToolTipService.ToolTip="Compagnon du mode">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Grid Width="18" Height="18">
+                            <Border x:Name="ModeCompanionGlow"
+                                    CornerRadius="9"
+                                    Background="{StaticResource NovaCoolAccentSoftBrush}"
+                                    Opacity="0.58" />
+                            <Border x:Name="ModeCompanionAccentDot"
+                                    Width="6"
+                                    Height="6"
+                                    CornerRadius="3"
+                                    Background="{StaticResource NovaCoolAccentBrush}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top" />
+                            <FontIcon x:Name="ModeCompanionIcon"
+                                      Glyph="&#xE70B;"
+                                      FontFamily="Segoe MDL2 Assets"
+                                      FontSize="11.5"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Text="Lumie" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center" />
+                        <Border Width="1" Height="12" Background="{StaticResource NovaChromeStrokeSoftBrush}" Opacity="0.62" />
+                        <TextBlock x:Name="ModeCompanionModeText" Text="Focus" FontSize="10.5" Opacity="0.62" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout x:Name="ModeCompanionFlyout" Placement="TopEdgeAlignedRight">
+                            <StackPanel Width="380" Spacing="12">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="46" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Width="46"
+                                            Height="46"
+                                            CornerRadius="23"
+                                            Background="{StaticResource NovaCoolAccentSoftBrush}"
+                                            BorderBrush="{StaticResource NovaCoolAccentBrush}"
+                                            BorderThickness="1.5">
+                                        <FontIcon x:Name="ModeCompanionMascotIcon"
+                                                  Glyph="&#xE70B;"
+                                                  FontFamily="Segoe MDL2 Assets"
+                                                  FontSize="20"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock x:Name="ModeCompanionTitleText" Text="Lumie" FontWeight="SemiBold" FontSize="18" />
+                                        <TextBlock x:Name="ModeCompanionBodyText"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="12"
+                                                   Opacity="0.68" />
+                                    </StackPanel>
+                                </Grid>
+                                <Border Padding="10"
+                                        CornerRadius="8"
+                                        Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock x:Name="ModeCompanionMemoryTitleText"
+                                                   Text="Mémoire du mode"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="13" />
+                                        <TextBox x:Name="ModeCompanionMemoryBox"
+                                                 MinHeight="84"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="Wrap"
+                                                 PlaceholderText="Votre compagnon garde cela ici."
+                                                 AutomationProperties.Name="Mémoire du compagnon" />
+                                        <Button x:Name="ModeCompanionSaveButton"
+                                                Content="Garder dans Lumie"
+                                                Style="{StaticResource NovaCompactButtonStyle}"
+                                                HorizontalAlignment="Stretch"
+                                                Click="ModeCompanionSaveButton_Click" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                <Button x:Name="ModeCompanionPrimaryButton"
+                                        Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                        Click="ModeCompanionPrimaryButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon x:Name="ModeCompanionPrimaryIcon" Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="ModeCompanionPrimaryTitleText" Text="Ouvrir Notes" FontWeight="SemiBold" />
+                                            <TextBlock x:Name="ModeCompanionPrimaryHintText" Text="Gardez l'outil du mode sous la main." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="ModeCompanionSecondaryButton"
+                                        Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                        Click="ModeCompanionSecondaryButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon x:Name="ModeCompanionSecondaryIcon" Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="ModeCompanionSecondaryTitleText" Text="Action rapide" FontWeight="SemiBold" />
+                                            <TextBlock x:Name="ModeCompanionSecondaryHintText" Text="Action liée au contexte actif." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock x:Name="ModeCompanionPrivacyText"
+                                           Text="Compagnon local : les notes et préférences restent dans ce profil Lumora."
+                                           TextWrapping="Wrap"
+                                           FontSize="11"
+                                           Opacity="0.62" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="UsageModeButton"
+                        MinHeight="30"
+                        Padding="10,0"
+                        Style="{StaticResource NovaFooterPillButtonStyle}"
+                        AutomationProperties.Name="Mode d'usage"
+                        ToolTipService.ToolTip="Mode d'usage">
+                    <Grid ColumnSpacing="6" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="UsageModeAccentBar"
+                                Grid.Column="0"
+                                Width="2"
+                                Height="14"
+                                CornerRadius="1"
+                                Background="{StaticResource NovaAccentBrush}"
+                                Opacity="0.78" />
+                        <FontIcon x:Name="UsageModeIcon"
+                                  Grid.Column="1"
+                                  Glyph="&#xE7F4;"
+                                  FontFamily="Segoe MDL2 Assets"
+                                  FontSize="11.5"
+                                  Opacity="0.76"
+                                  VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <TextBlock x:Name="UsageModeLabelText" Text="Mode" FontSize="10.5" Opacity="0.56" VerticalAlignment="Center" />
+                            <TextBlock x:Name="UsageModeCurrentText" Text="Équilibre" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <FontIcon Grid.Column="3" Glyph="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="8" Opacity="0.44" VerticalAlignment="Center" />
+                    </Grid>
+                    <Button.Flyout>
+                        <Flyout x:Name="UsageModeFlyout" Placement="TopEdgeAlignedRight">
+                            <StackPanel Width="360" Spacing="12">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Mode d'usage" FontWeight="SemiBold" FontSize="18" />
+                                    <TextBlock Text="Changez le rythme de Lumora selon ce que vous faites maintenant."
+                                               TextWrapping="Wrap" FontSize="12" Opacity="0.68" />
+                                </StackPanel>
+                                <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                                <Button x:Name="UsageModeNeutralButton" Tag="neutral" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeQuickButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE121;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Neutre" FontWeight="SemiBold" />
+                                            <TextBlock Text="Heure, recherche et outils essentiels uniquement." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="UsageModeBalancedButton" Tag="balanced" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeQuickButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Équilibre" FontWeight="SemiBold" />
+                                            <TextBlock Text="Accueil simple, repères sobres, navigation quotidienne." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="UsageModeFocusButton" Tag="focus" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeQuickButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Focus" FontWeight="SemiBold" />
+                                            <TextBlock Text="Moins de bruit, recherche au centre, interface compacte." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="UsageModeReadingButton" Tag="reading" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeQuickButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Lecture" FontWeight="SemiBold" />
+                                            <TextBlock Text="Lecture, annotations, notes et voix locale rapprochées." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="UsageModeCreativeButton" Tag="creative" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeQuickButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Création" FontWeight="SemiBold" />
+                                            <TextBlock Text="Idées, notes rapides, recherche assistée et repères." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="UsageModeResearchButton" Tag="research" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeQuickButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Recherche" FontWeight="SemiBold" />
+                                            <TextBlock Text="Collecte, sources, historique local et comparaison." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="UsageModeNightButton" Tag="night" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="UsageModeQuickButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE708;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Nuit" FontWeight="SemiBold" />
+                                            <TextBlock Text="Interface sombre, compacte et plus douce." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="ProfileStatusButton"
+                        Padding="10,2"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="6"
+                        ToolTipService.ToolTip="Ouvrir le menu profil"
+                        AutomationProperties.Name="Profil Lumora"
+                        Click="ProfileStatusButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Ellipse x:Name="ProfileStatusAvatar" Width="18" Height="18" Visibility="Collapsed">
+                            <Ellipse.Fill>
+                                <ImageBrush x:Name="ProfileStatusAvatarBrush" Stretch="UniformToFill" />
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <TextBlock x:Name="ProfileStatusText" FontSize="12" VerticalAlignment="Center"
+                                   Opacity="0.85" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout x:Name="ProfileStatusFlyout" Placement="TopEdgeAlignedRight">
+                            <StackPanel Width="340" Spacing="12">
+                                <StackPanel Spacing="2">
+                                    <TextBlock x:Name="ProfileFlyoutTitleText"
+                                               Text="Profil Lumora"
+                                               FontWeight="SemiBold"
+                                               FontSize="18" />
+                                    <TextBlock x:Name="ProfileFlyoutSubtitleText"
+                                               Text="Gerez l'utilisateur local, les profils et les reglages de cette session."
+                                               TextWrapping="Wrap"
+                                               FontSize="12"
+                                               Opacity="0.68" />
+                                </StackPanel>
+                                <Border Padding="10"
+                                        CornerRadius="8"
+                                        Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock x:Name="ProfileFlyoutCurrentUserText"
+                                                   Text="Aucun profil actif"
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock x:Name="ProfileFlyoutCurrentStateText"
+                                                   Text="Creer ou choisir un profil local pour garder vos donnees."
+                                                   TextWrapping="Wrap"
+                                                   FontSize="12"
+                                                   Opacity="0.68" />
+                                    </StackPanel>
+                                </Border>
+                                <Button x:Name="ProfileFlyoutSettingsButton"
+                                        Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                        Click="ProfileFlyoutSettingsButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Parametres utilisateur" FontWeight="SemiBold" />
+                                            <TextBlock Text="Ouvrir les reglages du profil local, du PIN et des autres comptes." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="ProfileFlyoutSwitchButton"
+                                        Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                        Click="ProfileFlyoutSwitchButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Changer d'utilisateur" FontWeight="SemiBold" />
+                                            <TextBlock Text="Afficher le choix des profils locaux sur cet ordinateur." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="ProfileFlyoutCreateButton"
+                                        Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                        Click="ProfileFlyoutCreateButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Creer un utilisateur" FontWeight="SemiBold" />
+                                            <TextBlock Text="Ajouter un nouveau profil Lumora sur cet appareil." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <Border x:Name="FullScreenTopRevealZone"
@@ -3650,7 +4111,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         BorderBrush="{StaticResource NovaChromeStrokeBrush}"
                         BorderThickness="1" CornerRadius="10"
                         Padding="40,36,40,36" Margin="0,32,0,32">
-                    <StackPanel Width="340" Spacing="0">
+                    <StackPanel Width="440" Spacing="0">
 
                         <!-- Logo -->
                         <StackPanel Orientation="Horizontal" Spacing="12"
@@ -3665,7 +4126,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         </StackPanel>
 
                         <!-- Indicateur d'etape -->
-                        <TextBlock x:Name="WizardStepIndicator" Text="Etape 1 / 3"
+                        <TextBlock x:Name="WizardStepIndicator" Text="Etape 1 / 4"
                                    HorizontalAlignment="Center" Opacity="0.5"
                                    FontSize="12" Margin="0,0,0,20" />
 
@@ -3673,15 +4134,15 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStep0" Spacing="14">
                             <TextBlock Text="Bienvenue !" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Lumora protege votre vie privee par defaut. Quelques reglages rapides pour personnaliser votre experience."
+                            <TextBlock Text="Lumora demarre volontairement epure : aucun module visible n'est impose. Quelques reglages rapides permettent de construire votre experience."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
                                     CornerRadius="8" Padding="16,14">
                                 <StackPanel Spacing="12">
-                                    <TextBlock Text="Bloqueur de publicites et traceurs integre"
+                                    <TextBlock Text="Modules visibles choisis par vous"
                                                FontSize="13" TextWrapping="Wrap" />
-                                    <TextBlock Text="Refus automatique des bandeaux cookies"
+                                    <TextBlock Text="Accueil personnalisable selon votre mode d'usage"
                                                FontSize="13" TextWrapping="Wrap" />
                                     <TextBlock Text="Donnees stockees uniquement sur votre machine"
                                                FontSize="13" TextWrapping="Wrap" />
@@ -3710,17 +4171,81 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                          Tag="bing" Checked="WizardSearch_Checked" />
                         </StackPanel>
 
-                        <!-- Etape 2 : Resume et confirmation -->
+                        <!-- Etape 2 : Experience personnelle -->
                         <StackPanel x:Name="WizardStep2" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Votre Lumora" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Choisissez un mode d'usage, puis les modules que vous voulez voir dans la barre. Vous pouvez tout laisser vide pour partir d'une interface nue."
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                    CornerRadius="8" Padding="16,14">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Mode d'usage" FontSize="13" FontWeight="SemiBold" />
+                                    <Grid ColumnSpacing="10" RowSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <RadioButton x:Name="WizardUsageNeutral" Grid.Row="0" Grid.Column="0" Content="Neutre" GroupName="WizardUsageGroup" Tag="neutral" Checked="WizardUsage_Checked" />
+                                        <RadioButton x:Name="WizardUsageBalanced" Grid.Row="0" Grid.Column="1" Content="Equilibre" GroupName="WizardUsageGroup" Tag="balanced" Checked="WizardUsage_Checked" />
+                                        <RadioButton x:Name="WizardUsageFocus" Grid.Row="1" Grid.Column="0" Content="Focus" GroupName="WizardUsageGroup" Tag="focus" Checked="WizardUsage_Checked" />
+                                        <RadioButton x:Name="WizardUsageReading" Grid.Row="1" Grid.Column="1" Content="Lecture" GroupName="WizardUsageGroup" Tag="reading" Checked="WizardUsage_Checked" />
+                                        <RadioButton x:Name="WizardUsageCreative" Grid.Row="2" Grid.Column="0" Content="Creation" GroupName="WizardUsageGroup" Tag="creative" Checked="WizardUsage_Checked" />
+                                        <RadioButton x:Name="WizardUsageResearch" Grid.Row="2" Grid.Column="1" Content="Recherche" GroupName="WizardUsageGroup" Tag="research" Checked="WizardUsage_Checked" />
+                                        <RadioButton x:Name="WizardUsageNight" Grid.Row="3" Grid.Column="0" Content="Nuit" GroupName="WizardUsageGroup" Tag="night" Checked="WizardUsage_Checked" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                    CornerRadius="8" Padding="16,14">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Modules visibles au demarrage" FontSize="13" FontWeight="SemiBold" />
+                                    <Grid ColumnSpacing="10" RowSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <CheckBox x:Name="WizardModuleReader" Grid.Row="0" Grid.Column="0" Content="Lecture" Tag="reader" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                        <CheckBox x:Name="WizardModuleNotes" Grid.Row="0" Grid.Column="1" Content="Notes" Tag="notes" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                        <CheckBox x:Name="WizardModuleReadAloud" Grid.Row="1" Grid.Column="0" Content="Lire a voix haute" Tag="readAloud" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                        <CheckBox x:Name="WizardModuleVideoDownload" Grid.Row="1" Grid.Column="1" Content="Telechargement video" Tag="videoDownload" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                        <CheckBox x:Name="WizardModuleSearchAssist" Grid.Row="2" Grid.Column="0" Content="Assistant recherche" Tag="searchAssist" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                        <CheckBox x:Name="WizardModuleTranslate" Grid.Row="2" Grid.Column="1" Content="Traduction" Tag="translate" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                        <CheckBox x:Name="WizardModuleWebApps" Grid.Row="3" Grid.Column="0" Content="Applications web" Tag="webApps" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                        <CheckBox x:Name="WizardModuleDictation" Grid.Row="3" Grid.Column="1" Content="Dictee" Tag="dictation" Checked="WizardModule_Checked" Unchecked="WizardModule_Checked" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Etape 3 : Resume et confirmation -->
+                        <StackPanel x:Name="WizardStep3" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Vous etes pret !" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Lumora est configure. Vous pouvez modifier ces reglages a tout moment dans Parametres."
+                            <TextBlock Text="Lumora est configure. Vous pouvez modifier ces reglages a tout moment dans le Centre Lumora."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
                                     CornerRadius="8" Padding="16,14">
                                 <StackPanel Spacing="8">
                                     <TextBlock x:Name="WizardSummarySearch"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="WizardSummaryUsage"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="WizardSummaryModules"
                                                FontSize="13" TextWrapping="Wrap" />
                                     <TextBlock Text="Protection de la vie privee activee"
                                                FontSize="13" TextWrapping="Wrap" />
