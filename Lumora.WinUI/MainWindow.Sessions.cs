@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
@@ -40,14 +41,14 @@ public sealed partial class MainWindow
                 // Chemin rapide : un seul appel natif (cookies + stockage des sites),
                 // aucune énumération.
                 await core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.AllSite);
-                StatusText.Text = "Sessions de la visite precedente purgees.";
+                UpdateStatusText("Sessions de la visite precedente purgees.");
                 WinUiRuntimeTrace.Write("Startup session purge: all site data cleared");
                 ExplainSessionPurgeOnce();
                 return;
             }
 
             var removed = await DeleteUntrustedCookiesAsync(core);
-            StatusText.Text = $"Sessions purgees ({removed} cookie(s)), sites de confiance conserves.";
+            UpdateStatusText($"Sessions purgees ({removed} cookie(s)), sites de confiance conserves.");
             WinUiRuntimeTrace.Write($"Startup session purge: {removed} cookies removed");
             if (removed > 0) ExplainSessionPurgeOnce();
         }
@@ -115,7 +116,7 @@ public sealed partial class MainWindow
         var core = _browserView?.CoreWebView2;
         if (core is null) return;
         var removed = await DeleteUntrustedCookiesAsync(core);
-        StatusText.Text = $"Sessions oubliees ({removed} cookie(s)), sites de confiance conserves.";
+        UpdateStatusText($"Sessions oubliees ({removed} cookie(s)), sites de confiance conserves.");
         await RefreshSessionsPanelAsync();
     }
 
@@ -129,6 +130,7 @@ public sealed partial class MainWindow
             {
                 Text = "Moteur web non initialise.",
                 Opacity = 0.65,
+                FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 8, 0, 0)
             });
             return;
@@ -155,6 +157,7 @@ public sealed partial class MainWindow
             {
                 Text = "Aucune session active. Les sites que vous visiterez apparaitront ici.",
                 Opacity = 0.65,
+                FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 8, 0, 0)
             });
             return;
@@ -179,13 +182,14 @@ public sealed partial class MainWindow
         {
             Text = rootDomain,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = AccessibilityBodyFontSize(),
             TextTrimming = TextTrimming.CharacterEllipsis
         });
         info.Children.Add(new TextBlock
         {
             Text = cookieCount > 0 ? $"{cookieCount} cookie(s)" : "Aucun cookie actif",
             Opacity = 0.6,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             Margin = new Thickness(0, 2, 0, 0)
         });
         Grid.SetColumn(info, 0);
@@ -195,10 +199,12 @@ public sealed partial class MainWindow
         {
             OnContent = "Session conservee",
             OffContent = "Purgee au demarrage",
+            FontSize = AccessibilitySecondaryFontSize(),
             IsOn = IsTrustedSessionSite(rootDomain),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, -6, 0, -6)
         };
+        ApplyNovaControlAccessibility(trustToggle, $"Politique de session pour {rootDomain}");
         ToolTipService.SetToolTip(trustToggle,
             "Site de confiance : sa session survit a la purge du demarrage.");
         // Handler attaché après IsOn pour ne pas déclencher pendant la construction.
@@ -208,6 +214,7 @@ public sealed partial class MainWindow
 
         var forgetBtn = new Button
         {
+            FontSize = AccessibilitySecondaryFontSize(),
             Padding = new Thickness(8, 4, 8, 4),
             VerticalAlignment = VerticalAlignment.Center,
             Content = new FontIcon
@@ -217,6 +224,7 @@ public sealed partial class MainWindow
                 FontSize = 14
             }
         };
+        ApplyNovaControlAccessibility(forgetBtn, $"Oublier les cookies du site {rootDomain}");
         ToolTipService.SetToolTip(forgetBtn, "Oublier ce site maintenant (supprime ses cookies)");
         forgetBtn.Click += async (_, _) => await ForgetSessionSiteAsync(rootDomain);
         Grid.SetColumn(forgetBtn, 2);
@@ -249,9 +257,9 @@ public sealed partial class MainWindow
         }
 
         _uiSettings.Save(_profile.UiSettingsFile);
-        StatusText.Text = trusted
+        UpdateStatusText(trusted
             ? $"{rootDomain} : session conservee au demarrage."
-            : $"{rootDomain} : session purgee au prochain demarrage.";
+            : $"{rootDomain} : session purgee au prochain demarrage.");
     }
 
     // ── Proposition « Rester connecté ? » au login détecté ────────────────────
@@ -298,7 +306,7 @@ public sealed partial class MainWindow
         var core = _browserView?.CoreWebView2;
         if (core is null) return;
         var removed = await DeleteUntrustedCookiesAsync(core, rootDomain);
-        StatusText.Text = $"{rootDomain} oublie ({removed} cookie(s) supprimes).";
+        UpdateStatusText($"{rootDomain} oublie ({removed} cookie(s) supprimes).");
         await RefreshSessionsPanelAsync();
     }
 
@@ -307,9 +315,9 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         _uiSettings.SessionPurgeEnabled = SessionPurgeSwitch.IsOn;
         _uiSettings.Save(_profile.UiSettingsFile);
-        StatusText.Text = _uiSettings.SessionPurgeEnabled
+        UpdateStatusText(_uiSettings.SessionPurgeEnabled
             ? "Purge des sessions au demarrage activee."
-            : "Purge des sessions au demarrage desactivee.";
+            : "Purge des sessions au demarrage desactivee.");
     }
 
     private void SessionsManageLink_Click(object sender, RoutedEventArgs e) =>

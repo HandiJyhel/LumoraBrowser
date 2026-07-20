@@ -23,9 +23,9 @@
             <SolidColorBrush x:Key="NovaFocusVisualSecondaryBrush" Color="#FF0D1822" />
             <SolidColorBrush x:Key="NovaControlForegroundBrush" Color="#FFFFF8EA" />
             <SolidColorBrush x:Key="NovaControlMutedForegroundBrush" Color="#FFC3B9A5" />
-            <SolidColorBrush x:Key="NovaControlSurfaceBrush" Color="#FF1A2731" />
-            <SolidColorBrush x:Key="NovaControlSurfaceRaisedBrush" Color="#FF22313A" />
-            <SolidColorBrush x:Key="NovaControlStrokeBrush" Color="#FF40545B" />
+            <SolidColorBrush x:Key="NovaControlSurfaceBrush" Color="#FF1A2231" />
+            <SolidColorBrush x:Key="NovaControlSurfaceRaisedBrush" Color="#FF222A3A" />
+            <SolidColorBrush x:Key="NovaControlStrokeBrush" Color="#FF40495B" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

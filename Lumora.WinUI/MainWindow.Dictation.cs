@@ -8,10 +8,13 @@ namespace Lumora.WinUI;
 // malgré le gain automatique et le filtre de confiance : le moteur SAPI date
 // d'une autre époque et sa reconnaissance du français reste médiocre. La
 // dictée moderne de Windows (Win+H) fonctionne très bien dans les champs du
-// navigateur ; le bouton micro sert désormais d'aide-mémoire vers ce
-// raccourci. Il n'existe pas d'API publique pour déclencher cette dictée par
-// programme (seule une simulation clavier Win+H serait possible, fragile),
-// d'où le choix assumé d'une simple astuce.
+// navigateur ; le bouton micro sert d'aide-mémoire vers ce raccourci. Il
+// n'existe pas d'API publique pour déclencher cette dictée par programme
+// (seule une simulation clavier Win+H serait possible, fragile), d'où le
+// choix assumé d'une simple astuce. Le réglage "Confort" dédié qui
+// grisait/activait ce bouton a été retiré le 2026-07-20 (aucune fonction
+// réelle derrière ce toggle, juste une opacité réduite) : le bouton reste
+// disponible en permanence via le système de modules épinglables.
 public sealed partial class MainWindow
 {
     private const string DictationShortcutTip =
@@ -20,8 +23,8 @@ public sealed partial class MainWindow
     private void UpdateDictationButtonVisibility()
     {
         if (MicDictationButton is null) return;
-        MicDictationButton.Opacity = _uiSettings.AccessibilityVoiceDictationEnabled ? 1 : 0.5;
-        DictationPinnedButton.Opacity = _uiSettings.AccessibilityVoiceDictationEnabled ? 1 : 0.5;
+        MicDictationButton.Opacity = 1;
+        DictationPinnedButton.Opacity = 1;
         UpdateModulesPinUi();
     }
 

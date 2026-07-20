@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
@@ -65,7 +66,7 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode)
         {
-            StatusText.Text = "Clés d'accès indisponibles en mode invité.";
+            UpdateStatusText("Clés d'accès indisponibles en mode invité.");
             return;
         }
         ShowPanel(PasskeysPanel, "Clés d'accès (Passkeys)");
@@ -102,6 +103,7 @@ public sealed partial class MainWindow
             {
                 Text = "Aucune clé d'accès enregistrée pour l'instant.",
                 Opacity = 0.65,
+                FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 8, 0, 0)
             });
             return;
@@ -123,6 +125,7 @@ public sealed partial class MainWindow
         {
             Text = entry.Origin,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = AccessibilityBodyFontSize(),
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -131,14 +134,14 @@ public sealed partial class MainWindow
 
         var deleteBtn = new Button
         {
+            FontSize = AccessibilitySecondaryFontSize(),
             Padding = new Thickness(8, 4, 8, 4),
             VerticalAlignment = VerticalAlignment.Center
         };
+        ApplyNovaControlAccessibility(deleteBtn, $"Supprimer la cle d'acces pour {entry.Origin}");
         deleteBtn.Content = new FontIcon
         {
-            // Corbeille (U+E74D). Le caractere avait ete perdu (chaine vide) :
-            // le bouton s'affichait sans icone.
-            Glyph = "", // Corbeille (Delete)
+            Glyph = "\uE74D",
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
             FontSize = 14
         };
@@ -152,7 +155,7 @@ public sealed partial class MainWindow
         {
             Text = $"Créée le {entry.CreatedAt.LocalDateTime:dd/MM/yyyy}",
             Opacity = 0.65,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             Margin = new Thickness(0, 4, 0, 0)
         };
 
@@ -160,7 +163,7 @@ public sealed partial class MainWindow
         {
             Text = $"Dernière utilisation : {entry.LastUsedAt.LocalDateTime:dd/MM/yyyy HH:mm}",
             Opacity = 0.5,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             Margin = new Thickness(0, 2, 0, 0)
         };
 
@@ -184,6 +187,6 @@ public sealed partial class MainWindow
         _passkeys.Remove(entry);
         SavePasskeys();
         RenderPasskeysPanel();
-        StatusText.Text = $"Clé d'accès supprimée : {entry.Origin}";
+        UpdateStatusText($"Clé d'accès supprimée : {entry.Origin}");
     }
 }

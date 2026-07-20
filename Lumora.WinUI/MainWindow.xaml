@@ -7,16 +7,21 @@
     mc:Ignorable="d"
     Title="Lumora">
 
-    <Grid x:Name="RootShell" Background="#FF0D1822">
+    <Grid x:Name="RootShell" Background="#FF0D1422">
         <Grid.Resources>
-            <SolidColorBrush x:Key="NovaAppBackgroundBrush" Color="#FF0D1822" />
-            <SolidColorBrush x:Key="NovaChromeSurfaceBrush" Color="#FF14202A" />
-            <SolidColorBrush x:Key="NovaChromeSurfaceAltBrush" Color="#FF1A2731" />
-            <SolidColorBrush x:Key="NovaChromeSurfaceRaisedBrush" Color="#FF22313A" />
-            <SolidColorBrush x:Key="NovaChromeStrokeBrush" Color="#FF40545B" />
-            <SolidColorBrush x:Key="NovaChromeStrokeSoftBrush" Color="#FF24343C" />
-            <SolidColorBrush x:Key="NovaAddressBackgroundBrush" Color="#FF172834" />
-            <SolidColorBrush x:Key="NovaAddressBorderBrush" Color="#FF46616A" />
+            <!-- Valeurs de depart avant le premier ApplyAccessibilitySettings()
+                 (constructeur) : corrigees le 2026-07-20 en meme temps que le
+                 moteur de theme, teinte cyan/verte d'origine rebalancee vers un
+                 bleu-ardoise net. Sans effet visible normalement (ecrasees des
+                 le demarrage), gardees coherentes pour la lisibilite du code. -->
+            <SolidColorBrush x:Key="NovaAppBackgroundBrush" Color="#FF0D1422" />
+            <SolidColorBrush x:Key="NovaChromeSurfaceBrush" Color="#FF141C2A" />
+            <SolidColorBrush x:Key="NovaChromeSurfaceAltBrush" Color="#FF1A2231" />
+            <SolidColorBrush x:Key="NovaChromeSurfaceRaisedBrush" Color="#FF222A3A" />
+            <SolidColorBrush x:Key="NovaChromeStrokeBrush" Color="#FF40495B" />
+            <SolidColorBrush x:Key="NovaChromeStrokeSoftBrush" Color="#FF242C3C" />
+            <SolidColorBrush x:Key="NovaAddressBackgroundBrush" Color="#FF172134" />
+            <SolidColorBrush x:Key="NovaAddressBorderBrush" Color="#FF46536A" />
             <SolidColorBrush x:Key="NovaAddressForegroundBrush" Color="#FFFFF8EA" />
             <SolidColorBrush x:Key="NovaTextMutedBrush" Color="#FFC3B9A5" />
             <SolidColorBrush x:Key="NovaAccentBrush" Color="#FFFFB935" />
@@ -1680,6 +1685,9 @@
                             <ToggleSwitch x:Name="SearchAssistEnabledSwitch" Header="Assistant IA pour preciser mes recherches" Toggled="SearchAssistEnabledSwitch_Toggled" />
                             <TextBlock Text="Desactive par defaut : necessite un telechargement unique d'environ 2,7 Go (modele de langage local Phi-3-mini). Une fois telechargee, la reformulation se fait hors ligne ; seule la requete finale que vous validez est envoyee a votre moteur de recherche, exactement comme aujourd'hui."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ToggleSwitch x:Name="HistorySemanticSearchEnabledSwitch" Header="Recherche intelligente dans l'historique" Toggled="HistorySemanticSearchEnabledSwitch_Toggled" />
+                            <TextBlock Text="Retrouvez une page par son sens plutot que par mot-clé exact (« cet article sur la fiscalité des indépendants »), meme sans vous souvenir du titre ou du site. Desactive par defaut : necessite un telechargement unique d'environ 120 Mo (modele d'embedding local multilingual-e5-small). Une fois active, le contenu texte des pages visitees est analyse et indexe localement (chiffre comme le reste de l'historique) ; rien n'est jamais envoye a un serveur."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Onglets" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
@@ -1838,9 +1846,71 @@
                         <!-- Section : Accessibilite -->
                         <StackPanel x:Name="SettingsSectionAccessibility" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Confort" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Réglez la lisibilité, le repérage au clavier, les animations et les aides vocales. Tout reste local à ce profil."
+                            <TextBlock Text="Deux familles de reglages independantes : le confort de lecture juste en dessous (affichage et aides vocales), puis la navigation clavier et lecteur d'ecran plus bas. Tout reste local a ce profil."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
 
+                            <TextBlock Text="Confort de lecture" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" Margin="0,4,0,0" />
+
+                            <TextBlock Text="Profils prets a l'emploi" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <Border Style="{StaticResource NovaPanelCardStyle}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Base rapide" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                    <TextBlock Text="Lumora peut partir d'un profil de confort coherent, puis vous laisser retoucher chaque aide juste en dessous."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <RadioButtons x:Name="AccessibilityComfortProfileRadio"
+                                                  SelectionChanged="AccessibilityComfortProfileRadio_SelectionChanged">
+                                        <RadioButton Tag="balanced">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Aucune aide" FontWeight="SemiBold" />
+                                                <TextBlock Text="Point de depart : rien n'est active, a vous de choisir un profil ou de regler chaque aide a la main."
+                                                           Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                        <RadioButton Tag="vision">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Vision fatiguee" FontWeight="SemiBold" />
+                                                <TextBlock Text="Teinte plus chaude, texte agrandi et transitions limitees - pas de contraste force, pense pour la fatigue visuelle plutot que la basse vision."
+                                                           Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                        <RadioButton Tag="custom">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Personnalise" FontWeight="SemiBold" />
+                                                <TextBlock Text="Pour vos reglages melanges a la main, sans revenir a un preset."
+                                                           Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                    </RadioButtons>
+                                    <TextBlock x:Name="AccessibilityComfortProfileSummaryText"
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource NovaPanelCardStyle}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Mode secours" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                    <TextBlock Text="Ce n'est pas un profil a choisir dans la liste ci-dessus : c'est un geste d'urgence pour reprendre la main tout de suite si la lisibilite s'effondre (texte, contraste, reperes). Un seul retour arriere est memorise, et il se perd a la fermeture de Lumora."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <TextBlock x:Name="AccessibilityRescueStatusText"
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="AccessibilityRescueActivateButton"
+                                                Content="Activer le mode secours"
+                                                Click="AccessibilityRescueActivateButton_Click"
+                                                AutomationProperties.Name="Activer le mode secours"
+                                                AutomationProperties.HelpText="Raccourci clavier : Ctrl+Alt+S."
+                                                Style="{StaticResource NovaCompactButtonStyle}" />
+                                        <Button x:Name="AccessibilityRescueRestoreButton"
+                                                Content="Revenir a l'etat d'avant"
+                                                Click="AccessibilityRescueRestoreButton_Click"
+                                                AutomationProperties.Name="Revenir a l'etat de confort d'avant"
+                                                AutomationProperties.HelpText="Raccourci clavier : Ctrl+Alt+X."
+                                                Style="{StaticResource NovaCompactButtonStyle}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Affichage" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
                             <ToggleSwitch x:Name="AccessibilityHighContrastSwitch"
                                           Header="Contraste renforce"
@@ -1862,28 +1932,87 @@
                                           Toggled="AccessibilitySwitch_Toggled" />
                             <TextBlock Text="Renforce les contours visibles quand vous naviguez avec Tab, Entree ou les fleches."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ToggleSwitch x:Name="AccessibilityReduceBlueLightSwitch"
+                                          Header="Reduire la lumiere bleue"
+                                          Toggled="AccessibilitySwitch_Toggled" />
+                            <TextBlock Text="Teinte plus chaude sur les pages visitees, pensee pour la fatigue visuelle (usage prolonge, soiree) - a l'oppose du contraste renforce, qui vise la basse vision et durcit volontairement l'affichage. N'agit pour l'instant que sur le contenu des pages, pas encore sur Lumora lui-meme."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Assistants vocaux" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
-                            <ToggleSwitch x:Name="AccessibilityVoiceDictationSwitch"
-                                          Header="Dictee vocale (bouton micro)"
-                                          Toggled="AccessibilitySwitch_Toggled" />
-                            <TextBlock Text="Ajoute un bouton micro dans la barre d'adresse qui rappelle le raccourci de la dictee Windows : cliquez dans un champ de texte puis appuyez sur Win+H. La voix est traitee par Windows selon vos parametres systeme, Lumora n'ouvre jamais le micro lui-meme."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="ReadAloudEnabledSwitch" Header="Lire les pages a voix haute" Toggled="ReadAloudEnabledSwitch_Toggled" />
                             <TextBlock Text="Ajoute un bouton dans la barre d'outils pour faire lire le texte de la page a voix haute (utile en cas de difficulte de lecture). Synthese vocale 100% locale (Windows), aucun texte de page envoye a un serveur externe."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="ReadingLensEnabledSwitch" Header="Loupe de lecture" Toggled="ReadingLensEnabledSwitch_Toggled" />
                             <TextBlock Text="Ajoute un bouton dans la barre d'outils qui capture la page dans un panneau zoomable, utile pour un captcha visuel deforme ou un texte minuscule. Aucune resolution automatique : une image locale agrandie, vous lisez et repondez vous-meme."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ToggleSwitch x:Name="ReadingGuideEnabledSwitch" Header="Guide de lecture immersif" Toggled="ReadingGuideEnabledSwitch_Toggled" />
+                            <TextBlock Text="Assombrit legerement le reste de la page et garde une bande nette qui suit la lecture dans le viewport. Pratique pour ne pas perdre sa ligne sur les longs articles, tableaux ou formulaires denses."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ComboBox x:Name="ReadingGuideBandHeightCombo"
+                                      Header="Hauteur de la bande de lecture"
+                                      SelectionChanged="ReadingGuideBandHeightCombo_SelectionChanged">
+                                <ComboBoxItem Content="Standard" Tag="160" />
+                                <ComboBoxItem Content="Large" Tag="220" />
+                            </ComboBox>
+                            <TextBlock Text="La bande suit le pointeur, les changements de focus et les grands deplacements clavier pour rester au bon niveau sans demander une nouvelle action."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
+                            <TextBlock Text="Aides ciblees" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <TextBlock Text="Contrairement au reste de cette page (qui ajuste la chrome Lumora), ces deux reglages agissent directement sur le contenu des pages web visitees."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ComboBox x:Name="AccessibilityTextSpacingCombo"
+                                      Header="Espacement du texte des pages"
+                                      SelectionChanged="AccessibilityTextSpacingCombo_SelectionChanged">
+                                <ComboBoxItem Content="Normal" Tag="normal" />
+                                <ComboBoxItem Content="Confortable" Tag="comfortable" />
+                                <ComboBoxItem Content="Large" Tag="wide" />
+                            </ComboBox>
+                            <TextBlock Text="Augmente l'espacement entre lettres, mots et lignes sur les pages visitees (recommandation d'accessibilite WCAG 1.4.12). Aide la dyslexie et la basse vision : un texte trop serre devient difficile a suivre ligne par ligne."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ToggleSwitch x:Name="AccessibilityColorBoostSwitch"
+                                          Header="Renforcer les couleurs difficiles a distinguer"
+                                          Toggled="AccessibilityColorBoostSwitch_Toggled" />
+                            <TextBlock Text="Augmente la saturation et le contraste des pages visitees, utile a certains daltoniens quand des couleurs proches se confondent. Ce n'est pas une correction medicale ni une simulation exacte : pour un filtre de vision des couleurs complet, Windows propose ses propres Filtres de couleurs (Parametres Windows > Accessibilite), qui s'appliquent a tout l'ecran."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
+                            <TextBlock Text="Navigation clavier" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" Margin="0,4,0,0" />
+                            <TextBlock Text="Independant du confort de lecture ci-dessus : reperage et deplacement au clavier dans toute la fenetre Lumora, utile avec ou sans lecteur d'ecran."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <TextBlock Text="Clavier et lecteurs d'ecran" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="6">
                                     <TextBlock Text="Navigation clavier" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                     <TextBlock Text="Ctrl+K ouvre la palette, Echap ferme les panneaux temporaires ou quitte le plein ecran, Tab parcourt les commandes visibles."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource NovaPanelCardStyle}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Raccourcis Lumora" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                    <TextBlock Text="F6 ou Maj+F6 : passer d'une grande zone du navigateur a l'autre."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <TextBlock Text="Ctrl+Alt+1 a 5 : aller directement vers les onglets, la barre d'adresse, le contenu actif, les outils ou le compagnon."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <TextBlock Text="Ctrl+Alt+F : faire relire le repere courant (zone, surface et controle actif)."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <TextBlock Text="Ctrl+Alt+R : recentrer le focus sur le repere utile quand on se sent perdu."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <TextBlock Text="Ctrl+Alt+S : activer le mode secours. Ctrl+Alt+X : revenir a l'etat de confort d'avant."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <TextBlock Text="Ctrl+K : ouvrir la palette de commande sans quitter le clavier."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <TextBlock Text="Win+H : lancer la dictee Windows quand un champ de texte est actif."
+                                               Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                    <Button x:Name="AccessibilityShortcutHelpButton"
+                                            Content="Faire annoncer les raccourcis"
+                                            Click="AccessibilityShortcutHelpButton_Click"
+                                            AutomationProperties.Name="Faire annoncer les raccourcis Lumora"
+                                            AutomationProperties.HelpText="Relit les raccourcis clavier importants via les annonces d'accessibilite."
+                                            HorizontalAlignment="Left"
+                                            Style="{StaticResource NovaCompactButtonStyle}" />
                                 </StackPanel>
                             </Border>
                             <TextBlock Text="Les boutons, onglets, favoris et menus principaux exposent des noms lisibles aux lecteurs d'ecran."
@@ -2277,6 +2406,7 @@
                         <Button x:Name="ApplySettingsChangesButton"
                                 Grid.Column="2"
                                 Click="ApplySettingsChangesButton_Click"
+                                AutomationProperties.Name="Appliquer les changements"
                                 Style="{StaticResource AccentButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <SymbolIcon Symbol="Accept" />
@@ -3027,7 +3157,9 @@
             </Grid>
 
             <!-- Panneau Clés d'accès (Passkeys) -->
-            <Grid x:Name="PasskeysPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+            <Grid x:Name="PasskeysPanel" Grid.Column="2" Padding="16" Visibility="Collapsed"
+                  AutomationProperties.Name="Clés d'accès"
+                  AutomationProperties.HelpText="Gérez vos clés d'accès locales et ouvrez les paramètres Windows dédiés.">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -3047,7 +3179,10 @@
                         <TextBlock Text="Gestion complète via Windows" FontWeight="SemiBold" />
                         <TextBlock TextWrapping="Wrap" Opacity="0.72" FontSize="13"
                                    Text="Windows Hello stocke et sécurise vos clés d'accès. Lumora enregistre les sites où vous en créez ou utilisez une." />
-                        <Button Click="PasskeysWindowsSettingsButton_Click" HorizontalAlignment="Left">
+                        <Button x:Name="PasskeysWindowsSettingsButton"
+                                Click="PasskeysWindowsSettingsButton_Click"
+                                HorizontalAlignment="Left"
+                                AutomationProperties.Name="Ouvrir les paramètres Windows des clés d'accès">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE770;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
                                 <TextBlock Text="Paramètres Windows — Clés d'accès" />
@@ -3062,7 +3197,9 @@
             </Grid>
 
             <!-- Panneau Portefeuille (moyens de paiement locaux) -->
-            <Grid x:Name="WalletPanel" Grid.Column="2" Padding="16" Visibility="Collapsed">
+            <Grid x:Name="WalletPanel" Grid.Column="2" Padding="16" Visibility="Collapsed"
+                  AutomationProperties.Name="Portefeuille"
+                  AutomationProperties.HelpText="Ajoutez une carte locale, modifiez-la ou utilisez-la sur la page active.">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -3076,7 +3213,9 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,16">
-                    <Button Click="WalletAddButton_Click">
+                    <Button x:Name="WalletAddCardButton"
+                            Click="WalletAddButton_Click"
+                            AutomationProperties.Name="Ajouter une carte au portefeuille">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
                             <TextBlock Text="Ajouter une carte" />
@@ -3445,6 +3584,37 @@
                             </Border>
                         </Grid>
 
+                        <Border Style="{StaticResource NovaPanelCardStyle}">
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8D4;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                                    <TextBlock Text="Confort de ce site" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                </StackPanel>
+                                <TextBlock x:Name="SiteControlComfortText" Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                <ComboBox x:Name="SiteControlComfortZoomCombo"
+                                          Header="Zoom prefere pour ce site"
+                                          Width="220"
+                                          SelectionChanged="SiteControlComfortZoomCombo_SelectionChanged">
+                                    <ComboBoxItem Content="90 %" Tag="90" />
+                                    <ComboBoxItem Content="100 %" Tag="100" />
+                                    <ComboBoxItem Content="110 %" Tag="110" />
+                                    <ComboBoxItem Content="125 %" Tag="125" />
+                                    <ComboBoxItem Content="140 %" Tag="140" />
+                                    <ComboBoxItem Content="160 %" Tag="160" />
+                                </ComboBox>
+                                <ToggleSwitch x:Name="SiteControlComfortLargeTextToggle"
+                                              Header="Texte plus lisible sur ce site"
+                                              Toggled="SiteControlComfortLargeTextToggle_Toggled" />
+                                <ToggleSwitch x:Name="SiteControlComfortReduceMotionToggle"
+                                              Header="Limiter les animations sur ce site"
+                                              Toggled="SiteControlComfortReduceMotionToggle_Toggled" />
+                                <Button x:Name="SiteControlComfortResetButton"
+                                        Content="Reinitialiser le confort de ce site"
+                                        HorizontalAlignment="Left"
+                                        Click="SiteControlComfortResetButton_Click" />
+                            </StackPanel>
+                        </Border>
+
                         <Grid ColumnSpacing="12" RowSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -3541,6 +3711,8 @@
             <TextBlock x:Name="StatusText" Grid.Column="0" Padding="10,4"
                        Text="Lumora WinUI 3 initialise." Opacity="0.72"
                        FontSize="12"
+                       AutomationProperties.Name="Etat Lumora"
+                       AutomationProperties.HelpText="Annonce les changements importants de navigation, de securite et d'accessibilite."
                        AutomationProperties.LiveSetting="Polite"
                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
             <Button x:Name="BackToPageButton" Grid.Column="1" Visibility="Collapsed"
@@ -3558,6 +3730,182 @@
                         Spacing="6"
                         Margin="6,3,8,3"
                         VerticalAlignment="Center">
+                <Button x:Name="AccessibilityQuickButton"
+                        MinHeight="30"
+                        Padding="10,0"
+                        Style="{StaticResource NovaFooterPillButtonStyle}"
+                        AutomationProperties.Name="Confort rapide"
+                        ToolTipService.ToolTip="Confort rapide">
+                    <Grid ColumnSpacing="6" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="AccessibilityQuickAccentBar"
+                                Grid.Column="0"
+                                Width="2"
+                                Height="14"
+                                CornerRadius="1"
+                                Background="{StaticResource NovaCoolAccentBrush}"
+                                Opacity="0.82" />
+                        <FontIcon x:Name="AccessibilityQuickIcon"
+                                  Grid.Column="1"
+                                  Glyph="&#xE790;"
+                                  FontFamily="Segoe MDL2 Assets"
+                                  FontSize="11.5"
+                                  Opacity="0.76"
+                                  VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <TextBlock Text="Confort" FontSize="10.5" Opacity="0.56" VerticalAlignment="Center" />
+                            <TextBlock x:Name="AccessibilityQuickCurrentText" Text="Aucune aide" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <FontIcon Grid.Column="3" Glyph="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="8" Opacity="0.44" VerticalAlignment="Center" />
+                    </Grid>
+                    <Button.Flyout>
+                        <Flyout x:Name="AccessibilityQuickFlyout"
+                                Placement="TopEdgeAlignedRight"
+                                Opening="AccessibilityQuickFlyout_Opening">
+                                <StackPanel Width="372" Spacing="12">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="Confort rapide" FontWeight="SemiBold" FontSize="18" />
+                                    <TextBlock Text="Changez l'etat de confort sans quitter la page. Raccourcis rapides : Ctrl+Alt+6 a Ctrl+Alt+9, Ctrl+Alt+S et Ctrl+Alt+X."
+                                               TextWrapping="Wrap" FontSize="12" Opacity="0.68" />
+                                </StackPanel>
+                                <Border Padding="10"
+                                        CornerRadius="8"
+                                        Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock x:Name="AccessibilityQuickProfileTitleText"
+                                                   Text="Profil courant"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="13" />
+                                        <TextBlock x:Name="AccessibilityQuickProfileSummaryText"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="12"
+                                                   Opacity="0.72" />
+                                        <TextBlock x:Name="AccessibilityQuickStateText"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="11.5"
+                                                   Opacity="0.62" />
+                                        <TextBlock x:Name="AccessibilityQuickContextText"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="11.5"
+                                                   Opacity="0.62" />
+                                    </StackPanel>
+                                </Border>
+                                <Button x:Name="AccessibilityQuickOpenSettingsButton"
+                                        Style="{StaticResource NovaCompactButtonStyle}"
+                                        Content="Ouvrir les reglages complets de Confort"
+                                        HorizontalAlignment="Left"
+                                        Click="AccessibilityQuickOpenSettingsButton_Click" />
+                                <TextBlock Text="Mode secours (action d'urgence, pas un profil)" FontSize="11" Opacity="0.56" Margin="0,4,0,0" />
+                                <Border Padding="10"
+                                        CornerRadius="8"
+                                        Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock x:Name="AccessibilityQuickRescueStatusText"
+                                                   Text="Aucun retour memorise pour l'instant."
+                                                   TextWrapping="Wrap"
+                                                   FontSize="11.5"
+                                                   Opacity="0.68" />
+                                        <Button x:Name="AccessibilityQuickRescueButton"
+                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                                Click="AccessibilityQuickRescueButton_Click"
+                                                AutomationProperties.Name="Activer le mode secours"
+                                                AutomationProperties.HelpText="Renforce d'un coup la lisibilite et garde la possibilite de revenir a l'etat precedent.">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <FontIcon Glyph="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Activer le mode secours" FontWeight="SemiBold" />
+                                                    <TextBlock Text="Raccourci : Ctrl+Alt+S." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="AccessibilityQuickRestoreButton"
+                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                                Click="AccessibilityQuickRestoreButton_Click"
+                                                AutomationProperties.Name="Restaurer l'etat de confort precedent"
+                                                AutomationProperties.HelpText="Revient a l'etat de confort memorise avant le mode secours.">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <FontIcon Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Revenir a l'etat d'avant" FontWeight="SemiBold" />
+                                                    <TextBlock Text="Raccourci : Ctrl+Alt+X." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                                <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                <TextBlock Text="Changer de profil de confort" FontSize="11" Opacity="0.56" />
+                                <Button x:Name="AccessibilityQuickBalancedButton" Tag="balanced" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="AccessibilityQuickPresetButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Aucune aide" FontWeight="SemiBold" />
+                                            <TextBlock Text="Reinitialise : aucune aide de confort active." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="AccessibilityQuickVisionButton" Tag="vision" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="AccessibilityQuickPresetButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE890;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Vision fatiguee" FontWeight="SemiBold" />
+                                            <TextBlock Text="Teinte plus chaude, texte agrandi, guide de lecture pret." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                <TextBlock Text="Aides individuelles (independantes du profil choisi)" FontSize="11" Opacity="0.56" />
+                                <Button x:Name="AccessibilityQuickGuideButton" Tag="guide" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="AccessibilityQuickToggleButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Basculer le guide de lecture" FontWeight="SemiBold" />
+                                            <TextBlock x:Name="AccessibilityQuickGuideHintText" Text="Active ou desactive la bande de lecture immersive." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="AccessibilityQuickLensButton" Tag="lens" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="AccessibilityQuickToggleButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Basculer la loupe de lecture" FontWeight="SemiBold" />
+                                            <TextBlock x:Name="AccessibilityQuickLensHintText" Text="Affiche ou cache le bouton de loupe dans la barre." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="AccessibilityQuickReadAloudButton" Tag="readaloud" Style="{StaticResource NovaModuleFlyoutActionStyle}" Click="AccessibilityQuickToggleButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Basculer la lecture a voix haute" FontWeight="SemiBold" />
+                                            <TextBlock x:Name="AccessibilityQuickReadAloudHintText" Text="Affiche ou retire la lecture vocale locale." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="AccessibilityQuickAnnounceButton"
+                                        Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                        Click="AccessibilityQuickAnnounceButton_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Faire relire l'etat de confort" FontWeight="SemiBold" />
+                                            <TextBlock Text="Annonce le profil et les aides actives dans Lumora." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <Button x:Name="ModeCompanionButton"
                         MinHeight="30"
                         Padding="10,0"

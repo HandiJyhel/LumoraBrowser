@@ -153,14 +153,14 @@ public sealed partial class MainWindow
         {
             Text = group.Name,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            FontSize = 15,
+            FontSize = AccessibilityBodyFontSize(),
             TextTrimming = TextTrimming.CharacterEllipsis
         });
         infoPanel.Children.Add(new TextBlock
         {
             Text = $"{group.TabCount} onglet(s) · enregistre {SavedGroupWhen(group.SavedAt)}",
             Opacity = 0.6,
-            FontSize = 12
+            FontSize = AccessibilitySecondaryFontSize()
         });
         // Apercu des premieres pages du groupe.
         var preview = string.Join("  ·  ", group.Tabs.Take(4).Select(t => t.Title));
@@ -169,7 +169,7 @@ public sealed partial class MainWindow
         {
             Text = preview,
             Opacity = 0.5,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             TextWrapping = TextWrapping.Wrap,
             MaxLines = 2,
             TextTrimming = TextTrimming.CharacterEllipsis
@@ -184,15 +184,18 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Top,
             Margin = new Thickness(12, 0, 0, 0)
         };
-        var openButton = new Button { Content = "Ouvrir", Tag = group.Id };
+        var openButton = new Button { Content = "Ouvrir", Tag = group.Id, FontSize = AccessibilitySecondaryFontSize() };
+        ApplyNovaControlAccessibility(openButton, $"Ouvrir le groupe enregistre {group.Name}");
         openButton.Click += OpenSavedGroup_Click;
         actions.Children.Add(openButton);
         var deleteButton = new Button
         {
             Content = "Supprimer",
             Tag = group.Id,
+            FontSize = AccessibilitySecondaryFontSize(),
             Style = (Style)RootShell.Resources["NovaCompactButtonStyle"]
         };
+        ApplyNovaControlAccessibility(deleteButton, $"Supprimer le groupe enregistre {group.Name}");
         deleteButton.Click += DeleteSavedGroup_Click;
         actions.Children.Add(deleteButton);
         Grid.SetColumn(actions, 2);

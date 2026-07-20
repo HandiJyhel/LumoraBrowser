@@ -73,6 +73,7 @@ public sealed partial class MainWindow
         {
             Text = app.Title,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = AccessibilityBodyFontSize(),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
@@ -81,20 +82,24 @@ public sealed partial class MainWindow
 
         var renameBtn = new Button
         {
+            FontSize = AccessibilitySecondaryFontSize(),
             Padding = new Thickness(8, 4, 8, 4),
             Content = new FontIcon { Glyph = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }
         };
-        ToolTipService.SetToolTip(renameBtn, "Renommer");
+        ApplyNovaControlAccessibility(renameBtn, $"Renommer l'application {app.Title}");
+        ToolTipService.SetToolTip(renameBtn, $"Renommer {app.Title}");
         renameBtn.Click += async (_, _) => await RenameWebAppAsync(app);
         Grid.SetColumn(renameBtn, 2);
         headerGrid.Children.Add(renameBtn);
 
         var deleteBtn = new Button
         {
+            FontSize = AccessibilitySecondaryFontSize(),
             Padding = new Thickness(8, 4, 8, 4),
             Content = new FontIcon { Glyph = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }
         };
-        ToolTipService.SetToolTip(deleteBtn, "Désinstaller");
+        ApplyNovaControlAccessibility(deleteBtn, $"Desinstaller l'application {app.Title}");
+        ToolTipService.SetToolTip(deleteBtn, $"Desinstaller {app.Title}");
         deleteBtn.Click += async (_, _) => await DeleteWebAppAsync(app);
         Grid.SetColumn(deleteBtn, 3);
         headerGrid.Children.Add(deleteBtn);
@@ -105,7 +110,7 @@ public sealed partial class MainWindow
         {
             Text = app.RootDomain,
             Opacity = 0.6,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             Margin = new Thickness(0, 4, 0, 0)
         });
 
@@ -113,9 +118,11 @@ public sealed partial class MainWindow
         {
             OnContent = "Toujours au premier plan",
             OffContent = "Fenêtre normale",
+            FontSize = AccessibilitySecondaryFontSize(),
             IsOn = app.AlwaysOnTop,
             Margin = new Thickness(0, 8, 0, -6)
         };
+        ApplyNovaControlAccessibility(alwaysOnTop, $"Mode de fenetre pour {app.Title}");
         alwaysOnTop.Toggled += (_, _) =>
         {
             app.AlwaysOnTop = alwaysOnTop.IsOn;
@@ -124,7 +131,8 @@ public sealed partial class MainWindow
         body.Children.Add(alwaysOnTop);
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 10, 0, 0) };
-        var openBtn = new Button { Content = "Ouvrir", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        var openBtn = new Button { Content = "Ouvrir", FontSize = AccessibilitySecondaryFontSize(), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        ApplyNovaControlAccessibility(openBtn, $"Ouvrir l'application {app.Title}");
         openBtn.Click += (_, _) => LaunchWebAppWindow(app);
         actions.Children.Add(openBtn);
         body.Children.Add(actions);

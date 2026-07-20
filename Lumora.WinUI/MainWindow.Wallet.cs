@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
@@ -19,7 +20,7 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode)
         {
-            StatusText.Text = "Portefeuille indisponible en mode invité.";
+            UpdateStatusText("Portefeuille indisponible en mode invité.");
             return;
         }
 
@@ -27,7 +28,7 @@ public sealed partial class MainWindow
         // ou le mot de passe à chaque ouverture, zone la plus sensible.
         if (!await RequireVaultAccessAsync())
         {
-            StatusText.Text = "Accès au portefeuille refusé : code incorrect ou annulé.";
+            UpdateStatusText("Accès au portefeuille refusé : code incorrect ou annulé.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             return;
         }
 
@@ -46,6 +47,7 @@ public sealed partial class MainWindow
             {
                 Text = "Aucune carte dans le portefeuille.",
                 Opacity = 0.65,
+                FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 8, 0, 0)
             });
             return;
@@ -81,6 +83,7 @@ public sealed partial class MainWindow
         {
             Text = title,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = AccessibilityBodyFontSize(),
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         });
@@ -89,6 +92,7 @@ public sealed partial class MainWindow
 
         var editBtn = new Button
         {
+            FontSize = AccessibilitySecondaryFontSize(),
             Padding = new Thickness(8, 4, 8, 4),
             Margin = new Thickness(0, 0, 6, 0),
             VerticalAlignment = VerticalAlignment.Center,
@@ -99,6 +103,7 @@ public sealed partial class MainWindow
                 FontSize = 14
             }
         };
+        ApplyNovaControlAccessibility(editBtn, $"Modifier la carte {title}");
         ToolTipService.SetToolTip(editBtn, "Modifier cette carte");
         editBtn.Click += async (_, _) =>
         {
@@ -106,13 +111,14 @@ public sealed partial class MainWindow
             if (updated is null) return;
             _vault.UpsertCard(updated);
             RefreshWalletPanel();
-            StatusText.Text = "Carte mise à jour.";
+            UpdateStatusText("Carte mise à jour.");
         };
         Grid.SetColumn(editBtn, 1);
         headerGrid.Children.Add(editBtn);
 
         var deleteBtn = new Button
         {
+            FontSize = AccessibilitySecondaryFontSize(),
             Padding = new Thickness(8, 4, 8, 4),
             VerticalAlignment = VerticalAlignment.Center,
             Content = new FontIcon
@@ -122,6 +128,7 @@ public sealed partial class MainWindow
                 FontSize = 14
             }
         };
+        ApplyNovaControlAccessibility(deleteBtn, $"Supprimer la carte {title}");
         ToolTipService.SetToolTip(deleteBtn, "Supprimer cette carte");
         deleteBtn.Click += async (_, _) =>
         {
@@ -137,7 +144,7 @@ public sealed partial class MainWindow
             if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
             _vault.DeleteCard(card.Id);
             RefreshWalletPanel();
-            StatusText.Text = "Carte supprimée.";
+            UpdateStatusText("Carte supprimée.");
         };
         Grid.SetColumn(deleteBtn, 2);
         headerGrid.Children.Add(deleteBtn);
@@ -148,6 +155,7 @@ public sealed partial class MainWindow
         body.Children.Add(new TextBlock
         {
             Text = PaymentCardUtil.MaskedNumber(card.Number),
+            FontSize = AccessibilityBodyFontSize(),
             Opacity = 0.75,
             Margin = new Thickness(0, 6, 0, 0)
         });
@@ -158,7 +166,7 @@ public sealed partial class MainWindow
         {
             Text = detail,
             Opacity = 0.6,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             Margin = new Thickness(0, 2, 0, 0)
         });
 
@@ -168,7 +176,7 @@ public sealed partial class MainWindow
             {
                 Text = "Carte expirée",
                 Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
-                FontSize = 12,
+                FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 2, 0, 0)
             });
         }
@@ -179,7 +187,7 @@ public sealed partial class MainWindow
             {
                 Text = card.Note,
                 Opacity = 0.55,
-                FontSize = 12,
+                FontSize = AccessibilitySecondaryFontSize(),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 4, 0, 0)
             });
@@ -192,16 +200,18 @@ public sealed partial class MainWindow
             Margin = new Thickness(0, 10, 0, 0)
         };
 
-        var copyNumber = new Button { Content = "Copier le numéro" };
+        var copyNumber = new Button { Content = "Copier le numéro", FontSize = AccessibilitySecondaryFontSize() };
+        ApplyNovaControlAccessibility(copyNumber, $"Copier le numero de la carte {title}");
         copyNumber.Click += (_, _) =>
             CopySecretToClipboard(card.Number, "Numéro de carte copié (effacé dans 30 s).", clearAfterSeconds: 30);
         actions.Children.Add(copyNumber);
 
-        var fillBtn = new Button { Content = "Utiliser sur la page active" };
+        var fillBtn = new Button { Content = "Utiliser sur la page active", FontSize = AccessibilitySecondaryFontSize() };
+        ApplyNovaControlAccessibility(fillBtn, $"Utiliser la carte {title} sur la page active");
         fillBtn.Click += async (_, _) =>
         {
             ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Page active");
-            StatusText.Text = (await FillCardAsync(card)).Message;
+            UpdateStatusText((await FillCardAsync(card)).Message);
         };
         actions.Children.Add(fillBtn);
 
@@ -223,7 +233,7 @@ public sealed partial class MainWindow
         if (card is null) return;
         _vault.UpsertCard(card);
         RefreshWalletPanel();
-        StatusText.Text = "Carte ajoutée au portefeuille.";
+        UpdateStatusText("Carte ajoutée au portefeuille.");
     }
 
     // Dialogue d'ajout/modification. Le numéro est validé par Luhn (détection de

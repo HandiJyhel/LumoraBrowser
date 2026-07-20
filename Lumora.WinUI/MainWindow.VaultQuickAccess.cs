@@ -58,11 +58,13 @@ public sealed partial class MainWindow
         VaultQuickAccessPanel.Children.Add(new TextBlock
         {
             Text = "Coffre verrouillé.",
+            FontSize = AccessibilityBodyFontSize(),
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Opacity = 0.8
         });
 
-        var unlockBtn = new Button { Content = "Déverrouiller" };
+        var unlockBtn = new Button { Content = "Déverrouiller", FontSize = AccessibilitySecondaryFontSize() };
+        ApplyNovaControlAccessibility(unlockBtn, "Deverrouiller le coffre");
         unlockBtn.Click += async (_, _) =>
         {
             if (await UnlockVaultIfNeededAsync())
@@ -81,7 +83,7 @@ public sealed partial class MainWindow
         {
             Text = "Identifiants de ce site",
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            FontSize = 14
+            FontSize = AccessibilityBodyFontSize()
         });
 
         var matches = _passwordManager.FindAllForAddress(address);
@@ -91,7 +93,7 @@ public sealed partial class MainWindow
             {
                 Text = "Aucun identifiant enregistré pour ce site.",
                 Opacity = 0.6,
-                FontSize = 12,
+                FontSize = AccessibilitySecondaryFontSize(),
                 TextWrapping = TextWrapping.Wrap
             });
         }
@@ -103,7 +105,8 @@ public sealed partial class MainWindow
             }
         }
 
-        var openVaultLink = new HyperlinkButton { Content = "Ouvrir le coffre complet", Padding = new Thickness(0) };
+        var openVaultLink = new HyperlinkButton { Content = "Ouvrir le coffre complet", FontSize = AccessibilitySecondaryFontSize(), Padding = new Thickness(0) };
+        ApplyNovaControlAccessibility(openVaultLink, "Ouvrir le coffre complet");
         openVaultLink.Click += (_, _) =>
         {
             VaultQuickAccessFlyout.Hide();
@@ -122,7 +125,7 @@ public sealed partial class MainWindow
         headerRow.Children.Add(new TextBlock
         {
             Text = hasUser ? cred.Username : PasswordManagerService.DisplayName(cred),
-            FontSize = 13,
+            FontSize = AccessibilityBodyFontSize(),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
@@ -130,7 +133,8 @@ public sealed partial class MainWindow
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
 
-        var fillBtn = new Button { Content = "Remplir", FontSize = 12, Padding = new Thickness(8, 4, 8, 4) };
+        var fillBtn = new Button { Content = "Remplir", FontSize = AccessibilitySecondaryFontSize(), Padding = new Thickness(8, 4, 8, 4) };
+        ApplyNovaControlAccessibility(fillBtn, $"Remplir les identifiants pour {PasswordManagerService.DisplayName(cred)}");
         fillBtn.Click += async (_, _) =>
         {
             VaultQuickAccessFlyout.Hide();
@@ -139,11 +143,13 @@ public sealed partial class MainWindow
         };
         actions.Children.Add(fillBtn);
 
-        var copyUserBtn = new Button { Content = "Copier ID", FontSize = 12, Padding = new Thickness(8, 4, 8, 4), IsEnabled = hasUser };
+        var copyUserBtn = new Button { Content = "Copier ID", FontSize = AccessibilitySecondaryFontSize(), Padding = new Thickness(8, 4, 8, 4), IsEnabled = hasUser };
+        ApplyNovaControlAccessibility(copyUserBtn, $"Copier l'identifiant pour {PasswordManagerService.DisplayName(cred)}");
         copyUserBtn.Click += (_, _) => CopyPasswordManagerText(cred.Username, "Identifiant copié.");
         actions.Children.Add(copyUserBtn);
 
-        var copyPassBtn = new Button { Content = "Copier mdp", FontSize = 12, Padding = new Thickness(8, 4, 8, 4) };
+        var copyPassBtn = new Button { Content = "Copier mdp", FontSize = AccessibilitySecondaryFontSize(), Padding = new Thickness(8, 4, 8, 4) };
+        ApplyNovaControlAccessibility(copyPassBtn, $"Copier le mot de passe pour {PasswordManagerService.DisplayName(cred)}");
         copyPassBtn.Click += (_, _) => CopyPasswordManagerText(cred.Password, "Mot de passe copié.");
         actions.Children.Add(copyPassBtn);
 
@@ -160,11 +166,12 @@ public sealed partial class MainWindow
             {
                 Text = code,
                 FontFamily = new FontFamily("Consolas"),
-                FontSize = 15,
+                FontSize = AccessibilityBodyFontSize(),
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            var copyTotpBtn = new Button { Content = "Copier le code", FontSize = 12, Padding = new Thickness(8, 4, 8, 4) };
+            var copyTotpBtn = new Button { Content = "Copier le code", FontSize = AccessibilitySecondaryFontSize(), Padding = new Thickness(8, 4, 8, 4) };
+            ApplyNovaControlAccessibility(copyTotpBtn, $"Copier le code TOTP pour {PasswordManagerService.DisplayName(cred)}");
             copyTotpBtn.Click += (_, _) => CopyPasswordManagerText(code, "Code TOTP copié.");
             totpRow.Children.Add(codeText);
             totpRow.Children.Add(copyTotpBtn);

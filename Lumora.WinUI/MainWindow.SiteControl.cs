@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
@@ -23,7 +24,7 @@ public sealed partial class MainWindow
     {
         if (CurrentSite() is not { } site)
         {
-            StatusText.Text = "Aucun site web actif.";
+            UpdateStatusText("Aucun site web actif.");
             return;
         }
 
@@ -94,12 +95,12 @@ public sealed partial class MainWindow
         try
         {
             var path = await ExportLoginDiagnosticAsync(site);
-            StatusText.Text = $"Diagnostic exporte : {path}";
+            UpdateStatusText($"Diagnostic exporte : {path}");
             SiteControlDiagnosticText.Text = $"Diagnostic exporte : {path}";
         }
         catch (Exception error)
         {
-            StatusText.Text = $"Export diagnostic impossible : {error.Message}";
+            UpdateStatusText($"Export diagnostic impossible : {error.Message}", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
         }
     }
 
@@ -108,13 +109,13 @@ public sealed partial class MainWindow
         if (CurrentSite() is not { } site) return;
         if (_isGuestMode)
         {
-            StatusText.Text = "Coffre indisponible en mode invite.";
+            UpdateStatusText("Coffre indisponible en mode invite.");
             return;
         }
 
         if (!await RequireVaultAccessAsync())
         {
-            StatusText.Text = "Acces au coffre refuse : code incorrect ou annule.";
+            UpdateStatusText("Acces au coffre refuse : code incorrect ou annule.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             return;
         }
 
@@ -206,6 +207,7 @@ public sealed partial class MainWindow
         }
 
         SiteControlForgetButton.IsEnabled = cookieCount > 0;
+        RefreshSiteComfortUi(site.RootDomain);
 
         var passwordCount = PasswordCountForRootDomain(site.RootDomain);
         SiteControlPasswordText.Text = passwordCount switch
@@ -224,7 +226,7 @@ public sealed partial class MainWindow
 
         RenderSitePermissions(site.RootDomain);
         RenderSiteRecentHistory(historyEntries.Take(5).ToList());
-        StatusText.Text = $"Centre du site: {site.RootDomain}";
+        UpdateStatusText($"Centre du site: {site.RootDomain}");
     }
 
     private void RenderSitePermissions(string rootDomain)
@@ -267,12 +269,13 @@ public sealed partial class MainWindow
         labels.Children.Add(new TextBlock
         {
             Text = descriptor.Label,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = AccessibilityBodyFontSize()
         });
         labels.Children.Add(new TextBlock
         {
             Text = descriptor.Detail,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             Opacity = 0.66,
             TextWrapping = TextWrapping.Wrap
         });
@@ -282,9 +285,11 @@ public sealed partial class MainWindow
         var combo = new ComboBox
         {
             Width = 150,
+            FontSize = AccessibilitySecondaryFontSize(),
             Tag = new SitePermissionSelection(rootDomain, descriptor.Key),
             VerticalAlignment = VerticalAlignment.Center
         };
+        ApplyNovaControlAccessibility(combo, $"{descriptor.Label} pour {rootDomain}");
         combo.Items.Add(new ComboBoxItem { Content = "Demander", Tag = SitePermissionPolicy.Ask });
         combo.Items.Add(new ComboBoxItem { Content = "Autoriser", Tag = SitePermissionPolicy.Allow });
         combo.Items.Add(new ComboBoxItem { Content = "Bloquer", Tag = SitePermissionPolicy.Block });
@@ -299,6 +304,10 @@ public sealed partial class MainWindow
                 break;
             }
         }
+
+        AutomationProperties.SetHelpText(
+            combo,
+            $"{descriptor.Detail} Etat actuel : {SitePermissionPolicy.StateLabel(state)}.");
 
         Grid.SetColumn(combo, 1);
         row.Children.Add(combo);
@@ -320,7 +329,7 @@ public sealed partial class MainWindow
         SitePermissionPolicy.SetState(_uiSettings.SitePermissions, selection.RootDomain, selection.Kind, state);
         SaveUiSettings();
         RenderSitePermissions(selection.RootDomain);
-        StatusText.Text = $"{SitePermissionPolicy.StateLabel(state)} : {selection.Kind} pour {selection.RootDomain}.";
+        UpdateStatusText($"{SitePermissionPolicy.StateLabel(state)} : {selection.Kind} pour {selection.RootDomain}.");
 
         // La liste des sites exemptes de la position fictive depend des regles
         // "geolocation" : la rafraichir des qu'une regle de ce type change.
@@ -357,7 +366,7 @@ public sealed partial class MainWindow
 
         DispatcherQueue.TryEnqueue(() =>
         {
-            StatusText.Text = $"{SitePermissionPolicy.StateLabel(state)} : {permissionKey} pour {rootDomain}.";
+            UpdateStatusText($"{SitePermissionPolicy.StateLabel(state)} : {permissionKey} pour {rootDomain}.", announce: false);
         });
     }
 

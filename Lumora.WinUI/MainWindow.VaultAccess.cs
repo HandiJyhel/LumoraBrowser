@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
 namespace Lumora.WinUI;
@@ -40,7 +41,7 @@ public sealed partial class MainWindow
         if (string.IsNullOrWhiteSpace(pwBox.Password)) return null;
         if (pwBox2 is not null && pwBox.Password != pwBox2.Password)
         {
-            StatusText.Text = "Les mots de passe ne correspondent pas.";
+            UpdateStatusText("Les mots de passe ne correspondent pas.");
             return null;
         }
 
@@ -82,13 +83,13 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode)
         {
-            StatusText.Text = "Coffre indisponible en mode invité.";
+            UpdateStatusText("Coffre indisponible en mode invité.");
             return;
         }
 
         if (!await RequireVaultAccessAsync())
         {
-            StatusText.Text = "Acces au coffre refuse : code incorrect ou annule.";
+            UpdateStatusText("Acces au coffre refuse : code incorrect ou annule.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             return;
         }
 
@@ -101,13 +102,13 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode)
         {
-            StatusText.Text = "Import des mots de passe indisponible en mode invité.";
+            UpdateStatusText("Import des mots de passe indisponible en mode invité.");
             return;
         }
 
         if (!await RequireVaultAccessAsync())
         {
-            StatusText.Text = "Acces au coffre refuse : import annule.";
+            UpdateStatusText("Acces au coffre refuse : import annule.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             return;
         }
 
