@@ -40,7 +40,7 @@ public sealed class BookmarkBarRegressionTests
     public void Titres_invisibles_sont_preserves_pour_les_favoris_icone_seule()
     {
         var model = ReadRepoFile("Lumora.WinUI", "Models", "Bookmarks.cs");
-        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksDialogs.cs");
 
         Assert.Contains("public const string InvisibleTitle = \"\\u200B\";", model, StringComparison.Ordinal);
         Assert.Contains("Nom invisible (icone seule dans la barre)", code, StringComparison.Ordinal);
@@ -73,10 +73,14 @@ public sealed class BookmarkBarRegressionTests
     {
         var script = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
 
-        Assert.Contains("/t:Publish", script, StringComparison.Ordinal);
+        // Le "/t:Publish" litteral a ete remplace par -Target "Publish" passe a
+        // la fonction partagee Invoke-WinUiTarget (winui-build-common.ps1) lors
+        // d'un refactor legitime : le comportement (publish autonome complet)
+        // est inchange, seule la forme d'ecriture de la cible MSBuild a bouge.
+        Assert.Contains("-Target \"Publish\"", script, StringComparison.Ordinal);
         Assert.Contains("/p:SelfContained=true", script, StringComparison.Ordinal);
         Assert.Contains("/p:PublishSelfContained=true", script, StringComparison.Ordinal);
-        Assert.Contains("/p:PublishDir=\"$appDir\\\"", script, StringComparison.Ordinal);
+        Assert.Contains("/p:PublishDir=$appDir\\\"", script, StringComparison.Ordinal);
         Assert.Contains("[switch]$NoRestore", script, StringComparison.Ordinal);
         Assert.Contains("App.xbf", script, StringComparison.Ordinal);
         Assert.Contains("MainWindow.xbf", script, StringComparison.Ordinal);

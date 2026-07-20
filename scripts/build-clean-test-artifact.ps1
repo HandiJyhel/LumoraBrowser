@@ -2,12 +2,13 @@
 param(
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
-    [string]$Version = "0.83.24-dev",
+    [string]$Version = "0.83.54-dev",
     [string]$OutputRoot = "artifacts\clean-test",
     [switch]$NoRestore
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "winui-build-common.ps1")
 
 function Get-Sha256Hex {
     param([string]$FilePath)
@@ -40,40 +41,32 @@ if (-not (Test-Path $project)) {
     throw "Projet WinUI introuvable: $project"
 }
 
-$vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-if (-not (Test-Path $vswhere)) {
-    throw "vswhere est introuvable. Installe Visual Studio avec les outils de developpement desktop Windows."
-}
-
-$msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find "MSBuild\Current\Bin\amd64\MSBuild.exe" | Select-Object -First 1
-if (-not $msbuild) {
-    throw "MSBuild x64 est introuvable. Installe les outils de build Visual Studio pour WinUI 3."
-}
-
+$msbuild = Get-WinUiMsbuildPath
+$context = New-WinUiBuildContext -RepoRoot $repoRoot -ProjectName "Lumora.WinUI" -Configuration $Configuration -Platform $Platform
+$xamlOutputDir = Get-WinUiOutputDir -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64"
 New-Item -ItemType Directory -Force -Path $appDir | Out-Null
 New-Item -ItemType Directory -Force -Path $signatureDir | Out-Null
 
 Set-Location $repoRoot
 if (-not $NoRestore) {
-    & $msbuild $project /t:Restore /p:Configuration=$Configuration /p:Platform=$Platform /p:RuntimeIdentifier=win-x64
-    if ($LASTEXITCODE -ne 0) {
-        throw "Restore WinUI echoue avec le code $LASTEXITCODE."
-    }
+    Invoke-WinUiRestore -MsbuildPath $msbuild -ProjectPath $project -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64"
 }
 else {
     Write-Host "Restore WinUI ignore (-NoRestore): utilisation du cache local deja restaure."
 }
 
-& $msbuild $project /t:Publish /p:Configuration=$Configuration /p:Platform=$Platform /p:RuntimeIdentifier=win-x64 /p:SelfContained=true /p:PublishSelfContained=true /p:PublishSingleFile=false /p:PublishDir="$appDir\"
-if ($LASTEXITCODE -ne 0) {
-    throw "Publication WinUI autonome echouee avec le code $LASTEXITCODE."
-}
+Invoke-WinUiTarget -MsbuildPath $msbuild -ProjectPath $project -Target "Publish" -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64" -AdditionalProperties @(
+    "/p:SelfContained=true",
+    "/p:PublishSelfContained=true",
+    "/p:PublishSingleFile=false",
+    "/p:PublishDir=$appDir\"
+)
 
-$xamlOutputDir = Join-Path $repoRoot "Lumora.WinUI\bin\$Platform\$Configuration\net8.0-windows10.0.19041.0\win-x64"
+$xamlIntermediateDir = Get-WinUiIntermediateOutputDir -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64"
 foreach ($xbf in @("App.xbf", "MainWindow.xbf", "LumoraAppWindow.xbf", "LumoraPrivateWindow.xbf")) {
     $xbfPath = Join-Path $xamlOutputDir $xbf
     if (-not (Test-Path $xbfPath)) {
-        $xbfPath = Join-Path $repoRoot "Lumora.WinUI\obj\$Platform\$Configuration\net8.0-windows10.0.19041.0\win-x64\$xbf"
+        $xbfPath = Join-Path $xamlIntermediateDir $xbf
     }
 
     if (-not (Test-Path $xbfPath)) {

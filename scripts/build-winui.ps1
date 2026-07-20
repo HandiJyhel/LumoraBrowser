@@ -5,28 +5,14 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot "Lumora.WinUI\Lumora.WinUI.csproj"
+. (Join-Path $PSScriptRoot "winui-build-common.ps1")
 
 if (-not (Test-Path $project)) {
     throw "Projet WinUI introuvable: $project"
 }
 
-$vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-if (-not (Test-Path $vswhere)) {
-    throw "vswhere est introuvable. Installe Visual Studio avec les outils de developpement desktop Windows."
-}
-
-$msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find "MSBuild\Current\Bin\amd64\MSBuild.exe" | Select-Object -First 1
-if (-not $msbuild) {
-    throw "MSBuild x64 est introuvable. Installe les outils de build Visual Studio pour WinUI 3."
-}
-
+$msbuild = Get-WinUiMsbuildPath
+$context = New-WinUiBuildContext -RepoRoot $repoRoot -ProjectName "Lumora.WinUI" -Configuration "Debug" -Platform "x64"
 Set-Location $repoRoot
-& $msbuild $project /t:Restore /p:Configuration=Debug /p:Platform=x64
-if ($LASTEXITCODE -ne 0) {
-    throw "Restore WinUI echoue avec le code $LASTEXITCODE."
-}
-
-& $msbuild $project /t:Build /p:Configuration=Debug /p:Platform=x64
-if ($LASTEXITCODE -ne 0) {
-    throw "Build WinUI echoue avec le code $LASTEXITCODE."
-}
+Invoke-WinUiRestore -MsbuildPath $msbuild -ProjectPath $project -Context $context -Configuration "Debug" -Platform "x64" -RuntimeIdentifier "win-x64"
+Invoke-WinUiTarget -MsbuildPath $msbuild -ProjectPath $project -Target "Build" -Context $context -Configuration "Debug" -Platform "x64" -RuntimeIdentifier "win-x64"
