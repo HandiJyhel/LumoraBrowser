@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
@@ -35,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.83.24-dev";
+    private const string Version = "0.83.54-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -77,6 +78,9 @@ public sealed partial class MainWindow : Window
     private bool _verticalTabsCompact;
     private bool _compactModeEnabled;
     private bool _isFullScreenMode;
+    private string _lastAnnouncedStatus = string.Empty;
+    private DateTimeOffset _lastStatusAnnouncementAt = DateTimeOffset.MinValue;
+    private int _lastAccessibilityShellZoneIndex = 2;
     private CoreWebView2? _contentFullScreenCore;
     private bool _wasLumoraFullScreenBeforeContentFullScreen;
     private AppWindowPresenterKind? _presenterKindBeforeContentFullScreen;
@@ -92,6 +96,7 @@ public sealed partial class MainWindow : Window
     private double _verticalTabsExpandedWidth = VerticalTabsDefaultWidth;
     private int _nextTabId = 1;
     private readonly HistoryPanelController _historyPanel;
+    private readonly SemanticHistoryIndex _semanticIndex;
     private readonly ObservableCollection<CommandPaletteItem> _commandPaletteItems = new();
     private bool _suppressTabSave = true;
     private readonly VaultStore _vault;
@@ -147,6 +152,7 @@ public sealed partial class MainWindow : Window
     private bool _suppressSiteControlTrustToggle;
     private bool _suppressSiteControlCompatibilityToggle;
     private bool _suppressSiteControlDiagnosticToggle;
+    private bool _suppressSiteComfortUi;
     private bool _suppressSitePermissionUi;
     private static readonly System.Net.Http.HttpClient FaviconHttpClient = new()
     {
@@ -233,6 +239,10 @@ public sealed partial class MainWindow : Window
         };
         reopenTabAccelerator.Invoked += ReopenClosedTabAccelerator_Invoked;
         Content.KeyboardAccelerators.Add(reopenTabAccelerator);
+        RegisterAccessibilityZoneAccelerators();
+        RegisterAccessibilityQuickActionAccelerators();
+        RegisterAccessibilityContextAccelerators();
+        RegisterAccessibilityRescueAccelerators();
         // L'accélérateur est porté par la racine (toute la fenêtre). Son infobulle
         // automatique « Ctrl+K » resterait collée car le WebView2 avale l'événement de
         // sortie du pointeur → on la désactive.
@@ -268,6 +278,7 @@ public sealed partial class MainWindow : Window
         _historyPanel = new HistoryPanelController(
             new HistoryStore(_profile.HistoryFile, _profile.LegacyHistoryFile),
             new DownloadHistoryStore(_profile.DownloadsFile));
+        _semanticIndex = new SemanticHistoryIndex(_profile.SemanticIndexFile);
         _savedTabGroups = new SavedTabGroupStore(
             _profile.SavedTabGroupsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
         _notes = new NoteStore(_profile.NotesFile);
@@ -300,7 +311,7 @@ public sealed partial class MainWindow : Window
                 Margin = new Thickness(24),
                 TextWrapping = TextWrapping.Wrap
             });
-            StatusText.Text = "Moteur web désactivé pour diagnostic.";
+            UpdateStatusText("Moteur web désactivé pour diagnostic.");
             WinUiRuntimeTrace.Write("Browser surface skipped by environment");
             return;
         }
@@ -445,9 +456,9 @@ public sealed partial class MainWindow : Window
     private void ProfileStatusButton_Click(object sender, RoutedEventArgs e)
     {
         UpdateProfileFlyoutUi();
-        StatusText.Text = _isGuestMode
+        UpdateStatusText(_isGuestMode
             ? "Menu profil invite disponible."
-            : "Menu profil Lumora disponible.";
+            : "Menu profil Lumora disponible.");
     }
 
     private void OpenPersonalizationFromProfileButton_Click(object sender, RoutedEventArgs e) =>
@@ -457,7 +468,7 @@ public sealed partial class MainWindow : Window
     {
         if (!_uiSettings.CommandPaletteEnabled)
         {
-            StatusText.Text = "Activez d'abord la palette de commande Ctrl+K.";
+            UpdateStatusText("Activez d'abord la palette de commande Ctrl+K.");
             return;
         }
 
@@ -479,7 +490,7 @@ public sealed partial class MainWindow : Window
         ModulesFlyout.Hide();
         if (!_uiSettings.CommandPaletteEnabled)
         {
-            StatusText.Text = "Activez d'abord la palette de commande Ctrl+K.";
+            UpdateStatusText("Activez d'abord la palette de commande Ctrl+K.");
             return;
         }
 
@@ -492,7 +503,7 @@ public sealed partial class MainWindow : Window
         ModulesFlyout.Hide();
         if (!_uiSettings.ReadAloudEnabled)
         {
-            StatusText.Text = "Activez la lecture à voix haute dans Paramètres > Accessibilité.";
+            UpdateStatusText("Activez la lecture à voix haute dans Paramètres > Accessibilité.");
             return;
         }
 
@@ -503,7 +514,7 @@ public sealed partial class MainWindow : Window
     {
         ModulesFlyout.Hide();
         ShowPanel(ModulesPanel, "Modules média Lumora");
-        StatusText.Text = "Modules média : détacher la vidéo ou télécharger depuis les tuiles vidéo.";
+        UpdateStatusText("Modules média : détacher la vidéo ou télécharger depuis les tuiles vidéo.");
     }
 
     private void ModulesVideoDownload_Click(object sender, RoutedEventArgs e)
@@ -526,14 +537,14 @@ public sealed partial class MainWindow : Window
         var address = view?.Source?.ToString() ?? tab?.Address ?? string.Empty;
         if (view is null || !BookmarkStore.IsWebUrl(address))
         {
-            StatusText.Text = "Ouvrez une page web pour utiliser la traduction.";
+            UpdateStatusText("Ouvrez une page web pour utiliser la traduction.");
             return;
         }
 
         await OfferTranslationIfNeededAsync(view, address);
         if (TranslateBar.Visibility != Visibility.Visible)
         {
-            StatusText.Text = "Aucune traduction proposee pour cette page.";
+            UpdateStatusText("Aucune traduction proposee pour cette page.");
         }
     }
 
@@ -557,501 +568,6 @@ public sealed partial class MainWindow : Window
 
         ApplyUsageModeFromUi(usageMode);
     }
-
-    private void ApplyUsageModeFromUi(string usageMode)
-    {
-        var previousUsageMode = _uiSettings.UsageMode;
-        _uiSettings.UsageMode = usageMode;
-        if (!string.Equals(previousUsageMode, usageMode, StringComparison.OrdinalIgnoreCase))
-        {
-            _uiSettings.LastIntroducedUsageMode = string.Empty;
-        }
-
-        ApplyUsageModePreset(usageMode);
-        _uiSettings.Save(_profile.UiSettingsFile);
-
-        ApplyUiSettings();
-        RefreshNovaHomePages();
-        StatusText.Text = string.Equals(usageMode, "neutral", StringComparison.OrdinalIgnoreCase)
-            ? "Mode Lumora applique : Neutre. Accueil simplifie et modules essentiels conserves."
-            : $"Mode Lumora applique : {UsageModeLabel(usageMode)}. Une presentation du mode est disponible sur l'accueil.";
-    }
-
-    private void UpdateUsageModeButtonUi()
-    {
-        var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
-        var label = UsageModeLabel(mode);
-        UsageModeIcon.Glyph = mode switch
-        {
-            "neutral" => "\uE121",
-            "focus" => "\uE8A7",
-            "reading" => "\uE736",
-            "creative" => "\uE70B",
-            "research" => "\uE721",
-            "night" => "\uE708",
-            _ => "\uE9D2"
-        };
-
-        UsageModeLabelText.Text = "Mode";
-        UsageModeCurrentText.Text = label;
-        ToolTipService.SetToolTip(UsageModeButton, $"Mode d'usage : {label}");
-        AutomationProperties.SetName(UsageModeButton, $"Mode d'usage : {label}");
-
-        void Mark(Button button, string tag)
-        {
-            var active = string.Equals(mode, tag, StringComparison.OrdinalIgnoreCase);
-            button.Opacity = active ? 1 : 0.78;
-            button.FontWeight = active ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
-        }
-
-        Mark(UsageModeNeutralButton, "neutral");
-        Mark(UsageModeBalancedButton, "balanced");
-        Mark(UsageModeFocusButton, "focus");
-        Mark(UsageModeReadingButton, "reading");
-        Mark(UsageModeCreativeButton, "creative");
-        Mark(UsageModeResearchButton, "research");
-        Mark(UsageModeNightButton, "night");
-    }
-
-    private void UpdateModeCompanionUi()
-    {
-        var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
-        var label = UsageModeLabel(mode);
-        var companion = ModeCompanion(mode);
-        var isNeutral = string.Equals(mode, "neutral", StringComparison.OrdinalIgnoreCase);
-
-        ModeCompanionButton.Visibility = Visibility.Visible;
-
-        ModeCompanionIcon.Glyph = companion.Icon;
-        ModeCompanionMascotIcon.Glyph = companion.Icon;
-        ModeCompanionModeText.Text = isNeutral ? "Rapide" : label;
-        ModeCompanionTitleText.Text = $"Compagnon {label}";
-        ModeCompanionBodyText.Text = companion.Body;
-        ModeCompanionMemoryTitleText.Text = companion.MemoryTitle;
-        ModeCompanionMemoryBox.PlaceholderText = companion.MemoryPlaceholder;
-        ModeCompanionMemoryBox.Text = CompanionMemory(mode);
-        ModeCompanionPrimaryIcon.Glyph = companion.PrimaryIcon;
-        ModeCompanionPrimaryTitleText.Text = companion.PrimaryTitle;
-        ModeCompanionPrimaryHintText.Text = companion.PrimaryHint;
-        ModeCompanionSecondaryIcon.Glyph = companion.SecondaryIcon;
-        ModeCompanionSecondaryTitleText.Text = companion.SecondaryTitle;
-        ModeCompanionSecondaryHintText.Text = companion.SecondaryHint;
-
-        ToolTipService.SetToolTip(ModeCompanionButton, $"Compagnon {label}");
-        AutomationProperties.SetName(ModeCompanionButton, $"Compagnon du mode {label}");
-    }
-
-    private void ModeCompanionButton_Click(object sender, RoutedEventArgs e)
-    {
-        UpdateModeCompanionUi();
-        StatusText.Text = $"Compagnon {UsageModeLabel(_uiSettings.UsageMode)} disponible.";
-    }
-
-    private async void ModeCompanionPrimaryButton_Click(object sender, RoutedEventArgs e)
-    {
-        ModeCompanionFlyout.Hide();
-        await RunModeCompanionActionAsync(ModeCompanion((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant()).PrimaryAction);
-    }
-
-    private async void ModeCompanionSecondaryButton_Click(object sender, RoutedEventArgs e)
-    {
-        ModeCompanionFlyout.Hide();
-        await RunModeCompanionActionAsync(ModeCompanion((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant()).SecondaryAction);
-    }
-
-    private void ModeCompanionSaveButton_Click(object sender, RoutedEventArgs e)
-    {
-        var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
-        SetCompanionMemory(mode, ModeCompanionMemoryBox.Text);
-        _uiSettings.Save(_profile.UiSettingsFile);
-        RefreshNovaHomePages();
-        StatusText.Text = $"Lumie garde votre {ModeCompanion(mode).MemoryName}.";
-    }
-
-    private string CompanionMemory(string mode) =>
-        mode switch
-        {
-            "focus" => _uiSettings.CompanionFocusObjective,
-            "reading" => _uiSettings.CompanionReadingNote,
-            "creative" => _uiSettings.CompanionCreativePostIt,
-            "research" => _uiSettings.CompanionResearchTrail,
-            "night" => _uiSettings.CompanionNightReminder,
-            _ => _uiSettings.CompanionBalancedMemo
-        };
-
-    private void SetCompanionMemory(string mode, string value)
-    {
-        var trimmed = (value ?? string.Empty).Trim();
-        if (trimmed.Length > 4000)
-        {
-            trimmed = trimmed[..4000];
-        }
-
-        switch (mode)
-        {
-            case "focus":
-                _uiSettings.CompanionFocusObjective = trimmed;
-                break;
-            case "reading":
-                _uiSettings.CompanionReadingNote = trimmed;
-                break;
-            case "creative":
-                _uiSettings.CompanionCreativePostIt = trimmed;
-                break;
-            case "research":
-                _uiSettings.CompanionResearchTrail = trimmed;
-                break;
-            case "night":
-                _uiSettings.CompanionNightReminder = trimmed;
-                break;
-            default:
-                _uiSettings.CompanionBalancedMemo = trimmed;
-                break;
-        }
-    }
-
-    private async Task RunModeCompanionActionAsync(string action)
-    {
-        switch (action)
-        {
-            case "notes":
-                NotesMenu_Click(this, new RoutedEventArgs());
-                StatusText.Text = "Compagnon Notes ouvert.";
-                break;
-
-            case "reader":
-                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
-                await ToggleReaderModeAsync(ensureOpen: true);
-                StatusText.Text = "Compagnon Lecture ouvert.";
-                break;
-
-            case "read_aloud":
-                ReadAloudFlyout.ShowAt(ReadAloudButton.Visibility == Visibility.Visible ? ReadAloudButton : ModeCompanionButton);
-                StatusText.Text = "Compagnon voix locale ouvert.";
-                break;
-
-            case "search_assist":
-                await RunSearchAssistAsync(SearchAssistButton.Visibility == Visibility.Visible ? SearchAssistButton : ModeCompanionButton);
-                break;
-
-            case "history":
-                HistoryMenu_Click(this, new RoutedEventArgs());
-                StatusText.Text = "Compagnon Recherche : historique local ouvert.";
-                break;
-
-            case "bookmarks":
-                BookmarksMenu_Click(this, new RoutedEventArgs());
-                StatusText.Text = "Compagnon Recherche : sources gardees ouvertes.";
-                break;
-
-            case "command_palette":
-                if (!_uiSettings.CommandPaletteEnabled)
-                {
-                    StatusText.Text = "Palette Ctrl+K desactivee.";
-                    return;
-                }
-
-                ShowCommandPalette();
-                break;
-
-            case "fullscreen":
-                ToggleFullScreenMode();
-                break;
-
-            case "modules":
-                ShowPanel(ModulesPanel, "Modules Lumora");
-                StatusText.Text = "Compagnon Modules ouvert.";
-                break;
-
-            case "add_shortcut":
-                await HandleNewTabShortcutMessageAsync("newtab_add_shortcut", new JsonObject());
-                StatusText.Text = "Ajout d'un raccourci Lumora.";
-                break;
-        }
-    }
-
-    private static ModeCompanionDefinition ModeCompanion(string usageMode) =>
-        usageMode switch
-        {
-            "neutral" => new ModeCompanionDefinition(
-                "\uE121",
-                "Le mode Neutre garde Lumora discret, mais laisse un accès rapide aux raccourcis et aux actions utiles.",
-                "Mémo neutre",
-                "votre mémo neutre",
-                "Ex. rappel minimal de navigation...",
-                "add_shortcut",
-                "\uE710",
-                "Ajouter un raccourci",
-                "Garder un repère rapide même en mode neutre.",
-                "command_palette",
-                "\uE721",
-                "Actions rapides",
-                "Ouvrir Ctrl+K sans quitter la page."),
-            "focus" => new ModeCompanionDefinition(
-                "\uE8A7",
-                "Gardez votre objectif et les commandes rapides sous la main sans revenir a l'accueil.",
-                "Objectif courant",
-                "votre objectif",
-                "Ex. terminer cette tâche, vérifier un bug, rester sur une seule priorité...",
-                "command_palette",
-                "\uE721",
-                "Ouvrir Ctrl+K",
-                "Lancer une action sans quitter la page.",
-                "fullscreen",
-                "\uE740",
-                "Plein ecran",
-                "Reduire le chrome quand la tache demande du calme."),
-            "reading" => new ModeCompanionDefinition(
-                "\uE736",
-                "Lecture, annotations, notes et voix locale restent accessibles pendant la navigation.",
-                "Note de lecture",
-                "votre note de lecture",
-                "Ex. passage à relire, idée importante, page à reprendre...",
-                "reader",
-                "\uE736",
-                "Mode lecture",
-                "Lire et annoter la page active.",
-                "notes",
-                "\uE70B",
-                "Notes de lecture",
-                "Retrouver vos notes locales."),
-            "creative" => new ModeCompanionDefinition(
-                "\uE70B",
-                "Le post-it de creation devient un compagnon : vos idees restent proches pendant les pages web.",
-                "Post-it de création",
-                "votre post-it",
-                "Ex. idée, brouillon, piste créative à ne pas perdre...",
-                "notes",
-                "\uE70B",
-                "Post-it et notes",
-                "Ouvrir le carnet local pour capturer ou reprendre une idee.",
-                "search_assist",
-                "\uE721",
-                "Relancer l'idee",
-                "Reformuler une piste avec l'assistant local si active."),
-            "research" => new ModeCompanionDefinition(
-                "\uE721",
-                "Collectez et comparez sans perdre le fil : historique, favoris et actions rapides restent proches.",
-                "Piste de recherche",
-                "votre piste",
-                "Ex. source à comparer, question à vérifier, lien ou hypothèse...",
-                "history",
-                "\uE81C",
-                "Historique local",
-                "Reprendre les pistes explorees sur cet appareil.",
-                "bookmarks",
-                "\uE734",
-                "Sources gardees",
-                "Ouvrir les favoris pour classer et comparer."),
-            "night" => new ModeCompanionDefinition(
-                "\uE708",
-                "Un compagnon plus calme pour lire, ecouter ou reduire l'eclat sans chercher les commandes.",
-                "Rappel calme",
-                "votre rappel",
-                "Ex. à reprendre demain, page à finir plus tard, action minimale...",
-                "reader",
-                "\uE736",
-                "Lecture douce",
-                "Basculer la page active en lecture.",
-                "read_aloud",
-                "\uE767",
-                "Ecoute locale",
-                "Ouvrir la lecture a voix haute locale."),
-            _ => new ModeCompanionDefinition(
-                "\uE9D2",
-                "Compagnon leger : modules et commandes utiles restent disponibles sans surcharger l'accueil.",
-                "Mémo Lumora",
-                "votre mémo",
-                "Ex. rappel de navigation, page à consulter, petite note...",
-                "modules",
-                "\uE713",
-                "Modules Lumora",
-                "Choisir les outils visibles.",
-                "command_palette",
-                "\uE721",
-                "Actions rapides",
-                "Ouvrir la palette de commande.")
-        };
-
-    private void ApplyUsageModePreset(string? usageMode)
-    {
-        switch ((usageMode ?? "neutral").ToLowerInvariant())
-        {
-            case "neutral":
-                _uiSettings.NewTabStyle = "minimal";
-                _uiSettings.PersonalizationMotionStyle = "subtle";
-                _uiSettings.NewTabFocusSearchOnOpen = true;
-                _uiSettings.NewTabShortcutsVisible = true;
-                _uiSettings.CommandPaletteEnabled = true;
-                _uiSettings.CompactModeEnabled = false;
-                _uiSettings.CompactModeHidesBookmarks = false;
-                _uiSettings.VerticalTabsEnabled = false;
-                _uiSettings.BookmarksBarVisible = true;
-                _uiSettings.AddressBarSuggestionsEnabled = true;
-                _uiSettings.ReadAloudEnabled = false;
-                _uiSettings.SearchAssistEnabled = false;
-                _uiSettings.TranslationEnabled = false;
-                _uiSettings.PinnedModuleIds.Clear();
-                break;
-
-            case "focus":
-                _uiSettings.NewTabStyle = "minimal";
-                _uiSettings.PersonalizationMotionStyle = "subtle";
-                _uiSettings.NewTabFocusSearchOnOpen = true;
-                _uiSettings.CommandPaletteEnabled = true;
-                _uiSettings.CompactModeEnabled = true;
-                _uiSettings.CompactModeHidesBookmarks = true;
-                _uiSettings.VerticalTabsEnabled = false;
-                break;
-
-            case "reading":
-                _uiSettings.NewTabStyle = "calm";
-                _uiSettings.PersonalizationMotionStyle = "subtle";
-                _uiSettings.NewTabFocusSearchOnOpen = false;
-                _uiSettings.CompactModeEnabled = false;
-                _uiSettings.VerticalTabsEnabled = false;
-                _uiSettings.BookmarksBarVisible = true;
-                AddPinnedModule("reader");
-                AddPinnedModule("notes");
-                AddPinnedModule("readAloud");
-                _uiSettings.ReadAloudEnabled = true;
-                break;
-
-            case "creative":
-                _uiSettings.NewTabStyle = "signature";
-                _uiSettings.PersonalizationMotionStyle = "dynamic";
-                _uiSettings.NewTabFocusSearchOnOpen = true;
-                _uiSettings.CompactModeEnabled = false;
-                _uiSettings.VerticalTabsEnabled = false;
-                AddPinnedModule("notes");
-                AddPinnedModule("searchAssist");
-                _uiSettings.SearchAssistEnabled = true;
-                break;
-
-            case "research":
-                _uiSettings.NewTabStyle = "signature";
-                _uiSettings.PersonalizationMotionStyle = "luminous";
-                _uiSettings.NewTabFocusSearchOnOpen = true;
-                _uiSettings.CompactModeEnabled = false;
-                _uiSettings.VerticalTabsEnabled = true;
-                _uiSettings.BookmarksBarVisible = true;
-                _uiSettings.AddressBarSuggestionsEnabled = true;
-                AddPinnedModule("notes");
-                AddPinnedModule("searchAssist");
-                AddPinnedModule("translate");
-                _uiSettings.SearchAssistEnabled = true;
-                break;
-
-            case "night":
-                _uiSettings.ThemeMode = "dark";
-                _uiSettings.NewTabStyle = "calm";
-                _uiSettings.PersonalizationMotionStyle = "subtle";
-                _uiSettings.NewTabFocusSearchOnOpen = false;
-                _uiSettings.CompactModeEnabled = true;
-                _uiSettings.CompactModeHidesBookmarks = true;
-                _uiSettings.VerticalTabsEnabled = false;
-                _uiSettings.WindowTransparency = Math.Max(_uiSettings.WindowTransparency, 24);
-                AddPinnedModule("reader");
-                AddPinnedModule("readAloud");
-                _uiSettings.ReadAloudEnabled = true;
-                break;
-
-            default:
-                _uiSettings.NewTabStyle = "signature";
-                _uiSettings.PersonalizationMotionStyle = "luminous";
-                _uiSettings.NewTabFocusSearchOnOpen = false;
-                _uiSettings.CommandPaletteEnabled = true;
-                _uiSettings.CompactModeEnabled = false;
-                _uiSettings.CompactModeHidesBookmarks = false;
-                _uiSettings.VerticalTabsEnabled = false;
-                _uiSettings.BookmarksBarVisible = true;
-                _uiSettings.AddressBarSuggestionsEnabled = true;
-                break;
-        }
-    }
-
-    private void AddPinnedModule(string moduleId)
-    {
-        if (_uiSettings.PinnedModuleIds.Contains(moduleId, StringComparer.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        _uiSettings.PinnedModuleIds.Add(moduleId);
-    }
-
-    private void ModulePinToggle_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not ToggleButton { Tag: string moduleId } toggle)
-        {
-            return;
-        }
-
-        var pinned = _uiSettings.PinnedModuleIds;
-        if (toggle.IsChecked == true)
-        {
-            if (!pinned.Contains(moduleId, StringComparer.OrdinalIgnoreCase))
-            {
-                pinned.Add(moduleId);
-            }
-        }
-        else
-        {
-            pinned.RemoveAll(id => string.Equals(id, moduleId, StringComparison.OrdinalIgnoreCase));
-        }
-
-        _uiSettings.Save(_profile.UiSettingsFile);
-        UpdateModulesPinUi();
-        RefreshNovaHomePages();
-    }
-
-    private void UpdateModulesPinUi()
-    {
-        var pinned = _uiSettings.PinnedModuleIds;
-        bool IsPinned(string id) => pinned.Contains(id, StringComparer.OrdinalIgnoreCase);
-
-        ReaderModeButton.Visibility = IsPinned("reader") ? Visibility.Visible : Visibility.Collapsed;
-        NotesModuleButton.Visibility = IsPinned("notes") ? Visibility.Visible : Visibility.Collapsed;
-        ReadAloudButton.Visibility = IsPinned("readAloud") ? Visibility.Visible : Visibility.Collapsed;
-        VideoDownloadButton.Visibility = IsPinned("videoDownload") ? Visibility.Visible : Visibility.Collapsed;
-        SearchAssistButton.Visibility = IsPinned("searchAssist") ? Visibility.Visible : Visibility.Collapsed;
-        DetachVideoPinnedButton.Visibility = IsPinned("detachVideo") ? Visibility.Visible : Visibility.Collapsed;
-        TranslatePinnedButton.Visibility = IsPinned("translate") ? Visibility.Visible : Visibility.Collapsed;
-        WebAppsPinnedButton.Visibility = IsPinned("webApps") ? Visibility.Visible : Visibility.Collapsed;
-        DictationPinnedButton.Visibility = IsPinned("dictation") ? Visibility.Visible : Visibility.Collapsed;
-
-        ReaderPinToggleButton.IsChecked = IsPinned("reader");
-        NotesPinToggleButton.IsChecked = IsPinned("notes");
-        ReadAloudPinToggleButton.IsChecked = IsPinned("readAloud");
-        VideoDownloadPinToggleButton.IsChecked = IsPinned("videoDownload");
-        SearchAssistPinToggleButton.IsChecked = IsPinned("searchAssist");
-        DetachVideoPinToggleButton.IsChecked = IsPinned("detachVideo");
-        TranslatePinToggleButton.IsChecked = IsPinned("translate");
-        WebAppsPinToggleButton.IsChecked = IsPinned("webApps");
-        DictationPinToggleButton.IsChecked = IsPinned("dictation");
-
-        PanelReaderPinToggleButton.IsChecked = IsPinned("reader");
-        PanelNotesPinToggleButton.IsChecked = IsPinned("notes");
-        PanelReadAloudPinToggleButton.IsChecked = IsPinned("readAloud");
-        PanelVideoDownloadPinToggleButton.IsChecked = IsPinned("videoDownload");
-        PanelSearchAssistPinToggleButton.IsChecked = IsPinned("searchAssist");
-        PanelDetachVideoPinToggleButton.IsChecked = IsPinned("detachVideo");
-        PanelTranslatePinToggleButton.IsChecked = IsPinned("translate");
-        PanelWebAppsPinToggleButton.IsChecked = IsPinned("webApps");
-        PanelDictationPinToggleButton.IsChecked = IsPinned("dictation");
-    }
-
-    private static string UsageModeLabel(string usageMode) =>
-        usageMode switch
-        {
-            "neutral" => "Neutre",
-            "focus" => "Focus",
-            "reading" => "Lecture",
-            "creative" => "Creation",
-            "research" => "Recherche",
-            "night" => "Nuit",
-            _ => "Equilibre"
-        };
 
     private void SettingsStartupShortcutButton_Click(object sender, RoutedEventArgs e)
     {
@@ -1086,7 +602,7 @@ public sealed partial class MainWindow : Window
         ReadingLensPanel.Visibility = Visibility.Collapsed;
 
         visiblePanel.Visibility = Visibility.Visible;
-        StatusText.Text = status;
+        UpdateStatusText(DescribePanelStatus(visiblePanel, status));
 
         // Depuis un panneau interne (coffre, historique, paramètres...), la barre
         // d'état propose de revenir à la page web en cours.
@@ -1094,6 +610,146 @@ public sealed partial class MainWindow : Window
             ? Visibility.Collapsed
             : Visibility.Visible;
         StatusBarRow.Visibility = Visibility.Visible;
+        FocusVisiblePanelEntryPoint(visiblePanel);
+    }
+
+    private string DescribePanelStatus(FrameworkElement visiblePanel, string status)
+    {
+        if (ReferenceEquals(visiblePanel, BrowserPanel))
+        {
+            return status;
+        }
+
+        if (ReferenceEquals(visiblePanel, PasskeysPanel))
+        {
+            return $"{status}. Ouvrez les paramètres Windows ou gérez les sites déjà enregistrés.";
+        }
+
+        if (ReferenceEquals(visiblePanel, WalletPanel))
+        {
+            return $"{status}. Ajoutez une carte locale ou utilisez-en une sur la page active.";
+        }
+
+        if (ReferenceEquals(visiblePanel, SiteControlPanel))
+        {
+            return $"{status}. Vérifiez la sécurité du site, les permissions et le confort local.";
+        }
+
+        if (ReferenceEquals(visiblePanel, SessionsPanel))
+        {
+            return $"{status}. Consultez les sessions gardées et oubliez-les si nécessaire.";
+        }
+
+        if (ReferenceEquals(visiblePanel, VaultPanel))
+        {
+            return $"{status}. Parcourez vos identifiants, recherchez-en un ou ajoutez-en un nouveau.";
+        }
+
+        if (ReferenceEquals(visiblePanel, SettingsPanel))
+        {
+            return $"{status}. Réglez Lumora puis appliquez les changements.";
+        }
+
+        if (ReferenceEquals(visiblePanel, ModulesPanel))
+        {
+            return $"{status}. Choisissez un module ou revenez à votre page web.";
+        }
+
+        return status;
+    }
+
+    private void FocusVisiblePanelEntryPoint(FrameworkElement visiblePanel)
+    {
+        if (ReferenceEquals(visiblePanel, BrowserPanel))
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (FindFirstFocusableDescendant(visiblePanel) is { } target)
+            {
+                target.Focus(FocusState.Programmatic);
+            }
+        });
+    }
+
+    private FrameworkElement? FindFirstFocusableDescendant(DependencyObject root)
+    {
+        var childCount = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < childCount; index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is FrameworkElement element && CanReceiveProgrammaticFocus(element))
+            {
+                return element;
+            }
+
+            if (FindFirstFocusableDescendant(child) is { } nested)
+            {
+                return nested;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool CanReceiveProgrammaticFocus(FrameworkElement element) =>
+        element.Visibility == Visibility.Visible
+        && element is Control control
+        && control.IsEnabled
+        && control.IsTabStop;
+
+    private void UpdateStatusText(
+        string text,
+        bool announce = true,
+        AutomationNotificationKind notificationKind = AutomationNotificationKind.Other)
+    {
+        StatusText.Text = text;
+
+        if (!announce)
+        {
+            return;
+        }
+
+        RaiseStatusAnnouncement(text, notificationKind);
+    }
+
+    private void AnnounceAccessibilityContext(
+        string text,
+        AutomationNotificationKind notificationKind = AutomationNotificationKind.Other) =>
+        RaiseStatusAnnouncement(text, notificationKind);
+
+    private void RaiseStatusAnnouncement(
+        string text,
+        AutomationNotificationKind notificationKind = AutomationNotificationKind.Other)
+    {
+        var normalized = text.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (string.Equals(_lastAnnouncedStatus, normalized, StringComparison.Ordinal) &&
+            now - _lastStatusAnnouncementAt < TimeSpan.FromSeconds(2))
+        {
+            return;
+        }
+
+        _lastAnnouncedStatus = normalized;
+        _lastStatusAnnouncementAt = now;
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            var peer = FrameworkElementAutomationPeer.FromElement(StatusText)
+                ?? FrameworkElementAutomationPeer.CreatePeerForElement(StatusText);
+            peer?.RaiseNotificationEvent(
+                notificationKind,
+                AutomationNotificationProcessing.MostRecent,
+                normalized,
+                "LumoraStatus");
+        });
     }
 
     private void BackToPageButton_Click(object sender, RoutedEventArgs e)
@@ -1115,129 +771,6 @@ public sealed partial class MainWindow : Window
             // (l'offre initiale ne se declenche qu'au chargement de la page).
             OfferAutoFill(tab.Address);
         }
-    }
-
-    private void ApplyWindowTitleBarColors()
-    {
-        if (_appWindow is null) return;
-
-        var translucent = IsTranslucentChromeEnabled();
-        var titleBarBackgroundAlpha = translucent ? (byte)226 : (byte)255;
-        var background = BrushColor("NovaChromeSurfaceBrush", UiColor(20, 32, 42, titleBarBackgroundAlpha));
-        var inactiveBackground = BrushColor("NovaChromeSurfaceAltBrush", background);
-        var foreground = BrushColor("NovaAddressForegroundBrush", UiColor(255, 248, 234));
-        var inactiveForeground = BrushColor("NovaTextMutedBrush", UiColor(195, 185, 165));
-        var hoverBackground = BrushColor("NovaChromeSurfaceRaisedBrush", UiColor(34, 49, 58, translucent ? (byte)238 : (byte)255));
-        var pressedBackground = BrushColor("NovaChromeStrokeBrush", UiColor(50, 69, 76, translucent ? (byte)244 : (byte)255));
-
-        var titleBar = _appWindow.TitleBar;
-        titleBar.BackgroundColor = WithAlpha(background, titleBarBackgroundAlpha);
-        titleBar.InactiveBackgroundColor = WithAlpha(inactiveBackground, titleBarBackgroundAlpha);
-        titleBar.ForegroundColor = foreground;
-        titleBar.InactiveForegroundColor = inactiveForeground;
-        titleBar.ButtonBackgroundColor = WithAlpha(background, titleBarBackgroundAlpha);
-        titleBar.ButtonInactiveBackgroundColor = WithAlpha(inactiveBackground, titleBarBackgroundAlpha);
-        titleBar.ButtonForegroundColor = foreground;
-        titleBar.ButtonInactiveForegroundColor = inactiveForeground;
-        titleBar.ButtonHoverBackgroundColor = hoverBackground;
-        titleBar.ButtonHoverForegroundColor = foreground;
-        titleBar.ButtonPressedBackgroundColor = pressedBackground;
-        titleBar.ButtonPressedForegroundColor = foreground;
-    }
-
-    private static Windows.UI.Color UiColor(byte r, byte g, byte b, byte a = 255) =>
-        new() { A = a, R = r, G = g, B = b };
-
-    private Windows.UI.Color BrushColor(string key, Windows.UI.Color fallback) =>
-        RootShell.Resources[key] is SolidColorBrush brush ? brush.Color : fallback;
-
-    private static Windows.UI.Color WithAlpha(Windows.UI.Color color, byte alpha) =>
-        new() { A = alpha, R = color.R, G = color.G, B = color.B };
-
-    private void ApplyNovaControlAccessibility(Control control, string? automationName = null)
-    {
-        control.FocusVisualPrimaryBrush = RootShell.Resources["NovaFocusBrush"] as Brush
-            ?? new SolidColorBrush(UiColor(255, 230, 104));
-        control.FocusVisualSecondaryBrush = RootShell.Resources["NovaFocusInnerBrush"] as Brush
-            ?? new SolidColorBrush(UiColor(13, 24, 34));
-        control.UseSystemFocusVisuals = true;
-
-        if (!string.IsNullOrWhiteSpace(automationName))
-        {
-            AutomationProperties.SetName(control, automationName);
-        }
-    }
-
-    private void ApplyAppIcon()
-    {
-        if (_appWindow is null) return;
-
-        try
-        {
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "LumoraApp.ico");
-            if (File.Exists(iconPath))
-            {
-                _appWindow.SetIcon(iconPath);
-            }
-        }
-        catch (Exception ex)
-        {
-            WinUiRuntimeTrace.Write($"App icon apply failed: {ex.Message}");
-        }
-    }
-
-    private void ApplyTitleBarSafeArea()
-    {
-        var rightInset = _appWindow?.TitleBar.RightInset ?? 138;
-        var safeRight = Math.Max(120, rightInset + 12);
-        BrowserTabs.Margin = new Thickness(0, 0, safeRight, 0);
-        _titleBarSafeRight = safeRight;
-        UpdateTitleBarDragRegion();
-    }
-
-    private double _titleBarSafeRight = 138;
-
-    // Zone de "drag" du titre : dynamique, calée sur l'espace vide de la barre
-    // d'onglets (après le dernier onglet + un peu de marge pour le bouton "+"),
-    // jusqu'aux boutons système. Sans ça, seule une mince bande fixe était
-    // "draggable" et le double-clic pour maximiser ne marchait presque nulle part
-    // dans la barre d'onglets — contrairement à Chrome/Edge où tout l'espace vide
-    // de la barre d'onglets maximise au double-clic.
-    private void UpdateTitleBarDragRegion()
-    {
-        if (_appWindow?.TitleBar is null || !ExtendsContentIntoTitleBar) return;
-
-        try
-        {
-            var scale = Content?.XamlRoot?.RasterizationScale ?? 1.0;
-            var rowHeight = TopTabsRow.ActualHeight > 0 ? TopTabsRow.ActualHeight : 38;
-            var windowWidth = RootShell.ActualWidth;
-            if (windowWidth <= 0) return;
-
-            double leftEdge = 0;
-            var lastTab = BrowserTabs.TabItems.OfType<TabViewItem>().LastOrDefault();
-            if (lastTab is not null && lastTab.ActualWidth > 0)
-            {
-                var bounds = lastTab.TransformToVisual(RootShell)
-                    .TransformBounds(new Windows.Foundation.Rect(0, 0, lastTab.ActualWidth, lastTab.ActualHeight));
-                leftEdge = bounds.Right;
-            }
-
-            const double addTabButtonReserve = 56; // bouton "+" : jamais recouvert par la zone de drag
-            var dragLeft = Math.Min(leftEdge + addTabButtonReserve, windowWidth - _titleBarSafeRight);
-            var dragRight = Math.Max(dragLeft, windowWidth - _titleBarSafeRight);
-            if (dragRight - dragLeft < 8) return;
-
-            var rect = new RectInt32
-            {
-                X = (int)Math.Round(dragLeft * scale),
-                Y = 0,
-                Width = (int)Math.Round((dragRight - dragLeft) * scale),
-                Height = (int)Math.Round(rowHeight * scale)
-            };
-            _appWindow.TitleBar.SetDragRectangles(new[] { rect });
-        }
-        catch { }
     }
 
     // Logique pure extraite dans AddressNormalizer (partagée avec la fenêtre privée).
@@ -1267,19 +800,4 @@ public sealed partial class MainWindow : Window
 
     private static string DisplayAddressForBar(string address) =>
         address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase) ? string.Empty : address;
-
-    private sealed record ModeCompanionDefinition(
-        string Icon,
-        string Body,
-        string MemoryTitle,
-        string MemoryName,
-        string MemoryPlaceholder,
-        string PrimaryAction,
-        string PrimaryIcon,
-        string PrimaryTitle,
-        string PrimaryHint,
-        string SecondaryAction,
-        string SecondaryIcon,
-        string SecondaryTitle,
-        string SecondaryHint);
 }

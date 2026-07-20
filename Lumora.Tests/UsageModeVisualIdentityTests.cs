@@ -7,7 +7,7 @@ public sealed class UsageModeVisualIdentityTests
     [Fact]
     public void Accueil_lumora_garde_une_signature_visuelle_par_mode()
     {
-        var source = ReadRepoFile("Lumora.WinUI", "MainWindow.Navigation.cs");
+        var source = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
 
         Assert.Contains("mode-visual", source, StringComparison.Ordinal);
         Assert.Contains("NewTabModeSignatureBarCss", source, StringComparison.Ordinal);
@@ -28,26 +28,26 @@ public sealed class UsageModeVisualIdentityTests
     public void Chrome_lumora_applique_la_palette_du_mode_actif()
     {
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
-        var settings = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
-        var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+        var settingsTheme = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
+        var windowChrome = ReadRepoFile("Lumora.WinUI", "MainWindow.WindowChrome.cs");
 
         Assert.Contains("ModeChromeAccentStrip", xaml, StringComparison.Ordinal);
-        Assert.Contains("ApplyUsageModeChrome", settings, StringComparison.Ordinal);
-        Assert.Contains("ResolveModeChromePalette", settings, StringComparison.Ordinal);
-        Assert.Contains("ModeChromePalette", settings, StringComparison.Ordinal);
-        Assert.Contains("SetIdentityGradient", settings, StringComparison.Ordinal);
-        Assert.Contains("UsageModeButton.Background", settings, StringComparison.Ordinal);
-        Assert.Contains("ApplyWindowTitleBarColors();", settings, StringComparison.Ordinal);
-        Assert.Contains("BrushColor(\"NovaChromeSurfaceBrush\"", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("ApplyUsageModeChrome", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("ResolveModeChromePalette", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("ModeChromePalette", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetIdentityGradient", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("UsageModeButton.Background", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("ApplyWindowTitleBarColors();", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("BrushColor(\"NovaChromeSurfaceBrush\"", windowChrome, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Accueil_lumora_affiche_un_outil_et_une_presentation_par_mode()
     {
-        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.Navigation.cs");
+        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
         var webMessaging = ReadRepoFile("Lumora.WinUI", "MainWindow.WebMessaging.cs");
         var uiSettings = ReadRepoFile("Lumora.WinUI", "Models", "UiSettings.cs");
-        var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+        var usageMode = ReadRepoFile("Lumora.WinUI", "MainWindow.UsageMode.cs");
         var settings = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
 
         Assert.Contains("NewTabModeIntroHtml", navigation, StringComparison.Ordinal);
@@ -62,7 +62,7 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("Objectif de maintenant", navigation, StringComparison.Ordinal);
         Assert.Contains("Source ou piste à vérifier", navigation, StringComparison.Ordinal);
         Assert.Contains("Rappel pour plus tard", navigation, StringComparison.Ordinal);
-        Assert.Contains("_uiSettings.LastIntroducedUsageMode = string.Empty", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("_uiSettings.LastIntroducedUsageMode = string.Empty", usageMode, StringComparison.Ordinal);
         Assert.Contains("_uiSettings.LastIntroducedUsageMode = string.Empty", settings, StringComparison.Ordinal);
     }
 
@@ -70,9 +70,10 @@ public sealed class UsageModeVisualIdentityTests
     public void Modes_lumora_ont_un_compagnon_permanent_et_un_accueil_aere()
     {
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
-        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.Navigation.cs");
-        var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
+        var usageMode = ReadRepoFile("Lumora.WinUI", "MainWindow.UsageMode.cs");
         var settings = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
+        var settingsTheme = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
 
         Assert.Contains("ModeCompanionButton", xaml, StringComparison.Ordinal);
         Assert.Contains("ModeCompanionFlyout", xaml, StringComparison.Ordinal);
@@ -90,12 +91,12 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("NavigationMenuButtonColumn", xaml, StringComparison.Ordinal);
         Assert.Contains("Grid.Column=\"21\"", xaml, StringComparison.Ordinal);
         Assert.Contains("NavigationMenuButton", xaml, StringComparison.Ordinal);
-        Assert.Contains("ChromeTint", settings, StringComparison.Ordinal);
-        Assert.Contains("ModeCompanionPrimaryButton_Click", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("ModeCompanionSaveButton_Click", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("RunModeCompanionActionAsync", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("ModeCompanionDefinition", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("CompanionMemory(string mode)", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("ChromeTint", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("ModeCompanionPrimaryButton_Click", usageMode, StringComparison.Ordinal);
+        Assert.Contains("ModeCompanionSaveButton_Click", usageMode, StringComparison.Ordinal);
+        Assert.Contains("RunModeCompanionActionAsync", usageMode, StringComparison.Ordinal);
+        Assert.Contains("ModeCompanionDefinition", usageMode, StringComparison.Ordinal);
+        Assert.Contains("CompanionMemory(string mode)", usageMode, StringComparison.Ordinal);
         Assert.Contains("UpdateModeCompanionUi();", settings, StringComparison.Ordinal);
         Assert.Contains(".home-grid", navigation, StringComparison.Ordinal);
         Assert.Contains(".home-primary", navigation, StringComparison.Ordinal);
@@ -106,7 +107,7 @@ public sealed class UsageModeVisualIdentityTests
     [Fact]
     public void Mode_equilibre_reste_distinct_du_mode_neutre()
     {
-        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.Navigation.cs");
+        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
         var webMessaging = ReadRepoFile("Lumora.WinUI", "MainWindow.WebMessaging.cs");
 
         Assert.Contains("\"balanced\" => \"balanced\"", navigation, StringComparison.Ordinal);
@@ -123,11 +124,11 @@ public sealed class UsageModeVisualIdentityTests
     public void Mode_neutre_reste_la_base_avec_raccourcis_et_acces_rapide()
     {
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
-        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.Navigation.cs");
-        var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
+        var usageMode = ReadRepoFile("Lumora.WinUI", "MainWindow.UsageMode.cs");
         var webMessaging = ReadRepoFile("Lumora.WinUI", "MainWindow.WebMessaging.cs");
         var uiSettings = ReadRepoFile("Lumora.WinUI", "Models", "UiSettings.cs");
-        var settings = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
+        var settingsTheme = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
         var wizard = ReadRepoFile("Lumora.WinUI", "MainWindow.SetupWizard.cs");
 
         Assert.Contains("UsageModeNeutralButton", xaml, StringComparison.Ordinal);
@@ -140,19 +141,19 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("neutral-name", navigation, StringComparison.Ordinal);
         Assert.Contains("if (mode == \"neutral\" || mode == \"balanced\")", navigation, StringComparison.Ordinal);
         Assert.Contains("NewTabUsageMode() != \"neutral\"", navigation, StringComparison.Ordinal);
-        Assert.Contains("PinnedModuleIds.Clear()", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("ModeCompanionButton.Visibility = Visibility.Visible", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("Ajouter un raccourci", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("PinnedModuleIds.Clear()", usageMode, StringComparison.Ordinal);
+        Assert.Contains("ModeCompanionButton.Visibility = Visibility.Visible", usageMode, StringComparison.Ordinal);
+        Assert.Contains("Ajouter un raccourci", usageMode, StringComparison.Ordinal);
         Assert.Contains("\"neutral\" => \"neutral\"", webMessaging, StringComparison.Ordinal);
         Assert.Contains("UsageMode { get; set; } = \"neutral\"", uiSettings, StringComparison.Ordinal);
-        Assert.Contains("\"neutral\" => 1", settings, StringComparison.Ordinal);
+        Assert.Contains("\"neutral\" => 1", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("WizardUsageNeutral.IsChecked = mode == \"neutral\"", wizard, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Accueil_equilibre_evite_la_pile_de_cartes_lourde()
     {
-        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.Navigation.cs");
+        var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
         var balancedStart = navigation.IndexOf("if (NewTabUsageMode() == \"balanced\")", StringComparison.Ordinal);
         var fallbackStart = navigation.IndexOf("return $$\"\"\"", balancedStart, StringComparison.Ordinal);
 
@@ -211,17 +212,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_83_22()
+    public void Version_projet_est_alignee_sur_0_83_41()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.83.24-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.83.24-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.83.24-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.83.24-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.83.54-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.83.54-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.83.54-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.83.54-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)
