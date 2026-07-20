@@ -38,6 +38,7 @@
     <Compile Include="..\Lumora.WinUI\BrandingText.cs"                    Link="Product\BrandingText.cs" />
     <Compile Include="..\Lumora.WinUI\Models\UserProfile.cs"             Link="Product\UserProfile.cs" />
     <Compile Include="..\Lumora.WinUI\Models\ProfilePaths.cs"            Link="Product\ProfilePaths.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\UiSettings.cs"              Link="Product\UiSettings.cs" />
     <Compile Include="..\Lumora.WinUI\Models\Profiles.cs"                Link="Product\Profiles.cs" />
     <Compile Include="..\Lumora.WinUI\LumoraConfig.cs"                    Link="Product\LumoraConfig.cs" />
     <Compile Include="..\Lumora.WinUI\Storage\LumoraFile.cs"              Link="Product\LumoraFile.cs" />
@@ -55,6 +56,11 @@
     <Compile Include="..\Lumora.WinUI\PasswordManager\VaultGroupingService.cs" Link="Product\VaultGroupingService.cs" />
     <Compile Include="..\Lumora.WinUI\Sessions\SessionKeepAdvisor.cs" Link="Product\SessionKeepAdvisor.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\WebAppLaunchArgs.cs" Link="Product\WebAppLaunchArgs.cs" />
+    <Compile Include="..\Lumora.WinUI\IncognitoLaunchArgs.cs" Link="Product\IncognitoLaunchArgs.cs" />
+    <Compile Include="..\Lumora.WinUI\IncognitoProcessLauncher.cs" Link="Product\IncognitoProcessLauncher.cs" />
+    <Compile Include="..\Lumora.WinUI\IncognitoWelcomeHtml.cs" Link="Product\IncognitoWelcomeHtml.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\FingerprintProtection\FingerprintProtectionScript.cs" Link="Product\FingerprintProtectionScript.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\GeolocationSpoofing\GeolocationSpoofScript.cs" Link="Product\GeolocationSpoofScript.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\WebAppUrlPolicy.cs" Link="Product\WebAppUrlPolicy.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\IcoWriter.cs" Link="Product\IcoWriter.cs" />
     <Compile Include="..\Lumora.WinUI\FaviconQuality.cs" Link="Product\FaviconQuality.cs" />
@@ -77,6 +83,7 @@
     <Compile Include="..\Lumora.WinUI\NavigationHealthTracker.cs" Link="Product\NavigationHealthTracker.cs" />
     <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordHealthAnalyzer.cs" Link="Product\PasswordHealthAnalyzer.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\SitePermissions\SitePermissionPolicy.cs" Link="Product\SitePermissionPolicy.cs" />
+    <Compile Include="..\Lumora.WinUI\SiteComfort\SiteComfortPolicy.cs" Link="Product\SiteComfortPolicy.cs" />
     <Compile Include="..\Lumora.WinUI\Models\DownloadHistory.cs" Link="Product\DownloadHistory.cs" />
     <Compile Include="..\Lumora.WinUI\ChromiumCredentialReader.cs" Link="Product\ChromiumCredentialReader.cs" />
     <Compile Include="..\Lumora.WinUI\Models\InstalledBrowsers.cs" Link="Product\InstalledBrowsers.cs" />
@@ -95,6 +102,10 @@
     <Compile Include="..\Lumora.WinUI\VideoDownload\YtDlpOutputParser.cs" Link="Product\YtDlpOutputParser.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameUncloakerModule.cs" Link="Product\CnameUncloakerModule.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameResolver.cs" Link="Product\CnameResolver.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorProcessManager.cs" Link="Product\TorProcessManager.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorTrustedRelease.cs" Link="Product\TorTrustedRelease.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorEngineState.cs" Link="Product\TorEngineState.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorEngineProvider.cs" Link="Product\TorEngineProvider.cs" />
     <EmbeddedResource Include="..\Lumora.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 

@@ -13,6 +13,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>Assets\LumoraApp.ico</ApplicationIcon>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;bin\**\*;obj\**;obj\**\*</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,9 +34,11 @@
     <Content Include="Translation\*.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="ReadAloud\*.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Reader\*.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="SemanticSearch\*.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Credentials\TestPages\*.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraApp.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraApp.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\LumoraIncognito.ico" CopyToOutputDirectory="PreserveNewest" />
     <!-- Public Suffix List (Mozilla, licence MPL 2.0) — https://publicsuffix.org -->
     <EmbeddedResource Include="Credentials\public_suffix_list.dat" />
   </ItemGroup>
