@@ -7359,3 +7359,1844 @@ process (voir plus haut), et Tor ne peut plus se basculer a chaud.
   telechargement automatique n'est pas cable, volontairement).
 
 **Version :** `0.83.24-dev`.
+
+
+## 2026-07-19 - Integrite de tor.exe avant lancement (0.83.25-dev)
+
+Suite du mode Incognito+Tor (0.83.24-dev) : l'utilisateur a demande de
+corriger le point n°1 encore ouvert de l'audit initial, en deux temps -
+d'abord l'integrite du binaire, puis le telechargement/l'installation.
+`TorProcessManager` lancait jusqu'ici n'importe quel fichier trouve a
+`<profil>/tor/tor.exe` sans la moindre verification (`IsEngineInstalled`
+faisait juste `File.Exists`), contraire a la regle `AGENTS.md` sur les
+binaires externes locaux.
+
+- Version passee a `0.83.25-dev`.
+- Nouveau `Lumora.WinUI/Tor/TorTrustedRelease.cs` : liste epinglee en dur du
+  SHA256 de `tor.exe`. Aucune valeur devinee : archive officielle
+  (`tor-expert-bundle-windows-x86_64-15.0.18.tar.gz`,
+  `dist.torproject.org`) reellement telechargee cette session, signature
+  GPG verifiee (cle Tor Browser Developers, empreinte
+  `EF6E286DDA85EA2A4BA7DE684E2C6E8793298290`), SHA256 de l'archive compare
+  au fichier de sommes de controle signe, extraction, et hash calcule sur
+  le `tor.exe` reellement extrait. Bonne surprise : ce bundle Windows ne
+  contient aucune DLL separee (juste `tor.exe`), donc pas de risque de
+  sideloading a couvrir en plus.
+- `TorProcessManager.StartAsync` appelle desormais
+  `VerifyEngineIntegrityAsync` avant tout lancement ; refus avec message
+  explicite si le fichier est absent ou ne correspond a aucun hash connu.
+- Nouveaux tests `Lumora.Tests/TorProcessManagerTests.cs`.
+- Doc corrigee au passage : `docs/PROCHAINES_ETAPES.md` mentionnait un
+  bouton "Installer le moteur Tor" qui n'existe plus depuis la fusion
+  Incognito (0.83.24).
+- Detail complet (methode de verification GPG, contournement `dirmngr`
+  indisponible dans l'environnement de dev) : `logs/2026-07-19-integrite-tor-0-83-25.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 523/523
+  tests reussis.
+- Build WinUI MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
+- Verification en conditions reelles, deux profils de test isoles : le vrai
+  `tor.exe` verifie se connecte normalement (bootstrap 0->100%, "IP
+  masquee : oui"), une copie alteree d'un seul octet est refusee avec le
+  message attendu, sans tentative d'execution.
+
+**Version :** `0.83.25-dev`.
+
+
+## 2026-07-19 - Telechargement et installation du moteur Tor (0.83.26-dev)
+
+Suite directe de l'etape precedente : l'utilisateur a teste sur sa machine
+reelle et vu que la bascule Tor affichait juste "Moteur Tor non installe."
+sans aucun moyen d'agir (capture d'ecran a l'appui) - le trou fonctionnel
+attendu, puisque rien n'installait encore le moteur. Cette version cable le
+telechargement + l'installation reelle, avec l'accord explicite de
+l'utilisateur sur l'approche (hash epingle en dur plutot que verification
+de signature GPG a l'execution, pour rester coherent avec l'etape 1 et ne
+pas ajouter de dependance crypto).
+
+- Version passee a `0.83.26-dev`.
+- `TorTrustedRelease.cs` etendu (`Version`, `ArchiveUrl`, `ArchiveSha256` -
+  memes valeurs deja verifiees a l'etape precedente, aucune nouvelle a
+  fabriquer).
+- Nouveau `Lumora.WinUI/Tor/TorEngineProvider.cs` : telecharge l'archive
+  officielle, verifie son SHA256, extrait uniquement `tor/tor.exe`
+  (`System.Formats.Tar`, deja dans le framework .NET 8 - aucune nouvelle
+  dependance), reverifie le binaire extrait, copie vers le profil. Double
+  verification par design : jamais un fichier non verifie n'atteint le
+  profil.
+- UI (`LumoraIncognitoWindow`) : nouveau bouton "Installer le moteur Tor" a
+  deux endroits (bascule d'en-tete et ecran d'echec au demarrage), jamais
+  declenche automatiquement - uniquement sur clic explicite. En cas de
+  succes, rouvre une fenetre neuve avec Tor active (le proxy est fige au
+  demarrage du process, comme avant).
+- Nouveaux tests `Lumora.Tests/TorEngineProviderTests.cs` (extraction sur
+  archive tar.gz synthetique, reseau reel volontairement exclu des tests
+  automatises).
+- Limite assumee et documentee dans `docs/PROCHAINES_ETAPES.md` : le hash
+  est epingle pour la version 15.0.18 uniquement - une nouvelle version Tor
+  demandera de refaire cette verification a la main. Accepte par
+  l'utilisateur, qui a note qu'une autre solution pourrait emerger d'ici la
+  prochaine mise a jour du protocole Tor.
+- Detail complet : `logs/2026-07-19-installation-tor-0-83-26.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 528/528
+  tests reussis.
+- Build WinUI MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
+- Verification en conditions reelles, bout en bout, sur un profil de test
+  totalement vierge (pilotage UIA par PID) : clic sur "Installer le moteur
+  Tor" -> telechargement reel depuis dist.torproject.org -> fermeture ->
+  reouverture automatique -> "IP masquee : oui". Fichier installe verifie
+  a la main (`Get-FileHash`) : hash identique a celui deja verifie a
+  l'etape precedente, aucune corruption pendant telechargement/extraction.
+
+**Version :** `0.83.26-dev`.
+
+
+## 2026-07-19 - Versionnement de schema pour UiSettings (0.83.27-dev)
+
+Point 4 de l'audit initial, choisi avant le point 3 (restructuration des
+god files de `MainWindow`) a la demande de l'utilisateur : avoir un filet
+de securite sur les migrations avant de toucher a `Settings.cs`, un des
+fichiers a decouper.
+
+- Version passee a `0.83.27-dev`.
+- `UiSettings.cs` : nouvelle propriete `SchemaVersion`
+  (`CurrentSchemaVersion = 1`), table `MigrationSteps` (vide aujourd'hui,
+  prete a recevoir une entree pour un futur renommage) et boucle generique
+  `ApplyMigrations` (internal, testable) appliquee sur le JSON brut avant
+  la deserialisation typee - pour qu'un renommage/suppression de propriete
+  ne fasse plus jamais reinitialiser TOUS les reglages via le catch-all de
+  `Load()`.
+- Nettoyage prealable indispensable (pas cosmetique) : 5 `using` non
+  utilises supprimes (`System.Net`, `System.Security.Cryptography`,
+  `System.Text`, `Microsoft.UI.Xaml`, `Microsoft.Web.WebView2.Core`) -
+  ils auraient bloque la compilation du fichier dans `Lumora.Tests`.
+  `UiSettings.cs` ajoute au projet de tests - premiers tests dedies a
+  cette classe.
+- Nouveaux tests `Lumora.Tests/UiSettingsMigrationTests.cs`.
+- Detail complet : `logs/2026-07-19-migration-uisettings-0-83-27.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 534/534
+  tests reussis.
+- Build WinUI MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
+- Verification en conditions reelles sur une copie du vrai profil de
+  l'utilisateur (jamais l'original) : ecran de verrouillage PIN atteint en
+  lancant `MainWindow` (attendu, mais bloquant sans les identifiants) -
+  verification poursuivie directement via `UiSettings.Load`/`Save` sur le
+  vrai fichier `ui-settings.pulse` copie. Valeurs reelles et personnalisees
+  confirmees (theme "system", transparence 77, minuteur a 0, modules
+  epingles personnalises), migration a `SchemaVersion = 1`, modification
+  d'un reglage + sauvegarde + rechargement : aucune perte parmi les ~65
+  proprietes. Test temporaire et copie supprimes apres verification.
+
+**Version :** `0.83.27-dev`.
+
+
+## 2026-07-19 - Restructuration des god files de MainWindow, increment 1/2 (0.83.28-dev)
+
+Point 3 de l'audit initial. `MainWindow` pese 17 229 lignes sur 37 fichiers
+partiels, dont 5 "god files" concentrent ~8500 lignes (~49%) :
+`Navigation.cs` (3010), `Settings.cs` (1597), `Bookmarks.cs` (1333),
+`Profile.cs` (1292), `xaml.cs` (1285). Exploration prealable par 3 agents en
+parallele avant toute modification. Perimetre convenu avec l'utilisateur :
+traiter les 3 fichiers les plus gros cette session, reporter
+`Profile.cs`/`xaml.cs` (le plus risque : etat partage par 7-19 autres
+fichiers + constructeur a l'ordre d'initialisation critique) a une session
+suivante.
+
+- Version passee a `0.83.28-dev`.
+- `MainWindow` est deja une `partial class` : deplacer une methode entre
+  fichiers ne change rien au runtime, seulement l'organisation. Risque
+  purement mecanique (transcription, using manquant, test couple a un
+  chemin de fichier), pas comportemental.
+- `Navigation.cs` (3010 -> 1426 l.) : `MainWindow.NewTabHome.cs` (1025 l.,
+  generateur de page nouvel onglet) et `MainWindow.TabGroups.cs` (601 l.,
+  groupes/onglets verticaux) extraits.
+- `Settings.cs` (1597 -> 992 l.) : `MainWindow.SettingsStorage.cs` (192 l.)
+  et `MainWindow.SettingsTheme.cs` (458 l., moteur de theme + P/Invoke
+  backdrop) extraits. Cluster plein-ecran/onglets-verticaux volontairement
+  garde groupe (le plus imbrique du fichier).
+- `Bookmarks.cs` (1333 -> 873 l.) : `MainWindow.BookmarksDialogs.cs`
+  (123 l.), `MainWindow.BookmarksImportExport.cs` (171 l.) et
+  `MainWindow.BookmarksFlyouts.cs` (216 l.) extraits. Rendu de la barre de
+  favoris volontairement laisse en place (couple a
+  `BookmarkBarRegressionTests.cs`).
+- **Piege rencontre deux fois** : des tests verifient du texte litteral par
+  chemin de fichier en dur plutot que par comportement
+  (`UsageModeVisualIdentityTests.cs` contre `Navigation.cs`/`Settings.cs`,
+  `BookmarkBarRegressionTests.cs` contre `Bookmarks.cs`). Deplacer le
+  contenu attendu casse ces tests sans regression reelle - corriges en
+  pointant vers le nouveau fichier. Lecon retenue : grep systematiquement
+  le nom du fichier source dans tout `Lumora.Tests/` avant une extraction
+  future, pas seulement les chaines reperees a la lecture.
+- Egalement rencontre : sequences d'echappement Unicode (glyphes d'icone)
+  accidentellement transformees en caracteres bruts lors d'une reecriture
+  manuelle du premier fichier extrait - detecte par comparaison
+  octet-a-octet, corrige, puis les extractions suivantes faites par
+  concatenation shell directe pour eliminer ce risque.
+- Detail complet (cartographie des blocs, notes de reprise pour
+  `Profile.cs`/`xaml.cs` incluant le cas `RootKeyDown`) :
+  `logs/2026-07-19-restructuration-mainwindow-0-83-28.md`.
+
+**Verification** :
+
+- Build MSBuild x64 (Debug) et `dotnet test` (534/534) executes apres
+  CHAQUE extraction, pas seulement a la fin.
+- Fidelite de chaque extraction verifiee par comparaison octet-a-octet
+  (`diff`/`cmp`), pas seulement par la compilation.
+- Verification en conditions reelles (profil de test isole, mode invite) :
+  nouvel onglet (NewTabHome), changement de theme confirme applique
+  (SettingsTheme), creation reelle d'un dossier de favoris avec rendu
+  correct dans l'arbre (BookmarksDialogs/BookmarksFlyouts). Aucune
+  exception. Nettoyage effectue.
+
+**Version :** `0.83.28-dev`.
+
+
+## 2026-07-19 - Restructuration des god files de MainWindow, increment 2/2 (0.83.29-dev)
+
+Suite et fin (pour l'instant) du point 3 de l'audit initial.
+
+- Version passee a `0.83.29-dev`.
+- **Decouverte** : `Profile.cs` n'avait finalement pas besoin
+  d'extraction. `RootKeyDown`, suspecte a l'increment 1 comme corps
+  etranger, utilise en realite directement `_pinBuffer`/`_pinFailCount`
+  (champs exclusifs a `Profile.cs`) dans sa branche principale - c'est un
+  routeur clavier multi-usage (palette, plein ecran, PIN) qui vit
+  legitimement ici. Laisse tel quel.
+- `xaml.cs` (1285 -> 652 lignes) : `MainWindow.UsageMode.cs` (553 l., mode
+  d'usage/compagnon Lumie) et `MainWindow.WindowChrome.cs` (165 l.,
+  couleurs de barre de titre/icone) extraits - les deux candidats surs
+  deja identifies a l'increment 1.
+- Lecon de l'increment 1 appliquee : chaque assertion de test contre
+  `xaml.cs` localisee (`grep -n`) AVANT l'extraction, pas apres. Resultat :
+  4 tests corriges preventivement dans
+  `Lumora.Tests/UsageModeVisualIdentityTests.cs`, `dotnet test` passe du
+  premier coup a 534/534 (aucune surprise, contrairement a l'increment 1).
+- Detail complet :
+  `logs/2026-07-19-restructuration-mainwindow-increment2-0-83-29.md`.
+
+**Verification** :
+
+- Build MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
+- `dotnet test` : 534/534 des le premier passage.
+- Fidelite verifiee par comparaison octet-a-octet (`diff`).
+- Verification en conditions reelles (profil de test isole, mode invite) :
+  changement de mode d'usage "Neutre" -> "Focus" confirme applique
+  ("Mode d'usage : Focus", "Compagnon du mode Focus"), sans exception -
+  valide `UsageMode.cs` et `WindowChrome.cs` (chrome de fenetre declenche
+  par le meme changement) dans la meme interaction.
+
+**Version :** `0.83.29-dev`.
+
+
+## 2026-07-19 - Tests pour les modules privacy/Tor/Incognito (0.83.30-dev)
+
+Point 1 de l'audit initial.
+
+- Version passee a `0.83.30-dev`.
+- `FingerprintProtectionScript`, `GeolocationSpoofScript`,
+  `IncognitoLaunchArgs` etaient deja des classes pures - juste ajoutees au
+  projet de tests et testees (19 tests).
+- Deux petites extractions de logique pure, aucun changement de
+  comportement : `IncognitoProcessLauncher.BuildArguments` (construction
+  des arguments, separee de `Launch` qui demarre un vrai process, non
+  testable) et nouveau `IncognitoWelcomeHtml.cs` (la page d'accueil de la
+  fenetre Incognito etait deja une fonction statique pure, coincee dans
+  `LumoraIncognitoWindow.xaml.cs`, une classe WinUI non compilable dans
+  `Lumora.Tests` - deplacee telle quelle, contenu verifie identique).
+- `LumoraIncognitoWindow` elle-meme reste sans test unitaire par nature
+  (fenetre WinUI) - couverte par verification en conditions reelles
+  (pilotage UIA), deja faite a plusieurs reprises cette session.
+- `MainWindow.ReadingLens.cs` (aussi mentionne dans l'audit initial) reste
+  hors perimetre, note dans `docs/PROCHAINES_ETAPES.md`.
+- Detail complet : `logs/2026-07-19-tests-privacy-incognito-0-83-30.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 567/567
+  tests reussis (534 precedents + 33 nouveaux), tous verts des le premier
+  passage.
+- Build WinUI MSBuild x64 (Debug) : 0 avertissement, 0 erreur.
+- Aucune verification en conditions reelles supplementaire necessaire :
+  extraction de logique pure uniquement, aucun comportement utilisateur
+  modifie.
+
+**Version :** `0.83.30-dev`.
+
+
+## 2026-07-19 - Pipeline CI (0.83.31-dev)
+
+Dernier point de priorite haute de l'audit initial.
+
+- Version passee a `0.83.31-dev`.
+- Nouveau `.github/workflows/ci.yml` : `pull_request`/`push` vers `main` +
+  `workflow_dispatch`. Deux jobs paralleles sur `windows-latest` : `dotnet
+  test` (net8.0-windows ne tourne pas sur Linux) et un build MSBuild
+  complet du projet WinUI avec `/warnaserror` (`dotnet build` seul echoue
+  sur ce projet - erreur MSB4062 sur `ExpandPriContent`, decouverte
+  plusieurs fois cette session - `microsoft/setup-msbuild` requis, meme
+  necessite que `scripts/run-winui.ps1` en local).
+- Aucun installeur ni executable de release genere par la CI (regle 20
+  d'AGENTS.md) - uniquement tests + build.
+- Depot pas encore pousse sur GitHub (aucun remote configure) - le
+  workflow s'activera des que ce sera fait.
+- Detail complet : `logs/2026-07-19-pipeline-ci-0-83-31.md`.
+- **Plus aucun point ouvert dans "priorite haute" de
+  `docs/PROCHAINES_ETAPES.md`.**
+
+**Verification** :
+
+- Syntaxe YAML validee localement.
+- `dotnet test --configuration Release` : 567/567 (meme commande que la
+  CI).
+- Build MSBuild avec `TreatWarningsAsErrors=true` : 0 erreur, confirme que
+  `/warnaserror` ne cassera rien en CI.
+- Workflow lui-meme non executable reellement (pas de remote GitHub
+  encore) - s'activera automatiquement des le depot pousse.
+
+**Version :** `0.83.31-dev`.
+
+
+## 2026-07-19 - Accessibilite socle et recherche d'accueil (0.83.32-dev)
+
+Premiere mise en oeuvre concrete apres l'audit UX/accessibilite demande par
+l'utilisateur : corriger les points a fort impact, a faible risque, sans
+refonte large du chrome.
+
+- Version passee a `0.83.32-dev`.
+- **Recherche de la page d'accueil simplifiee** : suppression du champ
+  temporairement `readonly` et du de-verrouillage differe par `setTimeout`
+  dans `MainWindow.NewTabHome.cs`. Le champ reste vide au chargement, mais
+  n'impose plus de comportement fragile au clavier ni de sequence ambigue
+  pour les lecteurs d'ecran.
+- **Toggles d'epinglage des modules rendus explicites** :
+  `UpdateModulesPinUi()` met maintenant a jour, pour chaque `ToggleButton`,
+  un libelle accessible et une info-bulle contextuelle du type
+  "Epingler ... dans la barre de modules" / "Retirer ... de la barre de
+  modules" au lieu d'un simple "Epingler" identique partout.
+- **Cartes dynamiques mieux exposees aux lecteurs d'ecran** :
+  ajout de noms accessibles sur les actions creees par code dans
+  `Telechargements`, `Applications`, `Groupes enregistres` et sur les
+  combos de permissions du `Centre du site`.
+- Nouveau test de garde-fou `Lumora.Tests/AccessibilityRegressionTests.cs`
+  pour verifier que :
+  - la recherche d'accueil ne revient pas a un champ bloque/deverrouille
+    artificiellement ;
+  - les actions dynamiques gardent des libelles accessibles explicites.
+- Log detaille ajoute : `logs/2026-07-19-accessibilite-socle-0-83-32.md`.
+
+**Verification** :
+
+- Premier `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore`
+  bloque par un acces refuse sur le cache `obj\Debug\net8.0-windows`
+  dans le sandbox.
+- Relance autorisee de la meme commande : `569/569` tests reussis.
+- Aucune verification visuelle ou Narrator reelle faite dans cette etape :
+  validation concentree sur le code, les libelles UIA et les tests de
+  regression texte.
+
+**Version :** `0.83.32-dev`.
+
+
+## 2026-07-19 - Accessibilite profonde des panneaux dynamiques (0.83.33-dev)
+
+Deuxieme lot suite a l'audit accessibilite : apres le socle (0.83.32-dev),
+l'objectif etait d'etendre la lisibilite et les conventions de focus/noms
+accessibles aux surfaces profondes, et pas seulement au chrome principal.
+
+- Version passee a `0.83.33-dev`.
+- **Nouvelles tailles d'accessibilite mutualisees** :
+  `AccessibilityBodyFontSize()` et `AccessibilitySecondaryFontSize()`
+  centralisent les tailles "texte principal" / "texte secondaire" pour les
+  controles dynamiques.
+- **Rerender des panneaux quand l'accessibilite change** :
+  `ApplyAccessibilitySettings()` appelle maintenant
+  `RefreshAccessibilitySensitivePanels()` pour reconstituer, quand ils sont
+  visibles, les panneaux dynamiques qui dependaient jusque-la d'un simple
+  affichage initial (`Telechargements`, `Groupes enregistres`,
+  `Applications`, `Passkeys`, `Portefeuille`, `Coffre`, `Sessions`,
+  `Centre du site`).
+- **Surfaces profondes elargies** :
+  les cartes `Sessions`, `Passkeys`, `Portefeuille` et le popup d'acces
+  rapide du coffre gagnent des tailles de texte coherentes avec
+  `Texte plus lisible`, ainsi que des noms accessibles plus explicites pour
+  les actions critiques.
+- **Correctif opportuniste valide** :
+  l'icone de suppression manquante dans `Passkeys` a ete restauree
+  (`\uE74D`), le bouton ne reste plus vide.
+- Tests de regression renforces dans
+  `Lumora.Tests/AccessibilityRegressionTests.cs` pour verifier :
+  - le rerender des panneaux quand les reglages d'accessibilite changent ;
+  - la presence des nouveaux libelles accessibles sur les surfaces
+    profondes.
+- Log detaille ajoute :
+  `logs/2026-07-19-accessibilite-panneaux-profonds-0-83-33.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` :
+  `570/570` tests reussis.
+- Aucune passe Narrator reelle ni verification visuelle exhaustive dans
+  cette etape : validation concentree sur le code, les rerenders et les
+  tests.
+
+**Version :** `0.83.33-dev`.
+
+## 2026-07-19 - Correctif de demarrage apres regression accessibilite
+
+Apres le lot `0.83.33-dev`, un blocage de demarrage a ete signale.
+Le build WinUI complet a permis d'isoler une erreur de compilation dans
+`MainWindow.SiteControl.cs` : `SitePermissionDescriptor` ne possede pas de
+propriete `Title`, il fallait utiliser `Label`.
+
+- Correctif applique dans la construction des lignes de permissions du
+  `Centre du site` pour reutiliser `descriptor.Label` dans le nom
+  accessible du `ComboBox`.
+- Verification reelle effectuee :
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-winui.ps1`
+    : build reussi, `0 erreur`.
+  - lancement bref de
+    `Lumora.WinUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\Lumora.WinUI.exe`
+    : demarrage confirme puis fermeture du processus de test.
+- Log detaille ajoute :
+  `logs/2026-07-19-correctif-demarrage-0-83-33.md`.
+
+## 2026-07-19 - Focus et contexte vocal des panneaux internes (0.83.40-dev)
+
+Pour continuer a pousser l'accessibilite au-dela des options de base,
+Lumora annonce maintenant mieux le contexte des panneaux internes et replace
+le focus clavier automatiquement sur la premiere action utile.
+
+- Version passee a `0.83.40-dev`.
+- `ShowPanel` enrichi dans `MainWindow.xaml.cs` avec un resume contextuel
+  plus explicite pour plusieurs panneaux clefs :
+  `Clés d'accès`, `Portefeuille`, `Centre du site`, `Sessions`,
+  `Gestionnaire de mots de passe`, `Paramètres` et `Modules`.
+- Nouveau helper de focus programmatique :
+  `FocusVisiblePanelEntryPoint`, avec recherche recursive du premier controle
+  tabbable visible via `FindFirstFocusableDescendant`.
+- `PasskeysPanel` et `WalletPanel` recoivent maintenant des
+  `AutomationProperties.Name` et `AutomationProperties.HelpText`
+  plus descriptifs.
+- Le bouton d'ajout de carte du portefeuille devient un point d'entree
+  explicite avec `x:Name="WalletAddCardButton"` et
+  `AutomationProperties.Name="Ajouter une carte au portefeuille"`.
+- Tests de regression source et versionnement mis a jour pour verrouiller :
+  - le resume contextuel de `ShowPanel`
+  - le helper de focus
+  - les nouveaux metadata UIA des panneaux `Passkeys` et `Portefeuille`
+  - la version `0.83.40-dev`.
+- Log detaille ajoute :
+  `logs/2026-07-19-focus-contexte-panneaux-0-83-40.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\\Lumora.Tests.csproj --no-restore` :
+  tests source reussis.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-winui.ps1`
+  : build WinUI complet reussi, `0 avertissement`, `0 erreur`.
+
+**Version :** `0.83.40-dev`.
+
+## 2026-07-19 - Annonces actives des changements d'etat (0.83.41-dev)
+
+Pour aller plus loin qu'une simple live region passive, Lumora pousse
+maintenant des notifications UIA actives sur les changements d'etat les plus
+importants, avec une petite deduplication pour eviter le bavardage.
+
+- Version passee a `0.83.41-dev`.
+- Nouveau helper `UpdateStatusText(...)` dans `MainWindow.xaml.cs` :
+  - met a jour `StatusText`
+  - declenche `RaiseNotificationEvent(...)`
+  - dedoublonne les annonces identiques sur une courte fenetre
+  - permet de marquer certains echecs comme `ActionAborted`.
+- `StatusText` expose maintenant :
+  - `AutomationProperties.Name="Etat Lumora"`
+  - un `HelpText` explicitant son role.
+- Les flux les plus importants passent par ce helper :
+  - ouverture de panneaux via `ShowPanel`
+  - acces/refus du coffre
+  - acces/refus du portefeuille
+  - actions passkeys
+  - purge et oubli des sessions
+  - centre du site et permissions
+  - application des options d'accessibilite.
+- Tests source et versionnement mis a jour pour verrouiller :
+  - la presence du helper central
+  - la levee de `RaiseNotificationEvent`
+  - les metadata UIA du `StatusText`
+  - la version `0.83.41-dev`.
+- Log detaille ajoute :
+  `logs/2026-07-19-annonces-actives-statut-0-83-41.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\\Lumora.Tests.csproj --no-restore` :
+  tests source reussis.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-winui.ps1`
+  : build WinUI complet reussi, `0 avertissement`, `0 erreur`.
+
+**Version :** `0.83.41-dev`.
+
+## 2026-07-19 - Navigation clavier transversale par zones (0.83.42-dev)
+
+Pour pousser Lumora au-dela des options d'accessibilite basiques du
+navigateur, une navigation clavier transversale a ete ajoutee sur les
+grandes zones du shell.
+
+- Version passee a `0.83.42-dev`.
+- Nouveau fichier `MainWindow.AccessibilityNavigation.cs` :
+  - definition de 5 zones shell (`Onglets`, `Barre d'adresse`,
+    `Contenu actif`, `Outils et navigation`, `Compagnon et statut`) ;
+  - cycle `F6` / `Shift+F6` entre ces zones ;
+  - acces direct `Ctrl+Alt+1..5` pour sauter vers une zone precise ;
+  - annonce UIA contextuelle `Zone clavier : ...` apres chaque deplacement.
+- La zone `Contenu actif` sait viser soit la page web en cours, soit le
+  premier controle utile du panneau interne visible (`Parametres`,
+  `Historique`, `Coffre`, `Portefeuille`, `Sessions`, etc.).
+- La navigation par zones se coupe volontairement quand un overlay bloqueur
+  est ouvert (`connexion`, `setup wizard`, `palette de commande`) pour
+  eviter des sauts de focus incoherents.
+- Test de regression source ajoute dans
+  `Lumora.Tests/AccessibilityRegressionTests.cs` pour verrouiller les
+  raccourcis, les zones exposees et l'annonce contextuelle.
+- Log detaille ajoute :
+  `logs/2026-07-19-navigation-zones-clavier-0-83-42.md`.
+
+## 2026-07-19 - Raccourcis accessibilite rendus decouvrables (0.83.43-dev)
+
+La navigation avancee et les aides clavier de Lumora commencaient a devenir
+puissantes, mais restaient encore trop cachees pour une personne qui ouvre
+simplement la section `Confort`.
+
+- Version passee a `0.83.43-dev`.
+- Section `Confort` enrichie dans `MainWindow.xaml` avec une nouvelle carte
+  `Raccourcis Lumora` :
+  - rappel de `F6` / `Maj+F6` pour les zones ;
+  - rappel de `Ctrl+Alt+1..5` pour les sauts directs ;
+  - rappel de `Ctrl+K` pour la palette ;
+  - rappel de `Win+H` pour la dictee Windows.
+- Nouveau bouton `Faire annoncer les raccourcis` :
+  il met a jour l'etat visible, puis relit les commandes importantes via
+  `AnnounceAccessibilityContext(...)` pour donner une aide immediate aux
+  personnes qui naviguent surtout au clavier ou avec lecteur d'ecran.
+- Test de regression source enrichi dans
+  `Lumora.Tests/AccessibilityRegressionTests.cs`.
+- Log detaille ajoute :
+  `logs/2026-07-19-raccourcis-confort-annonces-0-83-43.md`.
+
+## 2026-07-19 - Centre de confort rapide global (0.83.44-dev)
+
+Pour accelerer l'usage reel des aides distinctives de Lumora, le confort ne
+reste plus enferme dans `Parametres > Confort` : un centre d'action rapide
+est maintenant disponible directement dans la barre basse.
+
+- Version passee a `0.83.44-dev`.
+- Nouveau bouton `Confort rapide` dans le footer (`StatusBarRow`) avec :
+  - profil courant visible en permanence ;
+  - resume d'etat du confort ;
+  - 4 presets activables sans ouvrir les parametres :
+    `Equilibre`, `Mode calme`, `Vision fatiguee`, `Lecture profonde` ;
+  - bascule directe du `Guide de lecture`, de la `Loupe de lecture` et de
+    la `Lecture a voix haute` ;
+  - action `Faire relire l'etat de confort`.
+- Nouveau fichier `MainWindow.AccessibilityQuickActions.cs`.
+- Raccourcis globaux ajoutes :
+  - `Ctrl+Alt+6` : `Equilibre`
+  - `Ctrl+Alt+7` : `Mode calme`
+  - `Ctrl+Alt+8` : `Vision fatiguee`
+  - `Ctrl+Alt+9` : `Lecture profonde`
+  - `Ctrl+Alt+0` : annonce de l'etat courant
+- Les bascules de confort clees (`lecture a voix haute`, `loupe`,
+  `guide de lecture`) annoncent maintenant elles aussi activement leur
+  nouvel etat via `UpdateStatusText(...)`.
+- Test de regression source enrichi pour verrouiller :
+  - le bouton footer ;
+  - le flyout de confort ;
+  - les raccourcis globaux ;
+  - le helper de description d'etat.
+- Log detaille ajoute :
+  `logs/2026-07-19-confort-rapide-footer-0-83-44.md`.
+
+## 2026-07-19 - Repere contextuel et recentrage de focus (0.83.45-dev)
+
+Pour aller encore plus loin que les aides de confort classiques, Lumora
+sait maintenant repondre a deux questions concretes quand on navigue au
+clavier ou avec lecteur d'ecran : "ou suis-je ?" et "ramene-moi a
+l'endroit utile".
+
+- Version passee a `0.83.45-dev`.
+- Nouveau fichier `MainWindow.AccessibilityContext.cs`.
+- Nouveaux raccourcis globaux ajoutes :
+  - `Ctrl+Alt+F` : relire le repere courant ;
+  - `Ctrl+Alt+R` : recentrer le focus sur la zone utile.
+- Le centre `Confort rapide` du footer affiche maintenant aussi :
+  - un resume contextuel du repere courant ;
+  - un bouton `Ou suis-je maintenant ?` ;
+  - un bouton `Recentrer le focus`.
+- Le repere contextuel resume :
+  - la grande zone shell active ;
+  - la surface visible (page, panneau, section Parametres) ;
+  - le controle actuellement cible quand il est identifiable.
+- La navigation par zones a ete legerement etendue avec un
+  `FocusAccessibilityShellZone(..., announce: false)` pour permettre un
+  recentrage propre sans doublonner les annonces.
+- La carte `Raccourcis Lumora` dans `Confort` et son annonce vocale
+  integrent maintenant aussi `Ctrl+Alt+F` et `Ctrl+Alt+R`.
+- Test de regression source enrichi pour verrouiller :
+  - l'enregistrement des nouveaux accelerateurs ;
+  - la presence des nouveaux boutons du flyout ;
+  - le helper de description contextuelle ;
+  - le recadrage silencieux du focus.
+- Log detaille ajoute :
+  `logs/2026-07-19-repere-contextuel-focus-0-83-45.md`.
+
+## 2026-07-19 - Mode secours de confort avec retour arriere (0.83.46-dev)
+
+Pour accelerer une vraie sortie produit sans se perdre dans des micro-reglages,
+Lumora gagne maintenant un `mode secours` de confort : un seul geste pour
+renforcer la lisibilite, puis un autre pour revenir a l'etat precedent.
+
+- Version passee a `0.83.46-dev`.
+- Nouveau preset `Mode secours` dans `MainWindow.ComfortProfiles.cs` et dans
+  `Parametres > Confort`.
+- Nouveau fichier `MainWindow.AccessibilityRescue.cs`.
+- Nouveaux raccourcis globaux :
+  - `Ctrl+Alt+S` : active le `mode secours` ;
+  - `Ctrl+Alt+X` : restaure l'etat de confort precedent.
+- Le mode secours :
+  - capture l'etat courant une seule fois ;
+  - renforce contraste, taille de texte, reduction des mouvements et focus ;
+  - active la loupe et le guide de lecture ;
+  - place la bande de lecture sur `220 px` pour une reprise rapide.
+- Le footer `Confort rapide` expose maintenant aussi :
+  - un bloc `Mode secours` ;
+  - un bouton `Activer le mode secours` ;
+  - un bouton `Revenir a l'etat d'avant` ;
+  - un etat visible indiquant si un retour est encore disponible.
+- Les aides clavier annoncees dans `Confort` mentionnent aussi
+  `Ctrl+Alt+S` et `Ctrl+Alt+X`.
+- Tests source enrichis pour verrouiller :
+  - le nouveau preset ;
+  - les nouveaux raccourcis ;
+  - la capture/restauration de l'etat precedent ;
+  - les nouveaux boutons du flyout footer.
+- Log detaille ajoute :
+  `logs/2026-07-19-mode-secours-confort-0-83-46.md`.
+
+## 2026-07-19 - Annonces actives des changements d'etat (0.83.41-dev)
+
+Pour aller plus loin qu'une simple live region passive, Lumora pousse
+maintenant des notifications UIA actives sur les changements d'etat les plus
+importants, avec une petite deduplication pour eviter le bavardage.
+
+- Version passee a `0.83.41-dev`.
+- Nouveau helper `UpdateStatusText(...)` dans `MainWindow.xaml.cs` :
+  - met a jour `StatusText`
+  - declenche `RaiseNotificationEvent(...)`
+  - dedoublonne les annonces identiques sur une courte fenetre
+  - permet de marquer certains echecs comme `ActionAborted`.
+- `StatusText` expose maintenant :
+  - `AutomationProperties.Name="Etat Lumora"`
+  - un `HelpText` explicitant son role.
+- Les flux les plus importants passent par ce helper :
+  - ouverture de panneaux via `ShowPanel`
+  - acces/refus du coffre
+  - acces/refus du portefeuille
+  - actions passkeys
+  - purge et oubli des sessions
+  - centre du site et permissions
+  - application des options d'accessibilite.
+- Tests source et versionnement mis a jour pour verrouiller :
+  - la presence du helper central
+  - la levee de `RaiseNotificationEvent`
+  - les metadata UIA du `StatusText`
+  - la version `0.83.41-dev`.
+- Log detaille ajoute :
+  `logs/2026-07-19-annonces-actives-statut-0-83-41.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\\Lumora.Tests.csproj --no-restore` :
+  tests source reussis.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-winui.ps1`
+  : build WinUI complet reussi, `0 avertissement`, `0 erreur`.
+
+**Version :** `0.83.41-dev`.
+
+## 2026-07-19 - Bouton Passkeys Windows explicite en UIA (0.83.39-dev)
+
+La passe live sur `Clés d'accès (Passkeys)` a montré un comportement
+ambigu : le bloc `Paramètres Windows — Clés d'accès` etait bien visible dans
+le panneau, mais l'arbre UI Automation remontait surtout son texte interne,
+pas une action bouton clairement nommee.
+
+- Version passee a `0.83.39-dev`.
+- Le bouton du bloc `Gestion complete via Windows` recoit maintenant :
+  - `x:Name="PasskeysWindowsSettingsButton"`
+  - `AutomationProperties.Name="Ouvrir les paramètres Windows des clés d'accès"`
+- Test source enrichi pour verrouiller ce contrat d'accessibilite dans
+  `Lumora.Tests/AccessibilityRegressionTests.cs`.
+- Log detaille ajoute :
+  `logs/2026-07-19-passkeys-uia-windows-button-0-83-39.md`.
+
+## 2026-07-19 - Permissions du Centre du site plus lisibles et plus explicites (0.83.38-dev)
+
+Le `Centre du site` exposait deja des noms accessibles sur ses `ComboBox`
+de permissions, mais deux limites restaient visibles :
+
+- les libelles et explications de permissions n'etaient pas pleinement
+  raccordes au mode `Texte plus lisible` ;
+- le lecteur d'ecran annoncait le nom du controle sans reprendre le contexte
+  descriptif du type de permission et de son etat courant.
+
+- Version passee a `0.83.38-dev`.
+- `BuildSitePermissionRow()` utilise maintenant
+  `AccessibilityBodyFontSize()` pour le titre et
+  `AccessibilitySecondaryFontSize()` pour le texte d'explication.
+- Chaque `ComboBox` de permission recoit maintenant un `HelpText`
+  dynamique qui resume l'explication fonctionnelle et l'etat courant
+  (`Demander`, `Autoriser`, `Bloquer`).
+- Test de regression enrichi pour verifier la presence du `HelpText`
+  et l'usage des tailles de texte mutualisees dans `MainWindow.SiteControl.cs`.
+- Log detaille ajoute :
+  `logs/2026-07-19-centre-site-permissions-0-83-38.md`.
+
+## 2026-07-19 - Guide de lecture immersif et lancement WinUI debraye du binaire de build (0.83.36-dev)
+
+Pour aller au-dela des options d'accessibilite classiques du navigateur,
+un nouveau mode de lecture plus distinctif a ete ajoute dans Lumora :
+un guide de lecture immersif qui assombrit la page et laisse une bande de
+lecture mobile dans la zone utile.
+
+- Version passee a `0.83.36-dev`.
+- Nouveau reglage `AccessibilityReadingGuideEnabled` dans `UiSettings`.
+- Nouveau reglage `AccessibilityReadingGuideBandHeight` dans `UiSettings`
+  avec quatre tailles bornees (`120`, `160`, `220`, `300`).
+- Nouvelle carte UI dans `MainWindow.xaml` avec :
+  - un toggle `Guide de lecture immersif` ;
+  - un choix de largeur de bande.
+- Nouveau fichier `MainWindow.ReadingGuide.cs` :
+  - injection locale d'un overlay de lecture dans WebView2 ;
+  - suivi du pointeur, du focus et du clavier ;
+  - reapplication automatique sur les onglets ouverts.
+- Les profils de confort `Vision fatiguee` et `Lecture profonde`
+  activent maintenant aussi ce guide de lecture.
+- `ApplyAccessibilitySettings()` et les changements d'onglet/navigation
+  reappliquent desormais automatiquement le guide.
+- Correctif de workflow developpeur dans `scripts/run-winui.ps1` :
+  l'application n'est plus lancee depuis le dossier de build isole, mais
+  depuis une copie de lancement dediee sous `artifacts\tmp\winui-run\...`,
+  ce qui evite qu'un executable ouvert verrouille les builds suivantes.
+- Tests sources verifies avec un repertoire intermediaire temporaire :
+  succes (`exit code 0`).
+- Build WinUI complete reverifiee apres ce correctif de workflow :
+  succes, `0 avertissement`, `0 erreur`, temps ecoule `00:00:39.06`.
+- Aucune execution automatique supplementaire de `Lumora.WinUI.exe`
+  effectuee dans cette etape, conformement a la regle projet actuelle.
+- Log detaille ajoute :
+  `logs/2026-07-19-guide-lecture-immersif-0-83-36.md`.
+
+**Version :** `0.83.36-dev`.
+
+## 2026-07-19 - Correctif UIA sur l'application des reglages Confort (0.83.37-dev)
+
+Verification reelle de la nouvelle section `Confort` apres `0.83.36-dev`.
+Le pilotage UIA d'une instance WinUI isolee a montre que le chemin jusqu'au
+nouveau guide de lecture etait globalement bon, mais qu'un controle de fin
+de panneau restait mal expose :
+le bouton `ApplySettingsChangesButton` recevait bien le focus clavier, sans
+remonter de nom accessible lisible.
+
+- Version passee a `0.83.37-dev`.
+- Verification live realisee sur une instance Lumora isolee avec
+  `LUMORA_PROFILE_DIR` temporaire.
+- Chemin UIA confirme :
+  - `Menu Lumora` -> `Parametres` ;
+  - panneau `Confort` accessible ;
+  - `Guide de lecture immersif` present ;
+  - `Hauteur de la bande de lecture` presente.
+- Verification clavier live confirmee :
+  - `Loupe de lecture` -> `Guide de lecture immersif` ->
+    `Hauteur de la bande de lecture` -> `Annuler` ->
+    bouton d'application.
+- Correctif applique dans `MainWindow.xaml` :
+  `AutomationProperties.Name="Appliquer les changements"` sur
+  `ApplySettingsChangesButton`.
+- Test de regression source renforce dans
+  `Lumora.Tests/AccessibilityRegressionTests.cs`.
+- Nouveau log detaille ajoute :
+  `logs/2026-07-19-correctif-uia-confort-0-83-37.md`.
+
+**Version :** `0.83.37-dev`.
+
+## 2026-07-19 - Build WinUI isolee et script de build repare (0.83.35-dev)
+
+Le lot `Confort par site` avait remis en lumiere un probleme de fond :
+les builds WinUI locales se cognaient a des fichiers generes obsoletes ou
+verrouilles dans `Lumora.WinUI\obj` et `Lumora.WinUI\bin`, avec des
+erreurs de doublons ou de copie selon l'etat local du poste.
+
+- Nouveau helper `scripts/winui-build-common.ps1` pour centraliser une
+  build WinUI dans un espace isole sous `artifacts\tmp\winui-build\...`.
+- `scripts/build-winui.ps1`, `scripts/run-winui.ps1` et
+  `scripts/build-clean-test-artifact.ps1` passent maintenant par ce
+  contexte isole au lieu de s'appuyer directement sur les dossiers
+  intermediaires du projet.
+- Les proprietes MSBuild `BaseIntermediateOutputPath`,
+  `MSBuildProjectExtensionsPath`, `OutputPath` et `OutDir` sont redirigees
+  vers les repertoires temporaires isoles pour eviter les collisions avec
+  les fichiers verrouilles.
+- `Lumora.WinUI.csproj` exclut explicitement `bin\**` et `obj\**` des
+  items par defaut afin qu'un ancien `obj` local ne soit plus recompilé
+  comme du vrai code source quand le dossier intermediaire actif est
+  deplace hors du projet.
+- Le helper recopie les metadonnees NuGet deja presentes dans
+  `Lumora.WinUI\obj` et saute le restore reseau quand le cache local est
+  suffisant, ce qui supprime l'attente inutile sur `nuget.org` dans un
+  environnement hors ligne.
+- Log detaille ajoute :
+  `logs/2026-07-19-build-winui-isolee-0-83-35.md`.
+
+**Verification** :
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-winui.ps1`
+  : build WinUI reussie en `00:00:39.10`, `0 avertissement`, `0 erreur`.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-winui.ps1`
+  : build isolee reussie puis lancement de `Lumora.WinUI.exe` via
+  `Start-Process` sans erreur.
+
+**Version :** `0.83.35-dev`.
+
+## 2026-07-19 - Confort par site (0.83.35-dev)
+
+Premier lot de `confort par site` ajoute pour commencer a memoriser des
+preferences d'accessibilite au niveau du domaine plutot qu'uniquement au
+niveau global.
+
+- Version passee a `0.83.35-dev`.
+- Nouveau stockage `SiteComfortRules` dans `UiSettings`.
+- Nouvelle politique `SiteComfortPolicy` pour gerer :
+  - zoom memorise ;
+  - texte plus lisible ;
+  - animations reduites ;
+  - reinitialisation par domaine.
+- Nouvelle carte `Confort de ce site` dans le `Centre du site`.
+- Reapplication automatique du confort apres navigation et changement
+  d'adresse.
+- Correctif technique : abandon de l'appel a `WebView2.ZoomFactor` absent
+  dans cette pile WinUI, remplace par une injection CSS locale pour le zoom.
+- Tests source reussis avec un repertoire intermediaire temporaire pour
+  contourner un verrou local sur `obj`.
+- Verification WinUI locale partielle seulement : le blocage `ZoomFactor`
+  a disparu, mais la build isolee retombe ensuite sur des verrous /
+  doublons preexistants dans des fichiers generes `obj`.
+- Log detaille ajoute :
+  `logs/2026-07-19-confort-par-site-0-83-35.md`.
+
+**Version :** `0.83.35-dev`.
+
+## 2026-07-19 - Profils de confort prets a l'emploi (0.83.34-dev)
+
+Le menu `Confort` ne devait plus rester une simple liste de toggles
+techniques. Un premier lot produit a donc ete ajoute pour donner a Lumora
+des postures de confort plus lisibles et plus rapides a activer.
+
+- Version passee a `0.83.34-dev`.
+- Nouveau reglage `AccessibilityComfortProfile` dans `UiSettings` pour
+  memoriser la posture de confort courante (`balanced`, `calm`, `vision`,
+  `reading`, `custom`).
+- Nouvelle logique de profils dans `MainWindow.ComfortProfiles.cs` :
+  - `Equilibre`
+  - `Mode calme`
+  - `Vision fatiguee`
+  - `Lecture profonde`
+  - etat `Personnalise` detecte automatiquement quand l'utilisateur melange
+    manuellement plusieurs aides.
+- Section `Confort` enrichie dans `MainWindow.xaml` avec une carte
+  `Profils prets a l'emploi`, une radio de selection et un resume dynamique
+  du profil actif.
+- Les toggles `Affichage`, `Lire a voix haute` et `Loupe de lecture`
+  resynchronisent maintenant automatiquement l'etat du profil courant au lieu
+  de laisser un preset mensonger affiche.
+- Test de regression corrige pour le `Centre du site` (`descriptor.Label`
+  au lieu de `descriptor.Title`) et nouveau test source pour verifier la
+  presence des profils de confort.
+- Log detaille ajoute :
+  `logs/2026-07-19-profils-confort-0-83-34.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\\Lumora.Tests.csproj --no-restore` :
+  `571/571` tests reussis.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-winui.ps1`
+  : build WinUI complet reussi, `0 avertissement`, `0 erreur`.
+
+**Version :** `0.83.34-dev`.
+
+## 2026-07-19 - Profils de confort prets a l'emploi (0.83.34-dev)
+
+Le menu `Confort` ne devait plus rester une simple liste de toggles
+techniques. Un premier lot produit a donc ete ajoute pour donner a Lumora
+des postures de confort plus lisibles et plus rapides a activer.
+
+- Version passee a `0.83.34-dev`.
+- Nouveau reglage `AccessibilityComfortProfile` dans `UiSettings` pour
+  memoriser la posture de confort courante (`balanced`, `calm`, `vision`,
+  `reading`, `custom`).
+- Nouvelle logique de profils dans `MainWindow.ComfortProfiles.cs` :
+  - `Equilibre`
+  - `Mode calme`
+  - `Vision fatiguee`
+  - `Lecture profonde`
+  - etat `Personnalise` detecte automatiquement quand l'utilisateur melange
+    manuellement plusieurs aides.
+- Section `Confort` enrichie dans `MainWindow.xaml` avec une carte
+  `Profils prets a l'emploi`, une radio de selection et un resume dynamique
+  du profil actif.
+- Les toggles `Affichage`, `Lire a voix haute` et `Loupe de lecture`
+  resynchronisent maintenant automatiquement l'etat du profil courant au lieu
+  de laisser un preset mensonger affiche.
+- Test de regression corrige pour le `Centre du site` (`descriptor.Label`
+  au lieu de `descriptor.Title`) et nouveau test source pour verifier la
+  presence des profils de confort.
+- Log detaille ajoute :
+  `logs/2026-07-19-profils-confort-0-83-34.md`.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\\Lumora.Tests.csproj --no-restore` :
+  `571/571` tests reussis.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\build-winui.ps1`
+  : build WinUI complet reussi, `0 avertissement`, `0 erreur`.
+
+**Version :** `0.83.34-dev`.
+
+## 2026-07-19 - Correctif de demarrage apres regression accessibilite
+
+Apres le lot `0.83.33-dev`, un blocage de demarrage a ete signale.
+Le build WinUI complet a permis d'isoler une erreur de compilation dans
+`MainWindow.SiteControl.cs` : `SitePermissionDescriptor` ne possede pas de
+propriete `Title`, il fallait utiliser `Label`.
+
+- Correctif applique dans la construction des lignes de permissions du
+  `Centre du site` pour reutiliser `descriptor.Label` dans le nom
+  accessible du `ComboBox`.
+- Verification reelle effectuee :
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-winui.ps1`
+    : build reussi, `0 erreur`.
+  - lancement bref de
+    `Lumora.WinUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\Lumora.WinUI.exe`
+    : demarrage confirme puis fermeture du processus de test.
+- Log detaille ajoute :
+  `logs/2026-07-19-correctif-demarrage-0-83-33.md`.
+
+## 2026-07-19 - Nouveau circuit Tor pour echapper aux boucles de captcha (0.83.47-dev)
+
+Signalement utilisateur en conditions reelles : mode Incognito+Tor active,
+un captcha (recherche) redemandait sans fin malgre des reponses correctes,
+pendant environ une demi-heure. Diagnostic : comportement connu du reseau
+Tor (le noeud de sortie utilise a une mauvaise reputation aupres du systeme
+anti-bot du site, la reponse au captcha n'y change rien), aggrave ici par
+l'absence totale de mecanisme pour changer de circuit sans fermer toute la
+fenetre Incognito (le port SOCKS et le dossier de session etant figes au
+demarrage du process, cf. 0.83.24-dev). Feu vert explicite de l'utilisateur
+pour corriger.
+
+- Version passee a `0.83.47-dev`.
+- `TorProcessManager` lance desormais aussi `--ControlPort` (port libre
+  dynamique, comme le port SOCKS) avec `--CookieAuthentication 1` (jamais de
+  mot de passe a gerer, jamais expose hors de 127.0.0.1).
+- Nouvelle methode `RequestNewCircuitAsync()` : authentifie aupres du
+  control port via le cookie ecrit par Tor dans `DataDirectory`, envoie
+  `SIGNAL NEWNYM`. Cooldown cote client de 10s aligne sur celui impose par
+  Tor lui-meme (`NewCircuitCooldown`), avec message honnete si la demande
+  est trop rapprochee plutot qu'un bouton qui semble agir sans rien faire.
+- Nouveau bouton `Nouveau circuit` dans l'en-tete de `LumoraIncognitoWindow`,
+  visible uniquement quand Tor est actif et connecte : demande un nouveau
+  circuit puis recharge la page courante. Ne ferme jamais la fenetre
+  (contrairement a la bascule Tor elle-meme) : c'est le point cle qui
+  manquait pour sortir d'une boucle de captcha sans perdre la fenetre.
+- Limite assumee et non maquillee : les connexions deja ouvertes peuvent
+  garder l'ancien circuit jusqu'a leur fermeture naturelle - meme limite que
+  le `New Identity` de Tor Browser, jamais presentee comme une garantie
+  instantanee.
+- Correctif au passage, sans lien avec Tor : `AccessibilityRegressionTests.cs`
+  ne compilait plus (variable `siteControl` utilisee mais jamais lue depuis
+  `MainWindow.SiteControl.cs`), bloquant toute execution des tests. Corrige
+  pour debloquer la verification de cette etape.
+- Nouveaux tests dans `Lumora.Tests/TorProcessManagerTests.cs` : refus
+  honnete quand Tor n'est pas connecte, et logique pure de cooldown
+  (`EvaluateCooldown`) testee sans control port reel ni vrai `tor.exe`.
+- Anomalie preexistante et sans lien constatee, non corrigee : le test
+  `BookmarkBarRegressionTests.Artifact_propre_publie_l_application_autonome`
+  echoue (attend la sous-chaine litterale `/t:Publish` dans
+  `scripts/build-clean-test-artifact.ps1`, qui utilise maintenant un helper
+  `-Target "Publish"`) - a signaler separement, hors perimetre de cette etape.
+- Aucun installateur ni executable de release genere. Aucun lancement
+  automatique de `Lumora.WinUI.exe` effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 576/577
+  tests reussis (le seul echec est l'anomalie preexistante ci-dessus, sans
+  lien avec cette etape).
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-winui.ps1`
+  : build WinUI complet reussi, `0 avertissement`, `0 erreur`, `00:00:40.55`.
+- Verification live du nouveau circuit (control port + `SIGNAL NEWNYM` en
+  conditions reelles) non faite dans cette etape - a faire avant de
+  considerer le correctif pleinement valide sur le terrain.
+
+**Version :** `0.83.47-dev`.
+
+## 2026-07-20 - Verification live du bouton Nouveau circuit (0.83.47-dev)
+
+Suite directe de l'ajout du bouton `Nouveau circuit` : verification en conditions
+reelles demandee explicitement par l'utilisateur (`go`), via le skill `verify`.
+
+- Build via MSBuild direct (`Lumora.WinUI.csproj /t:Build`), profil isole sous
+  `%TEMP%\lumora-verify-newcircuit-...`, lance directement en
+  `--incognito --incognito-tor` (contourne le selecteur de profil).
+- `tor.exe` verifie (hash identique a `TorTrustedRelease`) copie depuis le
+  profil local existant vers le profil isole - copie de fichier locale
+  uniquement, aucun telechargement reseau declenche pour cette verification.
+- Premier essai : bootstrap Tor bloque a 30% pendant ~7 minutes, puis le
+  process `Lumora.WinUI.exe` s'est arrete de lui-meme sans dump de crash ni
+  exception journalisee. Diagnostic pousse avant de conclure a un bug : lance
+  `tor.exe` en ligne de commande avec exactement les memes arguments
+  (`--ControlPort` + `--CookieAuthentication 1` inclus) - bootstrap complet a
+  100% en ~17s. Confirme que les deux nouveaux flags ne sont pas en cause :
+  aleas reseau/relais isole au premier essai, pas une regression du code.
+- Deuxieme essai reussi : connexion Tor quasi instantanee (consensus deja en
+  cache du premier essai), bouton `Nouveau circuit` visible des que
+  `IP masquee : oui`.
+- Clic pilote par UIA (`InvokePattern`) : statut passe a `Nouveau circuit Tor
+  demande.`, bouton desactive immediatement. Apres le cooldown de 10s, statut
+  revient a `IP masquee : oui` et bouton reactive.
+- Double-clic rapide teste : le deuxieme `Invoke()` UIA echoue
+  (`MethodInvocationException`) car le bouton est deja desactive au moment du
+  clic - le garde-fou UI empeche physiquement le double-clic avant meme que
+  la logique de cooldown de `RequestNewCircuitAsync` (deja testee
+  unitairement via `EvaluateCooldown`) ait besoin d'intervenir. Defense en
+  profondeur confirmee aux deux niveaux.
+- Trace runtime (`winui-runtime-trace.log`) verifiee : aucune exception
+  `UNHANDLED` sur les deux lancements de cette session. La seule ligne
+  `UNHANDLED` du fichier date du 2026-07-18, dans une methode
+  (`RebuildBrowserSurfaceAsync`) qui n'existe plus dans le code actuel -
+  residu d'une session anterieure sans lien.
+- Nettoyage effectue : process `tor.exe`/`Lumora.WinUI.exe` de test arretes,
+  profil isole et logs temporaires supprimes.
+- Point non elucide et documente plutot que maquille : la cause exacte de
+  l'arret silencieux du process au premier essai (sans crash dump, sans
+  exception journalisee) reste inconnue. Comme le second essai a reussi
+  proprement et que le probleme n'est pas reproductible avec les memes
+  arguments en ligne de commande directe, hypothese la plus probable = un
+  comportement de l'hote (app empaquetee WinUI restee inactive/"30%" trop
+  longtemps) plutot qu'un bug de cette fonctionnalite - a surveiller si ca se
+  reproduit.
+
+**Verification** : bouton `Nouveau circuit` fonctionnel de bout en bout en
+conditions reelles (control port, cookie auth, `SIGNAL NEWNYM`, cooldown UI +
+logique, rechargement de page). Le point non verifie a la fin de l'etape
+precedente est desormais couvert.
+
+**Version :** `0.83.47-dev`.
+
+## 2026-07-20 - DuckDuckGo fixe comme moteur de recherche Incognito (0.83.48-dev)
+
+Suite du diagnostic de la boucle de captcha : confirme avec l'utilisateur que
+le moteur utilise etait Google. Diagnostic pousse (lecture des modules
+`NetworkBlockerModule`, `TelemetryBlockerModule`, `ParameterCleanerModule`) :
+aucun d'eux n'interfere avec les domaines Google/captcha, et
+`ParameterCleanerModule.CleanUrl` n'est meme jamais appele dans la fenetre
+Incognito (seul `ShouldBlock` l'est). La cause n'est donc pas un bug Lumora :
+Google est connu pour bloquer parfois des **plages entieres** de noeuds de
+sortie Tor pour la recherche, independamment du circuit utilise - un nouveau
+circuit retombe souvent dans une plage deja mal notee. Meme Tor Browser
+officiel a ce probleme avec Google et bascule pour ca sur DuckDuckGo par
+defaut.
+
+- Version passee a `0.83.48-dev`.
+- `LumoraIncognitoWindow` utilise desormais un moteur de recherche **fixe**
+  (`IncognitoSearchEngine = "duckduckgo"`) pour la barre d'adresse,
+  independant du reglage global `_uiSettings.SearchEngine` (qui reste
+  `google` par defaut pour la fenetre normale). Choix assume : une garantie
+  fixe plutot qu'un nouveau reglage a exposer/expliquer, dans la meme logique
+  que les autres garanties Incognito toujours actives.
+- Nouveau test `Lumora.Tests/IncognitoSearchEngineTests.cs` verrouillant ce
+  choix par lecture de source (meme pattern que les autres tests de
+  regression source du projet).
+- Aucun installateur ni executable de release genere. Aucun lancement
+  automatique de `Lumora.WinUI.exe` effectue.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 577/578 tests
+  reussis (le seul echec est l'anomalie preexistante et sans lien deja
+  signalee en 0.83.47-dev, toujours non corrigee, hors perimetre).
+- Build WinUI (MSBuild direct) : reussi sans erreur.
+- Verification live non refaite pour ce changement precis (choix de moteur
+  de recherche, pas de logique reseau/Tor) - a confirmer par l'utilisateur
+  que la boucle de captcha ne se reproduit plus avec DuckDuckGo.
+
+**Version :** `0.83.48-dev`.
+
+## 2026-07-20 - Onglets et icone dediee pour le mode Incognito (0.83.49-dev)
+
+Suite de la resolution de la boucle de captcha : demande explicite de
+l'utilisateur (avec clarification via question a choix, les deux options
+"recommandees" retenues) pour deux ameliorations produit independantes du
+probleme Tor :
+- naviguer avec plusieurs onglets dans le mode Incognito ;
+- une icone de fenetre/barre des taches distincte ("style incognito") pour
+  reperer ces fenetres au premier coup d'oeil.
+
+**Onglets** :
+
+- Version passee a `0.83.49-dev`.
+- `LumoraIncognitoWindow` gagne une vraie barre d'onglets (`TabView` natif
+  WinUI, meme controle que la fenetre normale `MainWindow`). Revient sur le
+  choix "volontairement minimale, pas d'onglets" de 0.83.24-dev : desormais
+  documente comme "onglets simples" (pas de groupes, pas d'epingles, pas
+  d'historique d'onglets fermes - contrairement a `BrowserTabState` de la
+  fenetre normale).
+- Nouveau modele `IncognitoTab` (`Lumora.WinUI/IncognitoTab.cs`) : juste
+  `TabViewItem`, `WebView2`, `Address`, `Title`. Association directe via
+  `TabViewItem.Tag`, pas de lookup par id.
+- Point cle d'architecture verifie avant d'ecrire le code : le blocage connu
+  (0.83.24-dev) concernait un DEUXIEME ENVIRONNEMENT WebView2 explicite dans
+  le meme process, pas un deuxieme WebView2 tout court - `MainWindow` prouve
+  deja que plusieurs `WebView2` dans un seul process fonctionnent avec
+  `EnsureCoreWebView2Async()` sans argument. Les onglets Incognito restent
+  donc dans le MEME process (pas de nouveau `IncognitoProcessLauncher.Launch`
+  par onglet), et partagent donc automatiquement le meme etat Tor/session -
+  aucun risque de fuite entre onglets d'une meme fenetre.
+- `Core_NewWindowRequested` (target=_blank, window.open) ouvre desormais un
+  nouvel onglet dans cette fenetre au lieu d'une nouvelle fenetre Incognito
+  separee (ancien comportement, devenu inutile).
+- Fermer le dernier onglet ferme toute la fenetre (comme un navigateur
+  classique) - la session ephemere reste liee a la fenetre, pas a un onglet.
+- Nouveau raccourci `Ctrl+T` pour un nouvel onglet (n'existe pas dans
+  `MainWindow`, qui n'a que `Ctrl+Maj+T` pour "rouvrir l'onglet ferme" - ajout
+  specifique a Incognito, assume).
+- Bug de compilation trouve et corrige en cours de route : deux lambdas
+  `(_, args) => { _ = ...; }` faisaient planter la compilation (`_` comme
+  UNIQUE underscore parmi plusieurs parametres nommes devient un vrai
+  parametre nomme en C#, pas un discard - il faut au moins deux `_` dans la
+  meme liste pour que ce soit un discard. Le `_ = CreateTabAsync(...)`
+  tentait alors de reassigner ce parametre nomme). Renomme les parametres
+  concernes plutot que de compter sur le discard.
+
+**Icone dediee** :
+
+- Nouvelle icone `Assets/LumoraIncognito.ico` : badge violet (#8E7BD6, meme
+  teinte que le badge de `IncognitoWelcomeHtml`) avec un glyphe "lunettes"
+  blanc dessine par code (System.Drawing/GDI+, pas d'outil de design externe),
+  encapsule en ICO mono-image via le meme format que `IcoWriter.WrapPngAsIco`
+  (PNG brut dans un conteneur ICO, supporte depuis Vista).
+- `LumoraIncognitoWindow` recupere maintenant son propre `AppWindow` (meme
+  mecanisme que `LumoraAppWindow`) et appelle `SetIcon(...)` avec cette icone
+  au lieu de l'icone Lumora par defaut - visible dans la barre de titre ET la
+  barre des taches Windows.
+
+**Bug trouve et corrige en verification live** (sans lien avec les onglets ou
+l'icone) : `IncognitoWelcomeHtml.Build()` n'avait pas de balise `<title>`.
+WebView2 retombe alors sur l'URI `data:` brute (tres longue, base64) comme
+`DocumentTitle`, ce qui n'etait jamais visible avant (rien ne lisait ce champ
+dans l'ancien code mono-onglet) mais devenait visible avec les onglets (titre
+de fenetre ET intitule d'onglet pollues par l'URI brute). Corrige a la racine
+en ajoutant `<title>Incognito</title>` au HTML plutot qu'en contournant cote
+C#. Deuxieme bug trouve juste apres, du a ce correctif : le titre de fenetre
+devenait "Incognito - Incognito" (redondant) au lieu de "Incognito - Lumora"
+pour la page d'accueil, corrige via un helper `WindowTitleFor(...)` qui
+traite `"Nouvel onglet"` ET `"Incognito"` comme des etats neutres.
+
+**Anomalie environnementale constatee, non liee au code de cette etape** :
+plusieurs lancements de verification cette session (avec et sans Tor, avant
+et apres ce lot de changements) ont vu le process `Lumora.WinUI.exe` se
+fermer tout seul de facon totalement silencieuse - aucun crash dump, aucune
+exception journalisee dans `winui-runtime-trace.log`, parfois en quelques
+secondes seulement apres un demarrage reussi. Le pattern se reproduit sur du
+code strictement anterieur a cette session (deja vu lors de la verification
+du bouton `Nouveau circuit`, 0.83.47-dev) : ecarte comme cause du code
+applicatif. Hypothese non confirmee : un facteur externe au process
+(lancements repetes pendant cette session de verification, ou tout autre
+mecanisme du poste). La verification finale a fini par reussir de bout en
+bout en executant tout le scenario dans un seul script sans pause entre les
+etapes.
+
+- Nouveaux tests : `Lumora.Tests/IncognitoTabsAndIconTests.cs` (barre
+  d'onglets, fermeture du dernier onglet, `Ctrl+T`, ouverture en onglet plutot
+  qu'en nouveau process, icone dediee cote source et fichier ICO valide) et
+  un test ajoute dans `IncognitoWelcomeHtmlTests.cs` pour verrouiller la
+  balise `<title>`.
+- Aucun installateur ni executable de release genere. Aucun lancement
+  automatique de `Lumora.WinUI.exe` en dehors de la verification.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 584/585 tests
+  reussis (seul echec : l'anomalie preexistante et sans lien deja signalee en
+  0.83.47-dev, toujours hors perimetre).
+- Build WinUI (MSBuild direct) : reussi sans erreur.
+- Verification live complete en conditions reelles (profil isole, pilotage
+  UIA) : icone violette "lunettes" confirmee visible dans la barre de titre
+  (capture d'ecran) ; ouverture d'un 2e onglet confirmee (bouton "+", nom
+  "Incognito" correct sur les deux onglets, titre de fenetre "Incognito -
+  Lumora" correct) ; fermeture du 2e onglet ramene bien a 1 onglet, process
+  toujours actif ; fermeture du dernier onglet ferme bien toute la fenetre
+  (process termine proprement, pas par la fermeture mysterieuse).
+
+**Version :** `0.83.49-dev`.
+
+## 2026-07-20 - Incognito remplace la fenetre normale (0.83.50-dev)
+
+Demande explicite de l'utilisateur : quand on active le mode Incognito, le
+navigateur de base doit se fermer (plutot que d'avoir les deux fenetres
+ouvertes en meme temps). Clarifie avant d'agir (question a choix) : a la
+fermeture de la fenetre Incognito, la fenetre normale doit se rouvrir
+automatiquement (session/onglets restaures normalement) plutot que de laisser
+l'utilisateur sans aucune fenetre Lumora ouverte.
+
+- Version passee a `0.83.50-dev`.
+- Nouveau flag `IncognitoLaunchArgs.ReturnToMainFlag`
+  (`--incognito-return-to-main`), lu par `IncognitoLaunchArgs.IsIncognitoLaunch`
+  et transmis a `LumoraIncognitoWindow`.
+- `MainWindow.Incognito.cs` (`OpenIncognitoWindow`, utilisee par le menu, le
+  raccourci clavier et le selecteur de mode - un seul point d'entree) lance
+  desormais Incognito avec `returnToMain: true` puis appelle `Close()` sur
+  elle-meme.
+- `IncognitoProcessLauncher` gagne `LaunchMainWindow()` : relance
+  `Lumora.WinUI.exe` sans aucun argument Incognito (lancement normal, session
+  restauree comme d'habitude par le mecanisme existant de `MainWindow`, rien
+  de nouveau a cabler la-dessus).
+- `LumoraIncognitoWindow` retient `_returnToMain` (du lancement) et un
+  nouveau flag interne `_relaunchingIncognito` : les deux points ou Incognito
+  se relance elle-meme (bascule Tor, installation du moteur Tor) posent ce
+  flag a `true` juste avant leur propre `Close()`, pour que le gestionnaire
+  `Closed` sache faire la difference entre "l'utilisateur quitte vraiment
+  Incognito" (relance MainWindow si `_returnToMain`) et "on rouvre juste une
+  autre fenetre Incognito dans un etat different" (ne relance rien - sinon
+  double fenetre).
+- Nouveaux tests : `IncognitoLaunchArgsTests` et `IncognitoProcessLauncherTests`
+  etendus pour le nouveau flag ; nouveau fichier
+  `Lumora.Tests/IncognitoReturnToMainTests.cs` (cablage source : fermeture de
+  MainWindow, condition du Closed, les deux points qui posent
+  `_relaunchingIncognito`).
+- Aucun installateur ni executable de release genere. Aucun lancement
+  automatique de `Lumora.WinUI.exe` en dehors de la verification.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 590/591 tests
+  reussis (seul echec : l'anomalie preexistante et sans lien deja signalee en
+  0.83.47-dev, toujours hors perimetre).
+- Build WinUI (MSBuild direct) : reussi sans erreur.
+- Verification live cible sur le point le plus a risque (nouveau) : lancement
+  direct `--incognito --incognito-return-to-main` (equivalent au chemin
+  emprunte par MainWindow apres son propre `Close()`), fermeture du dernier
+  onglet -> fenetre Incognito fermee, ancien process termine proprement, et
+  un NOUVEAU process `Lumora.WinUI.exe` detecte automatiquement montrant une
+  fenetre normale ("Lumora 0.83.49-dev" au moment du test). Le trajet
+  MainWindow -> clic menu Incognito -> fermeture n'a pas ete rejoue via UIA
+  (navigation de flyouts imbriques hors scope de cette passe) : il reutilise
+  exactement le meme `Launch(...)`+`Close()` deja prouve fonctionner ailleurs
+  dans ce fichier (bascule Tor), risque juge faible.
+
+**Version :** `0.83.50-dev`.
+
+## 2026-07-20 - Correctif du rendu des onglets Incognito + message d'accueil pedagogique (0.83.51-dev)
+
+Signalement utilisateur : plus de message sur le nouvel onglet en mode
+Incognito depuis l'ajout des onglets (0.83.49-dev). Diagnostic en conditions
+reelles (capture d'ecran) : confirme un vrai bug, pas une impression - la
+zone de contenu de l'onglet etait completement vide (fond uni, aucun texte),
+alors que le titre de document ("Incognito") etait bien lu correctement.
+
+**Cause reelle** : `CreateTabAsync` plaçait le `WebView2` directement en
+`TabViewItem.Content`. Un `WebView2` en contenu direct d'un `TabViewItem` ne
+s'affiche pas de facon fiable (verifie : navigation reussie, titre lu, mais
+rien ne se peint a l'ecran). `MainWindow` n'a jamais fait ça : `BrowserTabs`
+(TabView) ne porte que la bande d'onglets, et un `Grid` separe et permanent
+(`BrowserHost`) contient tous les `WebView2`, la bascule d'onglet n'etant
+qu'un changement de `Visibility` (`ActivateTab`). Corrige en alignant
+`LumoraIncognitoWindow` sur exactement ce meme mecanisme :
+- XAML : `IncognitoTabs` (TabView, ligne `Auto`, ne porte plus de contenu)
+  + nouveau `IncognitoWebViewHost` (Grid, ligne `*`, toujours dans l'arbre
+  visuel) + `IncognitoErrorHost` (meme ligne, bascule d'ecran d'erreur).
+- Code-behind : `CreateTabAsync` ajoute la vue a `IncognitoWebViewHost.Children`
+  (plus a `item.Content`) ; `IncognitoTabs_SelectionChanged` bascule
+  `Visibility` de toutes les vues (Visible pour l'onglet actif, Collapsed pour
+  les autres) ; `FailTab` retire l'onglet/la vue plutot que d'essayer d'y
+  injecter un `TextBlock` d'erreur (qui ne se serait pas affiche non plus).
+- Verifie en conditions reelles apres correctif : le message d'accueil
+  s'affiche correctement sur 2 onglets differents, sans chevauchement ni
+  fantome de l'un dans l'autre.
+
+**Message d'accueil rendu pedagogique** (demande explicite, meme etape) :
+`IncognitoWelcomeHtml` n'annoncait que des statuts bruts ("IP masquee :
+oui/non"). Ajout d'un paragraphe expliquant le PRINCIPE - Incognito protege
+l'historique local, pas le trafic reseau (le FAI et les sites visites voient
+toujours l'IP reelle sans Tor, point de confusion deja documente en
+0.83.24-dev) - et enrichissement du paragraphe Tor pour expliquer le
+mecanisme (masque l'IP en routant via le reseau Tor) et le compromis
+(latence, d'ou desactive par defaut).
+
+- Version passee a `0.83.51-dev`.
+- Nouveaux tests : verrouillent le paragraphe principe reseau/local et
+  l'explication du bouton Tor (`IncognitoWelcomeHtmlTests`).
+- Aucun installateur ni executable de release genere. Aucun lancement
+  automatique de `Lumora.WinUI.exe` en dehors de la verification.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 593/594 tests
+  reussis (seul echec : l'anomalie preexistante et sans lien deja signalee en
+  0.83.47-dev, toujours hors perimetre).
+- Build WinUI (MSBuild direct) : reussi sans erreur.
+- Verification live complete : captures d'ecran avant/apres confirmant le
+  bug (fond vide) puis le correctif (message entierement visible, texte
+  pedagogique lisible) sur deux onglets differents.
+
+**Version :** `0.83.51-dev`.
+
+## 2026-07-20 - Correction de la collision "Equilibre" entre modes de navigation et Confort (0.83.52-dev)
+
+Demande utilisateur : revoir les profils de Confort (mis en place par un
+autre outil IA dans une session precedente) car "je ne comprends pas
+l'interet [...] certains modes n'ont pas d'interet". Audit demande avant
+toute action (agent Explore), avis donne, feu vert recu.
+
+**Constat de l'audit** : deux systemes totalement independants partagent
+litteralement le meme mot-cle "balanced"/"Equilibre" sans rien partager en
+interne :
+- Mode de navigation (`MainWindow.UsageMode.cs`, `UiSettings.UsageMode`) :
+  esthetique/organisation (style nouvel onglet, palette, modules epingles).
+  "Equilibre" y est un vrai preset avec du contenu.
+- Profil de Confort (`MainWindow.ComfortProfiles.cs`,
+  `UiSettings.AccessibilityComfortProfile`) : vrais reglages d'accessibilite
+  (contraste, texte, animations, lecture vocale, loupe, guide). Le profil
+  "Equilibre" de ce systeme ne configurait strictement rien (tout a l'etat
+  par defaut) - un profil vide deguise en carte cliquable.
+
+Autre probleme trouve, plus grave que la simple confusion de nom : activer
+le contraste eleve (Confort) ecrase silencieusement la palette du mode de
+navigation actif (`ApplyUsageModeChrome` retourne tot des que
+`highContrast` est actif) - aucun message n'expliquait pourquoi changer de
+mode de navigation n'avait alors plus d'effet visuel.
+
+**Corrections appliquees** :
+- Version passee a `0.83.52-dev`.
+- Profil de Confort "Equilibre" renomme "Aucune aide" (libelle uniquement -
+  la cle technique persistee `"balanced"` reste inchangee pour ne rien
+  casser dans les reglages deja sauvegardes sur disque). Mis a jour partout
+  ou le libelle apparaissait en dur : `MainWindow.ComfortProfiles.cs`
+  (Label + Summary honnete sur son role de reinitialisation), section
+  Confort des Reglages et bouton "Confort rapide" du footer
+  (`MainWindow.xaml`).
+- Le mode de navigation "Equilibre" (UsageMode) n'a pas ete touche : ce
+  n'est pas lui le probleme, il a un vrai contenu.
+- Nouveau signal d'eclipse : `UpdateUsageModeButtonUi()`
+  (`MainWindow.UsageMode.cs`) affiche desormais "Mode (masque)" au lieu de
+  "Mode" dans le footer, et une infobulle explicite
+  ("Couleurs remplacees tant que le contraste eleve (Confort) est actif.")
+  quand `AccessibilityHighContrast` est actif. Mis a jour automatiquement a
+  chaque changement de reglage d'accessibilite via un appel ajoute dans
+  `ApplyAccessibilitySettings()` (`MainWindow.SettingsTheme.cs`).
+- "Vision fatiguee", "Lecture profonde" et "Mode secours" laisses tels
+  quels : ce sont de vrais combos utiles (4 a 6 reglages a la fois) ou un
+  mecanisme propre (capture/restauration). "Mode calme" laisse aussi tel
+  quel apres reflexion : un seul reglage (reduction des animations) mais un
+  vrai reglage, pas un profil vide comme "Equilibre" l'etait.
+- Nouveaux tests : `Lumora.Tests/AccessibilityComfortNamingTests.cs`
+  (renommage cote source et XAML, cle technique preservee, mode de
+  navigation intact, signal d'eclipse present et branche).
+- Aucun installateur ni executable de release genere. Aucun lancement
+  automatique de `Lumora.WinUI.exe` en dehors de la verification.
+
+**Verification** :
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 599/600
+  tests reussis (seul echec : l'anomalie preexistante et sans lien deja
+  signalee en 0.83.47-dev, toujours hors perimetre).
+- Build WinUI (MSBuild direct) : reussi sans erreur.
+- Verification live incomplete cette fois : deux captures d'ecran
+  consecutives ont retourne du contenu totalement etranger a Lumora (une
+  fois une fenetre VS Code d'un autre projet, une fois ce meme fichier
+  MEMORY.md ouvert dans un editeur) au lieu de la fenetre Lumora attendue -
+  `BoundingRectangle` incoherent avec le contenu reel affiche a l'ecran.
+  Arrete volontairement de capturer l'ecran dans cette session plutot que de
+  risquer d'exposer a nouveau du contenu hors sujet. Le footer
+  "Confort rapide"/"Mode" n'etant visible que lorsqu'un panneau interne est
+  ouvert (`StatusBarRow` collapsed sur la page web), la confirmation
+  visuelle du nouveau libelle "Aucune aide" et du signal d'eclipse reste a
+  faire par l'utilisateur ou lors d'une prochaine session avec capture
+  d'ecran fiable. Le changement reste neanmoins couvert integralement par
+  les tests source ci-dessus et suit exactement le meme motif deja verifie
+  visuellement pour le profil "Vision fatiguee" (0.83.44-dev).
+
+**Version :** `0.83.52-dev`.
+
+## 2026-07-20 - Vision fatiguee ne rafraichissait pas la page ouverte + placeholder illisible (0.83.54-dev)
+
+Suite directe de 0.83.52-dev : l'utilisateur a teste "Vision fatiguee" en
+conditions reelles (capture d'ecran a l'appui) et signale deux symptomes
+concrets - "quand on active le mode il y a rien qui nous explique son
+fonctionnement" et surtout "il y a certains trucs qu'on voit plus rien" /
+"plein d'autres modes ca change rien [...] pour moi ca fonctionne pas".
+
+**Bug reel trouve (pas juste une impression)** : `ApplyAccessibilityComfortProfile`
+(`MainWindow.ComfortProfiles.cs`, chemin du bouton "Confort rapide" du footer
+et des raccourcis Ctrl+Alt+6-9) sauvegardait bien les reglages et mettait a
+jour le chrome natif WinUI, mais n'appelait jamais `RefreshNovaHomePages()`.
+Or `MainWindow.NewTabHome.cs` lit `_uiSettings.AccessibilityHighContrast` /
+`LargeText` / etc. au moment du rendu HTML de la page d'accueil - rendu qui
+n'est jamais redeclenche par un simple changement de `_uiSettings`. Une page
+d'accueil deja ouverte gardait donc ses anciennes couleurs/tailles apres
+activation d'un profil, exactement le symptome "ca change rien" signale.
+Le bouton "Appliquer les changements" des Reglages (`ApplySettingsChangesButton_Click`)
+le faisait deja correctement depuis le debut - seul le chemin rapide
+l'oubliait.
+
+**Deuxieme bug trouve en verifiant le premier** : le texte d'indication
+("Rechercher ou saisir une URL") de la barre de recherche de l'accueil
+gardait une couleur fixe brun-gris (`#81786d`) meme quand le contraste eleve
+passe le fond de la barre en blanc pur - contraste insuffisant, quasi
+invisible. Correspond probablement precisement au "on voit plus rien"
+signale. Corrige en rendant cette couleur sensible au contraste eleve
+(`#4a4a4a` sur fond blanc), meme mecanisme deja utilise pour les autres
+couleurs de ce fichier.
+
+- Version passee a `0.83.54-dev`.
+- `ApplyAccessibilityComfortProfile` appelle desormais `RefreshNovaHomePages()`
+  apres `ApplyAccessibilitySettings()`.
+- `.search input::placeholder` dans `MainWindow.NewTabHome.cs` suit
+  maintenant `_uiSettings.AccessibilityHighContrast`.
+- Nouveaux tests dans `Lumora.Tests/AccessibilityComfortNamingTests.cs`
+  (rafraichissement de la page d'accueil verrouille au niveau du corps de
+  methode, pas juste presence globale du texte ; contraste du placeholder).
+- Aucun installateur ni executable de release genere. Aucun lancement
+  automatique de `Lumora.WinUI.exe` en dehors de la verification.
+
+**Verification live reussie cette fois** (contrairement a 0.83.52-dev) :
+lecon apprise sur les echecs precedents - grouper lancement + interaction +
+capture d'ecran dans un seul script sans pause, et appeler `AutomationElement.
+SetFocus()` juste avant `CopyFromScreen`, evite que le focus reel du poste
+utilisateur (fenetres tierces) ne s'intercale et fausse la capture. Le
+selecteur de profil s'est aussi revele etre un overlay dans la MEME fenetre
+(pas une fenetre separee) : le contournement fiable est une marche d'arbre
+UIA elaguee (`ControlType.Document` ignore) cherchant par nom exact ou
+AutomationId, jamais `FindFirst(Descendants)` brut sur toute la fenetre
+(trop lent/peu fiable avec le contenu WebView2 charge). Deroule complet
+verifie par capture d'ecran : bouton "Confort rapide" affichant deja
+"Aucune aide" (correctif 0.83.52-dev confirme visuellement) ; ouverture du
+flyout, clic sur "Vision fatiguee" (AutomationId
+`AccessibilityQuickVisionButton`) ; page d'accueil deja ouverte visiblement
+transformee immediatement apres (recherche agrandie, horloge agrandie,
+palette contraste eleve) - correctif confirme fonctionnel ; footer affichant
+"Mode (masque) Neutre" - signal d'eclipse de 0.83.52-dev egalement confirme
+visuellement.
+
+- `dotnet test Lumora.Tests\Lumora.Tests.csproj --no-restore` : 601/602
+  tests reussis (seul echec : l'anomalie preexistante et sans lien deja
+  signalee en 0.83.47-dev, toujours hors perimetre).
+- Build WinUI (MSBuild direct) : reussi sans erreur.
+
+**Reste ouvert, non traite cette etape** : l'absence d'explication du
+fonctionnement au moment de l'activation d'un profil (un statut texte discret
+existe deja - "Profil de confort active : Vision fatiguee." - mais reste
+peu visible/peu explicatif). A voir si l'utilisateur le juge encore
+necessaire maintenant que le vrai bug de rafraichissement est corrige.
+
+**Version :** `0.83.54-dev`.
+
+## 2026-07-20 - Refonte structurelle de la rubrique Confort (0.83.54-dev)
+
+Suite a un retour utilisateur ("la rubrique confort, on comprend rien, [...]
+revois ca correctement et donne une vraie utilite a la chose"), audit complet
+du systeme Confort/Accessibilite (delegue a un agent Explore) puis refonte
+structurelle validee explicitement par l'utilisateur avant implementation
+("Reorganisation + nettoyage" : toutes les fonctions gardees, pas de coupe).
+
+**Diagnostic** : le mot "Confort" designait 3 systemes disjoints empiles au
+meme endroit (reglages visuels/lecture, mode secours, navigation clavier/
+lecteur d'ecran), avec duplication integrale des 6 profils entre Reglages et
+footer, mode secours activable par 3 chemins differents dans le meme flyout,
+et un bug de fond deja documente (RefreshNovaHomePages absent sur certains
+chemins) qui se reproduisait a l'identique sur un autre chemin non corrige
+(retour du mode secours).
+
+- Section Reglages > Confort scindee en deux blocs visuellement distincts :
+  "Confort de lecture" (profils, affichage, assistants vocaux) et "Navigation
+  clavier" (reperage/raccourcis/lecteur d'ecran).
+- Mode secours retire de la liste des profils (RadioButtons) : nouvelle carte
+  dediee "Mode secours" (`MainWindow.xaml`) avec ses propres boutons Activer/
+  Revenir, reliee aux memes `AccessibilityRescueActivateButton_Click`/
+  `AccessibilityRescueRestoreButton_Click` que le footer
+  (`MainWindow.AccessibilityRescue.cs`) - un seul chemin de logique, deux
+  points d'entree visuels.
+- `UpdateAccessibilityComfortProfileFromControls` (`MainWindow.ComfortProfiles.cs`)
+  gere desormais explicitement le cas "rescue" (plus de RadioButton
+  correspondant) : `SelectedIndex=-1` au lieu de retomber a tort sur "Aucune
+  aide" (bug qu'aurait cause une simple suppression naive du RadioButton).
+- Flyout "Confort rapide" du footer : suppression du bouton preset "Mode
+  secours" duplique (`AccessibilityQuickRescuePresetButton` retire), ajout de
+  sous-titres de regroupement ("Reperage clavier", "Mode secours (action
+  d'urgence, pas un profil)", "Changer de profil de confort", "Aides
+  individuelles"), ajout d'un bouton "Ouvrir les reglages complets de
+  Confort" (`AccessibilityQuickOpenSettingsButton_Click`).
+- Point d'application centralise : nouvelle methode
+  `ApplyAccessibilityComfortSideEffects()` (`MainWindow.ComfortProfiles.cs`),
+  appelee par le preset, le retour du mode secours ET chaque toggle
+  individuel des Reglages (auparavant seul le chemin preset appelait
+  `RefreshNovaHomePages()` - meme classe de bug corrigee sur tous les
+  chemins, y compris le retour du mode secours qui l'avait aussi).
+- `ComboBoxItem` "Confort" (160px, bande du guide de lecture) renomme
+  "Standard" pour arreter la collision de mot avec le nom de toute la
+  rubrique.
+- Texte du panneau "Confort de ce site" (Centre du site) precise desormais
+  explicitement l'independance vis-a-vis du Confort global
+  (`MainWindow.SiteComfort.cs`) ; bouton renomme "Reinitialiser le confort de
+  ce site".
+- Tests : `AccessibilityRegressionTests` et `AccessibilityComfortNamingTests`
+  mis a jour (references cassees corrigees, nouvelles assertions verrouillant
+  le point d'application unique et l'absence du doublon mode secours).
+
+**Verification** : build MSBuild reussi (0 erreur). `dotnet test` :
+602/603 (seul echec : `BookmarkBarRegressionTests.Artifact_propre_publie_l_application_autonome`,
+anomalie preexistante sans lien avec ce travail - `scripts/build-clean-test-artifact.ps1`
+etait deja modifie hors session pour un autre chantier). Verifie en
+conditions reelles (profil isole, mode invite, pilotage UIA) : structure des
+Reglages en deux blocs, activation/restauration du mode secours (contraste
+applique visuellement, un seul niveau d'annulation confirme, synchronisation
+footer <-> carte Reglages confirmee sur le meme texte d'etat), changement de
+profil "Vision fatiguee" applique immediatement et de facon coherente sur les
+deux surfaces.
+
+Piege UIA rencontre pendant la verification : `Lumora.WinUI\bin\x64\Debug\...`
+contient un executable OBSOLETE (build manuel anterieur a l'introduction des
+scripts `build-winui.ps1`/`run-winui.ps1`) qui ne se met plus a jour. Le vrai
+executable frais est sous
+`artifacts\tmp\winui-build\Lumora.WinUI\x64\Debug\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\Lumora.WinUI.exe`
+(chemin calcule par `Get-WinUiOutputDir` dans `scripts/winui-build-common.ps1`).
+Comparer les dates de modification XAML vs exe avant de faire confiance a un
+executable trouve par recherche large.
+
+**Reste ouvert, non traite cette etape** : numero de version non incremente
+(les fichiers de version - `AGENTS.md`, `MainWindow.xaml.cs` - touchent aussi
+`Lumora.Tests/UsageModeVisualIdentityTests.cs` et des scripts d'installeur
+deja modifies hors session pour un autre chantier en cours, Incognito/Tor ;
+bump laisse a l'utilisateur pour eviter un conflit avec ce travail parallele).
+
+**Version :** `0.83.54-dev` (inchangee).
+
+## 2026-07-20 - Tri du Confort et vraies aides d'accessibilite ciblees (0.83.54-dev)
+
+Suite directe de la refonte ci-dessus : l'utilisateur, apres avoir vu le
+resultat reorganise, a juge qu'il restait du "gras" (des reglages qui ne
+servent a rien) et a rappele l'intention de depart aupres d'un autre
+assistant IA - un vrai mode accessibilite pour situations de handicap, pas
+un mode "confort" generique. Diagnostic partage puis "Go" explicite avant
+implementation.
+
+**Coupes (plus de fonction reelle derriere, ou profil incoherent)** :
+- Toggle "Dictee vocale (bouton micro)" retire (Reglages, ComfortProfiles,
+  snapshot secours, `UiSettings.AccessibilityVoiceDictationEnabled`) : ne
+  faisait qu'attenuer l'opacite d'un bouton qui affiche un texte de rappel
+  Win+H, aucune fonction Lumora derriere. `MainWindow.Dictation.cs` simplifie
+  (bouton toujours a pleine opacite, reste accessible via le systeme de
+  modules epinglables existant, hors de portee de ce tri).
+- Profil "Mode calme" retire : un seul reglage (ReduceMotion) ne justifie pas
+  un profil a part.
+- Profil "Lecture profonde" retire : combinait lecture vocale + loupe + guide
+  de lecture simultanement, une combinaison artificielle plutot qu'un vrai
+  besoin.
+- Boutons "Ou suis-je maintenant ?"/"Recentrer le focus" retires du flyout
+  footer "Confort rapide" (visible par tout le monde) : outil de repere
+  clavier pour utilisateur de lecteur d'ecran, sans valeur pour le reste des
+  utilisateurs. Les raccourcis Ctrl+Alt+F/R restent actifs (accelerateurs
+  globaux inchanges, deja independants du bouton).
+- Hauteur de bande du guide de lecture reduite de 4 a 2 choix (Standard/
+  Large) : 4 niveaux pour un reglage secondaire etait du reglage pour le
+  plaisir de regler.
+- Cles techniques "calm"/"reading" retirees de `NormalizeAccessibilityComfortProfile`
+  (degradent proprement vers "custom" pour un ancien fichier de reglages qui
+  les contiendrait encore).
+
+**Ajouts (vraie accessibilite ciblee par situation de handicap, nouveau
+bloc "Aides ciblees" dans Confort de lecture)** :
+- **Espacement du texte des pages** (`AccessibilityTextSpacing` : normal/
+  comfortable/wide) - recommandation WCAG 1.4.12 (ligne >= 1.5x, lettres,
+  mots, paragraphes), aide dyslexie et basse vision. Nouveau fichier
+  `MainWindow.AccessibilityVision.cs`, meme mecanisme d'injection CSS par
+  navigation que le confort par site et le guide de lecture (script injecte
+  dans `BrowserView_NavigationCompleted`, `MainWindow.Navigation.cs`).
+- **Renforcement des couleurs** (`AccessibilityColorBoostEnabled`, bool) :
+  sature/durcit le contraste des pages (`filter: saturate(1.45) contrast(1.08)`),
+  aide certains daltoniens quand des couleurs proches se confondent.
+  Deliberement PAS presente comme une correction daltonienne scientifique
+  (matrices de simulation vs correction sont deux choses differentes, et une
+  simulation appliquee a la mauvaise personne serait contre-productive) :
+  texte UI honnete sur la limite, avec renvoi vers les Filtres de couleurs
+  Windows (Parametres > Accessibilite) pour qui veut une solution complete
+  systeme. Decision documentee ici pour ne pas la refaire sans y repenser.
+- Phase suivante explicitement differee (annoncee a l'utilisateur, pas
+  bacle) : police adaptee dyslexie, mode lecture epure generalise a tout site
+  (extraction de contenu, au-dela de l'accueil Lumora), cibles de clic
+  agrandies, defilement automatique. Ces quatre restent a faire.
+
+**Verification** : build MSBuild reussi. `dotnet test` 603/604 (meme
+anomalie preexistante que d'habitude, toujours sans lien). Verifie en
+conditions reelles sur une vraie page externe (fr.wikipedia.org, article
+"Accessibilite du web") : espacement large et renforcement des couleurs tous
+deux visiblement appliques par capture d'ecran (texte nettement plus aere,
+couleurs saturees/plus contrastees). Piege rencontre pendant la verification :
+naviguer vers une page ferme le panneau Reglages (Visibility=Collapsed), ce
+qui rend ses controles invisibles pour UIA (ControlView exclut les elements
+Collapsed) - il faut regler les options AVANT de naviguer, ou rouvrir les
+Reglages apres la navigation.
+
+**Version :** `0.83.54-dev` (inchangee, meme raison qu'a l'etape precedente).
+
+## 2026-07-20 - Vision fatiguee ne force plus le contraste renforce (0.83.54-dev)
+
+Retour utilisateur immediat apres verification : le profil "Vision fatiguee"
+rendait des zones illisibles. Cause reelle : le profil reutilisait
+`HighContrast: true`, la meme palette (noir/jaune brut) que le vrai
+"Contraste renforce" pense pour la basse vision - un besoin oppose a la
+fatigue visuelle, qui cherche moins d'agressivite visuelle, pas plus.
+
+- Preset "vision" (`MainWindow.ComfortProfiles.cs`) : `HighContrast: false`
+  desormais. Garde LargeText, ReduceMotion, ReadingGuide.
+- Nouveau reglage independant `AccessibilityReduceBlueLight` (bool,
+  `UiSettings.cs`) : toggle "Reduire la lumiere bleue" dans Reglages >
+  Confort > Affichage (5eme item, a cote de Contraste renforce/Texte plus
+  lisible/Transitions/Focus). Applique une teinte chaude discrete
+  (`sepia(0.18) saturate(0.92) brightness(0.98)`) au contenu web via le meme
+  mecanisme d'injection que les autres aides ciblees
+  (`MainWindow.AccessibilityVision.cs`).
+- Piege CSS evite : renforcement des couleurs et reduction de lumiere bleue
+  partagent tous deux la propriete `filter` - composees en UNE seule regle
+  (sinon la seconde ecraserait purement la premiere en cascade CSS, meme
+  specificite + `!important`).
+- Ajoute au tuple de preset (`AccessibilityComfortProfilePreset`) et au
+  snapshot du mode secours (`AccessibilityComfortSnapshot`) pour rester
+  coherent partout - "Aucune aide" et "Mode secours" restent a `false`
+  (rescue reste sur contraste maximal assume, cas d'urgence different).
+
+**Principe retenu pour la suite** : basse vision (contraste maximal) et
+fatigue visuelle (moins d'agressivite visuelle) sont deux besoins opposes, ne
+jamais les regrouper sous le meme interrupteur/preset.
+
+**Verification** : build + tests (voir plus haut, aucune regression). Verifie
+en direct sur la meme page Wikipedia : teinte chaude visible, texte
+entierement lisible partout (plus de zone noire/jaune brutale), footer et
+Reglages synchronises sur "Vision fatiguee".
+
+## 2026-07-20 - Mode sombre "Neutre" verdatre corrige (0.83.54-dev)
+
+Retour utilisateur : "le mode sombre actuel ressemble plutot a un truc
+verdatre". Diagnostic dans `MainWindow.SettingsTheme.cs` : deux sources
+cumulatives.
+
+1. Toutes les couleurs de surface/bordure du mode "Neutre" (`ResolveModeChromePalette`,
+   utilisees partout - fond, panneaux, cartes, bordures) avaient une teinte
+   ~195-208 degres (quasi-cyan) au lieu d'un bleu net (~220 degres) : le
+   canal vert etait systematiquement trop proche du bleu.
+2. Plus grave : la couleur "Accent" du mode Neutre etait `(107,157,150)` -
+   le VERT y etait le canal dominant (pas le bleu), soit ~172 degres de
+   teinte, du vert-sauge assume. Utilisee pour la barre d'accent sous le
+   selecteur de mode, le fond/bordure teintes du bouton de mode, et un
+   des 3 points dans le gradient de la marque d'identite Lumora (logo).
+   Meme souci pour "Focus" (185,210,205, ~168 degres) et "WarmAccent"
+   (128,146,142, ~168 degres malgre son nom).
+
+Corrige : rebalance systematique de toutes les couleurs sombres du mode
+"Neutre" (`ResolveModeChromePalette`) vers un bleu-ardoise net (~220 degres),
+Accent devient un bleu doux (110,130,170), WarmAccent devient vraiment chaud
+(200,190,170, sable/creme) au lieu de vert. Meme correction appliquee aux
+valeurs mortes-mais-partiellement-vivantes de `ApplyAccessibilitySettings`
+(NovaInfoSurfaceBrush et NovaPanelBackgroundBrush restent live, le reste est
+ecrase par `ApplyUsageModeChrome` juste apres mais corrige quand meme par
+hygiene) et aux couleurs de depart statiques (`MainWindow.xaml`, `App.xaml`).
+
+**Perimetre volontairement limite** : seul le mode d'usage "Neutre" (celui
+actif par defaut) a ete corrige. Les 5 autres modes (Focus/Lecture/Creatif/
+Recherche/Nuit) ont chacun une identite chromatique deliberee (ex.
+Recherche = cyan assume, Creatif = violet) et n'ont pas ete touches - pas
+signales comme problematiques.
+
+**Verification** : build + tests (aucune regression, aucun test ne verrouille
+ces valeurs RGB). Verifie visuellement en conditions reelles (accueil +
+menu Lumora deroule) : plus de teinte verte, bleu-nuit net partout.
+
+**Piege rencontre pendant la verification** : le process Lumora.WinUI s'est
+arrete seul entre deux captures (instabilite deja connue de cet
+environnement, voir [[verifier-lapp-winui]]) et le script a capture le BUREAU
+WINDOWS (photos personnelles) au lieu de la fenetre fermee - capture
+supprimee immediatement sans etre decrite. Ajouter systematiquement une
+verification process-vivant + nom de fenetre avant tout `CopyFromScreen`.
+
+**Version :** `0.83.54-dev` (inchangee).
+
+## 2026-07-20 - Recherche semantique locale dans l'historique (0.83.54-dev)
+
+Fonctionnalite issue d'une discussion produit ("qu'est-ce qui pourrait faire
+la difference tout en restant dans la philosophie sans-cloud") : recherche en
+langage naturel dans l'historique de navigation ("cet article sur X que
+j'avais lu"), par le sens du contenu des pages et non par mot-cle exact.
+Aucun navigateur grand public ne le propose - impossible a faire serieusement
+cote serveur sans etre effrayant en confidentialite, ce qui en fait un
+differenciateur structurel plutot qu'un simple argument marketing.
+
+**Architecture** (nouveau dossier `Lumora.WinUI/SemanticSearch/`) :
+- `EmbeddingModelCatalog.cs` : `Xenova/multilingual-e5-small` (384 dim,
+  ~118 Mo quantifie int8), meme source Hugging Face que les modeles de
+  traduction existants.
+- `EmbeddingEngine.cs` : un seul passage encodeur ONNX (pas de generation
+  autoregressive, donc plus simple que `TranslationEngine`), tokenizer
+  XLM-RoBERTa via `SentencePieceTokenizer` (`Microsoft.ML.Tokenizers`, meme
+  package deja utilise par la traduction) avec le decalage "fairseq" standard
+  de cette famille de modeles, pooling par moyenne masquee + normalisation
+  L2. Inference sequence par sequence sans padding (jamais de pad_token_id
+  utilise).
+- `EmbeddingService.cs` : telechargement/cache, meme pattern exact que
+  `TranslationService`/`SearchAssistService` (`.part` -> `File.Move`, aucune
+  verification de hash - conforme a l'existant, pas une regression).
+- `Models/SemanticHistoryIndex.cs` : store separe de `HistoryStore`, mais
+  **au moins aussi protege** (JSON chiffre DPAPI via `LumoraFile`, meme
+  plafond 2000 entrees) - decision deliberee : le contenu de page capture ici
+  est potentiellement plus sensible que le simple titre/URL de l'historique
+  classique, ca ne pouvait pas etre moins protege sous pretexte de simplicite
+  technique (SQLite non chiffre aurait ete plus simple mais moins protege).
+  Recherche par force brute (produit scalaire, embeddings deja normalises) :
+  suffisant pour un historique personnel, pas besoin d'index vectoriel
+  specialise.
+- `MainWindow.SemanticSearch.cs` : capture declenchee a chaque navigation
+  reussie (a cote de `AddHistoryEntry`), opt-in strict
+  (`UiSettings.HistorySemanticSearchEnabled`, desactive par defaut, meme
+  discours explicite sur la taille du telechargement que SearchAssist),
+  desactivee en mode invite comme le reste de l'historique.
+- UI : nouveau toggle "Recherche intelligente dans l'historique" dans
+  Reglages > Espace de travail (a cote de l'assistant IA de recherche). Le
+  panneau Historique existant complete ses resultats mot-cle avec les
+  resultats semantiques (`AugmentHistoryWithSemanticResultsAsync`), sans
+  duplication, sans distinction visuelle pour l'instant (simplification
+  MVP assumee).
+
+**Point de rigueur technique le plus important de cette session** : le
+decalage de tokenisation XLM-RoBERTa (piece sentencepiece brute vers id de
+vocabulaire final) est un piege bien connu et facile a rater silencieusement
+(des embeddings plausibles mais faux, sans aucune erreur visible). Plutot que
+de faire confiance a la convention memorisee, verification empirique reelle
+AVANT integration via un harnais autonome (hors Lumora, meme algorithme,
+modele reellement telecharge et execute) : trois tests independants
+(similaire vs different en francais, requete vs page pertinente/non
+pertinente, alignement multilingue fr/en) confirment tous une separation
+nette et coherente. Resultats concrets : phrases proches en sens
+~0.88-0.94 de similarite cosinus, phrases sans rapport ~0.78-0.85 - a partir
+de cette mesure reelle, le seuil de recherche (`SemanticHistoryIndex.Search`,
+`minScore`) a ete fixe a 0.85 (pas une valeur inventee a priori). Egalement
+verifie a cette occasion : le graphe ONNX de ce modele exige bien
+`token_type_ids` en entree (`EmbeddingEngine` le detecte dynamiquement via
+`InputMetadata` plutot que de le supposer).
+
+**Verification** : build + tests (603/604, meme anomalie preexistante sans
+lien). Harnais ML isole avec telechargement reel du modele (voir ci-dessus).
+Verifie aussi dans la vraie application (profil isole, mode invite) : le
+toggle apparait et s'active correctement dans Reglages > Espace de travail,
+aucune exception dans le log de trace apres navigation reelle vers une page
+externe.
+
+**Reste non teste en conditions reelles completes** : le cycle capture ->
+indexation -> recherche persistante n'a pas ete verifie de bout en bout dans
+l'application (le mode invite, seul mode testable sans naviguer l'ecran de
+creation de profil via UIA, desactive volontairement la capture - meme
+logique que l'historique classique). La confiance vient de la combinaison de
+deux verifications separees mais solides : le moteur ML (harnais isole,
+donnees reelles) et le branchement UI (application reelle, sans crash) sont
+chacun elle-meme verifies, mais pas encore leur enchainement complet sur un
+profil non-invite.
+
+**Reste a faire, explicitement differe** : distinction visuelle des
+resultats semantiques dans le panneau Historique (actuellement meles aux
+resultats mot-cle sans marqueur), acces a la recherche semantique depuis
+Ctrl+K (actuellement seulement dans le panneau Historique).
+
+**Version :** `0.83.54-dev` (inchangee).
+
+## 2026-07-20 - Verification d'integrite des modeles telecharges (0.83.54-dev)
+
+Suite a la question directe de l'utilisateur ("est-ce que TOI tu livrerais
+l'appli aujourd'hui ?"), deux manques concrets identifies plutot qu'un
+jugement flou : aucune verification d'integrite sur les modeles telecharges,
+et la recherche semantique jamais testee de bout en bout. Les deux devaient
+etre corriges "dans le respect de la politique du Navigateur" (aucune
+donnee ne sort de la machine).
+
+**Verification d'integrite** : AGENTS.md pose le principe "un binaire execute
+localement, son integrite est verifiee avant toute execution" - non respecte
+sur les 3 telechargements de modeles (SearchAssist/Phi-3 ~2,7 Go, Traduction
+OPUS-MT, Recherche semantique), qui ne verifiaient que HTTPS + code 200.
+Corrige :
+- Nouveau `Lumora.WinUI/ModelDownload/ModelIntegrity.cs` : calcul + verification
+  SHA256, suppression du fichier si l'empreinte ne correspond pas (le
+  telechargement sera retente au prochain usage), verification faite sur le
+  `.part` AVANT le `File.Move` final.
+- Empreintes obtenues en telechargeant reellement chaque fichier depuis
+  Hugging Face au moment de l'integration (pas une source tierce) : ~130 Mo
+  pour la traduction (en-fr + fr-en), ~2,95 Go pour Phi-3-mini (le plus gros
+  fichier, `.onnx.data`, n'avait jusque-la aucune verification), ~120 Mo pour
+  le modele d'embedding (deja telecharge lors de la verification precedente).
+  Catalogues (`EmbeddingModelCatalog`, `TranslationModelCatalog.RequiredFilesByPair`,
+  `SearchAssistService.RequiredFiles`) restructures en listes de `ModelFile
+  (RelativePath, Sha256)` au lieu de simples chemins.
+- Au passage : le test `BookmarkBarRegressionTests.Artifact_propre_publie_l_application_autonome`,
+  casse depuis plusieurs sessions ("anomalie preexistante" citee a chaque
+  fois), s'est revele etre une fausse alerte - assertions obsoletes
+  (`/t:Publish` litteral, guillemets autour de `$appDir`) apres un refactor
+  legitime du script d'installeur qui n'avait jamais change de comportement.
+  Corrige : **suite de tests verte pour la premiere fois de la session
+  (604/604)**.
+
+**Test de bout en bout de la recherche semantique sur un vrai profil** :
+tentative approfondie (9 iterations), non concluante mais instructive :
+- Confirme que `LUMORA_PROFILE_DIR` n'isole PAS la toute premiere creation de
+  profil via "Creer un autre profil" (elle ecrit dans le vrai
+  `%LocalAppData%\Lumora\profiles\` et modifie le `config.json` global,
+  `ActiveProfileId` y compris) - seulement les lancements suivants. A
+  chaque tentative, nettoyage manuel du profil reel pollue (profil test
+  supprime, `ActiveProfileId` restaure a `"default"`) : aucune trace laissee
+  sur la machine.
+- Decouverte utile : `MigrationSkipButton_Click` (`MainWindow.Profile.cs:839`)
+  appelle `RestartApp()` si `_restartRequired` - le process sort
+  intentionnellement et un nouveau processus le remplace. Pris au debut pour
+  un crash aleatoire (le symptome ressemble exactement a l'instabilite deja
+  documentee, sans exception loggee) alors que c'est un comportement normal
+  et voulu de l'onboarding. Une fois compris et gere (rattachement UIA au
+  nouveau PID), le flux redemarre correctement sur le selecteur de profil.
+- Le flux complet (creation -> redemarrage -> selection du profil ->
+  deverrouillage -> navigation -> Historique -> recherche) n'a neanmoins pas
+  ete mene a bien avant d'epuiser le temps raisonnable a y consacrer :
+  nouvelle instabilite de processus rencontree apres le redemarrage,
+  non diagnostiquee.
+- La confiance dans la fonctionnalite repose donc, comme note precedemment,
+  sur deux verifications solides mais toujours separees : le moteur ML
+  (harnais isole, donnees reelles, 2026-07-20) et le branchement UI (sans
+  crash, mode invite). Le cycle complet capture -> index -> recherche sur un
+  profil persistant reste a verifier reellement une prochaine fois - a
+  refaire idealement en utilisant le bouton "Changer" de l'ecran de
+  localisation du profil pour rediriger explicitement vers un dossier de
+  scratch des la creation, plutot que de nettoyer apres coup.
+
+**Verification** : build + tests (604/604, voir ci-dessus). Empreintes
+SHA256 verifiees valides (64 caracteres hexadecimaux) avant integration.
+
+**Version :** `0.83.54-dev` (inchangee).
