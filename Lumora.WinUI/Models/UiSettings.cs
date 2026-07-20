@@ -1,12 +1,7 @@
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using Microsoft.UI.Xaml;
-using Microsoft.Web.WebView2.Core;
 
 namespace Lumora.WinUI;
 
@@ -16,6 +11,15 @@ internal sealed class UiSettings
     {
         WriteIndented = true
     };
+
+    // Version de schema courante. Une propriete renommee/retypee de facon
+    // incompatible doit s'accompagner d'une nouvelle entree dans
+    // MigrationSteps (cle = ancienne version) plutot que d'un renommage nu :
+    // sinon JsonSerializer.Deserialize<UiSettings> peut lever une exception
+    // qui remonte au catch-all de Load() et reinitialise TOUS les reglages a
+    // Default(), pas seulement la propriete concernee.
+    public const int CurrentSchemaVersion = 1;
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
     public bool BookmarksBarVisible { get; set; } = true;
     public bool VerticalTabsEnabled { get; set; }
@@ -101,10 +105,29 @@ internal sealed class UiSettings
     public bool AccessibilityLargeText { get; set; }
     public bool AccessibilityReduceMotion { get; set; }
     public bool AccessibilityVisibleFocus { get; set; } = true;
-    // Bouton micro de la barre d'adresse : simple aide-mémoire vers la dictée
-    // Windows (Win+H), Lumora n'ouvre jamais le micro lui-même (le moteur SAPI
-    // intégré des versions 0.65.x a été retiré : retranscription trop mauvaise).
-    public bool AccessibilityVoiceDictationEnabled { get; set; }
+    // Teinte plus chaude (moins de lumiere bleue) sur les pages web visitees,
+    // pour la fatigue visuelle en usage prolonge ou en soiree. Volontairement
+    // distinct de AccessibilityHighContrast : la basse vision a besoin de
+    // contraste maximal, la fatigue visuelle a besoin de l'inverse (moins
+    // d'agressivite visuelle). N'affecte pour l'instant que le contenu web,
+    // pas encore la chrome native Lumora.
+    public bool AccessibilityReduceBlueLight { get; set; }
+    // "balanced", "calm", "vision", "reading", "rescue" ou "custom". Sert a
+    // memoriser la posture de confort choisie, tout en laissant l'utilisateur
+    // retoucher chaque interrupteur manuellement ensuite. "rescue" n'est plus
+    // selectionnable depuis la liste de profils des Reglages (c'est une
+    // action d'urgence a part, pas un profil qu'on choisit) mais reste une
+    // valeur valide, atteignable via la carte "Mode secours" ou le footer.
+    public string AccessibilityComfortProfile { get; set; } = "balanced";
+    // Espacement du texte des pages web (WCAG 1.4.12), applique par script
+    // injecte a chaque navigation (independant du profil de confort ci-dessus,
+    // qui ne touche que la chrome native Lumora). "normal" (defaut, aucun
+    // changement), "comfortable" ou "wide".
+    public string AccessibilityTextSpacing { get; set; } = "normal";
+    // Sature/durcit le contraste des pages web visitees pour aider certains
+    // daltoniens a distinguer des couleurs proches. Aide pratique, pas une
+    // correction colorimetrique scientifique.
+    public bool AccessibilityColorBoostEnabled { get; set; }
     // Lecture a voix haute : synthese vocale 100% locale (Windows), aucun
     // texte de page envoye a un serveur externe. Fonction de confort, pas une
     // protection : opt-in comme le micro et l'assistant IA, pour ne pas encombrer
@@ -118,6 +141,13 @@ internal sealed class UiSettings
     // une image locale agrandie, l'utilisateur lit et agit lui-meme. Opt-in
     // comme les autres aides de confort.
     public bool AccessibilityReadingLensEnabled { get; set; }
+    // Guide de lecture immersif : assombrit legerement le reste de la page et
+    // maintient une bande lisible qui suit la lecture dans le viewport. Vise
+    // la fatigue visuelle et la perte de ligne sur les longues pages.
+    public bool AccessibilityReadingGuideEnabled { get; set; }
+    // Hauteur de la bande du guide de lecture, en pixels CSS. Valeurs
+    // attendues par l'interface : 120, 160, 220, 300.
+    public int AccessibilityReadingGuideBandHeight { get; set; } = 160;
     // Traduction neuronale locale des pages (modele telecharge une fois puis
     // traduction 100% hors ligne). Activee par defaut : simple telechargement
     // generique, pas de donnee personnelle envoyee, sur le meme principe que
@@ -128,6 +158,14 @@ internal sealed class UiSettings
     // explicite requise (contrairement a la traduction, poids nettement
     // plus lourd et fonctionnalite plus proche de l'experimental).
     public bool SearchAssistEnabled { get; set; }
+    // Recherche semantique locale dans l'historique : indexe le contenu texte
+    // des pages visitees via des embeddings calcules localement (modele
+    // multilingual-e5-small, ONNX), permet de retrouver une page par le sens
+    // plutot que par mot-clé exact. Desactivee par defaut : telechargement
+    // unique ~120 Mo, activation explicite requise (meme principe que
+    // SearchAssistEnabled). Le contenu capture est chiffre au meme titre que
+    // le reste de l'historique (voir SemanticHistoryIndex).
+    public bool HistorySemanticSearchEnabled { get; set; }
     public List<string> PinnedModuleIds { get; set; } = [];
     // Préférences du générateur de mots de passe du coffre, partagées entre le
     // dialogue "Nouvel identifiant" et la barre de suggestion automatique.
@@ -143,6 +181,7 @@ internal sealed class UiSettings
     public List<string> LoginCompatibilitySites { get; set; } = new();
     public List<string> LoginDiagnosticSites { get; set; } = new();
     public List<SitePermissionRule> SitePermissions { get; set; } = new();
+    public List<SiteComfortRule> SiteComfortRules { get; set; } = new();
     // Sessions éphémères : au démarrage, purge des cookies de la session précédente,
     // sauf pour les domaines racines listés comme sites de confiance.
     public bool SessionPurgeEnabled { get; set; } = true;
@@ -165,7 +204,7 @@ internal sealed class UiSettings
                 // Migration depuis .json legacy
                 if (legacyPath is not null && File.Exists(legacyPath))
                 {
-                    var legacyJson = File.ReadAllText(legacyPath);
+                    var legacyJson = MigrateJson(File.ReadAllText(legacyPath));
                     var migrated = JsonSerializer.Deserialize<UiSettings>(legacyJson, JsonOptions) ?? Default();
                     migrated.ApplyLegacyBrandingMigration();
                     migrated.ApplyPinnedModulesMigration(legacyJson);
@@ -178,8 +217,9 @@ internal sealed class UiSettings
                 return Default();
             }
 
-            var json = LumoraFile.TryReadAllText(path);
-            if (json is null) return Default();
+            var rawJson = LumoraFile.TryReadAllText(path);
+            if (rawJson is null) return Default();
+            var json = MigrateJson(rawJson);
             var settings = JsonSerializer.Deserialize<UiSettings>(json, JsonOptions) ?? Default();
             settings.ApplyLegacyBrandingMigration();
             settings.ApplyPinnedModulesMigration(json);
@@ -197,12 +237,53 @@ internal sealed class UiSettings
     {
         try
         {
+            SchemaVersion = CurrentSchemaVersion;
             LumoraFile.WriteAllText(path, JsonSerializer.Serialize(this, JsonOptions));
         }
         catch (Exception error)
         {
             WinUiRuntimeTrace.Write($"UI settings save skipped: {error.GetType().Name}");
         }
+    }
+
+    // Cle N = etape qui migre une version N vers N+1, appliquee sur le JSON
+    // brut AVANT la deserialisation typee. Vide aujourd'hui (version 1 = la
+    // version de reference qui introduit ce mecanisme). Pour une future
+    // propriete renommee, ajouter par exemple :
+    // [1] = root => { if (root.Remove("AncienNom", out var v)) root["NouveauNom"] = v; },
+    private static readonly IReadOnlyDictionary<int, Action<JsonObject>> MigrationSteps =
+        new Dictionary<int, Action<JsonObject>>();
+
+    // Applique en sequence chaque etape necessaire entre fromVersion et
+    // toVersion. internal (pas private) pour permettre aux tests de verifier
+    // le chainage avec une table de migrations synthetique, sans dependre
+    // d'un vrai renommage futur.
+    internal static JsonObject ApplyMigrations(
+        JsonObject root, int fromVersion, int toVersion,
+        IReadOnlyDictionary<int, Action<JsonObject>> steps)
+    {
+        var version = fromVersion;
+        while (version < toVersion && steps.TryGetValue(version, out var step))
+        {
+            step(root);
+            version++;
+        }
+
+        root["SchemaVersion"] = toVersion;
+        return root;
+    }
+
+    private static string MigrateJson(string json)
+    {
+        JsonObject? root;
+        try { root = JsonNode.Parse(json) as JsonObject; }
+        catch { return json; } // JSON illisible : laisse Deserialize echouer comme avant (catch-all de Load).
+
+        if (root is null) return json;
+
+        var version = (int?)root["SchemaVersion"] ?? 0; // absent = version 0 (avant ce mecanisme).
+        ApplyMigrations(root, version, CurrentSchemaVersion, MigrationSteps);
+        return root.ToJsonString();
     }
 
     private void RemoveLegacyDefaultShortcuts()
