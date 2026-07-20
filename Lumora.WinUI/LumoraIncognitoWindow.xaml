@@ -19,10 +19,14 @@
           etat toujours visible pour qu'il n'y ait jamais de doute sur ce qui est
           reellement actif.
         Volontairement minimale : pas de hub Modules, pas de compagnon, pas de
-        raccourcis, pas d'onglets (chaque page cible ouvre une nouvelle fenetre
-        Incognito qui herite de l'etat Tor courant). Les protections reseau de
-        fond (bloqueur pubs/trackers, anti-telemetrie, HTTPS, CNAME) restent
-        actives sans bouton dedie, comme dans les anciennes fenetres.
+        raccourcis de confort. Onglets simples (pas de groupes, pas d'epingles,
+        pas d'historique d'onglets fermes) : une page cible (target=_blank)
+        ouvre un nouvel onglet dans la MEME fenetre/process, pas une nouvelle
+        fenetre Incognito - tous les onglets d'une fenetre partagent deja le
+        meme etat Tor/session, donc pas de risque de fuite entre onglets. Les
+        protections reseau de fond (bloqueur pubs/trackers, anti-telemetrie,
+        HTTPS, CNAME) restent actives sans bouton dedie, comme dans les
+        anciennes fenetres.
     -->
     <Grid x:Name="RootGrid" Background="#FF1A1626">
         <Grid.RowDefinitions>
@@ -76,6 +80,13 @@
                 <ToggleSwitch x:Name="IncognitoTorSwitch" OnContent="Tor" OffContent="Tor"
                               Toggled="IncognitoTorSwitch_Toggled"
                               AutomationProperties.Name="Masquer l'adresse IP via Tor" />
+                <Button x:Name="IncognitoNewCircuitButton" Padding="8,5" Visibility="Collapsed"
+                        Content="Nouveau circuit" Click="IncognitoNewCircuitButton_Click"
+                        AutomationProperties.Name="Demander un nouveau circuit Tor"
+                        ToolTipService.ToolTip="Change de noeud de sortie Tor pour cette fenetre (utile si un captcha boucle sans jamais accepter la reponse)" />
+                <Button x:Name="IncognitoTorInstallButton" Padding="8,5" Visibility="Collapsed"
+                        Content="Installer le moteur Tor" Click="IncognitoTorInstallButton_Click"
+                        AutomationProperties.Name="Installer le moteur Tor" />
             </StackPanel>
 
             <TextBlock Grid.Column="6" Text="Incognito" Foreground="#FFB9A7E8"
@@ -83,6 +94,33 @@
                        Margin="4,0,2,0" />
         </Grid>
 
-        <Grid x:Name="IncognitoWebViewHost" Grid.Row="1" />
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!--
+                IncognitoTabs ne porte que la bande d'onglets (TabViewItem.Content
+                n'est jamais utilise) : WebView2 place directement en contenu d'un
+                TabViewItem ne s'affiche pas de facon fiable (verifie en conditions
+                reelles - fond vide malgre une navigation reussie). Meme mecanisme
+                que MainWindow (BrowserTabs pour la bande, BrowserHost pour la
+                surface reelle) : un host partage, TOUJOURS dans l'arbre visuel,
+                contient tous les WebView2 des onglets, seule leur Visibility
+                bascule selon l'onglet actif.
+            -->
+            <TabView x:Name="IncognitoTabs" Grid.Row="0"
+                     Background="#FF1A1626"
+                     TabWidthMode="Equal"
+                     CanReorderTabs="True"
+                     AddTabButtonClick="IncognitoTabs_AddTabButtonClick"
+                     SelectionChanged="IncognitoTabs_SelectionChanged"
+                     TabCloseRequested="IncognitoTabs_TabCloseRequested"
+                     AutomationProperties.Name="Onglets Incognito" />
+
+            <Grid x:Name="IncognitoWebViewHost" Grid.Row="1" />
+            <Grid x:Name="IncognitoErrorHost" Grid.Row="1" Visibility="Collapsed" />
+        </Grid>
     </Grid>
 </Window>

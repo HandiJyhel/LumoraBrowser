@@ -30,6 +30,13 @@ public sealed partial class MainWindow
         OpenIncognitoWindow();
     }
 
+    // Incognito remplace la fenetre normale plutot que de s'ouvrir a cote
+    // (demande explicite utilisateur, 2026-07-20) : MainWindow se ferme des
+    // qu'Incognito s'ouvre. Pour ne jamais laisser l'utilisateur sans aucune
+    // fenetre Lumora, la fenetre Incognito relance automatiquement une
+    // fenetre normale (session/onglets restaures normalement) quand elle se
+    // ferme a son tour - voir IncognitoLaunchArgs.ReturnToMainFlag et le
+    // Closed de LumoraIncognitoWindow.
     private void OpenIncognitoWindow(string? startUrl = null)
     {
         // Pas d'Incognito tant que la session profil n'est pas ouverte : la
@@ -41,7 +48,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        IncognitoProcessLauncher.Launch(startUrl);
-        StatusText.Text = "Fenetre Incognito ouverte.";
+        IncognitoProcessLauncher.Launch(startUrl, returnToMain: true);
+        Close();
     }
 }

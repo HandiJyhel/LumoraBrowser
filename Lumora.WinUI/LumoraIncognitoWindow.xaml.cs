@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.Web.WebView2.Core;
 using Windows.System;
+using WinRT.Interop;
 using Lumora.Privacy;
 using Lumora.Privacy.NetworkBlocker;
 using Lumora.Privacy.TelemetryBlocker;
@@ -35,7 +36,10 @@ namespace Lumora.WinUI;
 // proxy Tor) sont figes UNE SEULE FOIS au demarrage du process, comme
 // WebView2Bootstrap.ConfigureOnce le fait pour MainWindow. Basculer Tor ne
 // peut donc pas se faire a chaud : ca ferme cette fenetre et en rouvre une
-// neuve dans l'etat souhaite (process separe).
+// neuve dans l'etat souhaite (process separe). Les onglets, eux, restent
+// dans CE process (voir CreateTabAsync) : un deuxieme WebView2 dans le meme
+// process fonctionne (c'est ce que fait deja MainWindow), seul un deuxieme
+// ENVIRONNEMENT WebView2 explicite posait probleme.
 public sealed partial class LumoraIncognitoWindow : Window
 {
     private readonly LumoraProfilePaths _profile;
@@ -46,26 +50,87 @@ public sealed partial class LumoraIncognitoWindow : Window
     private readonly string _sessionDataDir =
         Path.Combine(Path.GetTempPath(), "LumoraIncognito", Guid.NewGuid().ToString("N"));
     private string? _pendingStartUrl;
-    private WebView2? _view;
+    private IncognitoTab? _currentTab;
     private bool _suppressToggleHandler;
+    private bool _torEngineInstallInProgress;
+    private Microsoft.UI.Windowing.AppWindow? _appWindow;
+    private readonly bool _returnToMain;
+    // Vrai juste avant un Close() qui relance immediatement une AUTRE fenetre
+    // Incognito (bascule Tor, installation du moteur Tor) : dans ce cas le
+    // Closed ci-dessous ne doit surtout pas relancer MainWindow, seulement le
+    // vrai dernier Close() (l'utilisateur quitte Incognito) le doit.
+    private bool _relaunchingIncognito;
 
-    internal LumoraIncognitoWindow(LumoraProfilePaths profile, string? startUrl = null, bool initialTorEnabled = false)
+    internal LumoraIncognitoWindow(
+        LumoraProfilePaths profile, string? startUrl = null, bool initialTorEnabled = false, bool returnToMain = false)
     {
         _profile = profile;
         _pendingStartUrl = startUrl;
         _initialTorEnabled = initialTorEnabled;
+        _returnToMain = returnToMain;
         _uiSettings = UiSettings.Load(profile.UiSettingsFile, profile.LegacyUiSettingsFile);
 
         InitializeComponent();
         InitPrivacyEngine();
         CleanupStaleSessionFolders();
 
+        var hwnd = WindowNative.GetWindowHandle(this);
+        var winId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+        _appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(winId);
+        ApplyIcon();
+
+        var newTabAccelerator = new KeyboardAccelerator
+        {
+            Key = VirtualKey.T,
+            Modifiers = VirtualKeyModifiers.Control
+        };
+        newTabAccelerator.Invoked += (acceleratorSender, args) =>
+        {
+            _ = CreateTabAsync(null, select: true);
+            args.Handled = true;
+        };
+        Content.KeyboardAccelerators.Add(newTabAccelerator);
+
         Closed += (_, _) =>
         {
             _tor.Dispose();
-            try { _view?.Close(); } catch { }
+            foreach (var item in IncognitoTabs.TabItems.OfType<TabViewItem>())
+            {
+                if (item.Tag is IncognitoTab tab)
+                {
+                    try { tab.View.Close(); } catch { }
+                }
+            }
             try { if (Directory.Exists(_sessionDataDir)) Directory.Delete(_sessionDataDir, recursive: true); } catch { }
+
+            // MainWindow s'est fermee pour laisser la place a cette fenetre
+            // (voir MainWindow.Incognito.cs) : si on quitte vraiment Incognito
+            // (pas juste une bascule Tor qui relance une autre fenetre
+            // Incognito), on relance une fenetre normale pour ne jamais
+            // laisser l'utilisateur sans aucune fenetre Lumora ouverte.
+            if (_returnToMain && !_relaunchingIncognito)
+            {
+                IncognitoProcessLauncher.LaunchMainWindow();
+            }
         };
+    }
+
+    private void ApplyIcon()
+    {
+        if (_appWindow is null) return;
+
+        try
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "LumoraIncognito.ico");
+            if (File.Exists(iconPath))
+            {
+                _appWindow.SetIcon(iconPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"Incognito window icon apply failed: {ex.GetType().Name}");
+        }
     }
 
     private void InitPrivacyEngine()
@@ -112,7 +177,7 @@ public sealed partial class LumoraIncognitoWindow : Window
             if (!TorProcessManager.IsEngineInstalled(_profile))
             {
                 SetTorSwitchSilently(false);
-                ShowStartupError("Moteur Tor non installe.");
+                ShowStartupError("Moteur Tor non installe.", offerInstall: true);
                 return;
             }
 
@@ -122,15 +187,21 @@ public sealed partial class LumoraIncognitoWindow : Window
             var connected = await ConnectTorAsync();
             if (!connected)
             {
-                ShowStartupError(_tor.StatusMessage);
+                ShowStartupError(_tor.StatusMessage, offerInstall: true);
                 return;
             }
 
             IncognitoTorStatusText.Text = "IP masquee : oui";
             IncognitoTorSwitch.IsEnabled = true;
+            IncognitoNewCircuitButton.Visibility = Visibility.Visible;
         }
 
-        await BuildBrowserSurfaceAsync(_initialTorEnabled);
+        ConfigureProcessWebView(_initialTorEnabled);
+        await CreateTabAsync(_pendingStartUrl, select: true);
+        if (string.IsNullOrWhiteSpace(_pendingStartUrl))
+        {
+            IncognitoAddressBox.Focus(FocusState.Programmatic);
+        }
     }
 
     private void SetTorSwitchSilently(bool isOn)
@@ -143,7 +214,9 @@ public sealed partial class LumoraIncognitoWindow : Window
     // Le proxy Tor est fige au demarrage du process (voir commentaire de
     // classe) : basculer Tor ne peut pas se faire a chaud. On rouvre une
     // fenetre Incognito neuve dans l'etat souhaite et on ferme celle-ci,
-    // plutot qu'une migration impossible entre deux profils differents.
+    // plutot qu'une migration impossible entre deux profils differents. Les
+    // autres onglets ouverts sont perdus (comportement deja present avant les
+    // onglets : la bascule Tor ne conservait deja pas la page courante).
     private void IncognitoTorSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressToggleHandler) return;
@@ -153,12 +226,14 @@ public sealed partial class LumoraIncognitoWindow : Window
         {
             SetTorSwitchSilently(false);
             IncognitoTorStatusText.Text = "Moteur Tor non installe.";
+            IncognitoTorInstallButton.Visibility = Visibility.Visible;
             return;
         }
 
         IncognitoTorSwitch.IsEnabled = false;
         IncognitoTorStatusText.Text = wantsTor ? "Ouverture d'une session Tor..." : "Fermeture de la session Tor...";
-        IncognitoProcessLauncher.Launch(torEnabled: wantsTor);
+        _relaunchingIncognito = true;
+        IncognitoProcessLauncher.Launch(torEnabled: wantsTor, returnToMain: _returnToMain);
         Close();
     }
 
@@ -200,7 +275,7 @@ public sealed partial class LumoraIncognitoWindow : Window
         _tor.StateChanged += Handler;
         try
         {
-            var started = await _tor.StartAsync(_profile, FindFreeTcpPort());
+            var started = await _tor.StartAsync(_profile, FindFreeTcpPort(), FindFreeTcpPort());
             if (!started)
             {
                 return false;
@@ -213,12 +288,48 @@ public sealed partial class LumoraIncognitoWindow : Window
         }
     }
 
-    // Construit la surface WebView2, une seule fois pour toute la duree de vie
-    // du process : configuration par variables d'environnement (dossier
-    // temporaire de session + arguments Chromium, dont le proxy Tor) suivie de
-    // EnsureCoreWebView2Async() sans argument - seul chemin fiable dans ce
-    // projet (voir commentaire de classe).
-    private async Task BuildBrowserSurfaceAsync(bool torEnabled)
+    // "Nouveau circuit" : echappatoire pour un noeud de sortie Tor mal note
+    // aupres d'un site (captcha qui boucle indefiniment malgre une reponse
+    // correcte - comportement connu du reseau Tor, pas un bug Lumora). Ne
+    // ferme pas la fenetre (contrairement a la bascule Tor elle-meme, qui
+    // change de port SOCKS fige au demarrage du process) : demande de
+    // nouveaux circuits sur le control port puis recharge l'onglet courant
+    // pour que la prochaine connexion emprunte un circuit different. Les
+    // connexions deja ouvertes peuvent garder l'ancien circuit jusqu'a leur
+    // fermeture naturelle - meme limite honnete que le "New Identity" de Tor
+    // Browser, jamais presentee comme une garantie instantanee.
+    private async void IncognitoNewCircuitButton_Click(object sender, RoutedEventArgs e)
+    {
+        IncognitoNewCircuitButton.IsEnabled = false;
+        var previousStatus = IncognitoTorStatusText.Text;
+
+        var (success, message) = await _tor.RequestNewCircuitAsync();
+        IncognitoTorStatusText.Text = message;
+
+        if (success)
+        {
+            _currentTab?.View.CoreWebView2?.Reload();
+        }
+
+        await Task.Delay(TorProcessManager.NewCircuitCooldown);
+        IncognitoNewCircuitButton.IsEnabled = true;
+        if (success)
+        {
+            IncognitoTorStatusText.Text = "IP masquee : oui";
+        }
+        else if (IncognitoTorStatusText.Text == message)
+        {
+            IncognitoTorStatusText.Text = previousStatus;
+        }
+    }
+
+    // Pose le dossier de session et les arguments Chromium (dont le proxy
+    // Tor) une seule fois pour tout le process, avant le premier onglet -
+    // exactement comme avant l'ajout des onglets (voir commentaire de
+    // classe). Les onglets suivants reutilisent automatiquement le meme
+    // environnement WebView2 implicite via EnsureCoreWebView2Async() sans
+    // argument.
+    private void ConfigureProcessWebView(bool torEnabled)
     {
         var flags = "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings";
         if (_uiSettings.WebRtcLeakProtectionEnabled)
@@ -231,13 +342,91 @@ public sealed partial class LumoraIncognitoWindow : Window
         }
         try { Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", _sessionDataDir); } catch { }
         try { Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", flags); } catch { }
+    }
 
+    private void IncognitoTabs_AddTabButtonClick(TabView sender, object args) =>
+        _ = CreateTabAsync(null, select: true);
+
+    private void IncognitoTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (IncognitoTabs.SelectedItem is not TabViewItem item || item.Tag is not IncognitoTab tab)
+        {
+            return;
+        }
+
+        _currentTab = tab;
+
+        // Rend l'onglet visible SANS recharger sa page : chaque onglet garde
+        // son propre WebView2 dans IncognitoWebViewHost (toujours present
+        // dans l'arbre visuel), le changement d'onglet est un simple
+        // basculement de visibilite - meme mecanisme que MainWindow.ActivateTab.
+        foreach (var other in IncognitoTabs.TabItems.OfType<TabViewItem>())
+        {
+            if (other.Tag is IncognitoTab otherTab)
+            {
+                otherTab.View.Visibility = ReferenceEquals(otherTab, tab) ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        UpdateTabFromCore(tab);
+        Title = WindowTitleFor(tab.Title);
+        tab.View.Focus(FocusState.Programmatic);
+    }
+
+    // "Nouvel onglet" (onglet tout juste cree) et "Incognito" (titre de la
+    // page d'accueil, voir IncognitoWelcomeHtml) sont tous deux des etats
+    // neutres, sans vraie page chargee : garder le titre de marque plutot
+    // que produire "Incognito - Incognito".
+    private static string WindowTitleFor(string tabTitle) =>
+        tabTitle is "Nouvel onglet" or "Incognito" ? "Incognito - Lumora" : $"{tabTitle} - Incognito";
+
+    // Fermer le dernier onglet ferme toute la fenetre, comme un navigateur
+    // classique - la session ephemere est de toute facon liee a la fenetre,
+    // pas a un onglet individuel.
+    private void IncognitoTabs_TabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
+    {
+        if (args.Tab.Tag is not IncognitoTab tab) return;
+
+        IncognitoTabs.TabItems.Remove(args.Tab);
+        IncognitoWebViewHost.Children.Remove(tab.View);
+        try { tab.View.Close(); } catch { }
+
+        if (IncognitoTabs.TabItems.Count == 0)
+        {
+            Close();
+        }
+    }
+
+    // Cree un nouvel onglet dans CETTE fenetre/process (voir commentaire de
+    // classe : un deuxieme WebView2 dans le meme process fonctionne, seul un
+    // deuxieme environnement explicite posait probleme). Tous les onglets
+    // d'une fenetre partagent donc automatiquement le meme etat Tor/session.
+    // Le WebView2 va dans IncognitoWebViewHost (partage, toujours dans
+    // l'arbre visuel), jamais en TabViewItem.Content : verifie en conditions
+    // reelles que WebView2 place directement en contenu d'un TabViewItem ne
+    // s'affiche pas (fond vide malgre une navigation reussie).
+    private async Task<IncognitoTab?> CreateTabAsync(string? url, bool select)
+    {
         var view = new WebView2
         {
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Visibility = select ? Visibility.Visible : Visibility.Collapsed
         };
+        var item = new TabViewItem
+        {
+            Header = "Nouvel onglet",
+            IsClosable = true
+        };
+        var tab = new IncognitoTab { Item = item, View = view };
+        item.Tag = tab;
+
         IncognitoWebViewHost.Children.Add(view);
+        IncognitoTabs.TabItems.Add(item);
+        if (select)
+        {
+            IncognitoTabs.SelectedItem = item;
+        }
 
         CoreWebView2? core;
         try
@@ -247,56 +436,137 @@ public sealed partial class LumoraIncognitoWindow : Window
         }
         catch (Exception ex)
         {
-            ShowStartupError($"Moteur web indisponible : {ex.Message}");
-            return;
+            FailTab(item, tab, $"Moteur web indisponible : {ex.Message}");
+            return null;
         }
 
         if (core is null)
         {
-            ShowStartupError("Moteur web indisponible : la session n'a pas pu demarrer. Fermez et rouvrez la fenetre Incognito.");
-            return;
+            FailTab(item, tab, "Moteur web indisponible : la session n'a pas pu demarrer. Fermez et rouvrez la fenetre Incognito.");
+            return null;
         }
 
-        _view = view;
         core.Settings.IsPasswordAutosaveEnabled = false;
         core.Settings.IsGeneralAutofillEnabled = false;
         try { core.Settings.IsReputationCheckingRequired = _uiSettings.SmartScreenEnabled; } catch { }
 
         core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
         core.WebResourceRequested += Core_WebResourceRequested;
-        core.SourceChanged += (_, _) => DispatcherQueue.TryEnqueue(UpdateChromeFromCore);
-        core.HistoryChanged += (_, _) => DispatcherQueue.TryEnqueue(UpdateChromeFromCore);
+        core.SourceChanged += (_, _) => DispatcherQueue.TryEnqueue(() => UpdateTabFromCore(tab));
+        core.HistoryChanged += (_, _) => DispatcherQueue.TryEnqueue(() => UpdateTabFromCore(tab));
         core.DocumentTitleChanged += (_, _) => DispatcherQueue.TryEnqueue(() =>
         {
             var title = core.DocumentTitle;
-            Title = string.IsNullOrWhiteSpace(title) ? "Incognito - Lumora" : $"{title} - Incognito";
+            tab.Title = string.IsNullOrWhiteSpace(title) ? "Nouvel onglet" : title;
+            tab.Item.Header = tab.Title;
+            if (ReferenceEquals(tab, _currentTab))
+            {
+                Title = WindowTitleFor(tab.Title);
+            }
         });
-        core.NewWindowRequested += Core_NewWindowRequested;
-
-        WinUiRuntimeTrace.Write($"Incognito window WebView2 ready (tor={torEnabled})");
-
-        if (!string.IsNullOrWhiteSpace(_pendingStartUrl))
+        // Une page cible (target=_blank, window.open) ouvre un nouvel onglet
+        // dans cette meme fenetre plutot qu'une fenetre Incognito separee :
+        // meme etat Tor/session deja garanti, pas besoin d'un nouveau process.
+        core.NewWindowRequested += (coreSender, args) =>
         {
-            core.Navigate(_pendingStartUrl);
+            args.Handled = true;
+            _ = CreateTabAsync(args.Uri, select: true);
+        };
+
+        WinUiRuntimeTrace.Write($"Incognito tab WebView2 ready (tor={_initialTorEnabled})");
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            core.Navigate(url);
         }
         else
         {
-            core.NavigateToString(WelcomeHtml(torEnabled));
-            IncognitoAddressBox.Focus(FocusState.Programmatic);
+            core.NavigateToString(IncognitoWelcomeHtml.Build(_initialTorEnabled));
+        }
+
+        return tab;
+    }
+
+    // Echec de creation d'un onglet : si c'est le seul onglet (typiquement le
+    // tout premier, au demarrage), on retombe sur l'ecran d'erreur plein cadre
+    // existant. Sinon, l'onglet rate est simplement retire - les autres
+    // restent utilisables.
+    private void FailTab(TabViewItem item, IncognitoTab tab, string message)
+    {
+        WinUiRuntimeTrace.Write($"Incognito window startup failed: {message}");
+        var wasOnlyTab = IncognitoTabs.TabItems.Count == 1;
+
+        IncognitoTabs.TabItems.Remove(item);
+        IncognitoWebViewHost.Children.Remove(tab.View);
+        try { tab.View.Close(); } catch { }
+
+        if (wasOnlyTab)
+        {
+            ShowStartupError(message);
         }
     }
 
-    private void ShowStartupError(string message)
+    private void ShowStartupError(string message, bool offerInstall = false)
     {
         WinUiRuntimeTrace.Write($"Incognito window startup failed: {message}");
         IncognitoTorSwitch.IsEnabled = true;
-        IncognitoWebViewHost.Children.Clear();
-        IncognitoWebViewHost.Children.Add(new TextBlock
+        IncognitoTabs.Visibility = Visibility.Collapsed;
+        IncognitoWebViewHost.Visibility = Visibility.Collapsed;
+        IncognitoErrorHost.Children.Clear();
+        IncognitoErrorHost.Visibility = Visibility.Visible;
+
+        var panel = new StackPanel { Margin = new Thickness(24), Spacing = 12 };
+        panel.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap });
+
+        if (offerInstall)
         {
-            Text = message,
-            Margin = new Thickness(24),
-            TextWrapping = TextWrapping.Wrap
-        });
+            var statusText = new TextBlock { TextWrapping = TextWrapping.Wrap, Opacity = 0.8 };
+            var installButton = new Button { Content = "Installer le moteur Tor", HorizontalAlignment = HorizontalAlignment.Left };
+            installButton.Click += async (_, _) =>
+                await RunTorEngineInstallAsync(installButton, text => statusText.Text = text);
+            panel.Children.Add(installButton);
+            panel.Children.Add(statusText);
+        }
+
+        IncognitoErrorHost.Children.Add(panel);
+    }
+
+    private async void IncognitoTorInstallButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunTorEngineInstallAsync(IncognitoTorInstallButton, text => IncognitoTorStatusText.Text = text);
+    }
+
+    // Logique d'installation partagee entre le bouton de l'en-tete (bascule)
+    // et celui de l'ecran d'echec au demarrage. Jamais declenchee
+    // automatiquement : uniquement sur clic explicite. En cas de succes,
+    // rouvre une fenetre neuve avec Tor active (le proxy est fige au
+    // demarrage du process, cf. commentaire de classe) et ferme celle-ci.
+    private async Task RunTorEngineInstallAsync(Button triggerButton, Action<string> report)
+    {
+        if (_torEngineInstallInProgress)
+        {
+            return;
+        }
+
+        _torEngineInstallInProgress = true;
+        triggerButton.IsEnabled = false;
+        try
+        {
+            await TorEngineProvider.DownloadEngineAsync(_profile, new Progress<string>(report));
+            report("Moteur Tor installe. Reouverture avec Tor active...");
+            _relaunchingIncognito = true;
+            IncognitoProcessLauncher.Launch(torEnabled: true, returnToMain: _returnToMain);
+            Close();
+        }
+        catch (Exception ex)
+        {
+            report($"Installation du moteur Tor impossible : {ex.Message}");
+            triggerButton.IsEnabled = true;
+        }
+        finally
+        {
+            _torEngineInstallInProgress = false;
+        }
     }
 
     private void Core_WebResourceRequested(CoreWebView2 sender, CoreWebView2WebResourceRequestedEventArgs args)
@@ -307,30 +577,36 @@ public sealed partial class LumoraIncognitoWindow : Window
         }
     }
 
-    // Une page cible (target=_blank, window.open) ouvre une nouvelle fenetre
-    // Incognito qui herite de l'etat Tor courant : jamais de retour silencieux
-    // vers une session non anonymisee si l'utilisateur avait active Tor ici.
-    // Nouveau process (voir commentaire de classe), pas une fenetre
-    // in-process : un deuxieme moteur WebView2 dans CE process reproduirait
-    // le probleme que le process dedie contourne.
-    private void Core_NewWindowRequested(CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
+    // Met a jour l'adresse memorisee de l'onglet, et - seulement si c'est
+    // l'onglet actuellement visible - la barre d'adresse et les boutons
+    // precedent/suivant partages par toute la fenetre.
+    private void UpdateTabFromCore(IncognitoTab tab)
     {
-        args.Handled = true;
-        IncognitoProcessLauncher.Launch(args.Uri, IncognitoTorSwitch.IsOn);
-    }
-
-    private void UpdateChromeFromCore()
-    {
-        var core = _view?.CoreWebView2;
+        var core = tab.View.CoreWebView2;
         if (core is null) return;
 
-        var source = core.Source ?? string.Empty;
-        IncognitoAddressBox.Text = source.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+        tab.Address = core.Source ?? string.Empty;
+
+        if (!ReferenceEquals(tab, _currentTab)) return;
+
+        IncognitoAddressBox.Text = tab.Address.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
             ? string.Empty
-            : source;
+            : tab.Address;
         IncognitoBackButton.IsEnabled = core.CanGoBack;
         IncognitoForwardButton.IsEnabled = core.CanGoForward;
     }
+
+    // Moteur de recherche fixe pour Incognito, independant du reglage global
+    // (_uiSettings.SearchEngine) : diagnostique en conditions reelles le
+    // 2026-07-20, Google bloque parfois des plages entieres de noeuds de
+    // sortie Tor pour la recherche, avec une boucle de captcha qui ne se
+    // resout jamais quel que soit le nombre de circuits Tor demandes -
+    // comportement cote serveur Google, pas un bug reseau. DuckDuckGo est
+    // nettement plus tolerant envers Tor (c'est aussi le choix par defaut de
+    // Tor Browser). Fixe plutot que configurable : meme logique que les
+    // autres garanties Incognito (session ephemere, etc.), une garantie
+    // simple et previsible plutot qu'un reglage de plus a expliquer.
+    private const string IncognitoSearchEngine = "duckduckgo";
 
     private void IncognitoAddressBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
@@ -340,47 +616,23 @@ public sealed partial class LumoraIncognitoWindow : Window
         var raw = IncognitoAddressBox.Text ?? string.Empty;
         if (string.IsNullOrWhiteSpace(raw)) return;
 
-        var url = AddressNormalizer.Normalize(raw, _uiSettings.SearchEngine);
-        try { _view?.CoreWebView2?.Navigate(url); } catch { }
-        _view?.Focus(FocusState.Programmatic);
+        var url = AddressNormalizer.Normalize(raw, IncognitoSearchEngine);
+        try { _currentTab?.View.CoreWebView2?.Navigate(url); } catch { }
+        _currentTab?.View.Focus(FocusState.Programmatic);
     }
 
     private void IncognitoBackButton_Click(object sender, RoutedEventArgs e)
     {
-        var core = _view?.CoreWebView2;
+        var core = _currentTab?.View.CoreWebView2;
         if (core?.CanGoBack == true) core.GoBack();
     }
 
     private void IncognitoForwardButton_Click(object sender, RoutedEventArgs e)
     {
-        var core = _view?.CoreWebView2;
+        var core = _currentTab?.View.CoreWebView2;
         if (core?.CanGoForward == true) core.GoForward();
     }
 
     private void IncognitoReloadButton_Click(object sender, RoutedEventArgs e) =>
-        _view?.CoreWebView2?.Reload();
-
-    private static string WelcomeHtml(bool torEnabled) => $$"""
-        <!doctype html><html lang="fr"><head><meta charset="utf-8">
-        <style>
-        body{font-family:'Segoe UI',system-ui,sans-serif;background:radial-gradient(circle at 50% 28%,#8e7bd633,transparent 25%),linear-gradient(180deg,#17131f,#1c1628);color:#fff8ea;
-             display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-        .card{max-width:560px;padding:0 32px;text-align:center}
-        h1{font-size:26px;font-weight:600;margin:0 0 14px}
-        p{opacity:.78;line-height:1.55;margin:0 0 10px}
-        .badge{font-size:40px;margin-bottom:18px;color:#8e7bd6}
-        .claim{font-weight:600;opacity:1}
-        </style></head><body><div class="card">
-        <div class="badge">&#128373;&#65039;</div>
-        <h1>Incognito</h1>
-        <p class="claim">Cette session ne sera jamais sauvegardee : a la fermeture de cette
-        fenetre, rien n'est ecrit dans l'historique, le coffre, les favoris ou le disque
-        - cookies, cache et stockage restent dans un dossier temporaire supprime a la
-        fermeture.</p>
-        <p class="claim">{{(torEnabled
-            ? "Votre adresse IP reelle est masquee : elle n'est visible ni du site visite ni d'un relais Tor unique."
-            : "Votre adresse IP reelle N'est PAS masquee : le site visite et votre reseau la voient normalement. Activez Tor (bouton en haut a droite) pour la masquer.")}}</p>
-        <p>Les fichiers que vous telechargez volontairement sont, eux, conserves sur le disque.</p>
-        </div></body></html>
-        """;
+        _currentTab?.View.CoreWebView2?.Reload();
 }

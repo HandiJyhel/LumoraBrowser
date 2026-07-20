@@ -23,10 +23,10 @@ public partial class App : Application
 
         var commandLineArgs = Environment.GetCommandLineArgs();
 
-        if (IncognitoLaunchArgs.IsIncognitoLaunch(commandLineArgs, out var torEnabled, out var incognitoUrl))
+        if (IncognitoLaunchArgs.IsIncognitoLaunch(commandLineArgs, out var torEnabled, out var incognitoUrl, out var returnToMain))
         {
             var profile = LumoraProfilePaths.Default();
-            var incognitoWindow = new LumoraIncognitoWindow(profile, incognitoUrl, torEnabled);
+            var incognitoWindow = new LumoraIncognitoWindow(profile, incognitoUrl, torEnabled, returnToMain);
             _window = incognitoWindow;
             incognitoWindow.Activate();
             incognitoWindow.InitializeWindow();
