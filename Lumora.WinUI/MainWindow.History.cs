@@ -26,6 +26,29 @@ public sealed partial class MainWindow
     {
         _historyPanel.SearchTerm = HistorySearchBox.Text.Trim();
         RenderHistory();
+        _ = AugmentHistoryWithSemanticResultsAsync(_historyPanel.SearchTerm);
+    }
+
+    // Complete les resultats de la recherche par mot-cle (deja affiches par
+    // RenderHistory) avec les pages trouvees par sens uniquement, sans les
+    // dupliquer. Ignore silencieusement si la recherche a change entre-temps
+    // (l'utilisateur continue de taper) - evite d'injecter des resultats
+    // perimes apres coup.
+    private async Task AugmentHistoryWithSemanticResultsAsync(string query)
+    {
+        if (!_uiSettings.HistorySemanticSearchEnabled || query.Length < 4) return;
+
+        var semanticItems = await SearchHistorySemanticAsync(query);
+        if (!string.Equals(_historyPanel.SearchTerm, query, StringComparison.Ordinal)) return;
+
+        var existingUrls = _historyPanel.Items.Select(i => i.Entry.Url).ToHashSet();
+        foreach (var item in semanticItems)
+        {
+            if (existingUrls.Add(item.Entry.Url))
+            {
+                _historyPanel.Items.Add(item);
+            }
+        }
     }
 
     private void HistoryList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
@@ -86,6 +109,7 @@ public sealed partial class MainWindow
             if (s is MenuFlyoutItem { Tag: HistoryListItem i })
             {
                 _historyPanel.Store.Remove(i.Entry);
+                _semanticIndex.RemoveByUrl(i.Entry.Url);
                 RenderHistory();
                 StatusText.Text = "Entree supprimee de l'historique.";
             }
@@ -97,6 +121,7 @@ public sealed partial class MainWindow
     private void ClearHistoryButton_Click(object sender, RoutedEventArgs e)
     {
         _historyPanel.Store.Clear();
+        _semanticIndex.Clear();
         RenderHistory();
         StatusText.Text = "Historique efface.";
     }
@@ -194,6 +219,7 @@ public sealed partial class MainWindow
         {
             Text = dl.FileName,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = AccessibilityBodyFontSize(),
             TextTrimming = TextTrimming.CharacterEllipsis
         };
         Grid.SetColumn(fileNameText, 0);
@@ -202,7 +228,7 @@ public sealed partial class MainWindow
         {
             Text = dl.SourceDomain,
             Opacity = 0.65,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 0, 0)
         };
@@ -229,19 +255,22 @@ public sealed partial class MainWindow
         {
             Text = fileExists || !dl.IsCompleted ? dl.StateLabel : "Fichier absent",
             Opacity = 0.68,
-            FontSize = 12,
+            FontSize = AccessibilitySecondaryFontSize(),
             VerticalAlignment = VerticalAlignment.Center
         });
         if (dl.IsCompleted && fileExists)
         {
-            var openBtn = new Button { Content = "Ouvrir", Padding = new Thickness(12, 4, 12, 4) };
+            var openBtn = new Button { Content = "Ouvrir", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
+            ApplyNovaControlAccessibility(openBtn, $"Ouvrir le telechargement {dl.FileName}");
             openBtn.Click += (_, _) => OpenDownloadFile(dl.LocalPath);
             footerPanel.Children.Add(openBtn);
-            var folderBtn = new Button { Content = "Dossier", Padding = new Thickness(12, 4, 12, 4) };
+            var folderBtn = new Button { Content = "Dossier", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
+            ApplyNovaControlAccessibility(folderBtn, $"Ouvrir le dossier du telechargement {dl.FileName}");
             folderBtn.Click += (_, _) => OpenDownloadFolder(dl.LocalPath);
             footerPanel.Children.Add(folderBtn);
         }
-        var removeBtn = new Button { Content = "Retirer", Padding = new Thickness(12, 4, 12, 4) };
+        var removeBtn = new Button { Content = "Retirer", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
+        ApplyNovaControlAccessibility(removeBtn, $"Retirer le telechargement {dl.FileName} de l'historique");
         removeBtn.Click += (_, _) =>
         {
             _historyPanel.Downloads.Remove(dl.Id);

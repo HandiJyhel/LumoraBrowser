@@ -23,6 +23,7 @@ internal sealed class LumoraProfilePaths
         SavedTabGroupsFile  = DataFile(NavigationDir, "saved-tab-groups");
         SiteRelocationsFile = DataFile(NavigationDir, "site-relocations");
         HistoryFile         = DataFile(NavigationDir, "history");
+        SemanticIndexFile   = DataFile(NavigationDir, "semantic-index");
         NotesFile           = DataFile(NavigationDir, "notes");
         AnnotationsFile     = DataFile(NavigationDir, "annotations");
         LegacyHistoryFile   = Path.Combine(NavigationDir, "history.json");
@@ -49,6 +50,7 @@ internal sealed class LumoraProfilePaths
     public string SavedTabGroupsFile   { get; }
     public string SiteRelocationsFile  { get; }
     public string HistoryFile          { get; }
+    public string SemanticIndexFile    { get; }
     public string NotesFile            { get; }
     public string AnnotationsFile      { get; }
     public string LegacyHistoryFile    { get; }

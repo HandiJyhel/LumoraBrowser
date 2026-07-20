@@ -627,6 +627,7 @@ public sealed partial class MainWindow
         _annotations.SetGuestMode(true);
         _historyPanel.Store.SetGuestMode(true);
         _historyPanel.Downloads.SetGuestMode(true);
+        _semanticIndex.SetGuestMode(true);
         _webApps.SetGuestMode(true);
         _savedTabGroups.SetGuestMode(true);
         _siteRelocations.SetGuestMode(true);
