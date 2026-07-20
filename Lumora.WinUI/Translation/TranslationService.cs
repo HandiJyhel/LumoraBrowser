@@ -1,3 +1,5 @@
+using Lumora.WinUI.ModelDownload;
+
 namespace Lumora.WinUI.Translation;
 
 // Télécharge (à la demande, une seule fois par paire de langues) et met en
@@ -29,7 +31,8 @@ internal sealed class TranslationService : IDisposable
         var info = TranslationModelCatalog.Find(sourceLang, targetLang);
         if (info is null) return false;
         var dir = Path.Combine(ModelsDir, info.PairId);
-        return TranslationModelCatalog.RequiredFiles.All(f => File.Exists(Path.Combine(dir, f)));
+        return TranslationModelCatalog.RequiredFilesByPair[info.PairId]
+            .All(f => File.Exists(Path.Combine(dir, f.RelativePath.Replace('/', Path.DirectorySeparatorChar))));
     }
 
     public async Task<string> TranslateAsync(
@@ -70,13 +73,13 @@ internal sealed class TranslationService : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(dir, "onnx"));
 
-        foreach (var relativePath in TranslationModelCatalog.RequiredFiles)
+        foreach (var file in TranslationModelCatalog.RequiredFilesByPair[info.PairId])
         {
-            var destination = Path.Combine(dir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            var destination = Path.Combine(dir, file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(destination)) continue;
 
-            progress?.Report($"Telechargement du modele de traduction ({info.SourceLang} -> {info.TargetLang}) : {relativePath}...");
-            var url = $"https://huggingface.co/{info.HuggingFaceRepo}/resolve/main/{relativePath}";
+            progress?.Report($"Telechargement du modele de traduction ({info.SourceLang} -> {info.TargetLang}) : {file.RelativePath}...");
+            var url = $"https://huggingface.co/{info.HuggingFaceRepo}/resolve/main/{file.RelativePath}";
 
             var tempPath = destination + ".part";
             using (var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
@@ -86,6 +89,9 @@ internal sealed class TranslationService : IDisposable
                 await using var output = File.Create(tempPath);
                 await input.CopyToAsync(output, cancellationToken);
             }
+
+            progress?.Report($"Verification de l'integrite : {file.RelativePath}...");
+            await ModelIntegrity.VerifyOrDeleteAsync(tempPath, file.Sha256, cancellationToken);
             File.Move(tempPath, destination, overwrite: true);
         }
     }

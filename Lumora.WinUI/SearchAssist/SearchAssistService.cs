@@ -1,3 +1,4 @@
+using Lumora.WinUI.ModelDownload;
 using Microsoft.ML.OnnxRuntimeGenAI;
 
 namespace Lumora.WinUI.SearchAssist;
@@ -14,14 +15,18 @@ internal sealed class SearchAssistService : IDisposable
     private const string ModelSubPath = "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4";
     private const string ModelFileName = "phi3-mini-4k-instruct-cpu-int4-rtn-block-32-acc-level-4.onnx";
 
-    private static readonly string[] RequiredFiles =
+    // Empreintes SHA256 obtenues en telechargeant reellement ces fichiers le
+    // 2026-07-20 (voir ModelDownload/ModelIntegrity.cs) - le plus gros fichier
+    // (~2,7 Go, les poids du modele) n'avait jusque-la aucune verification
+    // d'integrite au-dela du HTTPS.
+    private static readonly IReadOnlyList<ModelFile> RequiredFiles =
     [
-        "genai_config.json",
-        ModelFileName,
-        $"{ModelFileName}.data",
-        "tokenizer.json",
-        "tokenizer_config.json",
-        "special_tokens_map.json",
+        new("genai_config.json", "d5ec04466a3d080de412409bf762219628f375314cfff303976733364baec5a2"),
+        new(ModelFileName, "385cd1b908a0d2f8634e86d30236f6dbb7ae660eb3943fd1ef5bdc3847326480"),
+        new($"{ModelFileName}.data", "5db30ce699aee1123cf9045742488db5928006fa618a42cb3c0840322a85ad0f"),
+        new("tokenizer.json", "072ab882d6c7192a42f78790945d16c064691321a73251a4b18f6a380f0fbe39"),
+        new("tokenizer_config.json", "32f66c2bab499baaa8341819ad9a13342f957501ce1e989bcb90853a01336cc0"),
+        new("special_tokens_map.json", "810adc6e6c6ef2f56c285ef930d243358a3a9f05e36a01c5a10bafc6fac4609b"),
     ];
 
     private static readonly string ModelDir = Path.Combine(
@@ -39,7 +44,7 @@ internal sealed class SearchAssistService : IDisposable
     private Model? _model;
     private Tokenizer? _tokenizer;
 
-    public bool IsModelCached() => RequiredFiles.All(f => File.Exists(Path.Combine(ModelDir, f)));
+    public bool IsModelCached() => RequiredFiles.All(f => File.Exists(Path.Combine(ModelDir, f.RelativePath)));
 
     public async Task<string?> RewriteQueryAsync(
         string rawQuery, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
@@ -78,13 +83,13 @@ internal sealed class SearchAssistService : IDisposable
     {
         Directory.CreateDirectory(ModelDir);
 
-        foreach (var fileName in RequiredFiles)
+        foreach (var file in RequiredFiles)
         {
-            var destination = Path.Combine(ModelDir, fileName);
+            var destination = Path.Combine(ModelDir, file.RelativePath);
             if (File.Exists(destination)) continue;
 
-            progress?.Report($"Telechargement du modele de recherche assistee : {fileName}...");
-            var url = $"https://huggingface.co/{HuggingFaceRepo}/resolve/main/{ModelSubPath}/{fileName}";
+            progress?.Report($"Telechargement du modele de recherche assistee : {file.RelativePath}...");
+            var url = $"https://huggingface.co/{HuggingFaceRepo}/resolve/main/{ModelSubPath}/{file.RelativePath}";
 
             var tempPath = destination + ".part";
             using (var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
@@ -94,6 +99,9 @@ internal sealed class SearchAssistService : IDisposable
                 await using var output = File.Create(tempPath);
                 await input.CopyToAsync(output, cancellationToken);
             }
+
+            progress?.Report($"Verification de l'integrite : {file.RelativePath}...");
+            await ModelIntegrity.VerifyOrDeleteAsync(tempPath, file.Sha256, cancellationToken);
             File.Move(tempPath, destination, overwrite: true);
         }
     }
