@@ -18,9 +18,10 @@ internal sealed record PasswordHealthReport(
 }
 
 // Bilan de santé du coffre : réutilisés, faibles, anciens. Analyse 100% locale,
-// aucune donnée (ni hash) ne quitte la machine — c'est la règle du projet. La
-// vérification « compromis dans une fuite » (type Have I Been Pwned) exigerait
-// une requête sortante : exclue tant qu'elle n'a pas été explicitement validée.
+// aucune donnée (ni hash) ne quitte la machine. La vérification « compromis
+// dans une fuite » (Have I Been Pwned) est désormais implémentée séparément
+// dans BreachChecker (k-anonymat, requête sortante explicitement déclenchée
+// par l'utilisateur) — jamais mélangée à cette analyse locale et automatique.
 internal static class PasswordHealthAnalyzer
 {
     // Un mot de passe non changé depuis 2 ans est signalé comme ancien : assez
