@@ -375,7 +375,6 @@
                                             <VisualState.Setters>
                                                 <Setter Target="RootGrid.Background" Value="{StaticResource NovaChromeSurfaceRaisedBrush}" />
                                                 <Setter Target="AccentBar.Opacity" Value="1" />
-                                                <Setter Target="SettingsNavContentPresenter.(TextElement.FontWeight)" Value="SemiBold" />
                                             </VisualState.Setters>
                                         </VisualState>
                                         <VisualState x:Name="Unchecked" />
