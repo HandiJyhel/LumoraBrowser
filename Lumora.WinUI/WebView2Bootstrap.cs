@@ -22,6 +22,13 @@ internal static class WebView2Bootstrap
             // anti-télémétrie au lieu d'écraser la variable.
             var external = Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
             var flags = "--disable-crash-reporter --disable-breakpad --disable-domain-reliability --no-pings";
+            // Privacy Sandbox (Topics API + Protected Audience/FLEDGE) : ce sont les
+            // API de ciblage publicitaire de Chromium, actives par defaut. Coupees
+            // ici car elles n'ont pas leur place dans un navigateur qui promet
+            // l'absence de tracking - constate le 2026-07-29 via les fichiers
+            // InterestGroups/BrowsingTopicsSiteData crees dans le profil meme sans
+            // usage. Effet secondaire utile : ces fichiers ne sont plus crees.
+            flags += " --disable-features=BrowsingTopics,InterestGroupStorage,AdInterestGroupAPI,Fledge,PrivacySandboxSettings4,PrivacySandboxAdsAPIsOverride";
             // Anti-fuite WebRTC : interdit les candidats ICE UDP non proxifies, qui
             // reveleraient sinon l'IP locale/publique reelle a n'importe quel site
             // utilisant WebRTC (appel video ou simple fingerprinting).
