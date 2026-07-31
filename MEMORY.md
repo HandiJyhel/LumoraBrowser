@@ -16053,3 +16053,47 @@ tot).
 
 **Version :** `0.93.8.0-dev` (inchangee - nouvelle fonctionnalite, pas
 un changement de palier).
+
+## 2026-07-31 (suite) - Vrai crash natif signale par l'utilisateur, trouve et corrige
+
+**Signale par l'utilisateur** : l'application se fermait en entrant dans
+A propos, sur sa propre execution reelle. Diagnostique serieusement
+plutot que suppose :
+- Reproduit avec un build de dev frais (meme sequence : Menu Lumora ->
+  Parametres) - crash confirme du cote IA aussi, pas specifique a la
+  machine de l'utilisateur.
+- `winui-runtime-trace.log` ne contenait AUCUNE ligne "UNHANDLED" - donc
+  pas une exception .NET geree.
+- **Observateur d'evenements Windows** (`Get-WinEvent`, log Application,
+  provider "Application Error") a confirme le vrai diagnostic : violation
+  d'acces (`0xc0000005`) dans `Microsoft.UI.Xaml.dll` - un crash natif du
+  moteur XAML, invisible pour tout mecanisme de capture .NET.
+
+**Cause reelle** : le `ControlTemplate` de `NovaSideRailNavRadioButtonStyle`
+(introduit plus tot cette session pour le rail Parametres/A propos)
+posait `<Setter Target="SettingsNavContentPresenter.(TextElement.FontWeight)" .../>`
+dans un `VisualState.Setters` - `ContentPresenter` ne supporte pas
+nativement cette syntaxe de propriete attachee dans ce contexte en
+WinUI 3, ce qui faisait planter le moteur natif au lieu d'echouer
+proprement (pas d'exception .NET catchable). Retire - l'effet "gras a
+la selection" n'etait qu'un detail, la barre d'accent + le fond releve
+suffisent deja a signaler l'etat selectionne.
+
+**Verification serieuse post-correctif** (pas juste "ca compile") :
+build frais, lancement reel, Parametres ouvert (defaut "Vue d'ensemble"
+deja coche a l'ouverture - exercice immediat du VisualState Checked),
+selection explicite de "Mon Lumora", reouverture du menu, puis A propos
+et ses 7 rubriques une par une (Vue d'ensemble, Modules, Confidentialite,
+Authenticite, Dependances, Technique, Profil local) - toutes
+selectionnees sans le moindre crash, processus reste reactif tout du
+long. Build + `dotnet test` : 695/696 (meme echec preexistant).
+
+**Lecon a retenir** : les crashs natifs (violation d'acces) ne laissent
+aucune trace dans les mecanismes .NET habituels (try/catch,
+UnhandledException, WinUiRuntimeTrace) - l'Observateur d'evenements
+Windows (log Application, provider "Application Error") est la seule
+source fiable pour diagnostiquer ce type de crash. A reflexe pour tout
+futur signalement de fermeture brutale sans message d'erreur.
+
+**Version :** `0.93.8.0-dev` (inchangee - correctif critique, aucun
+changement de comportement voulu).
