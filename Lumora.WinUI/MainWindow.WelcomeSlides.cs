@@ -1,7 +1,8 @@
+using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Shapes;
 
 namespace Lumora.WinUI;
 
@@ -14,6 +15,10 @@ namespace Lumora.WinUI;
 public sealed partial class MainWindow
 {
     private const int WelcomeSlideCount = 5;
+    private const double WelcomeSlideDistance = 48;
+    private const double WelcomeCursorStep = 16;
+    private const double WelcomeTransitionMs = 260;
+
     private int _welcomeStep;
     private bool _welcomeIsReplay;
     private Storyboard? _welcomeCurrentPulse;
@@ -24,7 +29,15 @@ public sealed partial class MainWindow
     };
 
     private StackPanel[] WelcomeSteps => new[] { WelcomeStep0, WelcomeStep1, WelcomeStep2, WelcomeStep3, WelcomeStep4 };
-    private Rectangle[] WelcomeDots => new[] { WelcomeDot0, WelcomeDot1, WelcomeDot2, WelcomeDot3, WelcomeDot4 };
+
+    private TranslateTransform[] WelcomeStepTransforms => new[]
+    {
+        (TranslateTransform)WelcomeStep0.RenderTransform,
+        (TranslateTransform)WelcomeStep1.RenderTransform,
+        (TranslateTransform)WelcomeStep2.RenderTransform,
+        (TranslateTransform)WelcomeStep3.RenderTransform,
+        (TranslateTransform)WelcomeStep4.RenderTransform,
+    };
 
     // isReplay=false : premier lancement reel, la fin des slides enchaine sur
     // la creation du profil (ShowLoginPanel("create") + ShowLoginOverlayChrome()).
@@ -35,52 +48,137 @@ public sealed partial class MainWindow
     {
         _welcomeStep = 0;
         _welcomeIsReplay = isReplay;
-        UpdateWelcomeStep();
+
+        var steps = WelcomeSteps;
+        var transforms = WelcomeStepTransforms;
+        for (var i = 0; i < steps.Length; i++)
+        {
+            steps[i].Visibility = i == 0 ? Visibility.Visible : Visibility.Collapsed;
+            steps[i].Opacity = 1;
+            transforms[i].X = 0;
+        }
+        Canvas.SetLeft(WelcomeStepCursor, 0);
+
+        UpdateWelcomeChrome();
         WelcomeOverlay.Visibility = Visibility.Visible;
         WelcomeOverlay.Focus(FocusState.Programmatic);
         ((Storyboard)WelcomeOverlay.Resources["WelcomeAmbienceStoryboard"]).Begin();
+        BeginWelcomePulse(0);
     }
 
-    private void UpdateWelcomeStep()
+    // Retour utilisateur : le changement de diapositive devait vraiment se
+    // "voir voyager" (effet page qui glisse), pas sauter d'un bloc. direction
+    // +1 = Suivant (la nouvelle slide arrive de la droite, l'ancienne part a
+    // gauche), -1 = Precedent (inverse).
+    private void GoToWelcomeStep(int newStep, int direction)
+    {
+        var oldStep = _welcomeStep;
+        _welcomeStep = newStep;
+
+        AnimateWelcomeStepTransition(oldStep, newStep, direction);
+        AnimateWelcomeCursor(newStep);
+        BeginWelcomePulse(newStep);
+        UpdateWelcomeChrome();
+    }
+
+    private void AnimateWelcomeStepTransition(int oldIndex, int newIndex, int direction)
+    {
+        var steps = WelcomeSteps;
+        var transforms = WelcomeStepTransforms;
+        var oldPanel = steps[oldIndex];
+        var newPanel = steps[newIndex];
+        var oldTransform = transforms[oldIndex];
+        var newTransform = transforms[newIndex];
+
+        newPanel.Visibility = Visibility.Visible;
+        newPanel.Opacity = 0;
+        newTransform.X = direction * WelcomeSlideDistance;
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(WelcomeOpacityAnimation(oldPanel, 1, 0));
+        storyboard.Children.Add(WelcomeTranslateAnimation(oldTransform, 0, -direction * WelcomeSlideDistance));
+        storyboard.Children.Add(WelcomeOpacityAnimation(newPanel, 0, 1));
+        storyboard.Children.Add(WelcomeTranslateAnimation(newTransform, direction * WelcomeSlideDistance, 0));
+
+        storyboard.Completed += (_, _) =>
+        {
+            oldPanel.Visibility = Visibility.Collapsed;
+            oldPanel.Opacity = 1;
+            oldTransform.X = 0;
+        };
+        storyboard.Begin();
+    }
+
+    private void AnimateWelcomeCursor(int step)
+    {
+        var animation = new DoubleAnimation
+        {
+            To = step * WelcomeCursorStep,
+            Duration = new Duration(TimeSpan.FromMilliseconds(WelcomeTransitionMs)),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        Storyboard.SetTarget(animation, WelcomeStepCursor);
+        Storyboard.SetTargetProperty(animation, "(Canvas.Left)");
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(animation);
+        storyboard.Begin();
+    }
+
+    private static DoubleAnimation WelcomeOpacityAnimation(UIElement target, double from, double to)
+    {
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = new Duration(TimeSpan.FromMilliseconds(WelcomeTransitionMs)),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        Storyboard.SetTarget(animation, target);
+        Storyboard.SetTargetProperty(animation, "Opacity");
+        return animation;
+    }
+
+    private static DoubleAnimation WelcomeTranslateAnimation(TranslateTransform target, double from, double to)
+    {
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = new Duration(TimeSpan.FromMilliseconds(WelcomeTransitionMs)),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        Storyboard.SetTarget(animation, target);
+        Storyboard.SetTargetProperty(animation, "X");
+        return animation;
+    }
+
+    // Halo + anneau de l'icone en cours "respirent" doucement tant que la
+    // diapositive reste affichee - une seule animation active a la fois.
+    private void BeginWelcomePulse(int step)
+    {
+        _welcomeCurrentPulse?.Stop();
+        _welcomeCurrentPulse = (Storyboard)WelcomeOverlay.Resources[WelcomePulseKeys[step]];
+        _welcomeCurrentPulse.Begin();
+    }
+
+    private void UpdateWelcomeChrome()
     {
         // AutomationProperties.Name (pas le Text, garde volontairement invisible/
-        // quasi transparent a l'ecran) : seul signal donne au lecteur d'ecran, les
-        // pilules de progression n'en portent aucun a elles seules.
+        // quasi transparent a l'ecran) : seul signal donne au lecteur d'ecran, le
+        // rail de pastilles n'en porte aucun a lui seul.
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
             WelcomeStepIndicator, $"Étape {_welcomeStep + 1} sur {WelcomeSlideCount}");
 
-        var steps = WelcomeSteps;
-        for (var i = 0; i < steps.Length; i++)
-        {
-            steps[i].Visibility = i == _welcomeStep ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        var dots = WelcomeDots;
-        for (var i = 0; i < dots.Length; i++)
-        {
-            var isCurrent = i == _welcomeStep;
-            dots[i].Width = isCurrent ? 20 : 8;
-            dots[i].Fill = isCurrent
-                ? (Microsoft.UI.Xaml.Media.Brush)RootShell.Resources["NovaAccentBrush"]
-                : (Microsoft.UI.Xaml.Media.Brush)RootShell.Resources["NovaChromeStrokeBrush"];
-        }
-
         WelcomePrevButton.IsEnabled = _welcomeStep > 0;
         WelcomeNextButton.Content = _welcomeStep == WelcomeSlideCount - 1 ? "Commencer" : "Suivant";
-
-        // Halo + anneau de l'icone en cours "respirent" doucement tant que la
-        // diapositive reste affichee - une seule animation active a la fois.
-        _welcomeCurrentPulse?.Stop();
-        _welcomeCurrentPulse = (Storyboard)WelcomeOverlay.Resources[WelcomePulseKeys[_welcomeStep]];
-        _welcomeCurrentPulse.Begin();
     }
 
     private void WelcomePrevButton_Click(object sender, RoutedEventArgs e)
     {
         if (_welcomeStep > 0)
         {
-            _welcomeStep--;
-            UpdateWelcomeStep();
+            GoToWelcomeStep(_welcomeStep - 1, -1);
         }
     }
 
@@ -88,8 +186,7 @@ public sealed partial class MainWindow
     {
         if (_welcomeStep < WelcomeSlideCount - 1)
         {
-            _welcomeStep++;
-            UpdateWelcomeStep();
+            GoToWelcomeStep(_welcomeStep + 1, 1);
         }
         else
         {
