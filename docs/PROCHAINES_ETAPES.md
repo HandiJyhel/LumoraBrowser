@@ -4,158 +4,84 @@ Document de suivi, pas un journal de version comme les autres fichiers de
 `docs/`. Mis a jour a chaque session pour refleter ce qui reste a faire.
 Contexte complet dans `MEMORY.md` (historique) et `AGENTS.md` (regles).
 
-**Etat au 2026-07-19, apres la version `0.83.46-dev`.**
+**Etat au 2026-07-31, apres la version `0.93.8.0-dev` et l'adoption de la
+GPLv3.** Remplace la version precedente de ce document, restee figee au
+19 juillet malgre ~10 jours de travail commits depuis (voir le rattrapage
+de 17 commits du 31 juillet, detaille dans `MEMORY.md`).
 
 ---
 
-## Deja fait cette session (17-19 juillet)
+## Deja fait depuis le 19 juillet (versions 0.83.54.1-dev a 0.93.8.0-dev)
 
-- Audit complet du projet (securite, coffre, architecture, tests/build).
-- Rattrapage de ~25 versions non commitees, reorganise en 8 commits propres.
-- Point bloquant n°1 de l'audit corrige : pont JS<->natif authentifie
-  (passkeys via `e.Source`, messages `newtab_*` restreints a la page
-  d'accueil interne). Commit `d21062a`.
-- Mode Incognito : fusion navigation privee + Tor, session ephemere,
-  Tor optionnel, entree dans le selecteur de mode. Bug bloquant de rendu
-  WebView2 trouve et corrige (voir `logs/2026-07-18-mode-incognito-fusion-tor-0-83-24.md`
-  pour le detail complet du diagnostic). Verifie sur deux machines.
-  Commit `a365abe`.
-- SDK `Microsoft.Web.WebView2` mis a jour (1.0.2903.40 -> 1.0.4078.44).
-- **Integrite de `tor.exe` verifiee avant lancement (0.83.25-dev)** :
-  `TorProcessManager.StartAsync` refuse desormais d'executer tout fichier
-  sous `<profil>/tor/` dont le SHA256 ne correspond pas a la liste epinglee
-  `TorTrustedRelease.TrustedFileHashes` (actuellement : `tor.exe` du Tor
-  Expert Bundle 15.0.18 officiel, verifie par signature GPG + SHA256 avant
-  d'etre epingle - voir `logs/2026-07-19-integrite-tor-0-83-25.md`). Point 1
-  de l'audit initial traite.
-- **Telechargement et installation reelle du moteur Tor (0.83.26-dev)** :
-  nouveau `TorEngineProvider.cs` telecharge l'archive officielle
-  (`TorTrustedRelease.ArchiveUrl`), verifie son SHA256 contre
-  `TorTrustedRelease.ArchiveSha256`, extrait uniquement `tor/tor.exe` (via
-  `System.Formats.Tar`, deja dans .NET 8, aucune nouvelle dependance),
-  reverifie le binaire extrait contre `TorTrustedRelease.TrustedFileHashes`,
-  puis le copie dans le profil. Bouton "Installer le moteur Tor" ajoute a
-  deux endroits de `LumoraIncognitoWindow` (bascule d'en-tete et ecran
-  d'echec au demarrage), jamais declenche automatiquement. Voir
-  `logs/2026-07-19-installation-tor-0-83-26.md`. Hash epingle en dur
-  choisi deliberement (pas de verification de signature GPG a l'execution)
-  pour rester coherent avec l'etape 1 et ne pas ajouter de dependance
-  crypto - limite assumee ci-dessous.
-- **Versionnement de schema pour `UiSettings` (0.83.27-dev)** : nouvelle
-  propriete `SchemaVersion` + `CurrentSchemaVersion`, table
-  `MigrationSteps` (vide aujourd'hui) et boucle generique
-  `ApplyMigrations` appliquee sur le JSON brut avant deserialisation
-  typee. Objectif : qu'un futur renommage/suppression de propriete
-  s'absorbe par une entree de migration au lieu de faire echouer
-  `JsonSerializer.Deserialize<UiSettings>` et reinitialiser TOUS les
-  reglages via le catch-all de `Load()`. Voir
-  `logs/2026-07-19-migration-uisettings-0-83-27.md`. Point 4 de l'audit
-  initial traite.
-- **Restructuration des god files de `MainWindow`, increment 1/2 (0.83.28-dev)** :
-  `MainWindow` est une `partial class` deja repartie sur 37 fichiers -
-  deplacer des methodes entre fichiers ne change rien au runtime, seulement
-  l'organisation. Extractions surs realisees sur les 3 fichiers les plus
-  gros :
-  - `Navigation.cs` (3010 -> 1426 lignes) : `MainWindow.NewTabHome.cs`
-    (1025 l., generateur de page nouvel onglet) et `MainWindow.TabGroups.cs`
-    (601 l., groupes/onglets verticaux) extraits.
-  - `Settings.cs` (1597 -> 992 lignes) : `MainWindow.SettingsStorage.cs`
-    (192 l.) et `MainWindow.SettingsTheme.cs` (458 l., moteur de theme +
-    P/Invoke backdrop) extraits.
-  - `Bookmarks.cs` (1333 -> 873 lignes) : `MainWindow.BookmarksDialogs.cs`
-    (123 l.), `MainWindow.BookmarksImportExport.cs` (171 l.) et
-    `MainWindow.BookmarksFlyouts.cs` (216 l.) extraits.
-  - `Profile.cs` (1292 l.) et `xaml.cs` (1285 l., contient l'etat partage
-    par 7 a 19 autres fichiers + le constructeur a l'ordre d'initialisation
-    critique) **volontairement reportes** a une prochaine session - voir
-    "Notes utiles" plus bas pour reprendre le fil sans refaire
-    l'exploration.
-  - **Piege rencontre et corrige** : plusieurs tests verifient du texte
-    litteral dans un fichier par chemin en dur plutot que par comportement
-    (`UsageModeVisualIdentityTests.cs` contre `Navigation.cs`/`Settings.cs`,
-    `BookmarkBarRegressionTests.cs` contre `Bookmarks.cs`). Deplacer le
-    contenu attendu casse ces tests sans regression reelle - corriges en
-    pointant vers le nouveau fichier. A anticiper pour `Profile.cs`/`xaml.cs`.
-  - Voir `logs/2026-07-19-restructuration-mainwindow-0-83-28.md`.
-- **Restructuration des god files de `MainWindow`, increment 2/2 (0.83.29-dev)** :
-  point 3 de l'audit initial traite. Verification approfondie de
-  `Profile.cs` avant d'y toucher : **pas d'extraction necessaire** -
-  `RootKeyDown` (routeur clavier global suspecte a l'increment 1) utilise
-  en realite directement `_pinBuffer`/`_pinFailCount`, des champs exclusifs
-  a `Profile.cs` - ce n'est pas un corps etranger, juste un routeur
-  multi-usage qui vit legitimement ici. Le reste du fichier n'a pas de
-  couplage problematique, juste de la taille : laisse tel quel.
-  `xaml.cs` (1285 -> 652 lignes) : `MainWindow.UsageMode.cs` (553 l., mode
-  d'usage/compagnon Lumie) et `MainWindow.WindowChrome.cs` (165 l., couleurs
-  de barre de titre/icone/zone de securite) extraits - les deux candidats
-  surs deja identifies a l'increment 1, cette fois verifies ligne par ligne
-  avant extraction (chaque assertion de test localisee au prealable, aucune
-  surprise de test casse cette fois). Voir
-  `logs/2026-07-19-restructuration-mainwindow-increment2-0-83-29.md`.
-- **Tests pour les modules privacy/Tor/Incognito (0.83.30-dev)** : 33
-  nouveaux tests sur `FingerprintProtectionScript`, `GeolocationSpoofScript`
-  (deja des classes pures), `IncognitoLaunchArgs` (parseur pur). Deux
-  petites extractions de logique pure pour rendre le reste testable, sans
-  changement de comportement : `IncognitoProcessLauncher.BuildArguments`
-  (construction des arguments, separee de `Launch` qui demarre un vrai
-  process) et `IncognitoWelcomeHtml.cs` (nouveau fichier - la page
-  d'accueil de la fenetre Incognito etait deja une fonction statique pure,
-  coincee dans une classe WinUI non compilable dans `Lumora.Tests`).
-  `LumoraIncognitoWindow` elle-meme reste sans tests unitaires (fenetre
-  WinUI, deja verifiee en conditions reelles a plusieurs reprises cette
-  session) - point 1 de l'audit initial traite pour ces 5 elements. Voir
-  `logs/2026-07-19-tests-privacy-incognito-0-83-30.md`.
-- **Pipeline CI (0.83.31-dev)** : nouveau `.github/workflows/ci.yml`,
-  declenche sur pull request/push vers `main` et manuellement. Deux jobs
-  paralleles sur `windows-latest` : `dotnet test` (net8.0-windows ne
-  tourne pas sur Linux) et un build MSBuild complet du projet WinUI avec
-  `/warnaserror` (`dotnet build` seul echoue sur ce projet - `microsoft/setup-msbuild`
-  requis, meme necessite que `scripts/run-winui.ps1` en local). Aucun
-  installeur ni executable de release genere par la CI (regle 20
-  d'AGENTS.md). Depot pas encore pousse sur GitHub - le workflow prendra
-  effet des que ce sera fait. Dernier point de priorite haute de l'audit
-  initial traite. Voir `logs/2026-07-19-pipeline-ci-0-83-31.md`.
-- **Accessibilite produit plus distinctive (0.83.32-dev -> 0.83.41-dev)** :
-  au-dela des libelles UIA et tailles de texte, Lumora a maintenant :
-  - des profils de confort prets a l'emploi ;
-  - un confort memorise par site ;
-  - un guide de lecture immersif avec bande mobile et intensite utile pour
-    la lecture longue ;
-  - une navigation clavier par zones (`F6`, `Shift+F6`, `Ctrl+Alt+1..5`)
-    pour passer vite entre onglets, barre d'adresse, contenu actif,
-    outils et compagnon ;
-  - un rappel integre des raccourcis Lumora directement dans `Confort`,
-    avec relecture par annonce d'accessibilite pour ne pas laisser ces
-    aides avancees cachees ;
-  - un centre de confort rapide en barre basse, avec profils activables
-    partout et raccourcis `Ctrl+Alt+6..9` pour accelerer les bascules ;
-  - un repere contextuel global pour faire relire la zone courante et
-    recentrer le focus utile via `Ctrl+Alt+F` et `Ctrl+Alt+R` ;
-  - un `mode secours` avec retour a l'etat precedent, activable partout
-    via `Ctrl+Alt+S` puis `Ctrl+Alt+X` ;
-  - un script de lancement WinUI ajuste pour ne plus verrouiller
-    l'executable de build pendant les validations locales.
-  Voir `logs/2026-07-19-accessibilite-socle-0-83-32.md`,
-  `logs/2026-07-19-accessibilite-panneaux-profonds-0-83-33.md`,
-  `logs/2026-07-19-profils-confort-0-83-34.md`,
-  `logs/2026-07-19-confort-par-site-0-83-35.md` et
-  `logs/2026-07-19-guide-lecture-immersif-0-83-36.md`,
-  `logs/2026-07-19-navigation-zones-clavier-0-83-42.md`, puis
-  `logs/2026-07-19-raccourcis-confort-annonces-0-83-43.md`, puis
-  `logs/2026-07-19-confort-rapide-footer-0-83-44.md`.
+Resume par theme (detail complet, session par session, dans `MEMORY.md`) :
+
+- Securite : Tor/Incognito ephemere, faille mode invite corrigee, audit
+  manuel des points d'entree de connexion.
+- Navigation/popups : detournement sans reseau publicitaire repertorie,
+  popups parasites corriges.
+- Confidentialite : refus de cookies fiabilise (traversee Shadow DOM),
+  coupure des API de ciblage pub Privacy Sandbox (Topics/FLEDGE).
+- Coffre : verification des mots de passe compromis.
+- Applications web : identite Windows distincte, icones, barre de titre.
+- Ajout des flux RSS, du Menu Demarrer (registre de tuiles, epinglage),
+  de l'identite visuelle modulaire "Studio Lumora" et du fond d'ecran.
+- Molette : saga de diagnostic close (moteur de scroll natif fiabilise).
+- Onglets : menu contextuel a plat, selection multiple, split view.
+- **Chantier accessibilite handicap (0.93.0.0-dev -> 0.93.2.0-dev),
+  officiellement clos le 27 juillet** sur les 3 angles retenus par
+  l'utilisateur : lecteur d'ecran, moteur/motricite, basse vision
+  etendue. Voir plus bas les reserves explicites laissees a la cloture.
+- Rattrapage de 17 commits (10 jours de travail non commite) + adoption
+  de la licence GPLv3 avec exception pour composants Windows
+  proprietaires (WebView2, Windows App SDK) - 31 juillet.
 
 ---
 
-## Priorite haute (bloquants de l'audit initial, encore ouverts)
+## Priorite haute (bloquants avant de qualifier une release de "prete")
 
-_Aucun point restant - tous les points de priorite haute de l'audit
-initial (integrite Tor, god files `MainWindow`, tests privacy/Incognito,
-CI ; le pont JS<->natif avait deja ete traite en tout debut de session)
-sont desormais traites._
+- **Installateur non autonome (WebView2 Evergreen)** : `scripts/build-installer.ps1`
+  telecharge encore WebView2 depuis Microsoft si le runtime manque sur la
+  machine. L'utilisateur exige qu'une release n'ait rien a telecharger
+  pour l'utilisateur final - il faut basculer vers le mode "Fixed
+  Version" (runtime embarque dans l'installateur, ~150-200 Mo de plus,
+  mise a jour manuelle du runtime au lieu d'un auto-update Windows
+  Update). Pas fait a ce jour.
+- **Vrai zoom de l'interface Lumora elle-meme** (chrome native, pas
+  seulement les pages web visitees) : explicitement identifie comme le
+  point le plus lourd de l'angle basse vision et reporte a une session
+  dediee le 27 juillet, jamais traite depuis. ~319 `FontSize=` en dur
+  dans `MainWindow.xaml` (verifie a nouveau le 31 juillet), aucun
+  mecanisme de mise a l'echelle centralise. Chantier a part entiere, pas
+  un correctif ponctuel.
+- **Accessibilite handicap jamais verifiee en conditions reelles** :
+  tout le chantier 0.93.0-0.93.2 a ete valide par relecture de code et
+  automatisation UIA, jamais par un vrai passage a un lecteur d'ecran
+  (Narrateur/NVDA/JAWS) ni par de vrais raccourcis clavier physiques
+  (injection clavier/souris bloquee dans l'environnement de
+  developpement utilise). Documente comme limite assumee a chaque etape
+  (0.93.0.0, 0.93.1.0-dev), jamais leve depuis. Pas un blocage absolu
+  pour une premiere release, mais un vrai angle mort avant de presenter
+  l'accessibilite handicap comme "validee" plutot que "implementee".
+- **Test reel a la molette physique** toujours du par l'utilisateur -
+  signale comme non verifiable dans l'environnement de dev depuis
+  0.84.1.12-dev, rappele encore a 0.93.2.1-dev (filet de secours
+  generique). Meme limite d'environnement, jamais un vrai geste de
+  molette physique confirme.
+- **Correctif plein ecran YouTube (0.93.7.0-dev) non confirme en
+  conditions reelles** : le watchdog ajoute n'a jamais ete declenche par
+  un vrai clic sur le bouton plein ecran natif du lecteur (arbre
+  d'accessibilite Chromium/WebView2 non atteignable par l'automate UIA
+  dans cet environnement). A tester par l'utilisateur.
+- **Trou de documentation constate le 29 juillet** : `AGENTS.md` etait
+  deja a `0.93.6.2-dev` alors que le dernier point journalise dans
+  `MEMORY.md` s'arretait a `0.93.5.0-dev` - une etape anterieure n'a
+  jamais ete journalisee, contenu non reconstitue (ne pas inventer si le
+  sujet revient, juste constater le trou).
 
 ---
 
-## Priorite moyenne (important, pas bloquant)
+## Priorite moyenne (important, pas bloquant - liste du 19 juillet, non
+revisitee cette session, a reverifier avant d'agir dessus)
 
 - **Coffre - acces rapide sans reauthentification** (`MainWindow.VaultQuickAccess.cs`) :
   compromis ergonomie/securite assume, a reconfirmer consciemment plutot
@@ -172,83 +98,56 @@ sont desormais traites._
   `OffscreenCanvas`, `AudioWorkletNode` non couverts.
 - **Pattern `SyncTogglePair` a moitie generalise** (3 usages sur 38
   gestionnaires `Toggled`).
-- **Accessibilite encore partielle sur les surfaces profondes** :
-  `AccessibilityLargeText` et la passe UIA couvrent maintenant aussi des
-  panneaux dynamiques plus profonds (`Sessions`, `Passkeys`,
-  `Portefeuille`, acces rapide du coffre, ainsi que les rerenders quand les
-  reglages d'accessibilite changent), et un guide de lecture immersif vient
-  maintenant completer le lot "lecture/confort". La navigation clavier par
-  zones couvre aussi les grandes regions du shell, mais une passe clavier +
-  Narrator complete reste a faire sur l'ensemble du navigateur.
-- **Aucun vrai zoom de l'interface Lumora elle-meme** (chantier reporte
-  explicitement le 2026-07-27, palier 0.93.x accessibilite basse vision) :
-  seul le zoom des pages web visitees existe (`MainWindow.SiteComfort.cs`,
-  zoom par site) ; `AccessibilityLargeText` ne touche que 7 elements avec un
-  delta de 2px (`MainWindow.SettingsTheme.cs`). Le XAML statique contient
-  ~304 `FontSize=` en dur jamais relies a ce reglage. Une vraie correction
-  demande un mecanisme de mise a l'echelle centralise (ressources `FontSize`
-  partagees par les styles `Nova*Style` deja nommes plutot que 304 valeurs
-  individuelles) - chantier a part entiere, pas un correctif ponctuel, volontairement
-  laisse de cote pour eviter une refonte visuelle non voulue en cours de
-  route.
 - **Aucune doc d'architecture d'ensemble** decrivant comment les
-  fichiers `MainWindow.*` s'articulent entre eux.
-- **Version dupliquee en dur a 8 endroits** (AGENTS.md, xaml.cs, 2
+  fichiers `MainWindow.*` s'articulent entre eux (le nombre de fichiers
+  a fortement augmente depuis le 19 juillet - RSS, Menu Demarrer,
+  IdentitySpine, LayoutStudio, SplitView, LoginSecurity...).
+- **Version dupliquee en dur a plusieurs endroits** (AGENTS.md, xaml.cs,
   scripts, test de garde-fou). Le test empeche l'incoherence mais pas
   l'oubli simultane.
 - **Duplication entre les scripts de build** (`Get-Sha256Hex` copie dans
   `build-clean-test-artifact.ps1` et `build-installer.ps1`).
-- **Rendu de la barre de favoris pas encore extrait de `MainWindow.Bookmarks.cs`**
-  (lignes 46-217 et 548-873 environ, CRUD + toolbar) : candidat identifie
-  pour une session future, laisse en place cette session car
-  `BookmarkBarRegressionTests.cs` verifie du texte litteral dedans
-  (`CreateBookmarksOverflowButton`, `RevealBookmarkInBar`,
-  `SelectAllBookmarksButton_Click`, etc.) - a extraire en mettant a jour ce
-  test en meme temps, pas apres coup.
-- **`MainWindow.ReadingLens.cs` toujours sans test** (reste du perimetre du
-  point 1 de l'audit initial, non traite a la session 0.83.30-dev - les 5
-  autres elements de la liste l'ont ete).
-- **`LumoraIncognitoWindow` sans test unitaire** (par nature - fenetre
-  WinUI non compilable dans `Lumora.Tests`) : couverte uniquement par
-  verification en conditions reelles (pilotage UIA), plusieurs fois cette
-  session. `IncognitoWelcomeHtml.Build` et
-  `IncognitoProcessLauncher.BuildArguments` (la logique pure qu'elle
-  contenait) sont testes depuis la 0.83.30-dev.
-- **`TorTrustedRelease` epingle une version Tor precise (15.0.18) en dur**
-  (`Version`, `ArchiveUrl`, `ArchiveSha256`, `TrustedFileHashes["tor.exe"]`).
-  Choix assume a l'etape 2 (pas de verification de signature GPG a
-  l'execution, pour eviter une dependance crypto) : une nouvelle version de
-  Tor a supporter demande de refaire manuellement la verification
-  (telecharger l'archive, verifier signature GPG + SHA256, extraire,
-  calculer le hash de `tor.exe`) et de mettre a jour ces constantes -
-  detail de la methode dans `logs/2026-07-19-integrite-tor-0-83-25.md`. Pas
-  de mecanisme de mise a jour automatique du pin.
+- **`TorTrustedRelease` epingle une version Tor precise (15.0.18) en dur** :
+  pas de mecanisme de mise a jour automatique du pin, une nouvelle
+  version de Tor a supporter demande une reverification manuelle
+  complete (voir `logs/2026-07-19-integrite-tor-0-83-25.md`).
+
+---
+
+## Certification / distribution (nouveau depuis le 31 juillet)
+
+- **SignPath Foundation** (signature de code gratuite) : conditionne a la
+  publication du depot sur GitHub, pas encore faite. A candidater une
+  fois public.
+- **Microsoft Store** : compte developpeur individuel desormais gratuit
+  (verifie par recherche web le 31 juillet). Piste de distribution a
+  evaluer une fois le depot public.
+- **Badge OpenSSF/CII Best Practices** : gratuit, non encore mis en
+  place, mentionne comme signal de confiance complementaire.
 
 ---
 
 ## Notes utiles pour reprendre le fil
 
-- **Bug WebView2 resolu cette session** : creer un `CoreWebView2Environment`
-  explicite (`CreateWithOptionsAsync` + `EnsureCoreWebView2Async(environment, ...)`)
-  echoue silencieusement sur au moins une installation (les deux machines
-  testees), meme en process neuf. Seul `EnsureCoreWebView2Async()` sans
-  argument (config par variables d'environnement) est fiable. **A garder
-  en tete pour toute future fenetre qui aurait besoin d'un profil WebView2
-  isole** (le meme piege se reproduira si on recree ce pattern ailleurs).
-  Detail complet : `logs/2026-07-18-mode-incognito-fusion-tor-0-83-24.md`.
-- **Chaque fenetre Incognito tourne dans son propre process Windows**
-  depuis cette version (`IncognitoProcessLauncher`), consequence directe
-  du point ci-dessus. Bascule Tor = fermeture + reouverture d'une
-  fenetre neuve, pas un changement a chaud.
-- Le script de verification UIA utilise cette session
-  (`verify-incognito.ps1`) vit dans le scratchpad de l'agent, pas dans le
-  depot - a reconstruire si besoin de revalider la fenetre Incognito plus
-  tard (piloter via `AutomationId`, marche recursive `Children` en
-  elaguant les noeuds `Document`, cf. skill `verify`).
-- **Verification GPG de la signature Tor** : dans l'environnement de
-  developpement utilise cette session, `gpg --auto-key-locate wkd` echoue
-  (`dirmngr` indisponible dans ce shell). Contournement qui a fonctionne :
-  recuperer la cle publique par son empreinte exacte via
-  `https://keys.openpgp.org/vks/v1/by-fingerprint/<empreinte>` (GET simple,
-  pas de connexion dirmngr), puis `gpg --import`. Detail complet dans
-  `logs/2026-07-19-integrite-tor-0-83-25.md`.
+- **Bug WebView2 resolu (session du 19 juillet)** : creer un
+  `CoreWebView2Environment` explicite (`CreateWithOptionsAsync` +
+  `EnsureCoreWebView2Async(environment, ...)`) echoue silencieusement
+  sur au moins une installation. Seul `EnsureCoreWebView2Async()` sans
+  argument est fiable. A garder en tete pour toute future fenetre avec
+  profil WebView2 isole. Detail : `logs/2026-07-18-mode-incognito-fusion-tor-0-83-24.md`.
+- **Limite d'environnement recurrente** : l'injection clavier/souris
+  synthetique est refusee dans l'environnement de developpement utilise
+  (skill `verify`), et l'arbre d'accessibilite Chromium/WebView2 ne
+  s'active pas toujours pour l'automate UIA. Consequence directe : tous
+  les correctifs lies a la molette physique, aux raccourcis clavier et
+  au plein ecran video sont verifies par relecture de code stricte, pas
+  par un vrai geste physique - toujours le signaler comme tel plutot que
+  de presenter "verifie" sans nuance.
+- **Rattrapage de commits** : utiliser les fichiers `logs/*.md` comme
+  frontieres de regroupement quand plusieurs jours de travail
+  s'accumulent sans commit (fait le 19 juillet pour ~25 versions en 8
+  commits, refait le 31 juillet pour ~10 jours en 17 commits - voir
+  `MEMORY.md`, entree du 31 juillet, pour le detail et les limites
+  assumees sur les fichiers partages type `MainWindow.xaml`).
+- **Licence** : GPLv3 + `LICENSE-EXCEPTIONS.md` pour WebView2/Windows App
+  SDK, ajoutee le 31 juillet. Voir section "Licence" dans `AGENTS.md`.
