@@ -15837,3 +15837,49 @@ Style Parametres verifie par capture d'ecran reelle (avant/apres).
 
 **Version :** `0.93.8.0-dev` (inchangee - polish visuel, pas de nouvelle
 fonctionnalite).
+
+## 2026-07-31 (suite) - Theme clair : bug trouve et corrige avant meme le test visuel
+
+**Contexte** : l'utilisateur a explicitement demande que le theme clair
+soit "fait correctement, pas 15 fois" en vue d'une release prochaine
+suivie d'un portage Linux. Avant de relancer une verification visuelle
+en clair, relecture par prudence de `MainWindow.SettingsTheme.cs`.
+
+**Bug trouve par lecture de code, pas par capture d'ecran** :
+`NovaPanelShellCardBackgroundBrush`, ajoute au commit precedent
+("Interface : coherence du rail... + relief des cartes") pour corriger
+la platitude des cartes de panneaux, etait une `SolidColorBrush`
+statique dans les ressources XAML - sans entree `SetBrush(...)`
+correspondante dans `ApplyAccessibilitySettings`. Or **tous** les brushes
+Nova* qui different entre clair et sombre sont en realite mutes en place
+(`brush.Color = ...`) par `SetBrush`, appele a chaque application des
+reglages - un brush statique reste fige sur sa valeur XAML initiale
+quel que soit le theme choisi ensuite. Le brush ajoute etait donc juste
+en sombre (valeur choisie a la main pour ce theme), mais serait reste
+visuellement casse (fond sombre fige) une fois l'utilisateur passe en
+theme clair - jamais teste avant ce moment precis.
+
+**Corrige** : retour sur `NovaChromeSurfaceRaisedBrush`, deja
+synchronise clair/sombre par le meme mecanisme et deja suffisamment
+distinct du fond de page dans les deux themes (c'est la brush de base de
+`NovaPanelCardStyle`, dont `NovaPanelShellCardStyle` herite). Aucun
+nouveau brush a brancher sur le moteur de theme : reutilisation d'un
+brush deja correct des deux cotes.
+
+**Lecon pour la suite du lifting "polish pur"** : toute nouvelle couleur/
+brush introduite dans `MainWindow.xaml` doit soit reutiliser un brush
+Nova* deja gere par `ApplyAccessibilitySettings`/`SetBrush`, soit recevoir
+sa propre entree `SetBrush` avec une valeur clair ET sombre explicites -
+jamais une `SolidColorBrush` statique isolee pour un usage qui doit
+varier selon le theme. A verifier systematiquement pour chaque futur
+changement de brush de ce chantier.
+
+**Verification** : build + `dotnet test` (694/695, meme echec
+preexistant). Pas de nouvelle capture d'ecran live sur ce point precis -
+l'environnement d'automatisation UIA s'est montre instable sur plusieurs
+tentatives cette session (fenetre/rectangle invalides apres plusieurs
+allers-retours, focus vole par d'autres apps). Correction fondee sur la
+lecture directe du mecanisme de theming, jugee plus fiable qu'une
+capture d'ecran hasardeuse dans cet environnement aujourd'hui.
+
+**Version :** `0.93.8.0-dev` (inchangee).
