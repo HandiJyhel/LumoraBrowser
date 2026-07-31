@@ -14,7 +14,13 @@ internal static class ShellShortcut
     public static string DesktopFolder() =>
         Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
-    public static void Create(string shortcutPath, string targetExe, string arguments, string? iconPath, string description)
+    // appUserModelId (optionnel) : identifiant Windows distinct posé sur le
+    // raccourci (propriété System.AppUserModel.ID). Sans lui, toutes les
+    // fenêtres de Lumora.WinUI.exe (navigateur principal et applications web)
+    // héritent du même identifiant par défaut dérivé de l'exécutable, et
+    // Windows les regroupe sous une seule icône dans la barre des tâches /
+    // épinglages au lieu de traiter chaque application comme distincte.
+    public static void Create(string shortcutPath, string targetExe, string arguments, string? iconPath, string description, string? appUserModelId = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(shortcutPath)!);
 
@@ -27,6 +33,11 @@ internal static class ShellShortcut
             link.SetIconLocation(iconPath, 0);
         }
 
+        if (!string.IsNullOrWhiteSpace(appUserModelId))
+        {
+            ApplyAppUserModelId(link, appUserModelId);
+        }
+
         var file = (IPersistFile)link;
         file.Save(shortcutPath, false);
         Marshal.ReleaseComObject(link);
@@ -35,6 +46,72 @@ internal static class ShellShortcut
     public static void Delete(string shortcutPath)
     {
         try { if (File.Exists(shortcutPath)) File.Delete(shortcutPath); } catch { }
+    }
+
+    // L'objet ShellLink implémente aussi IPropertyStore (depuis Windows Vista) :
+    // c'est le canal standard pour poser une propriété comme AppUserModel.ID
+    // sur un .lnk, distinct des champs classiques (chemin, arguments, icône...).
+    private static void ApplyAppUserModelId(IShellLinkW link, string appUserModelId)
+    {
+        var store = (IPropertyStore)link;
+        var pv = PropVariant.FromString(appUserModelId);
+        try
+        {
+            store.SetValue(ref PkeyAppUserModelId, ref pv);
+            store.Commit();
+        }
+        finally
+        {
+            PropVariantClear(ref pv);
+        }
+    }
+
+    private static PROPERTYKEY PkeyAppUserModelId = new()
+    {
+        fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"),
+        pid = 5
+    };
+
+    [DllImport("ole32.dll")]
+    private static extern int PropVariantClear(ref PropVariant pvar);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROPERTYKEY
+    {
+        public Guid fmtid;
+        public uint pid;
+    }
+
+    // VT_LPWSTR uniquement (seul cas utilisé ici) : les 4 WORD d'en-tête
+    // (vt + réservés) puis le pointeur de chaîne, disposition standard du
+    // union PROPVARIANT côté natif pour ce type.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PropVariant
+    {
+        public ushort vt;
+        public ushort wReserved1;
+        public ushort wReserved2;
+        public ushort wReserved3;
+        public IntPtr pointerValue;
+
+        private const ushort VT_LPWSTR = 31;
+
+        public static PropVariant FromString(string value) => new()
+        {
+            vt = VT_LPWSTR,
+            pointerValue = Marshal.StringToCoTaskMemUni(value)
+        };
+    }
+
+    [ComImport, Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99"),
+     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IPropertyStore
+    {
+        void GetCount(out uint cProps);
+        void GetAt(uint iProp, out PROPERTYKEY pkey);
+        void GetValue(ref PROPERTYKEY key, out PropVariant pv);
+        void SetValue(ref PROPERTYKEY key, ref PropVariant pv);
+        void Commit();
     }
 
     [ComImport, Guid("00021401-0000-0000-C000-000000000046")]

@@ -194,13 +194,22 @@ public sealed partial class MainWindow
 
         if (!string.IsNullOrWhiteSpace(app.ShortcutFileName))
         {
-            ShellShortcut.Delete(Path.Combine(ShellShortcut.StartMenuAppsFolder(), app.ShortcutFileName));
-            ShellShortcut.Delete(Path.Combine(ShellShortcut.DesktopFolder(), app.ShortcutFileName));
+            // Path.GetFileName en defense en profondeur : ShortcutFileName est deja
+            // assaini a la creation (ShortcutNaming.SanitizeFileName), mais webapps.lumora
+            // reste un fichier local desserialise - ne pas faire confiance une deuxieme
+            // fois a une valeur qui pourrait avoir ete modifiee hors de l'app.
+            var shortcutName = Path.GetFileName(app.ShortcutFileName);
+            ShellShortcut.Delete(Path.Combine(ShellShortcut.StartMenuAppsFolder(), shortcutName));
+            ShellShortcut.Delete(Path.Combine(ShellShortcut.DesktopFolder(), shortcutName));
         }
 
         if (!string.IsNullOrWhiteSpace(app.IconFile))
         {
-            try { File.Delete(Path.Combine(_profile.WebAppIconsDir, app.IconFile)); } catch { }
+            // Meme defense en profondeur que ci-dessus : IconFile vient normalement
+            // toujours de $"{app.Id}.ico" (GUID), mais on ne construit jamais un
+            // chemin de suppression a partir d'un champ desserialise sans le
+            // reduire a un simple nom de fichier au prealable.
+            try { File.Delete(Path.Combine(_profile.WebAppIconsDir, Path.GetFileName(app.IconFile))); } catch { }
         }
 
         _webApps.Remove(app.Id);
@@ -225,10 +234,14 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(tab.IconPath))
-        {
-            await CaptureFaviconForTabAsync(tab);
-        }
+        // Capture forcée (pas seulement si tab.IconPath est vide) : la navigation
+        // normale a pu mettre en cache une icône générique/transitoire de
+        // WebView2 (avant que Chromium n'ait fini de charger la vraie icône du
+        // site) qui passe la détection de générique et bloque le cache 24h -
+        // voir CaptureAuthoritativeFaviconForInstallAsync. Une installation est
+        // une action déclarée et unique : mieux vaut revérifier que réutiliser
+        // une icône potentiellement fausse.
+        await CaptureAuthoritativeFaviconForInstallAsync(tab);
 
         var rootDomain = RootDomainOf(tab.Address);
         var existing = _webApps.FindByRootDomain(rootDomain);
@@ -324,8 +337,9 @@ public sealed partial class MainWindow
     {
         if (!string.IsNullOrWhiteSpace(app.ShortcutFileName))
         {
-            ShellShortcut.Delete(Path.Combine(ShellShortcut.StartMenuAppsFolder(), app.ShortcutFileName));
-            ShellShortcut.Delete(Path.Combine(ShellShortcut.DesktopFolder(), app.ShortcutFileName));
+            var oldShortcutName = Path.GetFileName(app.ShortcutFileName);
+            ShellShortcut.Delete(Path.Combine(ShellShortcut.StartMenuAppsFolder(), oldShortcutName));
+            ShellShortcut.Delete(Path.Combine(ShellShortcut.DesktopFolder(), oldShortcutName));
         }
 
         var fileName = ShortcutNaming.SanitizeFileName(app.Title, app.Id) + ".lnk";
@@ -334,14 +348,15 @@ public sealed partial class MainWindow
         var exePath = Path.Combine(AppContext.BaseDirectory, "Lumora.WinUI.exe");
         var iconPath = ResolveShortcutIconPath(app);
         var description = $"{app.Title} (application Lumora)";
+        var appUserModelId = WebAppIdentity.AppUserModelId(app.Id);
 
         var startMenuPath = Path.Combine(ShellShortcut.StartMenuAppsFolder(), fileName);
-        ShellShortcut.Create(startMenuPath, exePath, $"--app={app.Id}", iconPath, description);
+        ShellShortcut.Create(startMenuPath, exePath, $"--app={app.Id}", iconPath, description, appUserModelId);
 
         if (wantDesktop)
         {
             var desktopPath = Path.Combine(ShellShortcut.DesktopFolder(), fileName);
-            ShellShortcut.Create(desktopPath, exePath, $"--app={app.Id}", iconPath, description);
+            ShellShortcut.Create(desktopPath, exePath, $"--app={app.Id}", iconPath, description, appUserModelId);
         }
 
         app.HasDesktopShortcut = wantDesktop;
@@ -354,7 +369,7 @@ public sealed partial class MainWindow
         {
             if (string.IsNullOrWhiteSpace(app.IconFile)) continue;
 
-            var customIcon = Path.Combine(_profile.WebAppIconsDir, app.IconFile);
+            var customIcon = Path.Combine(_profile.WebAppIconsDir, Path.GetFileName(app.IconFile));
             if (FaviconQuality.IsUsablePngBackedIcoFile(customIcon)) continue;
 
             try { File.Delete(customIcon); } catch { }
@@ -377,7 +392,7 @@ public sealed partial class MainWindow
     {
         if (!string.IsNullOrWhiteSpace(app.IconFile))
         {
-            var custom = Path.Combine(_profile.WebAppIconsDir, app.IconFile);
+            var custom = Path.Combine(_profile.WebAppIconsDir, Path.GetFileName(app.IconFile));
             if (FaviconQuality.IsUsablePngBackedIcoFile(custom)) return custom;
         }
 
