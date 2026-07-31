@@ -16002,3 +16002,54 @@ explicitement a l'utilisateur avant de commencer) :
 
 **Version :** `0.93.8.0-dev` (inchangee - durcissements et plomberie,
 aucun changement de comportement utilisateur par defaut).
+
+## 2026-07-31 (suite) - Slides de bienvenue avant la creation du premier profil
+
+**Demande** : ecran de bienvenue façon premier lancement de telephone
+(accueil, tour rapide des fonctions majeures, puis creation de compte) -
+positionne AVANT meme le choix/creation de profil, pas apres comme
+l'assistant de configuration deja existant (`MainWindow.SetupWizard.cs`,
+reste totalement inchange). Langage FR/EN evoque puis explicitement
+ecarte par l'utilisateur pour ce lot ("on verra plus tard").
+
+**Implemente** :
+- `WelcomeOverlay` (`MainWindow.xaml`) : 4 slides (bienvenue,
+  confidentialite/donnees locales, accessibilite, personnalisation),
+  ZIndex 99 - au-dessus de `LoginOverlay` (90) et `SetupWizardOverlay`
+  (95), puisque c'est desormais le tout premier ecran possible, avant
+  meme le profil.
+- `MainWindow.WelcomeSlides.cs` : navigation Precedent/Suivant/Passer,
+  deux contextes (`isReplay`) - premier lancement reel (enchaine sur
+  `ShowLoginPanel("create")` apres la derniere slide) vs rejoue a la
+  demande (referme simplement l'overlay, ne touche a rien d'autre).
+- `LumoraConfig.WelcomeSlidesShown` : nouveau flag GLOBAL (pas
+  `UiSettings`, qui est par profil - ce moment precede l'existence de
+  tout profil).
+- `InitializeLoginOverlayAsync` (`MainWindow.Profile.cs`) : la branche
+  "aucun profil n'a jamais existe sur cette machine" montre les slides
+  une seule fois avant de proposer la creation du profil.
+- **Solution de test choisie par l'utilisateur** (evite de reinitialiser
+  son vrai profil ou de jongler avec un profil isole) : nouveau bouton
+  "Revoir l'ecran de bienvenue" dans Parametres > Mon Lumora, rejoue les
+  memes slides sans toucher au profil actif.
+
+**Verification** : `LoginOverlaySecurityTests` (test de regression
+existant sur la superposition des overlays, deja trouve un vrai bug par
+le passe) mis a jour pour verifier explicitement le ZIndex 99 de
+`WelcomeOverlay` plutot que d'affaiblir betement l'assertion. Build +
+`dotnet test` : 695/696 (meme echec preexistant sans rapport). Contenu
+relu (orthographe/grammaire) avant commit.
+
+**Pas fait, ecarte explicitement par l'utilisateur pour ce lot** :
+selecteur de langue FR/EN - aucune infrastructure de traduction
+n'existe dans Lumora aujourd'hui (tout le texte est en dur en francais),
+ce serait un chantier au moins aussi gros que le polish visuel, pas un
+ajout aux slides.
+
+**A faire par l'utilisateur** : tester le nouveau parcours via le bouton
+"Revoir l'ecran de bienvenue" (aucune verification live faite cote IA
+cette session, vu l'instabilite de l'automatisation UIA rencontree plus
+tot).
+
+**Version :** `0.93.8.0-dev` (inchangee - nouvelle fonctionnalite, pas
+un changement de palier).
