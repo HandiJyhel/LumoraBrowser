@@ -33,12 +33,12 @@ public static class StartMenuTileRegistry
         new(StartMenuTileIds.Translate, "Lecture et contenu", "Traduction", "Hors-ligne", "\uF2B7"),
         new(StartMenuTileIds.ReadingLens, "Lecture et contenu", "Loupe de lecture", "Confort visuel", "\uE721"),
 
-        new(StartMenuTileIds.Vault, "Confidentialité et sécurité", "Coffre", "Mots de passe", "\uE72E"),
-        new(StartMenuTileIds.Passkeys, "Confidentialité et sécurité", "Passkeys", "Sans mot de passe", "\uE8D7"),
-        new(StartMenuTileIds.Sessions, "Confidentialité et sécurité", "Sessions", "Connexions actives", "\uE7F4"),
-        new(StartMenuTileIds.Wallet, "Confidentialité et sécurité", "Portefeuille", "Cartes locales", "\uE8C7"),
-        new(StartMenuTileIds.Incognito, "Confidentialité et sécurité", "Incognito", "Nouvelle fenêtre privée", "\uE72E"),
-        new(StartMenuTileIds.SiteControl, "Confidentialité et sécurité", "Site actuel", "Centre de contrôle", "\uE774"),
+        new(StartMenuTileIds.Vault, "Confidentialité", "Coffre", "Mots de passe", "\uE72E"),
+        new(StartMenuTileIds.Passkeys, "Confidentialité", "Passkeys", "Sans mot de passe", "\uE8D7"),
+        new(StartMenuTileIds.Sessions, "Confidentialité", "Sessions", "Connexions actives", "\uE7F4"),
+        new(StartMenuTileIds.Wallet, "Confidentialité", "Portefeuille", "Cartes locales", "\uE8C7"),
+        new(StartMenuTileIds.Incognito, "Confidentialité", "Incognito", "Nouvelle fenêtre privée", "\uE72E"),
+        new(StartMenuTileIds.SiteControl, "Confidentialité", "Site actuel", "Centre de contrôle", "\uE774"),
 
         new(StartMenuTileIds.Favoris, "Navigation", "Favoris", "Enregistrés", "\uE735"),
         new(StartMenuTileIds.History, "Navigation", "Historique", "Recherche sémantique", "\uE81C"),
