@@ -91,6 +91,17 @@ internal sealed class FilterListManager
             {
                 onStatus?.Invoke($"Téléchargement : {id}...");
                 var content = await Http.GetStringAsync(url);
+                if (!LooksLikeFilterList(content))
+                {
+                    // Contenu suspect (page d'erreur, portail captif, redirection
+                    // HTML...) : on garde la liste precedente plutot que d'ecraser
+                    // une protection fonctionnelle par une reponse compromise/
+                    // detournee. Aucune de ces sources n'est verifiee par hash
+                    // (mises a jour trop frequentes pour un pinning fiable),
+                    // ce garde-fou minimal est le seul filet avant utilisation.
+                    onStatus?.Invoke($"Liste ignorée (contenu inattendu) : {id}");
+                    continue;
+                }
                 var path = Path.Combine(ListsDir, $"{id}.txt");
                 await File.WriteAllTextAsync(path, content);
                 _meta[id] = DateTime.UtcNow;
@@ -104,6 +115,13 @@ internal sealed class FilterListManager
         SaveMeta();
         onStatus?.Invoke("Listes mises à jour.");
     }
+
+    // Une vraie liste de filtrage fait toujours des dizaines de milliers de
+    // lignes de regles ; une reponse trop courte ou qui ressemble a du HTML
+    // (page d'erreur, portail captif, redirection) n'est jamais une mise a
+    // jour legitime.
+    private static bool LooksLikeFilterList(string content) =>
+        content.Length >= 1024 && !content.TrimStart().StartsWith("<", StringComparison.Ordinal);
 
     private void LoadMeta()
     {

@@ -58,15 +58,28 @@ internal static class FilterParser
             foreach (var opt in options.Split(','))
             {
                 var o = opt.Trim();
+                if (o.Length == 0) continue;
+
                 if (o.Equals("third-party", StringComparison.OrdinalIgnoreCase))
+                {
                     thirdPartyOnly = true;
-                // Règle restreinte à des sites précis ($domain=a.com|b.com) : sans matching
-                // par domaine de page, l'appliquer globalement sur-bloquerait des ressources
-                // légitimes (ex. ||lh3.googleusercontent.com^$domain=site-pirate → casse les
-                // avatars Google partout). On préfère ignorer la règle plutôt que sur-bloquer.
-                if (o.StartsWith("domain=", StringComparison.OrdinalIgnoreCase))
-                    return null;
-                // ~third-party : ignorer (ne bloque que first-party — rare, on skip)
+                    continue;
+                }
+
+                // Toute autre option ($domain=, ~third-party, ou une restriction de
+                // type de ressource comme $subdocument/$script/$image...) ne peut pas
+                // être respectée par ce moteur simplifié : ShouldBlock n'a ni le
+                // domaine de la page cible au moment du parsing, ni le type de
+                // ressource pour les règles de domaine. L'appliquer quand meme
+                // reviendrait a bloquer bien plus large que prevu par la regle
+                // d'origine. Trouve en conditions reelles le 2026-07-22 :
+                // ||eporner.com^$subdocument,~third-party (censee bloquer
+                // l'incrustation du site en iframe chez un tiers) etait appliquee
+                // comme un blocage total et permanent du domaine, rendant la page
+                // blanche pour ses propres ressources (CSS, JS, images) des qu'on
+                // visitait le site directement. Ignorer la regle plutot que la
+                // sur-appliquer, meme principe deja retenu pour domain=.
+                return null;
             }
         }
 

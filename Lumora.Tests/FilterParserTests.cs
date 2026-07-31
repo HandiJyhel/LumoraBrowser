@@ -47,6 +47,18 @@ public class FilterParserTests
     }
 
     [Fact]
+    public void Regle_avec_option_non_supportee_est_ignoree_pas_globale()
+    {
+        // Le bug reel du 2026-07-22 : cette regle (bloquer l'incrustation du site
+        // en iframe chez un tiers) devenait un blocage total et permanent du
+        // domaine faute de gestion de $subdocument/~third-party, rendant
+        // eporner.com blanc pour ses propres ressources (CSS/JS/images) des qu'on
+        // le visitait directement - meme genre de sur-blocage que $domain=.
+        var rules = Parse("||eporner.com^$subdocument,~third-party");
+        Assert.Empty(rules);
+    }
+
+    [Fact]
     public void Regle_avec_chemin_devient_sous_chaine()
     {
         var rules = Parse("||googleusercontent.com/tracker/");
