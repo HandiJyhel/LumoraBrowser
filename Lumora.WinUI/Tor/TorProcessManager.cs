@@ -272,7 +272,15 @@ internal sealed class TorProcessManager : IDisposable
                 _process.Kill(entireProcessTree: true);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Un echec silencieux ici laisserait potentiellement tor.exe tourner
+            // en arriere-plan sans qu'aucune trace ne le signale - source exacte
+            // de l'incident du 31 juillet (processus orphelin retenant les ports
+            // 9050/9051, diagnostique uniquement en interrogeant les processus
+            // reels de la machine faute de log).
+            WinUiRuntimeTrace.Write($"TorProcessManager.Stop: echec Kill : {ex.GetType().Name}: {ex.Message}");
+        }
         finally
         {
             _process.Dispose();

@@ -37,9 +37,16 @@ internal static class WebView2Bootstrap
                 Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", fixedRuntimeDir);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"WebView2Bootstrap: echec pose WEBVIEW2_BROWSER_EXECUTABLE_FOLDER : {ex.GetType().Name}: {ex.Message}");
+        }
 
-        try { Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", browserDataDir); } catch { }
+        try { Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", browserDataDir); }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"WebView2Bootstrap: echec pose WEBVIEW2_USER_DATA_FOLDER : {ex.GetType().Name}: {ex.Message}");
+        }
 
         try
         {
@@ -65,6 +72,12 @@ internal static class WebView2Bootstrap
             Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
                 string.IsNullOrWhiteSpace(external) ? flags : $"{flags} {external.Trim()}");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Echec silencieux ici = pas de protection anti-fuite WebRTC ni de
+            // coupure Privacy Sandbox sans qu'aucune trace ne le signale -
+            // trace desormais, meme si le cas reste tres improbable en pratique.
+            WinUiRuntimeTrace.Write($"WebView2Bootstrap: echec pose WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS (anti-fuite WebRTC/Privacy Sandbox non applique) : {ex.GetType().Name}: {ex.Message}");
+        }
     }
 }
