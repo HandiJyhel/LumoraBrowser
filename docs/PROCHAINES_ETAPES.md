@@ -39,36 +39,35 @@ Resume par theme (detail complet, session par session, dans `MEMORY.md`) :
 
 ## Priorite haute (bloquants avant de qualifier une release de "prete")
 
-- **Installateur non autonome (WebView2 Fixed Version) - EN COURS, bloque sur une
-  etape manuelle** : le 31 juillet, le code a ete bascule du mode Evergreen
-  (telechargement a l'installation) vers le mode Fixed Version (runtime
-  embarque) :
+- ~~Installateur non autonome (WebView2 Fixed Version)~~ **FAIT le 31
+  juillet** : bascule Evergreen -> Fixed Version complete et verifiee de
+  bout en bout.
   - `WebView2Bootstrap.cs` pose `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` vers
     `FixedRuntime\<version>` a cote de l'exe (app non empaquetee, pas de
     `Package.Current`).
-  - `Lumora.WinUI.csproj` copie ce dossier au build (`Content Include`
-    conditionnel, absent tant que non prepare).
-  - `scripts/prepare-webview2-fixedversion.ps1` (nouveau) verifie le
-    SHA256 d'un `.cab` telecharge manuellement puis l'extrait.
+  - `Lumora.WinUI.csproj` copie ce dossier au build (`WebView2FixedVersion`
+    = `150.0.4078.105`).
+  - `.cab` officiel x64 trouve via les donnees serveur embarquees dans la
+    page Microsoft (SPA Nuxt - aucune URL stable documentee, mais la
+    valeur reelle est servie au chargement de la page), telecharge,
+    verifie (SHA256 + signature Authenticode Microsoft valide sur
+    `msedgewebview2.exe`), et extrait via `scripts/prepare-webview2-fixedversion.ps1`.
+  - **Piege trouve et corrige** : le `.cab` contient un dossier imbrique
+    (`Microsoft.WebView2.FixedVersionRuntime.<version>.x64\`) que le
+    script ne remontait pas au premier essai - corrige (le script
+    aplatit desormais automatiquement cette structure).
   - `scripts/installer/Program.cs.template` : case a cocher et
     telechargement Evergreen retires, remplaces par un octroi `icacls`
     obligatoire (`ALL APPLICATION PACKAGES`/`ALL RESTRICTED APPLICATION
     PACKAGES`) sur le dossier FixedRuntime deploye - necessaire depuis la
     v120 du runtime pour une app non empaquetee (sandbox App Container).
-  - `scripts/build-installer.ps1` refuse desormais de packager si
-    FixedRuntime est vide.
-  - **Reste bloque sur une etape que l'IA ne peut pas faire seule** :
-    aucune URL stable/scriptable n'existe pour le `.cab` Fixed Version
-    (verifie le 31 juillet - meme les outils communautaires demandent un
-    telechargement manuel depuis la page officielle Microsoft). L'
-    utilisateur doit : telecharger le `.cab` x64 depuis
-    https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section,
-    lancer `prepare-webview2-fixedversion.ps1` une premiere fois pour
-    obtenir le SHA256, le coller dans le script, relancer pour extraire,
-    puis mettre a jour `WebView2FixedVersion` (csproj) et
-    `FixedRuntimeVersion` (WebView2Bootstrap.cs) avec la version reelle.
-    Tant que ce n'est pas fait, le build produit un navigateur sans
-    moteur web fonctionnel.
+  - `scripts/build-installer.ps1` refuse de packager si FixedRuntime est
+    vide (garde-fou, plus jamais declenche depuis que le runtime est en
+    place).
+  - Verifie de bout en bout : build MSBuild propre avec le runtime
+    (648 Mo) effectivement copie a la bonne profondeur, installateur
+    reel assemble (377 Mo, runtime inclus), `dotnet test` 694/695
+    inchange (meme echec preexistant sans rapport).
 - **Vrai zoom de l'interface Lumora elle-meme** (chrome native, pas
   seulement les pages web visitees) : explicitement identifie comme le
   point le plus lourd de l'angle basse vision et reporte a une session

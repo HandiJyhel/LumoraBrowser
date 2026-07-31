@@ -18,7 +18,7 @@
          A synchroniser avec FixedRuntimeVersion dans WebView2Bootstrap.cs et
          avec scripts/prepare-webview2-fixedversion.ps1 (obtention + verification
          SHA256 du dossier ci-dessous, non versionne dans le depot - voir .gitignore). -->
-    <WebView2FixedVersion>REPLACE_WITH_DOWNLOADED_VERSION</WebView2FixedVersion>
+    <WebView2FixedVersion>150.0.4078.105</WebView2FixedVersion>
   </PropertyGroup>
 
   <ItemGroup>

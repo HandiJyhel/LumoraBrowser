@@ -15684,3 +15684,75 @@ la compilation en l'absence du dossier FixedRuntime, comme prevu.
 
 **Aucun bump de version** : chantier en cours, pas encore fonctionnel de
 bout en bout (etape manuelle restante).
+
+## 2026-07-31 (suite) - WebView2 Fixed Version : chantier termine de bout en bout
+
+**Autorisation donnee par l'utilisateur** pour que l'IA telecharge elle-meme
+le `.cab` Fixed Version, apres avoir explique que le blocage precedent
+n'etait pas une question d'autorisation mais d'absence d'URL stable
+scriptable. Recherche approfondie (a la demande de l'utilisateur, "avant de
+compiler y'a pas autre chose a faire") : recuperation du HTML brut de la
+page officielle Microsoft (`developer.microsoft.com/.../webview2/`), qui
+s'est revelee etre une SPA Nuxt.js server-rendue - les URLs reelles de
+telechargement (x64/x86/arm64, deux dernieres versions majeures) sont
+servies directement dans le payload JSON embarque (`__NUXT_DATA__`) au
+chargement de la page, meme si aucune n'est cliquable/scriptable de facon
+documentee. URL x64 trouvee : `msedge.sf.dl.delivery.mp.microsoft.com`
+(infrastructure de livraison Microsoft, pas un miroir tiers).
+
+**Verification avant usage** (meme discipline que pour Tor) :
+- Telechargement (~284 Mo, `Content-Length` = 297904860, correspond
+  exactement a la taille recue).
+- SHA256 calcule via `Get-FileHash` (PowerShell - plus fiable que les
+  outils bash sur ce coup, voir note technique plus bas), pas juste
+  copie sans verification.
+- **Signature Authenticode verifiee sur `msedgewebview2.exe` extrait** :
+  `Get-AuthenticodeSignature` -> `Valid`, `CN=Microsoft Corporation,
+  O=Microsoft Corporation`, emis par `Microsoft Code Signing PCA 2024`,
+  non expire (15/04/2027). Confirme independamment que le fichier vient
+  bien de Microsoft, pas seulement que l'URL "avait l'air" officielle.
+
+**Piege trouve en verifiant le resultat, pas suppose** : le `.cab` contient
+un dossier racine unique (`Microsoft.WebView2.FixedVersionRuntime.150.0.4078.105.x64\`)
+que `prepare-webview2-fixedversion.ps1` ne remontait pas - `msedgewebview2.exe`
+se retrouvait un niveau plus profond que ce que `WebView2Bootstrap.cs`
+attendait (`FixedRuntime\<version>\` directement). Trouve en verifiant
+concretement l'artefact publie (`find`/`Get-ChildItem`) plutot qu'en
+supposant que "ca a marche parce que le build est vert" - le build
+compilait deja sans erreur avant ce correctif, la structure de dossier
+n'aurait fait echouer qu'a l'execution reelle. Script corrige pour aplatir
+automatiquement ce dossier apres extraction (`Move-Item` + suppression du
+dossier vide), reapplique sur l'extraction deja faite sans retelecharger.
+
+**Note technique** : difficultes de manipulation de texte avec `sed`/`grep -P`
+sur les sequences d'echappement JSON (`/` vs `\/` mixees dans le
+meme payload, `grep -P` refusant `\u` comme meta-sequence PCRE) -
+resolu en basculant sur PowerShell (`-replace`, `[regex]::Matches`) plutot
+que de s'acharner sur les outils Unix. A retenir : pour du texte/JSON
+complexe dans cet environnement Windows, PowerShell est souvent plus
+fiable que sed/grep -P.
+
+**Verification finale de bout en bout** :
+- `WebView2FixedVersion` (csproj) et `FixedRuntimeVersion`
+  (WebView2Bootstrap.cs) mis a `150.0.4078.105`.
+- Build MSBuild propre relance : runtime (648 Mo) copie a la bonne
+  profondeur (`FixedRuntime\150.0.4078.105\msedgewebview2.exe`).
+- Installateur reel assemble (plus de faux dossier de test) : 377 Mo,
+  runtime bien inclus dans le payload.
+- `dotnet test` : 694/695 inchange (meme echec preexistant sans rapport).
+
+**Portee de la verification "tout est compris dans l'app"** (demande
+explicite de l'utilisateur avant de compiler) : autres appels reseau du
+code passes en revue (BreachChecker vers l'API HaveIBeenPwned,
+FilterListManager vers les listes EasyList/uBlock/AdGuard, modeles
+HuggingFace pour recherche semantique/traduction/assistant de recherche,
+yt-dlp). Aucun ne partage le probleme de WebView2 (composant obligatoire
+telecharge silencieusement) : ce sont soit des appels de service en ligne
+inherents a la fonctionnalite (verification de fuite de mot de passe,
+impossible a "embarquer"), soit des telechargements deja caches derriere
+un geste explicite de l'utilisateur (meme principe que Tor). Pas
+d'audit exhaustif ligne par ligne de chacun - a redemander si un doute
+precis surgit sur l'un d'eux.
+
+**Version :** `0.93.8.0-dev` (inchangee - correctif d'infrastructure de
+build/installateur, pas de changement de comportement utilisateur).

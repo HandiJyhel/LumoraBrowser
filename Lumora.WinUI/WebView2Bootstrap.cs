@@ -13,7 +13,7 @@ internal static class WebView2Bootstrap
     // les trois doivent toujours pointer vers le meme runtime telecharge. Voir
     // ce script pour la procedure de mise a jour (nouvelle version = nouveau
     // telechargement manuel + nouveau hash, comme pour TorTrustedRelease).
-    private const string FixedRuntimeVersion = "REPLACE_WITH_DOWNLOADED_VERSION";
+    private const string FixedRuntimeVersion = "150.0.4078.105";
 
     private static bool _configured;
 
