@@ -45,14 +45,6 @@
             <SolidColorBrush x:Key="NovaCoolAccentBrush" Color="#FF56C2E4" />
             <SolidColorBrush x:Key="NovaCoolAccentSoftBrush" Color="#2456C2E4" />
             <SolidColorBrush x:Key="NovaCompanionGlassBrush" Color="#331A2731" />
-            <!-- Meme teinte que NovaCompanionGlassBrush mais plus opaque (0x5C
-                 contre 0x33) : NovaPanelShellCardStyle l'utilise seule pour que
-                 les cartes de contenu des panneaux (Parametres, A propos,
-                 Coffre, RSS...) se detachent vraiment du fond de page au lieu
-                 de s'y fondre - constate en verifiant Parametres en conditions
-                 reelles. NovaCompanionGlassBrush reste intact pour ses autres
-                 usages (bulles Compagnon Lumie, glass overlays). -->
-            <SolidColorBrush x:Key="NovaPanelShellCardBackgroundBrush" Color="#5C1A2731" />
             <SolidColorBrush x:Key="NovaCompanionStrokeBrush" Color="#3343DBD1" />
             <SolidColorBrush x:Key="NovaModeSelectorGlassBrush" Color="#331A2731" />
             <SolidColorBrush x:Key="NovaModeSelectorStrokeBrush" Color="#3340545B" />
@@ -578,10 +570,16 @@
                 <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
                 <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
             </Style>
+            <!-- Fond herite de NovaPanelCardStyle (NovaChromeSurfaceRaisedBrush,
+                 deja synchronise clair/sombre par MainWindow.SettingsTheme.cs) -
+                 volontairement PAS de Background propre ici. Un essai precedent
+                 avait introduit un brush statique dedie non branche sur le
+                 moteur de theme : correct en sombre par coincidence, casse en
+                 clair (jamais reecrit). Corrige avant meme la verification
+                 visuelle en clair, en relisant SetBrush/ApplyAccessibilitySettings. -->
             <Style x:Key="NovaPanelShellCardStyle" TargetType="Border" BasedOn="{StaticResource NovaPanelCardStyle}">
                 <Setter Property="Padding" Value="16,14" />
                 <Setter Property="CornerRadius" Value="18" />
-                <Setter Property="Background" Value="{StaticResource NovaPanelShellCardBackgroundBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaCompanionStrokeBrush}" />
             </Style>
             <Style x:Key="NovaPanelActionButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaCompactButtonStyle}">
