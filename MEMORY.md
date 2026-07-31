@@ -15883,3 +15883,65 @@ lecture directe du mecanisme de theming, jugee plus fiable qu'une
 capture d'ecran hasardeuse dans cet environnement aujourd'hui.
 
 **Version :** `0.93.8.0-dev` (inchangee).
+
+## 2026-07-31 (suite) - Polish : balayage systematique par code plutot que panneau par panneau
+
+**Changement de methode demande par l'utilisateur** : au vu de
+l'instabilite de l'automatisation UIA ce jour et de l'objectif de
+release rapide (puis portage Linux), consigne donnee de corriger
+immediatement chaque probleme trouve plutot que de lister puis
+attendre validation. Methode choisie : balayage systematique par lecture
+de code sur deux classes de bug precises plutot qu'un audit visuel
+panneau par panneau (plus rapide, plus fiable dans cet environnement).
+
+**Balayage 1 - rails de navigation** : recherche de tous les groupes de
+RadioButton du fichier (`GroupName`, motifs `x:Name` en `*Nav*`).
+Resultat : seuls `SettingsNav` (9) et `AboutNav` (7) sont des rails de
+navigation - tous deux deja corriges. Les autres groupes (`VaultSort`,
+`WizardSearchGroup`, `WizardUsageGroup`) sont de vrais choix parmi
+plusieurs valeurs, correctement laisses au rendu natif. Rien d'autre a
+corriger dans cette classe.
+
+**Balayage 2 - brushes non synchronises au theme** : diff entre tous les
+brushes de couleur statiques declares dans `MainWindow.xaml` et toutes
+les entrees `SetBrush`/`SetGlowBrush`/`SetFloatingGlassBrush`/
+`SetChromeGradient` de `MainWindow.SettingsTheme.cs`. Sur ~80 brushes,
+seuls 6 candidats sans correspondance, tous verifies un par un :
+`NovaChromeGradientBrush` (gere par `SetChromeGradient`, pas `SetBrush`),
+`NovaChromeHaloCoolGlowBrush`/`WarmGlowBrush` (geres par `SetGlowBrush`),
+`NovaFloatingGlassBrush` (`SetFloatingGlassBrush`), `NovaIdentityMarkBrush`
+(degrade de marque intentionnellement fixe entre themes - meme logique
+d'accent dans les deux, principe explicite de
+`docs/DIRECTION_IDENTITE_MODULAIRE_0_84.md`), et les 5 brushes
+`TabView*` (tous `Color="Transparent"`, invariant par nature). Aucun
+bug reel au-dela de celui deja corrige plus haut
+(`NovaPanelShellCardBackgroundBrush`).
+
+**Deux corrections supplementaires trouvees et appliquees immediatement** :
+- Categorie "Confidentialite et securite" du Menu Demarrer tronquee
+  (rail de 192px trop etroit) - raccourcie en "Confidentialite"
+  (`StartMenuTileRegistry.cs`, `MainWindow.StartMenu.cs`).
+- Message d'etat vide de la barre de favoris ("Barre vide", les deux
+  dispositions horizontale et laterale) trop technique - remplace par
+  "Aucun favori epingle" (`MainWindow.Bookmarks.cs`).
+
+**Verifie, pas un bug** : `LumoraIncognitoWindow.xaml.cs` n'a aucune
+logique `RequestedTheme`/`ElementTheme` - la fenetre Incognito garde une
+identite visuelle fixe (sombre) quel que soit le theme clair/sombre de
+la fenetre principale. Coherent avec la convention des autres
+navigateurs (mode prive = identite visuelle distincte et volontairement
+non liee au theme systeme, pour signaler visuellement le changement de
+mode) - non touche.
+
+**Verification** : build + `dotnet test` apres chaque correction
+(694/695 stable, meme echec preexistant sans rapport). Commits separes
+par correction, comme demande.
+
+**Etat du chantier "polish pur"** : les deux classes de bug identifiees
+initialement (Parametres) ont ete recherchees et corrigees partout, pas
+seulement la ou elles avaient ete vues. Une verification visuelle reelle
+(clair et sombre, tous panneaux) par l'utilisateur reste la derniere
+etape avant de considerer le lifting termine - l'automatisation UIA de
+cette session n'a pas ete assez stable pour la remplacer entierement.
+
+**Version :** `0.93.8.0-dev` (inchangee).
