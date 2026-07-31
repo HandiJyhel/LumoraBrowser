@@ -49,7 +49,7 @@ La version de depart du projet est:
 
 La version courante du projet est:
 
-`0.83.54-dev`
+`0.93.8.0-dev`
 
 La numerotation suit ce schema:
 
@@ -90,7 +90,7 @@ Toute modification de version doit respecter cette regle.
 17. Les decisions de release seront traitees plus tard.
 18. `MEMORY.md` doit etre mis a jour soigneusement apres chaque etape significative.
 19. A chaque nouvelle ouverture de session ou de chat sur Lumora, l'assistant IA du projet doit lire `MEMORY.md` pour reprendre le contexte historique du projet avant d'agir.
-20. Ne plus faire d exécutable automatique, attendre que je le demande moi même.
+20. Ne plus faire d'exécutable automatique, attendre que je le demande moi même.
 
 
 ## Direction technique actuelle

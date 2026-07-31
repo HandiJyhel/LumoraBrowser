@@ -180,6 +180,17 @@ sont desormais traites._
   maintenant completer le lot "lecture/confort". La navigation clavier par
   zones couvre aussi les grandes regions du shell, mais une passe clavier +
   Narrator complete reste a faire sur l'ensemble du navigateur.
+- **Aucun vrai zoom de l'interface Lumora elle-meme** (chantier reporte
+  explicitement le 2026-07-27, palier 0.93.x accessibilite basse vision) :
+  seul le zoom des pages web visitees existe (`MainWindow.SiteComfort.cs`,
+  zoom par site) ; `AccessibilityLargeText` ne touche que 7 elements avec un
+  delta de 2px (`MainWindow.SettingsTheme.cs`). Le XAML statique contient
+  ~304 `FontSize=` en dur jamais relies a ce reglage. Une vraie correction
+  demande un mecanisme de mise a l'echelle centralise (ressources `FontSize`
+  partagees par les styles `Nova*Style` deja nommes plutot que 304 valeurs
+  individuelles) - chantier a part entiere, pas un correctif ponctuel, volontairement
+  laisse de cote pour eviter une refonte visuelle non voulue en cours de
+  route.
 - **Aucune doc d'architecture d'ensemble** decrivant comment les
   fichiers `MainWindow.*` s'articulent entre eux.
 - **Version dupliquee en dur a 8 endroits** (AGENTS.md, xaml.cs, 2
