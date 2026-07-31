@@ -30,14 +30,22 @@ public sealed class LoginOverlaySecurityTests
         var wizardDeclaration = xaml.Substring(wizardIndex, Math.Min(200, xaml.Length - wizardIndex));
         Assert.Contains("Canvas.ZIndex=\"95\"", wizardDeclaration, StringComparison.Ordinal);
 
+        // WelcomeOverlay (slides de bienvenue) doit rester au-dessus des deux -
+        // seul overlay montre avant meme LoginOverlay, au tout premier lancement.
+        var welcomeIndex = xaml.IndexOf("x:Name=\"WelcomeOverlay\"", StringComparison.Ordinal);
+        Assert.True(welcomeIndex >= 0, "WelcomeOverlay introuvable.");
+        var welcomeDeclaration = xaml.Substring(welcomeIndex, Math.Min(200, xaml.Length - welcomeIndex));
+        Assert.Contains("Canvas.ZIndex=\"99\"", welcomeDeclaration, StringComparison.Ordinal);
+
         // Regression : tout ZIndex porte par un frere de LoginOverlay dans
         // RootShell (colonne identitaire, barres plein ecran...) doit rester
-        // strictement sous 90.
+        // strictement sous 90, sauf les overlays de premier lancement/wizard
+        // explicitement verifies ci-dessus (90, 95, 99).
         foreach (System.Text.RegularExpressions.Match m in
                  System.Text.RegularExpressions.Regex.Matches(xaml, "Canvas\\.ZIndex=\"(\\d+)\""))
         {
             var value = int.Parse(m.Groups[1].Value);
-            Assert.True(value is 90 or 95 || value < 90, $"ZIndex inattendu >= 90 hors LoginOverlay/SetupWizardOverlay : {value}");
+            Assert.True(value is 90 or 95 or 99 || value < 90, $"ZIndex inattendu >= 90 hors LoginOverlay/SetupWizardOverlay/WelcomeOverlay : {value}");
         }
     }
 

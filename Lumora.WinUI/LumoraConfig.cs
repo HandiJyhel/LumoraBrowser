@@ -20,6 +20,12 @@ internal sealed class LumoraConfig
     public string? CustomProfilePath { get; set; }
     public string ActiveProfileId { get; set; } = "default";
 
+    // Vrai des que les slides de bienvenue (presentation du logiciel, avant
+    // meme la creation du premier profil) ont ete montrees une fois. Vit ICI
+    // (config globale, pas dans UiSettings qui est par-profil) car ce moment
+    // se produit avant qu'aucun profil n'existe encore.
+    public bool WelcomeSlidesShown { get; set; }
+
     public static LumoraConfig Load()
     {
         try

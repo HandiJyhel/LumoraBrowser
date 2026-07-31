@@ -16,7 +16,8 @@ public sealed partial class MainWindow
     private async Task InitializeLoginOverlayAsync()
     {
         await Task.Yield(); // retour sur le thread UI après la construction
-        _profileEntries = LumoraProfileRegistry.Discover(LumoraConfig.Load());
+        var config = LumoraConfig.Load();
+        _profileEntries = LumoraProfileRegistry.Discover(config);
         _userProfile = UserProfile.Load(_profile.ProfileFile, _profile.LegacyProfileFile);
 
         // Lance via GuestProcessLauncher (--guest) : _profile pointe deja vers le
@@ -38,6 +39,21 @@ public sealed partial class MainWindow
         }
         else if (_userProfile is null)
         {
+            // Aucun profil n'a jamais existe sur cette machine (le seul cas ou
+            // cette branche est atteinte, cf. les deux conditions precedentes) :
+            // premier lancement reel. Montre les slides de bienvenue une seule
+            // fois (LumoraConfig.WelcomeSlidesShown, global - aucun profil
+            // n'existe encore pour porter ce flag) avant de proposer la
+            // creation du premier profil. La suite (ShowLoginPanel("create") +
+            // ShowLoginOverlayChrome()) est differee a CompleteWelcomeSlides()
+            // (MainWindow.WelcomeSlides.cs) pour ne jamais superposer les deux
+            // overlays.
+            if (!config.WelcomeSlidesShown)
+            {
+                ShowWelcomeSlides(isReplay: false);
+                RefreshProfileSettings();
+                return;
+            }
             ShowLoginPanel("create");
         }
         else
