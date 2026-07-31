@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using Lumora.WinUI;
 
 namespace Lumora.WinUI.Tor;
 
@@ -146,6 +147,11 @@ internal sealed class TorProcessManager : IDisposable
             process.ErrorDataReceived += (_, e) => HandleTorLogLine(e.Data);
             process.Exited += (_, _) =>
             {
+                // Le code de sortie et les dernieres lignes de tor.exe (traces via
+                // HandleTorLogLine) sont le seul moyen de savoir POURQUOI le moteur
+                // s'est arrete (port deja pris, permissions, etc.) - sans ca,
+                // "Moteur Tor arrete." ne dit rien de plus qu'un echec generique.
+                WinUiRuntimeTrace.Write($"tor.exe exited (code={SafeExitCode(process)})");
                 if (State != TorEngineState.Error)
                 {
                     SetState(TorEngineState.Stopped, "Moteur Tor arrete.");
@@ -154,6 +160,7 @@ internal sealed class TorProcessManager : IDisposable
 
             if (!process.Start())
             {
+                WinUiRuntimeTrace.Write("tor.exe: process.Start() a retourne false");
                 SetState(TorEngineState.Error, "Impossible de demarrer le moteur Tor.");
                 return false;
             }
@@ -166,9 +173,15 @@ internal sealed class TorProcessManager : IDisposable
         }
         catch (Exception ex)
         {
+            WinUiRuntimeTrace.Write($"tor.exe: exception au demarrage : {ex}");
             SetState(TorEngineState.Error, $"Moteur Tor indisponible : {ex.Message}");
             return false;
         }
+    }
+
+    private static int? SafeExitCode(Process process)
+    {
+        try { return process.ExitCode; } catch { return null; }
     }
 
     // Demande a Tor de batir de nouveaux circuits (SIGNAL NEWNYM sur le
@@ -271,6 +284,12 @@ internal sealed class TorProcessManager : IDisposable
     private void HandleTorLogLine(string? line)
     {
         if (string.IsNullOrWhiteSpace(line)) return;
+
+        // Trace integrale (pas seulement le pourcentage de bootstrap) : avant ce
+        // correctif, tout le reste de la sortie de tor.exe (erreurs de port deja
+        // pris, permissions, etc.) etait silencieusement jete, rendant un echec
+        // de demarrage indiagnosticable autrement que par "Moteur Tor arrete.".
+        WinUiRuntimeTrace.Write($"tor.exe: {line}");
 
         var bootstrapIndex = line.IndexOf("Bootstrapped ", StringComparison.OrdinalIgnoreCase);
         if (bootstrapIndex < 0) return;
