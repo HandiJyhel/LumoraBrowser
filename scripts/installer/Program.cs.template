@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Lumora.WinUI.Tor;
 using Microsoft.Win32;
 
 namespace Lumora.Setup;
@@ -15,7 +16,8 @@ internal sealed record InstallerOptions(
     bool EnsureWebView2Runtime,
     bool CleanInstalledProfile,
     bool CreateDesktopShortcut,
-    bool CreateStartMenuShortcut);
+    bool CreateStartMenuShortcut,
+    bool InstallTorEngine);
 
 internal static class Program
 {
@@ -32,7 +34,7 @@ internal static class Program
 internal sealed class InstallerForm : Form
 {
     private const int FormWidth = 760;
-    private const int FormHeight = 800;
+    private const int FormHeight = 894;
     private const int WmNclButtonDown = 0xA1;
     private const int HtCaption = 0x2;
 
@@ -47,8 +49,10 @@ internal sealed class InstallerForm : Form
     private readonly LumoraOptionCheckBox _desktopShortcutCheckBox = new();
     private readonly LumoraOptionCheckBox _startMenuShortcutCheckBox = new();
     private readonly LumoraOptionCheckBox _launchCheckBox = new();
+    private readonly LumoraOptionCheckBox _torCheckBox = new();
 
     private string? _installedAppExe;
+    private string? _torInstallWarning;
 
     [DllImport("user32.dll")]
     private static extern bool ReleaseCapture();
@@ -262,7 +266,7 @@ internal sealed class InstallerForm : Form
 
     private void BuildOptionsSection()
     {
-        var panel = CreateSectionPanel(new Point(22, 532), new Size(716, 156));
+        var panel = CreateSectionPanel(new Point(22, 532), new Size(716, 250));
         panel.Controls.Add(CreateSectionTitle("Options"));
 
         ConfigureCheckBox(
@@ -293,31 +297,54 @@ internal sealed class InstallerForm : Form
         ConfigureCheckBox(_startMenuShortcutCheckBox, "Menu Démarrer", new Point(444, 78), new Size(236, 30), true);
         ConfigureCheckBox(_launchCheckBox, "Lancer après installation", new Point(444, 116), new Size(236, 30), true);
 
+        ConfigureCheckBox(
+            _torCheckBox,
+            "Installer et activer Tor (anonymat réseau)",
+            new Point(18, 156),
+            new Size(416, 30),
+            false);
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Masque ton adresse IP réelle en faisant transiter le trafic par le réseau Tor - utile sur un réseau" +
+                   " public, en cas de censure locale, ou pour une recherche sensible. Ralentit la navigation : reste" +
+                   " décoché par défaut, à cocher seulement si tu sais que tu en as besoin. Sans cette case, le" +
+                   " bouton Tor de la fenêtre Incognito proposera de l'installer plus tard, au moment où tu voudras" +
+                   " vraiment t'en servir. Téléchargement vérifié par empreinte SHA256 fixée dans le code de Lumora" +
+                   " (dist.torproject.org).",
+            AutoSize = false,
+            Location = new Point(56, 190),
+            Size = new Size(640, 50),
+            ForeColor = LumoraPalette.MutedForeground,
+            BackColor = LumoraPalette.PanelSurface
+        });
+
         panel.Controls.Add(_webView2CheckBox);
         panel.Controls.Add(_cleanProfileCheckBox);
         panel.Controls.Add(_desktopShortcutCheckBox);
         panel.Controls.Add(_startMenuShortcutCheckBox);
         panel.Controls.Add(_launchCheckBox);
+        panel.Controls.Add(_torCheckBox);
 
         Controls.Add(panel);
     }
 
     private void BuildFooter()
     {
-        _progressBar.Location = new Point(26, 700);
+        _progressBar.Location = new Point(26, 794);
         _progressBar.Size = new Size(708, 12);
         Controls.Add(_progressBar);
 
         _statusLabel.Text = "Prêt à installer.";
         _statusLabel.AutoSize = false;
-        _statusLabel.Location = new Point(26, 724);
+        _statusLabel.Location = new Point(26, 818);
         _statusLabel.Size = new Size(430, 24);
         _statusLabel.ForeColor = LumoraPalette.MutedForeground;
         _statusLabel.Font = LumoraTypography.Text(9.75f);
         Controls.Add(_statusLabel);
 
         _installButton.Text = "Installer";
-        _installButton.Location = new Point(486, 748);
+        _installButton.Location = new Point(486, 842);
         _installButton.Size = new Size(116, 36);
         _installButton.FlatStyle = FlatStyle.Flat;
         StyleAccentButton(_installButton);
@@ -325,7 +352,7 @@ internal sealed class InstallerForm : Form
         Controls.Add(_installButton);
 
         _cancelButton.Text = "Annuler";
-        _cancelButton.Location = new Point(618, 748);
+        _cancelButton.Location = new Point(618, 842);
         _cancelButton.Size = new Size(116, 36);
         _cancelButton.FlatStyle = FlatStyle.Flat;
         StyleSecondaryButton(_cancelButton);
@@ -410,7 +437,8 @@ internal sealed class InstallerForm : Form
                 EnsureWebView2Runtime: _webView2CheckBox.Checked,
                 CleanInstalledProfile: _cleanProfileCheckBox.Checked,
                 CreateDesktopShortcut: _desktopShortcutCheckBox.Checked,
-                CreateStartMenuShortcut: _startMenuShortcutCheckBox.Checked);
+                CreateStartMenuShortcut: _startMenuShortcutCheckBox.Checked,
+                InstallTorEngine: _torCheckBox.Checked);
 
             SetStatus("Installation en cours...", 4);
             await Task.Run(() => Install(options));
@@ -426,9 +454,15 @@ internal sealed class InstallerForm : Form
                 });
             }
 
+            var completionMessage = "Lumora est installé.\n\nAucun profil utilisateur n'a été copié. Les modules Lumora sont inclus dans l'application, et tes données restent à toi.";
+            if (_torInstallWarning is not null)
+            {
+                completionMessage += "\n\n" + _torInstallWarning;
+            }
+
             MessageBox.Show(
                 this,
-                "Lumora est installé.\n\nAucun profil utilisateur n'a été copié. Les modules Lumora sont inclus dans l'application, et tes données restent à toi.",
+                completionMessage,
                 "Lumora Browser",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
@@ -500,6 +534,11 @@ internal sealed class InstallerForm : Form
         {
             SetStatus("Nettoyage du profil installé précédent...", 58);
             Directory.Delete(profileDir, recursive: true);
+        }
+
+        if (options.InstallTorEngine)
+        {
+            EnsureTorEngine();
         }
 
         var appExe = Path.Combine(appDir, "Lumora.WinUI.exe");
@@ -604,16 +643,57 @@ internal sealed class InstallerForm : Form
 
     private static void WriteInstallInfo(string installInfo, string installRoot, string appExe)
     {
+        var torExePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Lumora", "profiles", "default", "tor", "tor.exe");
+
         File.WriteAllText(installInfo,
             "Lumora installé localement" + Environment.NewLine + Environment.NewLine +
             "Emplacement : " + installRoot + Environment.NewLine +
             "Exécutable : " + appExe + Environment.NewLine +
             "Modules : modules Lumora intégrés à l'application." + Environment.NewLine +
             "WebView2 : " + (IsWebView2RuntimeInstalled() ? "runtime détecté" : "runtime non détecté après installation") + Environment.NewLine +
+            "Tor : " + (File.Exists(torExePath) ? "moteur installé (bouton Tor de la fenêtre Incognito)" : "non installé - disponible à la demande depuis le bouton Tor de la fenêtre Incognito") + Environment.NewLine +
             "Profil : aucun profil imposé au lancement ; le choix se fait dans Lumora." + Environment.NewLine +
             "Vérification : " + Path.Combine(Path.GetDirectoryName(appExe)!, "VERIFICATION.txt") + Environment.NewLine + Environment.NewLine +
             "Ce programme d'installation ne copie aucun profil utilisateur." + Environment.NewLine +
             "Les raccourcis lancent directement l'application, sans variable de profil forcée." + Environment.NewLine);
+    }
+
+    // "default" : identifiant du tout premier profil cree par Lumora sur une
+    // machine neuve (LumoraConfig.ActiveProfileId vaut "default" par defaut,
+    // LumoraProfilePaths.ProfilesRoot() = %LocalAppData%\Lumora\profiles). Ce
+    // chemin n'est donc fiable QUE pour un premier lancement sans profil
+    // personnalise deja choisi - exactement le scenario que cette case couvre
+    // (case a cocher pensee pour un poste vierge, pas une reinstallation).
+    // Un echec ici ne bloque jamais l'installation du navigateur lui-meme :
+    // Tor reste installable plus tard depuis le bouton Tor de la fenetre
+    // Incognito (meme telechargement, meme verification SHA256).
+    private void EnsureTorEngine()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var torExePath = Path.Combine(localAppData, "Lumora", "profiles", "default", "tor", "tor.exe");
+
+        if (File.Exists(torExePath))
+        {
+            SetStatus("Moteur Tor déjà présent.", 60);
+            return;
+        }
+
+        try
+        {
+            SetStatus($"Téléchargement du moteur Tor {TorTrustedRelease.Version} (dist.torproject.org)...", 60);
+            TorEngineProvider.DownloadEngineAsync(torExePath, new Progress<string>(message => SetStatus(message)))
+                .GetAwaiter().GetResult();
+            SetStatus("Moteur Tor installé.", 62);
+        }
+        catch (Exception ex)
+        {
+            _torInstallWarning =
+                "Le moteur Tor n'a pas pu être installé automatiquement (" + ex.Message + "). " +
+                "Tu pourras réessayer plus tard depuis le bouton Tor de la fenêtre Incognito.";
+            SetStatus("Moteur Tor non installé (voir message final).", 62);
+        }
     }
 
     private void EnsureWebView2Runtime()

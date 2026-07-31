@@ -2,7 +2,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
-    [string]$Version = "0.83.54-dev",
+    [string]$Version = "0.93.8.0-dev",
     [string]$OutputRoot = "artifacts\clean-test",
     [switch]$NoRestore
 )
@@ -63,7 +63,7 @@ Invoke-WinUiTarget -MsbuildPath $msbuild -ProjectPath $project -Target "Publish"
 )
 
 $xamlIntermediateDir = Get-WinUiIntermediateOutputDir -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64"
-foreach ($xbf in @("App.xbf", "MainWindow.xbf", "LumoraAppWindow.xbf", "LumoraPrivateWindow.xbf")) {
+foreach ($xbf in @("App.xbf", "MainWindow.xbf", "LumoraAppWindow.xbf", "LumoraIncognitoWindow.xbf")) {
     $xbfPath = Join-Path $xamlOutputDir $xbf
     if (-not (Test-Path $xbfPath)) {
         $xbfPath = Join-Path $xamlIntermediateDir $xbf

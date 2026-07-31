@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "0.83.54-dev",
+    [string]$Version = "0.93.8.0-dev",
     [string]$CleanArtifactDir = "",
     [string]$OutputDirectory = "artifacts\installer"
 )
@@ -161,6 +161,19 @@ if (Test-Path $iconSource) {
 }
 Copy-Item -LiteralPath $logoSource -Destination (Join-Path $sourceDir "LumoraApp.png") -Force
 
+# Copie directe (pas de duplication de valeurs) des memes fichiers source que
+# l'app pour l'option "Installer et activer Tor" : TorTrustedRelease porte les
+# empreintes SHA256 epinglees, TorEngineProvider le telechargement/verification.
+# Les deux sont deja decouples de LumoraProfilePaths/WinUI (voir leurs
+# commentaires), donc compilables tels quels dans ce projet WinForms autonome.
+$torSourceDir = Join-Path $repoRoot "Lumora.WinUI\Tor"
+$torDestDir = Join-Path $sourceDir "Tor"
+Assert-RequiredPath -Path (Join-Path $torSourceDir "TorTrustedRelease.cs") -Message "TorTrustedRelease.cs introuvable"
+Assert-RequiredPath -Path (Join-Path $torSourceDir "TorEngineProvider.cs") -Message "TorEngineProvider.cs introuvable"
+New-Item -ItemType Directory -Force -Path $torDestDir | Out-Null
+Copy-Item -LiteralPath (Join-Path $torSourceDir "TorTrustedRelease.cs") -Destination $torDestDir -Force
+Copy-Item -LiteralPath (Join-Path $torSourceDir "TorEngineProvider.cs") -Destination $torDestDir -Force
+
 $projectPath = Join-Path $sourceDir "Lumora.Setup.csproj"
 $programPath = Join-Path $sourceDir "Program.cs"
 
@@ -200,7 +213,7 @@ SHA256 : $setupHash
 Signature Sigstore : non signée pour ce build
 Signature Windows : non signée Authenticode
 Installation : dossier visible et modifiable ; par défaut sans privilège administrateur sous LOCALAPPDATA
-Contenu : application Lumora et modules intégrés inclus ; nom complet Lumora Browser ; logo LumoraApp.png embarqué avec rendu haute qualité ; options à cocher redessinées et visibles ; code d'installateur réorganisé en template propre ; WebView2 téléchargé depuis Microsoft si le runtime manque
+Contenu : application Lumora et modules intégrés inclus ; nom complet Lumora Browser ; logo LumoraApp.png embarqué avec rendu haute qualité ; options à cocher redessinées et visibles ; code d'installateur réorganisé en template propre ; WebView2 téléchargé depuis Microsoft si le runtime manque ; moteur Tor installable via une case à cocher (décochée par défaut), téléchargé depuis dist.torproject.org et vérifié par empreinte SHA256 épinglée dans le code de Lumora
 Profil : aucun profil embarqué ; aucun dossier de profil forcé au lancement
 Source build propre : $($cleanArtifact.FullName)
 
