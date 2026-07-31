@@ -16211,3 +16211,53 @@ Mon Lumora > "Revoir l'ecran de bienvenue".
 
 **Version :** `0.93.8.0-dev` (inchangee - ajustement visuel d'une
 fonctionnalite deja ajoutee cette session).
+
+## 2026-08-01 (suite) - Slides de bienvenue : 3e passe, transition "page qui glisse"
+
+**Retour utilisateur** : la pilule de progression sautait d'une taille
+a l'autre "d'un bloc", sans se voir se deplacer ; demande explicite
+d'un effet "page qui glisse" entre les diapositives et de vraies
+animations pour donner envie. Feu vert direct ("go") apres validation
+de l'approche proposee (curseur qui glisse + slide en swipe horizontal).
+
+**Changement structurel notable** : les 5 `StackPanel` de diapositives
+etaient enfants sequentiels d'une `StackPanel` (une seule visible a la
+fois, les autres `Collapsed`) - insuffisant pour un swipe, qui exige que
+l'ancienne ET la nouvelle soient visibles EN MEME TEMPS pendant la
+transition. Elles sont desormais enfants superposes d'un `Grid`
+(`WelcomeStepsHost`), chacune avec son propre `TranslateTransform`.
+`GoToWelcomeStep`/`AnimateWelcomeStepTransition` (nouveau, dans
+`MainWindow.WelcomeSlides.cs`) anime opacite + translation X des deux
+panneaux en parallele (`CubicEase EaseOut`, ~260ms), direction coherente
+avec Suivant (+1, glisse depuis la droite) / Precedent (-1, inverse).
+
+**Rail de progression** : les 5 `Rectangle` independants (chacun
+changeant de taille/couleur) sont remplaces par 5 points fixes (rail,
+jamais modifies) + une seule pilule mobile (`WelcomeStepCursor`) dont
+le `Canvas.Left` est anime d'une position a l'autre - c'est ce qui donne
+la sensation de "voyage" demandee, la pilule ne change plus jamais de
+largeur (toujours 20px), seule sa position bouge.
+
+**Aucun nouveau risque** : `Storyboard`/`DoubleAnimation` sur
+`Opacity`, `X` (TranslateTransform) et `(Canvas.Left)` restent l'API
+d'animation standard WinUI, deja utilisee pour le halo/anneau
+respirant de la passe precedente - pas de nouveau mecanisme exotique.
+
+**Verification** : build (MSBuild VS 2026) + `dotnet test` : 695/696
+(meme echec preexistant sans rapport). Session live prolongee (mode
+invite, plusieurs sections de Parametres visitees - Confort, Vie privee
+locale) sans le moindre crash, mais **le clic precis sur le bouton
+"Personnaliser"** (pour rejouer les slides et confirmer visuellement le
+nouveau glissement) **n'a pas abouti malgre plusieurs methodes**
+(`SetCursorPos`+`mouse_event`, UIA `InvokePattern`, `SendInput`) - les
+coordonnees rapportees par UIA se sont meme reveleees par moments
+completement fausses (rect a des dizaines de milliers de pixels hors
+ecran). Aucun crash observe, juste une automatisation qui n'a pas pu
+confirmer visuellement cette diapositive precise cette fois. **A
+verifier par l'utilisateur** via Parametres > Mon Lumora >
+"Revoir l'ecran de bienvenue", en particulier le glissement horizontal
+entre diapositives et le deplacement de la pilule de progression.
+
+**Version :** `0.93.8.0-dev` (inchangee - ajustement d'une
+fonctionnalite deja ajoutee cette session, meme raisonnement que les
+deux passes precedentes).
