@@ -39,6 +39,21 @@ internal sealed class VaultStore
     private static readonly byte[] LegacyPulseVaultEntropy = Encoding.UTF8.GetBytes("PulseBrowser.Vault.v1");
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
 
+    // AAD (donnee authentifiee additionnelle) par blob : lie chaque ciphertext au
+    // role precis pour lequel il a ete chiffre, pour qu'un blob GCM valide ne
+    // puisse pas etre rejoue silencieusement a la place d'un autre (ex. un blob
+    // "cartes" substitue au blob "identifiants"). Les coffres ecrits avant ce
+    // correctif n'avaient aucune AAD (equivalent a une AAD vide) : DecryptGcm et
+    // TryUnwrapKey retentent avec une AAD vide en repli pour rester lisibles,
+    // Save() reecrit toujours avec l'AAD des ce prochain enregistrement.
+    private static readonly byte[] AadVaultData          = Encoding.UTF8.GetBytes("Lumora.Vault.Data.v1");
+    private static readonly byte[] AadVaultCards          = Encoding.UTF8.GetBytes("Lumora.Vault.Cards.v1");
+    private static readonly byte[] AadRecoveryData        = Encoding.UTF8.GetBytes("Lumora.Vault.RecoveryData.v1");
+    private static readonly byte[] AadRecoveryCards       = Encoding.UTF8.GetBytes("Lumora.Vault.RecoveryCards.v1");
+    private static readonly byte[] AadPinWrap             = Encoding.UTF8.GetBytes("Lumora.Vault.PinWrap.v1");
+    private static readonly byte[] AadRecoveryWrap        = Encoding.UTF8.GetBytes("Lumora.Vault.RecoveryWrap.v1");
+    private static readonly byte[] AadRecoveryVaultWrap   = Encoding.UTF8.GetBytes("Lumora.Vault.RecoveryVaultWrap.v1");
+
     private readonly string _vaultFile;
     private VaultHeader _header = new();
     private List<VaultCredential> _credentials = new();
@@ -264,7 +279,7 @@ internal sealed class VaultStore
         if (!HasMasterPassword || _header.Salt is null) return false;
         var salt = Convert.FromBase64String(_header.Salt);
         var key  = DeriveKey(password, salt, _header);
-        if (!TryDecrypt(_header.Data ?? string.Empty, key, _header.DataCipher, out List<VaultCredential> creds)) return false;
+        if (!TryDecrypt(_header.Data ?? string.Empty, key, _header.DataCipher, AadVaultData, out List<VaultCredential> creds)) return false;
         _unlockedKey  = key;
         _credentials  = creds;
         LoadCardsWithKey(key);
@@ -287,7 +302,7 @@ internal sealed class VaultStore
             return;
         }
 
-        if (TryDecrypt(_header.Cards, key, "gcm", out List<VaultPaymentCard> cards))
+        if (TryDecrypt(_header.Cards, key, "gcm", AadVaultCards, out List<VaultPaymentCard> cards))
             _cards = cards;
         else
         {
@@ -334,7 +349,7 @@ internal sealed class VaultStore
     {
         if (!HasMasterPassword || _header.Salt is null) return false;
         var salt = Convert.FromBase64String(_header.Salt);
-        return TryDecrypt(_header.Data ?? string.Empty, DeriveKey(password, salt, _header), _header.DataCipher, out List<VaultCredential> _);
+        return TryDecrypt(_header.Data ?? string.Empty, DeriveKey(password, salt, _header), _header.DataCipher, AadVaultData, out List<VaultCredential> _);
     }
 
     // Repasse en mode DPAPI (confort) — coffre doit être déverrouillé avant l'appel
@@ -355,16 +370,7 @@ internal sealed class VaultStore
         var salt   = RandomNumberGenerator.GetBytes(32);
         var pinKey = DeriveKey(pin, salt, ArgonHeaderDefaults());
 
-        var nonce  = RandomNumberGenerator.GetBytes(12);
-        var cipher = new byte[_unlockedKey.Length];
-        var tag    = new byte[16];
-        using (var aes = new AesGcm(pinKey, 16))
-            aes.Encrypt(nonce, _unlockedKey, cipher, tag);
-
-        var wrapped = new byte[nonce.Length + cipher.Length + tag.Length];
-        Buffer.BlockCopy(nonce,  0, wrapped, 0,                          nonce.Length);
-        Buffer.BlockCopy(cipher, 0, wrapped, nonce.Length,              cipher.Length);
-        Buffer.BlockCopy(tag,    0, wrapped, nonce.Length + cipher.Length, tag.Length);
+        var wrapped = WrapKey(_unlockedKey, pinKey, AadPinWrap);
 
         var dpapi = ProtectedData.Protect(wrapped, VaultEntropy, DataProtectionScope.CurrentUser);
         _header.PinSalt       = Convert.ToBase64String(salt);
@@ -391,14 +397,9 @@ internal sealed class VaultStore
             var dpapi   = Convert.FromBase64String(_header.PinWrappedKey);
             var wrapped = UnprotectVaultBytes(dpapi);
 
-            var nonce    = wrapped[..12];
-            var tag      = wrapped[^16..];
-            var cipher   = wrapped[12..^16];
-            var vaultKey = new byte[cipher.Length];
-            using (var aes = new AesGcm(pinKey, 16))
-                aes.Decrypt(nonce, cipher, tag, vaultKey);
+            if (!TryUnwrapKey(Convert.ToBase64String(wrapped), pinKey, AadPinWrap, out var vaultKey)) return false;
 
-            if (!TryDecrypt(_header.Data ?? string.Empty, vaultKey, _header.DataCipher, out List<VaultCredential> creds)) return false;
+            if (!TryDecrypt(_header.Data ?? string.Empty, vaultKey, _header.DataCipher, AadVaultData, out List<VaultCredential> creds)) return false;
             _unlockedKey = vaultKey;
             _credentials = creds;
             LoadCardsWithKey(vaultKey);
@@ -419,8 +420,8 @@ internal sealed class VaultStore
         var recoveryWrapKey = DeriveKey(NormalizeRecoveryKey(recoveryKey), recoverySalt, ArgonHeaderDefaults());
 
         _header.RecoverySalt = Convert.ToBase64String(recoverySalt);
-        _header.RecoveryWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, recoveryWrapKey));
-        _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey));
+        _header.RecoveryWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, recoveryWrapKey, AadRecoveryWrap));
+        _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey, AadRecoveryVaultWrap));
         _recoveryDataKey = recoveryDataKey;
         Save();
         return true;
@@ -440,12 +441,12 @@ internal sealed class VaultStore
         {
             var salt = Convert.FromBase64String(_header.RecoverySalt);
             var recoveryWrapKey = DeriveKey(NormalizeRecoveryKey(recoveryKey), salt, _header);
-            if (!TryUnwrapKey(_header.RecoveryWrappedKey, recoveryWrapKey, out var recoveryDataKey))
+            if (!TryUnwrapKey(_header.RecoveryWrappedKey, recoveryWrapKey, AadRecoveryWrap, out var recoveryDataKey))
             {
                 return false;
             }
 
-            if (!TryDecrypt(_header.RecoveryData, recoveryDataKey, _header.RecoveryDataCipher, out List<VaultCredential> creds))
+            if (!TryDecrypt(_header.RecoveryData, recoveryDataKey, _header.RecoveryDataCipher, AadRecoveryData, out List<VaultCredential> creds))
             {
                 CryptographicOperations.ZeroMemory(recoveryDataKey);
                 return false;
@@ -455,7 +456,7 @@ internal sealed class VaultStore
             _credentials = creds;
             // Copie de secours du portefeuille (absente sur les anciens coffres).
             if (!string.IsNullOrEmpty(_header.RecoveryCards) &&
-                TryDecrypt(_header.RecoveryCards, recoveryDataKey, "gcm", out List<VaultPaymentCard> cards))
+                TryDecrypt(_header.RecoveryCards, recoveryDataKey, "gcm", AadRecoveryCards, out List<VaultPaymentCard> cards))
                 _cards = cards;
             else
                 _cards = new();
@@ -608,9 +609,9 @@ internal sealed class VaultStore
             var cardsJson = JsonSerializer.SerializeToUtf8Bytes(_cards, JsonOpts);
             if (_header.Mode == "aes256" && _unlockedKey is not null)
             {
-                _header.Data = Convert.ToBase64String(EncryptGcm(json, _unlockedKey));
+                _header.Data = Convert.ToBase64String(EncryptGcm(json, _unlockedKey, AadVaultData));
                 _header.DataCipher = "gcm";
-                _header.Cards = Convert.ToBase64String(EncryptGcm(cardsJson, _unlockedKey));
+                _header.Cards = Convert.ToBase64String(EncryptGcm(cardsJson, _unlockedKey, AadVaultCards));
             }
             else if (_header.Mode == "aes256")
                 _header.Data ??= string.Empty;
@@ -626,6 +627,11 @@ internal sealed class VaultStore
             var dir = Path.GetDirectoryName(_vaultFile);
             if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(_vaultFile, JsonSerializer.Serialize(_header, JsonOpts), Encoding.UTF8);
+            // json/cardsJson contiennent tous les secrets en clair (mots de passe,
+            // TOTP, numeros de carte...) : effaces des qu'ils ne servent plus,
+            // meme principe que dans TryDecrypt.
+            CryptographicOperations.ZeroMemory(json);
+            CryptographicOperations.ZeroMemory(cardsJson);
         }
         catch (Exception error)
         {
@@ -640,15 +646,27 @@ internal sealed class VaultStore
     // Déchiffre un blob du coffre. cipher = valeur de l'en-tête "data_cipher" :
     // "gcm" pour les coffres actuels (AES-256-GCM authentifié), "cbc" pour les
     // anciens (AES-256-CBC, lus tels quels puis réécrits en GCM au prochain Save).
-    private static bool TryDecrypt<T>(string dataBase64, byte[] key, string cipher, out List<T> result)
+    private static bool TryDecrypt<T>(string dataBase64, byte[] key, string cipher, byte[] aad, out List<T> result)
     {
         result = new();
         try
         {
             if (string.IsNullOrEmpty(dataBase64)) return true; // coffre vide = valide
             var bytes = Convert.FromBase64String(dataBase64);
-            var plain = cipher == "gcm" ? DecryptGcm(bytes, key) : DecryptAes(bytes, key);
-            result = JsonSerializer.Deserialize<List<T>>(plain, JsonOpts) ?? new();
+            var plain = cipher == "gcm" ? DecryptGcm(bytes, key, aad) : DecryptAes(bytes, key);
+            try
+            {
+                result = JsonSerializer.Deserialize<List<T>>(plain, JsonOpts) ?? new();
+            }
+            finally
+            {
+                // Le JSON dechiffre contient les secrets en clair (mots de passe,
+                // TOTP...) : reduit la fenetre pendant laquelle ce tampon
+                // intermediaire reste en memoire, meme si les `string` qui en
+                // sont issues (VaultCredential.Password) ne peuvent pas etre
+                // effacees de la meme facon (immutables en C#).
+                CryptographicOperations.ZeroMemory(plain);
+            }
             return true;
         }
         catch { return false; }
@@ -673,14 +691,15 @@ internal sealed class VaultStore
         }
     }
 
-    // AES-256-GCM authentifié : nonce(12) ‖ tag(16) ‖ ciphertext.
-    private static byte[] EncryptGcm(byte[] plaintext, byte[] key)
+    // AES-256-GCM authentifié : nonce(12) ‖ tag(16) ‖ ciphertext. AAD toujours
+    // posee a l'ecriture (voir les constantes Aad* plus haut).
+    private static byte[] EncryptGcm(byte[] plaintext, byte[] key, byte[] aad)
     {
         var nonce  = RandomNumberGenerator.GetBytes(GcmNonce);
         var cipher = new byte[plaintext.Length];
         var tag    = new byte[GcmTag];
         using (var aes = new AesGcm(key, GcmTag))
-            aes.Encrypt(nonce, plaintext, cipher, tag);
+            aes.Encrypt(nonce, plaintext, cipher, tag, aad);
 
         var result = new byte[GcmNonce + GcmTag + cipher.Length];
         Buffer.BlockCopy(nonce,  0, result, 0,                 GcmNonce);
@@ -689,7 +708,10 @@ internal sealed class VaultStore
         return result;
     }
 
-    private static byte[] DecryptGcm(byte[] data, byte[] key)
+    // Retente avec une AAD vide si l'AAD attendue echoue : couvre les blobs GCM
+    // ecrits avant l'introduction de l'AAD (equivalent a une AAD vide), qui
+    // doivent rester lisibles. Reecrits avec l'AAD au prochain Save().
+    private static byte[] DecryptGcm(byte[] data, byte[] key, byte[] aad)
     {
         if (data.Length < GcmNonce + GcmTag) throw new CryptographicException("Vault data too short");
         var nonce  = data[..GcmNonce];
@@ -697,7 +719,14 @@ internal sealed class VaultStore
         var cipher = data[(GcmNonce + GcmTag)..];
         var plain  = new byte[cipher.Length];
         using var aes = new AesGcm(key, GcmTag);
-        aes.Decrypt(nonce, cipher, tag, plain);
+        try
+        {
+            aes.Decrypt(nonce, cipher, tag, plain, aad);
+        }
+        catch (CryptographicException) when (aad.Length > 0)
+        {
+            aes.Decrypt(nonce, cipher, tag, plain);
+        }
         return plain;
     }
 
@@ -722,12 +751,12 @@ internal sealed class VaultStore
         var recoveryDataKey = TryGetRecoveryDataKey();
         if (recoveryDataKey is null) return;
 
-        _header.RecoveryData = Convert.ToBase64String(EncryptGcm(json, recoveryDataKey));
+        _header.RecoveryData = Convert.ToBase64String(EncryptGcm(json, recoveryDataKey, AadRecoveryData));
         _header.RecoveryDataCipher = "gcm";
-        _header.RecoveryCards = Convert.ToBase64String(EncryptGcm(cardsJson, recoveryDataKey));
+        _header.RecoveryCards = Convert.ToBase64String(EncryptGcm(cardsJson, recoveryDataKey, AadRecoveryCards));
         if (_unlockedKey is not null)
         {
-            _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey));
+            _header.RecoveryVaultWrappedKey = Convert.ToBase64String(WrapKey(recoveryDataKey, _unlockedKey, AadRecoveryVaultWrap));
         }
     }
 
@@ -743,18 +772,18 @@ internal sealed class VaultStore
             return null;
         }
 
-        return TryUnwrapKey(_header.RecoveryVaultWrappedKey, _unlockedKey, out var recoveryDataKey)
+        return TryUnwrapKey(_header.RecoveryVaultWrappedKey, _unlockedKey, AadRecoveryVaultWrap, out var recoveryDataKey)
             ? recoveryDataKey
             : null;
     }
 
-    private static byte[] WrapKey(byte[] keyToWrap, byte[] wrappingKey)
+    private static byte[] WrapKey(byte[] keyToWrap, byte[] wrappingKey, byte[] aad)
     {
         var nonce = RandomNumberGenerator.GetBytes(12);
         var cipher = new byte[keyToWrap.Length];
         var tag = new byte[16];
         using (var aes = new AesGcm(wrappingKey, 16))
-            aes.Encrypt(nonce, keyToWrap, cipher, tag);
+            aes.Encrypt(nonce, keyToWrap, cipher, tag, aad);
 
         var wrapped = new byte[nonce.Length + cipher.Length + tag.Length];
         Buffer.BlockCopy(nonce, 0, wrapped, 0, nonce.Length);
@@ -763,7 +792,9 @@ internal sealed class VaultStore
         return wrapped;
     }
 
-    private static bool TryUnwrapKey(string wrappedBase64, byte[] wrappingKey, out byte[] key)
+    // Meme repli AAD-vide qu'DecryptGcm, pour les cles emballees avant ce
+    // correctif (PIN, cle de recuperation).
+    private static bool TryUnwrapKey(string wrappedBase64, byte[] wrappingKey, byte[] aad, out byte[] key)
     {
         key = Array.Empty<byte>();
         try
@@ -776,7 +807,16 @@ internal sealed class VaultStore
             var cipher = wrapped[12..^16];
             var plain = new byte[cipher.Length];
             using (var aes = new AesGcm(wrappingKey, 16))
-                aes.Decrypt(nonce, cipher, tag, plain);
+            {
+                try
+                {
+                    aes.Decrypt(nonce, cipher, tag, plain, aad);
+                }
+                catch (CryptographicException) when (aad.Length > 0)
+                {
+                    aes.Decrypt(nonce, cipher, tag, plain);
+                }
+            }
             key = plain;
             return true;
         }

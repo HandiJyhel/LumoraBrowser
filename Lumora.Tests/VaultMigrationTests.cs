@@ -47,12 +47,117 @@ public sealed class VaultMigrationTests : IDisposable
         Assert.Equal(2, reopened.ListCredentials().Count);
     }
 
+    // Retro-compatibilite : un coffre GCM ecrit AVANT l'introduction de l'AAD
+    // (donnee authentifiee additionnelle) doit rester lisible, puis etre
+    // reecrit AVEC l'AAD des le prochain enregistrement. On fabrique ici un
+    // blob GCM sans AAD (equivalent a une AAD vide), reproduisant fidelement
+    // ce qu'ecrivait VaultStore avant ce correctif.
+    [Fact]
+    public void Un_coffre_GCM_sans_AAD_s_ouvre_puis_est_reecrit_avec_AAD()
+    {
+        const string password = "mot-de-passe-pre-aad";
+        WriteLegacyGcmVaultWithoutAad(password, ("https://exemple.fr", "alice", "s3cret"));
+
+        var vault = new VaultStore(_file);
+        Assert.True(vault.IsLocked);
+        Assert.True(vault.Unlock(password));
+        Assert.Equal("s3cret", vault.ListCredentials().Single().Password);
+
+        // Le blob sur disque n'a pas encore d'AAD tant qu'on n'a rien reecrit :
+        // le dechiffrer avec l'AAD attendue par le code actuel doit encore echouer.
+        Assert.False(TryDecryptDataBlobWithAad(GetKeyForCurrentHeader(password)));
+
+        // Toute ecriture doit reecrire le blob avec l'AAD.
+        vault.Upsert("https://autre.fr", "bob", "hunter2");
+        Assert.True(TryDecryptDataBlobWithAad(GetKeyForCurrentHeader(password)));
+
+        // Et le coffre migre se relit correctement depuis le disque.
+        vault.Lock();
+        var reopened = new VaultStore(_file);
+        Assert.True(reopened.Unlock(password));
+        Assert.Equal(2, reopened.ListCredentials().Count);
+    }
+
     private string DataCipherOnDisk()
     {
         using var doc = JsonDocument.Parse(File.ReadAllText(_file, Encoding.UTF8));
         return doc.RootElement.TryGetProperty("data_cipher", out var v)
             ? v.GetString() ?? "cbc"
             : "cbc";
+    }
+
+    private byte[] GetKeyForCurrentHeader(string password)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(_file, Encoding.UTF8));
+        var salt = Convert.FromBase64String(doc.RootElement.GetProperty("salt").GetString()!);
+        return DeriveArgon2id(password, salt);
+    }
+
+    // Reproduit precisement TryDecrypt("data", ..., aad: "Lumora.Vault.Data.v1")
+    // pour prouver, depuis l'exterieur, que le blob sur disque exige desormais
+    // cette AAD precise (donc qu'il a bien ete reecrit apres le correctif).
+    private bool TryDecryptDataBlobWithAad(byte[] key)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(_file, Encoding.UTF8));
+        var dataBase64 = doc.RootElement.GetProperty("data").GetString()!;
+        var bytes = Convert.FromBase64String(dataBase64);
+        var aad = Encoding.UTF8.GetBytes("Lumora.Vault.Data.v1");
+        const int nonceSize = 12, tagSize = 16;
+        var nonce = bytes[..nonceSize];
+        var tag = bytes[nonceSize..(nonceSize + tagSize)];
+        var cipher = bytes[(nonceSize + tagSize)..];
+        var plain = new byte[cipher.Length];
+        try
+        {
+            using var aes = new AesGcm(key, tagSize);
+            aes.Decrypt(nonce, cipher, tag, plain, aad);
+            return true;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    // Reproduit fidelement ce que VaultStore ecrivait AVANT l'introduction de
+    // l'AAD : blob AES-256-GCM (nonce(12) . tag(16) . cipher), chiffre sans
+    // AAD (equivalent a une AAD vide).
+    private void WriteLegacyGcmVaultWithoutAad(string password, params (string origin, string user, string pass)[] creds)
+    {
+        var salt = RandomNumberGenerator.GetBytes(32);
+        var key = DeriveArgon2id(password, salt);
+
+        var list = creds.Select(c => new VaultCredential
+        {
+            Origin = c.origin, Username = c.user, Password = c.pass,
+            CreatedAt = 1, UpdatedAt = 1
+        }).ToList();
+        var plaintext = JsonSerializer.SerializeToUtf8Bytes(list, new JsonSerializerOptions { WriteIndented = false });
+
+        var nonce = RandomNumberGenerator.GetBytes(12);
+        var cipher = new byte[plaintext.Length];
+        var tag = new byte[16];
+        using (var aes = new AesGcm(key, 16))
+            aes.Encrypt(nonce, plaintext, cipher, tag); // pas d'AAD, comme avant le correctif
+
+        var blob = new byte[nonce.Length + tag.Length + cipher.Length];
+        Buffer.BlockCopy(nonce, 0, blob, 0, nonce.Length);
+        Buffer.BlockCopy(tag, 0, blob, nonce.Length, tag.Length);
+        Buffer.BlockCopy(cipher, 0, blob, nonce.Length + tag.Length, cipher.Length);
+
+        var header = new
+        {
+            version = 2,
+            mode = "aes256",
+            kdf = "argon2id",
+            salt = Convert.ToBase64String(salt),
+            argon2_mem = 65536,
+            argon2_iter = 3,
+            argon2_par = 4,
+            data = Convert.ToBase64String(blob),
+            data_cipher = "gcm"
+        };
+        File.WriteAllText(_file, JsonSerializer.Serialize(header), Encoding.UTF8);
     }
 
     // Reproduit fidèlement l'ancien format : clé Argon2id, blob AES-256-CBC (IV ‖ chiffré),
