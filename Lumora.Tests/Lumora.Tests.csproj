@@ -39,6 +39,8 @@
     <Compile Include="..\Lumora.WinUI\Models\UserProfile.cs"             Link="Product\UserProfile.cs" />
     <Compile Include="..\Lumora.WinUI\Models\ProfilePaths.cs"            Link="Product\ProfilePaths.cs" />
     <Compile Include="..\Lumora.WinUI\Models\UiSettings.cs"              Link="Product\UiSettings.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\StartMenuTiles.cs"          Link="Product\StartMenuTiles.cs" />
+    <Compile Include="..\Lumora.WinUI\StartMenuTileRegistry.cs"          Link="Product\StartMenuTileRegistry.cs" />
     <Compile Include="..\Lumora.WinUI\Models\Profiles.cs"                Link="Product\Profiles.cs" />
     <Compile Include="..\Lumora.WinUI\LumoraConfig.cs"                    Link="Product\LumoraConfig.cs" />
     <Compile Include="..\Lumora.WinUI\Storage\LumoraFile.cs"              Link="Product\LumoraFile.cs" />
@@ -56,6 +58,7 @@
     <Compile Include="..\Lumora.WinUI\PasswordManager\VaultGroupingService.cs" Link="Product\VaultGroupingService.cs" />
     <Compile Include="..\Lumora.WinUI\Sessions\SessionKeepAdvisor.cs" Link="Product\SessionKeepAdvisor.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\WebAppLaunchArgs.cs" Link="Product\WebAppLaunchArgs.cs" />
+    <Compile Include="..\Lumora.WinUI\WebApps\WebAppIdentity.cs" Link="Product\WebAppIdentity.cs" />
     <Compile Include="..\Lumora.WinUI\IncognitoLaunchArgs.cs" Link="Product\IncognitoLaunchArgs.cs" />
     <Compile Include="..\Lumora.WinUI\IncognitoProcessLauncher.cs" Link="Product\IncognitoProcessLauncher.cs" />
     <Compile Include="..\Lumora.WinUI\IncognitoWelcomeHtml.cs" Link="Product\IncognitoWelcomeHtml.cs" />
@@ -68,6 +71,7 @@
     <Compile Include="..\Lumora.WinUI\NewTabMarkup.cs" Link="Product\NewTabMarkup.cs" />
     <Compile Include="..\Lumora.WinUI\Settings\NewTabShortcutText.cs" Link="Product\NewTabShortcutText.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\ShortcutNaming.cs" Link="Product\ShortcutNaming.cs" />
+    <Compile Include="..\Lumora.WinUI\WheelScrollMath.cs" Link="Product\WheelScrollMath.cs" />
     <Compile Include="..\Lumora.WinUI\Models\HistoryTimeFormatter.cs" Link="Product\HistoryTimeFormatter.cs" />
     <Compile Include="..\Lumora.WinUI\Models\Notes.cs" Link="Product\Notes.cs" />
     <Compile Include="..\Lumora.WinUI\Models\Annotations.cs" Link="Product\Annotations.cs" />
@@ -102,6 +106,7 @@
     <Compile Include="..\Lumora.WinUI\VideoDownload\YtDlpOutputParser.cs" Link="Product\YtDlpOutputParser.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameUncloakerModule.cs" Link="Product\CnameUncloakerModule.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\CnameUncloaker\CnameResolver.cs" Link="Product\CnameResolver.cs" />
+    <Compile Include="..\Lumora.WinUI\Privacy\ConsentManager\ConsentManagerScripts.cs" Link="Product\ConsentManagerScripts.cs" />
     <Compile Include="..\Lumora.WinUI\Tor\TorProcessManager.cs" Link="Product\TorProcessManager.cs" />
     <Compile Include="..\Lumora.WinUI\Tor\TorTrustedRelease.cs" Link="Product\TorTrustedRelease.cs" />
     <Compile Include="..\Lumora.WinUI\Tor\TorEngineState.cs" Link="Product\TorEngineState.cs" />

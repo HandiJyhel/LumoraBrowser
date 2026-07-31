@@ -38,6 +38,7 @@
     <Content Include="Credentials\TestPages\*.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraApp.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraApp.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\LumoraLogoMark.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraIncognito.ico" CopyToOutputDirectory="PreserveNewest" />
     <!-- Public Suffix List (Mozilla, licence MPL 2.0) — https://publicsuffix.org -->
     <EmbeddedResource Include="Credentials\public_suffix_list.dat" />
