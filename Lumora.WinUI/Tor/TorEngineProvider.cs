@@ -7,10 +7,16 @@ namespace Lumora.WinUI.Tor;
 
 // Telechargement et installation du moteur Tor a la demande. Rien n'est
 // jamais telecharge automatiquement : DownloadEngineAsync n'est appele que
-// sur un clic explicite de l'utilisateur (LumoraIncognitoWindow). Meme
+// sur un clic explicite de l'utilisateur (LumoraIncognitoWindow) ou une case
+// cochee explicitement dans l'installateur (scripts/installer). Meme
 // philosophie que YtDlpEngineProvider : double verification (archive puis
-// binaire extrait) avant d'ecrire quoi que ce soit dans le profil, car ce
+// binaire extrait) avant d'ecrire quoi que ce soit sur le disque, car ce
 // fichier sera ensuite execute par TorProcessManager.
+//
+// Volontairement decouple de LumoraProfilePaths (prend un chemin de
+// destination direct) : ce fichier est aussi copie tel quel dans
+// l'installateur autonome (scripts/build-installer.ps1), qui ne depend pas
+// du reste de l'app WinUI et n'a pas de profil au moment ou il tourne.
 internal static class TorEngineProvider
 {
     private static readonly HttpClient Http = new()
@@ -19,8 +25,13 @@ internal static class TorEngineProvider
         DefaultRequestHeaders = { { "User-Agent", "Lumora/1.0 (Tor engine installer)" } }
     };
 
+    // destinationExePath : chemin complet ou ecrire tor.exe (le dossier parent
+    // est cree s'il n'existe pas). L'appelant decide de l'emplacement -
+    // TorProcessManager.ExpectedExecutablePath(profile) depuis l'app,
+    // %LocalAppData%\Lumora\profiles\default\tor\tor.exe calcule directement
+    // depuis l'installateur (voir Program.cs.template, EnsureTorEngine).
     public static async Task DownloadEngineAsync(
-        LumoraProfilePaths profile, IProgress<string>? progress, CancellationToken cancellationToken = default)
+        string destinationExePath, IProgress<string>? progress, CancellationToken cancellationToken = default)
     {
         var workDir = Path.Combine(Path.GetTempPath(), "LumoraTorInstall", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workDir);
@@ -63,9 +74,10 @@ internal static class TorEngineProvider
                     "Le moteur Tor extrait ne correspond pas a la version verifiee. Installation annulee par securite.");
             }
 
-            var torDir = TorProcessManager.ExpectedDirectory(profile);
+            var torDir = Path.GetDirectoryName(destinationExePath)
+                ?? throw new InvalidOperationException("Chemin de destination du moteur Tor invalide.");
             Directory.CreateDirectory(torDir);
-            File.Copy(extractedExePath, TorProcessManager.ExpectedExecutablePath(profile), overwrite: true);
+            File.Copy(extractedExePath, destinationExePath, overwrite: true);
             progress?.Report("Moteur Tor installe.");
         }
         finally

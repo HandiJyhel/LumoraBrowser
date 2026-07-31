@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
 using Windows.System;
 using WinRT.Interop;
@@ -77,6 +78,7 @@ public sealed partial class LumoraIncognitoWindow : Window
         var hwnd = WindowNative.GetWindowHandle(this);
         var winId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(winId);
+        LumoraTheme.ApplySecondaryWindowTheme(RootGrid, _appWindow, _uiSettings, LumoraWindowThemeRole.Incognito);
         ApplyIcon();
 
         var newTabAccelerator = new KeyboardAccelerator
@@ -192,6 +194,7 @@ public sealed partial class LumoraIncognitoWindow : Window
             }
 
             IncognitoTorStatusText.Text = "IP masquee : oui";
+            SetTorIndicatorActive(true);
             IncognitoTorSwitch.IsEnabled = true;
             IncognitoNewCircuitButton.Visibility = Visibility.Visible;
         }
@@ -210,6 +213,18 @@ public sealed partial class LumoraIncognitoWindow : Window
         IncognitoTorSwitch.IsOn = isOn;
         _suppressToggleHandler = false;
     }
+
+    // Pastille rouge/vert a cote du texte de statut : rouge tant que l'IP reelle
+    // n'est pas confirmee masquee (desactive, en cours de connexion, echec),
+    // vert seulement une fois la connexion Tor reellement etablie. Purement
+    // additif a IncognitoTorStatusText (deja le signal accessible principal) -
+    // jamais la couleur seule comme unique indicateur d'etat.
+    private void SetTorIndicatorActive(bool active) =>
+        IncognitoTorIndicatorDot.Fill = RootGrid.Resources[
+            active ? "LumoraWindowSuccessBrush" : "LumoraWindowDangerBrush"] as Brush
+            ?? new SolidColorBrush(active
+                ? LumoraTheme.UiColor(61, 214, 136)
+                : LumoraTheme.UiColor(229, 72, 77));
 
     // Le proxy Tor est fige au demarrage du process (voir commentaire de
     // classe) : basculer Tor ne peut pas se faire a chaud. On rouvre une
@@ -413,6 +428,7 @@ public sealed partial class LumoraIncognitoWindow : Window
             VerticalAlignment = VerticalAlignment.Stretch,
             Visibility = select ? Visibility.Visible : Visibility.Collapsed
         };
+        view.PointerEntered += (_, _) => view.Focus(FocusState.Programmatic);
         var item = new TabViewItem
         {
             Header = "Nouvel onglet",
@@ -552,7 +568,8 @@ public sealed partial class LumoraIncognitoWindow : Window
         triggerButton.IsEnabled = false;
         try
         {
-            await TorEngineProvider.DownloadEngineAsync(_profile, new Progress<string>(report));
+            await TorEngineProvider.DownloadEngineAsync(
+                TorProcessManager.ExpectedExecutablePath(_profile), new Progress<string>(report));
             report("Moteur Tor installe. Reouverture avec Tor active...");
             _relaunchingIncognito = true;
             IncognitoProcessLauncher.Launch(torEnabled: true, returnToMain: _returnToMain);
@@ -569,8 +586,18 @@ public sealed partial class LumoraIncognitoWindow : Window
         }
     }
 
+    // La navigation principale (Document) n'est jamais remplacee par une reponse
+    // vide, meme si son URL matche une regle EasyList/EasyPrivacy : sinon un
+    // faux positif sur le domaine cible (frequent avec les redirecteurs
+    // publicitaires) rend la page entiere blanche au lieu de ne bloquer que ses
+    // sous-ressources. Meme garde-fou que MainWindow.Privacy.cs.
     private void Core_WebResourceRequested(CoreWebView2 sender, CoreWebView2WebResourceRequestedEventArgs args)
     {
+        if (args.ResourceContext == CoreWebView2WebResourceContext.Document)
+        {
+            return;
+        }
+
         if (_privacy.ShouldBlock(args.Request.Uri, sender.Source ?? string.Empty))
         {
             args.Response = sender.Environment.CreateWebResourceResponse(null, 200, "OK", string.Empty);

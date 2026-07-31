@@ -29,12 +29,38 @@
         anciennes fenetres.
     -->
     <Grid x:Name="RootGrid" Background="#FF1A1626">
+        <Grid.Resources>
+            <SolidColorBrush x:Key="LumoraWindowBackgroundBrush" Color="#FF1A1626" />
+            <SolidColorBrush x:Key="LumoraWindowChromeBrush" Color="#FF241C33" />
+            <SolidColorBrush x:Key="LumoraWindowAccentBrush" Color="#FFB9A7E8" />
+            <SolidColorBrush x:Key="LumoraWindowCalloutBrush" Color="#FF241C33" />
+            <SolidColorBrush x:Key="LumoraWindowCalloutStrokeBrush" Color="#FF4D4660" />
+            <SolidColorBrush x:Key="LumoraWindowSuccessBrush" Color="#FF3DD688" />
+            <SolidColorBrush x:Key="LumoraWindowDangerBrush" Color="#FFE5484D" />
+            <SolidColorBrush x:Key="LumoraWindowTabStripBrush" Color="#FF1A1626" />
+            <SolidColorBrush x:Key="LumoraWindowTextBrush" Color="#FFF6EFFF" />
+            <SolidColorBrush x:Key="LumoraWindowMutedTextBrush" Color="#FFC1B6D9" />
+            <LinearGradientBrush x:Key="LumoraWindowIdentityBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FFB9A7E8" Offset="0" />
+                <GradientStop Color="#FF7BE4DB" Offset="1" />
+            </LinearGradientBrush>
+            <Style x:Key="IncognitoToolbarButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource NovaControlSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaControlStrokeBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource NovaControlForegroundBrush}" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+            </Style>
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Padding="10,8" ColumnSpacing="8" Background="#FF241C33">
+        <Grid Grid.Row="0" Padding="10,8" ColumnSpacing="8" Background="{StaticResource LumoraWindowChromeBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -46,22 +72,25 @@
             </Grid.ColumnDefinitions>
 
             <FontIcon Grid.Column="0" Glyph="&#xE727;" FontFamily="Segoe MDL2 Assets"
-                      FontSize="16" Foreground="#FFB9A7E8" VerticalAlignment="Center"
+                      FontSize="16" Foreground="{StaticResource LumoraWindowAccentBrush}" VerticalAlignment="Center"
                       Margin="2,0,4,0" />
 
             <Button x:Name="IncognitoBackButton" Grid.Column="1" Padding="8,5"
+                    Style="{StaticResource IncognitoToolbarButtonStyle}"
                     Click="IncognitoBackButton_Click" IsEnabled="False"
                     AutomationProperties.Name="Page precedente"
                     ToolTipService.ToolTip="Page precedente">
                 <FontIcon Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
             </Button>
             <Button x:Name="IncognitoForwardButton" Grid.Column="2" Padding="8,5"
+                    Style="{StaticResource IncognitoToolbarButtonStyle}"
                     Click="IncognitoForwardButton_Click" IsEnabled="False"
                     AutomationProperties.Name="Page suivante"
                     ToolTipService.ToolTip="Page suivante">
                 <FontIcon Glyph="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
             </Button>
             <Button x:Name="IncognitoReloadButton" Grid.Column="3" Padding="8,5"
+                    Style="{StaticResource IncognitoToolbarButtonStyle}"
                     Click="IncognitoReloadButton_Click"
                     AutomationProperties.Name="Recharger la page"
                     ToolTipService.ToolTip="Recharger la page">
@@ -72,24 +101,37 @@
                      PlaceholderText="Rechercher ou saisir une URL (Incognito)"
                      KeyDown="IncognitoAddressBox_KeyDown"
                      AutomationProperties.Name="Barre d'adresse Incognito"
-                     VerticalAlignment="Center" />
+                     VerticalAlignment="Center"
+                     Background="{StaticResource NovaControlSurfaceBrush}"
+                     BorderBrush="{StaticResource NovaControlStrokeBrush}"
+                     Foreground="{StaticResource NovaControlForegroundBrush}"
+                     PlaceholderForeground="{StaticResource NovaControlMutedForegroundBrush}"
+                     SelectionHighlightColor="{StaticResource AccentFillColorSecondaryBrush}" />
 
             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <TextBlock x:Name="IncognitoTorStatusText" Text="IP masquee : non" Foreground="#FFB9A7E8"
+                <!-- Pastille rouge/vert : indicateur purement visuel, decoratif pour le lecteur
+                     d'ecran (AccessibilityView=Raw) car IncognitoTorStatusText juste a cote
+                     annonce deja le meme etat en texte - jamais la couleur seule comme signal. -->
+                <Ellipse x:Name="IncognitoTorIndicatorDot" Width="10" Height="10" Fill="{StaticResource LumoraWindowDangerBrush}"
+                         VerticalAlignment="Center"
+                         AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock x:Name="IncognitoTorStatusText" Text="IP masquee : non" Foreground="{StaticResource LumoraWindowAccentBrush}"
                            FontSize="12" VerticalAlignment="Center" />
                 <ToggleSwitch x:Name="IncognitoTorSwitch" OnContent="Tor" OffContent="Tor"
                               Toggled="IncognitoTorSwitch_Toggled"
                               AutomationProperties.Name="Masquer l'adresse IP via Tor" />
                 <Button x:Name="IncognitoNewCircuitButton" Padding="8,5" Visibility="Collapsed"
+                        Style="{StaticResource IncognitoToolbarButtonStyle}"
                         Content="Nouveau circuit" Click="IncognitoNewCircuitButton_Click"
                         AutomationProperties.Name="Demander un nouveau circuit Tor"
                         ToolTipService.ToolTip="Change de noeud de sortie Tor pour cette fenetre (utile si un captcha boucle sans jamais accepter la reponse)" />
                 <Button x:Name="IncognitoTorInstallButton" Padding="8,5" Visibility="Collapsed"
+                        Style="{StaticResource IncognitoToolbarButtonStyle}"
                         Content="Installer le moteur Tor" Click="IncognitoTorInstallButton_Click"
                         AutomationProperties.Name="Installer le moteur Tor" />
             </StackPanel>
 
-            <TextBlock Grid.Column="6" Text="Incognito" Foreground="#FFB9A7E8"
+            <TextBlock Grid.Column="6" Text="Incognito" Foreground="{StaticResource LumoraWindowAccentBrush}"
                        FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                        Margin="4,0,2,0" />
         </Grid>
@@ -111,7 +153,8 @@
                 bascule selon l'onglet actif.
             -->
             <TabView x:Name="IncognitoTabs" Grid.Row="0"
-                     Background="#FF1A1626"
+                     Background="{StaticResource LumoraWindowTabStripBrush}"
+                     Foreground="{StaticResource LumoraWindowTextBrush}"
                      TabWidthMode="Equal"
                      CanReorderTabs="True"
                      AddTabButtonClick="IncognitoTabs_AddTabButtonClick"
