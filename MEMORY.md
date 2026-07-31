@@ -15756,3 +15756,84 @@ precis surgit sur l'un d'eux.
 
 **Version :** `0.93.8.0-dev` (inchangee - correctif d'infrastructure de
 build/installateur, pas de changement de comportement utilisateur).
+
+## 2026-07-31 (suite) - Lifting visuel "polish pur" : premiers correctifs + incident Tor accidentel
+
+**Cadrage** : l'utilisateur a demande un lifting complet de l'interface.
+Portee choisie explicitement parmi 3 options proposees : "polish pur"
+(coherence visuelle, finitions sur l'existant, aucune nouvelle structure
+ni suppression de fonctionnalite) plutot que reprendre le plan de grille
+modulaire jamais fini de `docs/DIRECTION_IDENTITE_MODULAIRE_0_84.md`.
+
+**Audit visuel reel** (skill verify, profil jetable, mode invite, captures
+UIA) sur Accueil/Nouvel onglet, Menu Demarrer, Centre Lumora
+(Parametres). Deux incoherences confirmees par relecture de code (pas
+seulement par l'oeil) et corrigees :
+- **Rail de navigation Parametres** : les 9 RadioButton "Navigation
+  rapide" utilisaient le rendu natif WinUI generique, alors que le Menu
+  Demarrer signale sa section active par une barre d'accent doree +
+  surface relevee (`ListViewItem` natif). Nouveau style
+  `NovaSettingsNavRadioButtonStyle` (ControlTemplate dedie, scope a ces
+  RadioButton precis) pour unifier les deux rails.
+- **Cartes de contenu trop plates** : `NovaPanelShellCardStyle` (utilise
+  dans ~20 panneaux : Parametres, A propos, Coffre, RSS...) heritait de
+  `NovaCompanionGlassBrush`, un fond translucide a 20% d'opacite trop
+  proche du fond de page - les cartes se fondaient dedans au lieu de s'en
+  detacher. Nouveau brush dedie `NovaPanelShellCardBackgroundBrush`
+  (meme teinte, ~36% d'opacite), `NovaCompanionGlassBrush` intact pour
+  ses autres usages (bulles Compagnon Lumie).
+- Une fausse piste ecartee en verifiant le code avant d'agir : les icones
+  du Menu Demarrer semblaient multicolores sur la capture, mais
+  `NovaIdentityMarkBrush` (degrade cyan->ambre unique) est bien applique
+  partout - pas une incoherence, juste une lecture de pixels trompeuse a
+  petite taille. Retenue comme rappel : verifier au niveau code avant de
+  rapporter un defaut visuel, pas seulement a l'oeil sur une capture.
+
+**Deux incidents pendant l'audit automatise, tous deux geres
+correctement par les garde-fous mis en place** :
+1. Une capture d'ecran a saisi la fenetre VS Code (liste de sessions)
+   au lieu de Lumora - fenetre au premier plan differente de la fenetre
+   ciblee par UIA. Supprimee immediatement, jamais analysee. Correctif
+   ajoute : verifier et forcer le premier plan (`SetForegroundWindow` +
+   verification du PID) avant chaque capture, plus jamais declenche
+   depuis.
+2. **Meme garde-fou, cette fois efficace avant coup** : une notification
+   Discord ("@Ma fille") a vole le focus pendant une sequence
+   d'automatisation - la verification de premier plan a detecte le
+   mismatch et **stoppe avant toute capture**, aucune image prise.
+
+**Incident reel cause par cette session, diagnostique et corrige** :
+une sequence d'automatisation UIA a fini par lancer Tor pour de vrai
+sous le profil existant de l'utilisateur ("test", cree le 29 juillet,
+non touche par ailleurs) au lieu de rester en mode invite jetable.
+Quand la fenetre Incognito parasite qui en resultait a ete fermee de
+force, le processus enfant `tor.exe` est reste orphelin, retenant les
+ports 9050/9051 - consequence concrete signalee par l'utilisateur :
+"le protocole Tor ne demarre plus" (message "Moteur Tor arrete." sur
+toute nouvelle tentative). Diagnostique en verifiant les processus reels
+de la machine (pas suppose), processus orphelin trouve et arrete,
+ports confirmes liberes. Aucun code Tor n'etait en cause.
+
+**Correctif de diagnosticabilite ajoute a la demande de l'utilisateur**
+(`TorProcessManager.cs`) : `HandleTorLogLine` ne tracait auparavant que
+les lignes "Bootstrapped X%", jetant silencieusement le reste de la
+sortie de tor.exe (erreurs de port deja pris, permissions...). Trace
+desormais chaque ligne + le code de sortie du processus via
+`WinUiRuntimeTrace` (meme mecanisme que le reste de l'app,
+`LUMORA_TRACE_STARTUP=1`) - un futur echec Tor laissera une vraie trace
+exploitable au lieu du seul message generique.
+
+**Verification** : build MSBuild + `dotnet test` apres chaque lot de
+changements - 694/695 inchange (meme echec preexistant sans rapport).
+Style Parametres verifie par capture d'ecran reelle (avant/apres).
+
+**A la charge de l'utilisateur / reste ouvert** :
+- Les ~20 autres panneaux partageant `NovaPanelShellCardStyle` n'ont pas
+  ete revisites individuellement - le changement de brush s'applique a
+  tous automatiquement, mais seul Parametres a ete revu a l'oeil.
+- Suite du lifting "polish pur" a continuer (audit non termine : thème
+  clair jamais compare, panneaux Coffre/Historique/Notes/RSS/Studio/
+  Incognito pas encore audites individuellement).
+
+**Version :** `0.93.8.0-dev` (inchangee - polish visuel, pas de nouvelle
+fonctionnalite).
