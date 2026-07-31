@@ -15945,3 +15945,60 @@ etape avant de considerer le lifting termine - l'automatisation UIA de
 cette session n'a pas ete assez stable pour la remplacer entierement.
 
 **Version :** `0.93.8.0-dev` (inchangee).
+
+## 2026-07-31 (suite) - Avant release : correction de tout ce qui est corrigeable
+
+**Cadrage** : l'utilisateur veut une release publique "1.0.0" au plus vite,
+suivie du chantier portage Linux. Precision importante obtenue : la
+"version de release" (1.0.0) et la "version de developpement"
+(`0.93.8.0-dev`) sont deux compteurs totalement separes - la premiere
+commence a 1.0.0 par convention pour toute premiere sortie publique,
+independamment d'ou en est le compteur interne (meme logique qu'un jeu
+video : build interne vs numero marketing). Consigne donnee : corriger
+immediatement chaque probleme trouve, un par un, plutot que lister puis
+attendre validation.
+
+**Corrections faites, dans l'ordre** :
+
+1. **Coffre : AAD sur l'AES-GCM + effacement des tampons en clair**
+   (`VaultStore.cs`) - chaque blob chiffre lie a un contexte precis
+   (constantes `Aad*`), retro-compatibilite geree comme la migration
+   CBC->GCM deja existante (repli sur AAD vide si l'AAD attendue
+   echoue), nouveau test prouvant le round-trip. Tampons JSON
+   intermediaires effaces (`ZeroMemory`) apres usage - limite assumee :
+   les `string` C# (mots de passe) restent immuables, non effacables de
+   la meme facon, chantier a part entiere non fait ici.
+2. **Erreurs avalees en silence tracees** : `WebView2Bootstrap.cs`
+   (variables d'environnement, dont l'anti-fuite WebRTC) et
+   `TorProcessManager.Stop()` (echec de `Kill()` - source exacte de
+   l'incident Tor de cette session) tracent desormais via
+   `WinUiRuntimeTrace` au lieu de ne rien dire.
+3. **Plomberie version de release** : nouvelle constante
+   `MainWindow.ReleaseVersion` (`null` par defaut = comportement
+   inchange). Une fois renseignee ("1.0.0" au moment de couper la vraie
+   release), l'ecran A propos n'affiche plus que "Version 1.0.0" au lieu
+   de "Version de developpement * 0.93.8.0-dev" - tranche par
+   l'utilisateur via AskUserQuestion (remplacement complet, pas
+   d'affichage cote a cote).
+4. **Sweep supplementaire** : recherche d'autres chaines techniques
+   residuelles du type "Barre vide" (deja corrigee plus tot) - aucune
+   autre trouvee.
+
+**Verification** : build + `dotnet test` apres chaque correction
+(695/696 stable tout du long, meme echec preexistant sans rapport, +1
+test grace au nouveau test de migration AAD). Un commit par correction.
+
+**Ce qui reste sciemment hors de portee de ce lot** (rappele
+explicitement a l'utilisateur avant de commencer) :
+- Le vrai zoom de l'interface (chantier a part entiere, pas un
+  correctif).
+- Rendre le depot public sur GitHub (action a Go explicite separe,
+  jamais prise de ma propre initiative).
+- Verification en conditions reelles de l'accessibilite (lecteur
+  d'ecran, clavier, molette) et test de l'installateur sur une machine
+  vraiment neuve - hors de portee sans un environnement de test stable
+  ou l'aide de l'utilisateur.
+- Elimination complete des `string` en clair dans le coffre (voir point 1).
+
+**Version :** `0.93.8.0-dev` (inchangee - durcissements et plomberie,
+aucun changement de comportement utilisateur par defaut).
