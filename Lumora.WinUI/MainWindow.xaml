@@ -325,17 +325,17 @@
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
             </Style>
-            <!-- Rail de navigation du Centre Lumora (Parametres) : meme langage
-                 visuel que l'indicateur de selection natif du rail de
-                 categories du Menu Demarrer (barre d'accent + surface
-                 relevee), pour que "section active dans un rail lateral"
-                 se lise pareil partout dans l'app plutot que via le point
-                 radio natif generique. Style scope a ces RadioButton precis
-                 (SettingsNav*) : ne touche pas les autres RadioButton de
-                 choix (confort, demarrage, tri du coffre...) qui restent
-                 volontairement au rendu natif, un vrai choix parmi plusieurs
-                 valeurs plutot qu'une navigation. -->
-            <Style x:Key="NovaSettingsNavRadioButtonStyle" TargetType="RadioButton">
+            <!-- Rail de navigation lateral (Centre Lumora/Parametres, panneau A
+                 propos) : meme langage visuel que l'indicateur de selection
+                 natif du rail de categories du Menu Demarrer (barre d'accent +
+                 surface relevee), pour que "section active dans un rail
+                 lateral" se lise pareil partout dans l'app plutot que via le
+                 point radio natif generique. Style scope aux RadioButton de
+                 navigation (SettingsNav*, AboutNav*) : ne touche pas les
+                 autres RadioButton de choix (confort, demarrage, tri du
+                 coffre...) qui restent volontairement au rendu natif, un vrai
+                 choix parmi plusieurs valeurs plutot qu'une navigation. -->
+            <Style x:Key="NovaSideRailNavRadioButtonStyle" TargetType="RadioButton">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Padding" Value="12,9,10,9" />
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -2655,7 +2655,7 @@
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Navigation rapide" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                 <RadioButton x:Name="SettingsNavOverview" Content="Vue d'ensemble"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav" IsChecked="True"
                                              Click="SettingsNav_Click" Tag="overview" />
                             </StackPanel>
@@ -2665,15 +2665,15 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Text="Espace personnel" Opacity="0.6" FontSize="11" />
                                 <RadioButton x:Name="SettingsNavAppearance" Content="Mon Lumora"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="appearance" />
                                 <RadioButton x:Name="SettingsNavProfile" Content="Profils locaux"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="profile" />
                                 <RadioButton x:Name="SettingsNavAccessibility" Content="Confort"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="accessibility" />
                             </StackPanel>
@@ -2683,11 +2683,11 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Text="Travail quotidien" Opacity="0.6" FontSize="11" />
                                 <RadioButton x:Name="SettingsNavNavigation" Content="Espace de travail"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="navigation" />
                                 <RadioButton x:Name="SettingsNavStartup" Content="Ouverture"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="startup" />
                             </StackPanel>
@@ -2697,15 +2697,15 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Text="Donnees locales" Opacity="0.6" FontSize="11" />
                                 <RadioButton x:Name="SettingsNavPrivacy" Content="Vie privee locale"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="privacy" />
                                 <RadioButton x:Name="SettingsNavVault" Content="Coffre et donnees"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="vault" />
                                 <RadioButton x:Name="SettingsNavStorage" Content="Stockage local"
-                                             Style="{StaticResource NovaSettingsNavRadioButtonStyle}"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
                                              Click="SettingsNav_Click" Tag="storage" />
                             </StackPanel>
@@ -3858,13 +3858,13 @@
                             <TextBlock Text="À propos"
                                        Style="{StaticResource NovaPanelSectionTitleStyle}"
                                        Margin="0,0,0,8" />
-                            <RadioButton x:Name="AboutNavSummary" Content="Vue d'ensemble" Tag="summary" IsChecked="True" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavModules" Content="Modules" Tag="modules" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavPrivacy" Content="Confidentialité" Tag="privacy" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavAuthenticity" Content="Authenticité" Tag="authenticity" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavCredits" Content="Dépendances" Tag="credits" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavTechnical" Content="Technique" Tag="technical" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavProfile" Content="Profil local" Tag="profile" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavSummary" Content="Vue d'ensemble" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="summary" IsChecked="True" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavModules" Content="Modules" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="modules" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavPrivacy" Content="Confidentialité" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="privacy" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavAuthenticity" Content="Authenticité" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="authenticity" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavCredits" Content="Dépendances" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="credits" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavTechnical" Content="Technique" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="technical" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavProfile" Content="Profil local" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="profile" Click="AboutNav_Click" />
                         </StackPanel>
                     </Border>
 
