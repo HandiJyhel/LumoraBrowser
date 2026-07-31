@@ -16150,3 +16150,64 @@ langue FR/EN.
 
 **Version :** `0.93.8.0-dev` (inchangee - ajustement d'une fonctionnalite
 deja ajoutee cette session, pas un nouvel ajout).
+
+## 2026-08-01 - Slides de bienvenue : 2e passe visuelle, "verre depoli / profondeur"
+
+**Retour utilisateur sur la refonte de la veille** : "c'est bien, mais
+pas tres 2026, c'est tres simpliste". Clarifie via question ciblee
+avant d'agir (les 4 points juges dates - mise en page, couleurs/fond,
+mouvement, typographie - et la direction visuelle voulue parmi
+plusieurs options presentees) plutot que de repartir a l'aveugle sur
+une 2e passe de "creative freedom".
+
+**Direction choisie par l'utilisateur** : verre depoli / profondeur.
+
+**Ce qui a change** (uniquement des mecanismes deja utilises ailleurs
+dans le code, aucun nouveau risque introduit) :
+- Carte de la fenetre : `NovaChromeSurfaceRaisedBrush` (fond plat) ->
+  `NovaFloatingGlassBrush` (le meme `AcrylicBrush` deja utilise par
+  `NavigationToolbarCapsule`) + `Translation="0,0,32"` + `ThemeShadow`
+  pour une vraie elevation - copie exacte d'un idiome deja eprouve dans
+  ce fichier, pas une invention.
+- Fond ambiant : deux `Ellipse` larges (halos deja existants,
+  `NovaChromeHaloWarmGlowBrush`/`...CoolGlowBrush`) qui respirent
+  lentement derriere la carte via un `Storyboard` (`RepeatBehavior=
+  Forever`), pour donner de la profondeur au lieu d'un fond plat.
+- Icone de la fonction affichee : anneau (`Ellipse Stroke=...`) +
+  halo qui respirent en boucle tant que la diapositive reste ouverte -
+  un `Storyboard` par diapositive, demarre/arrete dans
+  `MainWindow.WelcomeSlides.cs::UpdateWelcomeStep` (une seule
+  animation active a la fois, arretee proprement a la fermeture).
+- Etiquette "eyebrow" au-dessus de chaque titre (meme style que
+  `IdentitySpineHeroEyebrowText` : `CharacterSpacing="60"`,
+  majuscules, couleur d'accent) + un mot-cle accentue par titre via
+  `Run`/`Span` - hierarchie typographique la ou il n'y avait qu'un
+  bloc de texte uniforme.
+- Points de progression : pilules (`Rectangle RadiusX/Y="4"`) qui
+  s'allongent (8px -> 20px) sur l'etape en cours, au lieu de simples
+  points de taille egale.
+
+**Pourquoi c'etait sans risque** : `AcrylicBrush`/`ThemeShadow` deja
+utilises ailleurs dans `MainWindow.xaml` (`NavigationToolbarCapsule`) -
+pas un nouveau mecanisme. `Storyboard`/`DoubleAnimation` sont l'API
+d'animation standard WinUI (premiere utilisation dans ce fichier, mais
+rien d'exotique comme le Setter de propriete attachee qui avait
+provoque le crash natif de la veille). Aucune nouvelle glyphe Segoe
+MDL2 (les 4 memes que la veille). Aucun nouveau brush a synchroniser
+theme clair/sombre - uniquement des resources deja couvertes par
+`ApplyAccessibilitySettings`.
+
+**Verification** : build (MSBuild VS 2026) + `dotnet test` : 695/696
+(meme echec preexistant sans rapport). Lancement reel confirme sans
+crash (titre de fenetre correct, bascule en mode invite fonctionnelle).
+**Le parcours clic-par-clic complet des 5 diapositives n'a en revanche
+pas pu etre confirme cette fois** : l'automatisation UIA a ete
+perturbee a plusieurs reprises par d'autres fenetres reprenant le focus
+pendant les clics (memes symptomes que l'incident Discord deja
+documente cette session) - le garde-fou "verifier le foreground avant
+d'agir" a correctement detecte et stoppe l'automatisation plutot que de
+cliquer au hasard. **A verifier par l'utilisateur** via Parametres >
+Mon Lumora > "Revoir l'ecran de bienvenue".
+
+**Version :** `0.93.8.0-dev` (inchangee - ajustement visuel d'une
+fonctionnalite deja ajoutee cette session).
