@@ -15568,3 +15568,57 @@ restent une piste distincte, pas traitee ici.
 
 **Version :** `0.93.8.0-dev` (ajout : nouveau comportement de confidentialite, pas une
 correction d'une version deja livree).
+
+## 2026-07-31 - Rattrapage de 17 commits + choix de licence GPLv3 (aucun bump de version)
+
+**Rattrapage de commits** : ~10 jours de travail non commite (0.83.54.1-dev a
+0.93.8.0-dev, 167 fichiers) organise en 17 commits thematiques sur le meme
+principe que le rattrapage du 19 juillet (logs/*.md comme frontieres de
+regroupement). Un commit de consolidation ("Interface : consolidation du
+shell partage") a ete necessaire pour les fichiers `MainWindow.*` touches en
+continu par presque toutes les sessions : un diff plat contre HEAD ne permet
+pas de les separer par session sans inventer une precision absente de
+l'etat du depot - choix assume et explique dans le message de ce commit
+plutot qu'un decoupage artificiel. Tests reverifies apres coup : 694/695
+inchange (meme echec preexistant sans rapport).
+
+**Choix de licence** : discussion (reflexion puis Go) sur la licence a
+adopter avant la premiere release publique. GNU GPLv3 retenue, coherente
+avec l'esprit privacy-first du projet (empeche une reprise en version
+fermee sans republier le code source). Fichiers ajoutes :
+- `LICENSE` : texte GPLv3 integral et non modifie (recupere directement
+  depuis gnu.org, jamais retranscrit de memoire - risque d'erreur trop
+  eleve sur un texte a portee legale).
+- `LICENSE-EXCEPTIONS.md` : exception additionnelle (Section 7 de la
+  GPLv3) autorisant explicitement la liaison/distribution combinee avec
+  les composants systeme Windows proprietaires necessaires a Lumora
+  (runtime/SDK WebView2, Windows App SDK) - sans cette clause, la portee
+  copyleft de la GPLv3 laissait planer un doute sur la distribution liee
+  a ces composants prop.
+- Section "Licence" ajoutee dans `AGENTS.md`.
+
+**Contexte financier de la decision** : l'utilisateur ne peut pas se
+permettre les certificats de signature de code payants (~600€/certificat)
+tant que la viabilite du logiciel n'est pas prouvee. Pistes gratuites
+identifiees pour plus tard (conditionnees a la publication du depot sur
+GitHub, pas encore faite) : SignPath Foundation (signature de code
+gratuite pour projets open source eligibles - licence OSI comme la
+GPLv3, projet maintenu, pas de double-licence commerciale) et compte
+developpeur Microsoft Store (desormais gratuit pour les developpeurs
+individuels, verifie par recherche web - l'ancien tarif de 19$ n'existe
+plus). Badge OpenSSF/CII Best Practices mentionne comme signal de
+confiance complementaire, gratuit, non encore mis en place.
+
+**Rappel explicite de l'utilisateur pour la release a venir** : l'
+installateur doit etre entierement autonome, aucun telechargement pour
+l'utilisateur final. Verifie dans `scripts/build-installer.ps1` (ligne
+216) : l'installateur actuel telecharge WebView2 depuis Microsoft si le
+runtime manque (mode "Evergreen Bootstrapper") - **ecart reel avec cette
+exigence**, pas encore corrige. Pour s'y conformer, il faudra basculer
+vers le mode "Fixed Version" de WebView2 (runtime embarque dans
+l'installateur, ~150-200 Mo de plus, mise a jour manuelle du runtime
+embarque au lieu d'un auto-update par Windows Update) - a faire avant la
+release, pas fait dans cette session.
+
+**Aucun bump de version** : decisions de gouvernance/licence, pas de
+changement de comportement du logiciel.

@@ -41,6 +41,27 @@ Lumora peut s'appuyer sur des composants techniques externes (moteur web, biblio
 
 Le moteur web (WebView2/Chromium) reste la seule dependance structurante du projet ; les autres restent des briques ponctuelles au service d'un module precis, remplacables sans remettre en cause l'identite de Lumora.
 
+## Licence
+
+Lumora est distribue sous licence **GNU General Public License v3.0**
+(texte integral et non modifie dans `LICENSE`), avec une exception
+additionnelle documentee dans `LICENSE-EXCEPTIONS.md` (accordee via la
+Section 7 de la GPLv3) qui autorise explicitement la liaison et la
+distribution combinee avec les composants systeme Windows proprietaires
+necessaires au fonctionnement de Lumora (runtime/SDK WebView2, Windows
+App SDK). Cette exception ne couvre que ces composants precis, rien
+d'autre.
+
+Ce choix decoule de l'esprit privacy-first du projet (voir plus haut) :
+la GPLv3 garantit que Lumora et ses eventuels derives restent auditables
+et ne peuvent pas etre repris en version fermee (ajout de pub, de
+tracking) sans que le code source correspondant reste public.
+
+Toute piste de certification/signature complementaire (ex. SignPath
+Foundation pour la signature de code gratuite, publication Microsoft
+Store) est evaluee au cas par cas et reste conditionnee a la
+publication du depot sur GitHub, prealable a toute candidature externe.
+
 ## Versionnement
 
 La version de depart du projet est:
