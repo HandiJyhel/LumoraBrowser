@@ -6503,77 +6503,142 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
             <ScrollViewer HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border Background="{StaticResource NovaChromeSurfaceRaisedBrush}"
                         BorderBrush="{StaticResource NovaChromeStrokeBrush}"
-                        BorderThickness="1" CornerRadius="10"
-                        Padding="40,36,40,36" Margin="0,32,0,32">
-                    <StackPanel Width="440" Spacing="0">
+                        BorderThickness="1" CornerRadius="16"
+                        Padding="40,32,40,32" Margin="0,32,0,32">
+                    <StackPanel Width="460" Spacing="0">
 
-                        <!-- Logo + lien "Passer" -->
-                        <Grid Margin="0,0,0,24">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Orientation="Horizontal" Spacing="12" Grid.Column="0">
-                                <Border Width="36" Height="36" CornerRadius="9">
-                                    <Image Source="ms-appx:///Assets/LumoraApp.png"
-                                           Width="36" Height="36"
-                                           Stretch="Uniform" />
-                                </Border>
-                                <TextBlock Text="Lumora" FontSize="20" FontWeight="SemiBold"
-                                           VerticalAlignment="Center" />
-                            </StackPanel>
+                        <!-- Lien "Passer", seul (le logo vit desormais dans chaque slide,
+                             au-dessus de l'icone de fonction) -->
+                        <Grid Margin="0,0,0,4" HorizontalAlignment="Stretch">
                             <HyperlinkButton x:Name="WelcomeSkipButton" Content="Passer"
-                                             Grid.Column="2" VerticalAlignment="Center"
+                                             HorizontalAlignment="Right" VerticalAlignment="Center"
                                              Padding="8,4"
                                              Click="WelcomeSkipButton_Click" />
                         </Grid>
 
-                        <!-- Indicateur d'etape -->
-                        <TextBlock x:Name="WelcomeStepIndicator" Text="1 / 4"
-                                   HorizontalAlignment="Center" Opacity="0.5"
-                                   FontSize="12" Margin="0,0,0,20" />
-
-                        <!-- Slide 0 : Bienvenue -->
-                        <StackPanel x:Name="WelcomeStep0" Spacing="14">
-                            <TextBlock Text="Bienvenue dans Lumora" FontSize="22" FontWeight="SemiBold"
+                        <!-- Slide 0 : Bienvenue (accueil, pas une fonction) -->
+                        <StackPanel x:Name="WelcomeStep0" Spacing="16" HorizontalAlignment="Center">
+                            <StackPanel.Transitions>
+                                <TransitionCollection>
+                                    <EntranceThemeTransition FromVerticalOffset="24" />
+                                </TransitionCollection>
+                            </StackPanel.Transitions>
+                            <Border Width="86" Height="86" CornerRadius="43" Margin="0,4,0,0">
+                                <Image Source="ms-appx:///Assets/LumoraApp.png" Stretch="Uniform" />
+                            </Border>
+                            <TextBlock Text="Bienvenue dans Lumora" FontSize="24" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-                            <TextBlock Text="Un navigateur différent, pensé pour vous. Les prochains écrans vous présentent rapidement ce qui le rend unique, avant de créer votre identifiant."
-                                       TextWrapping="Wrap" TextAlignment="Center"
+                            <TextBlock Text="Un navigateur différent, pensé pour vous. Petit tour de ce qu'il sait faire, avant de créer votre identifiant."
+                                       TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                        FontSize="14" Opacity="0.72" />
                         </StackPanel>
 
-                        <!-- Slide 1 : Confidentialite -->
-                        <StackPanel x:Name="WelcomeStep1" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Vos données restent chez vous" FontSize="22" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-                            <TextBlock Text="Historique, mots de passe, favoris : tout reste stocké uniquement sur votre ordinateur, jamais envoyé ailleurs. Lumora ne vous suit pas et ne vend pas vos données."
-                                       TextWrapping="Wrap" TextAlignment="Center"
+                        <!-- Slide 1 : Coffre de mots de passe + portefeuille -->
+                        <StackPanel x:Name="WelcomeStep1" Spacing="16" HorizontalAlignment="Center" Visibility="Collapsed">
+                            <StackPanel.Transitions>
+                                <TransitionCollection>
+                                    <EntranceThemeTransition FromVerticalOffset="24" />
+                                </TransitionCollection>
+                            </StackPanel.Transitions>
+                            <Grid Width="86" Height="86" Margin="0,4,0,0">
+                                <Ellipse Fill="{StaticResource NovaChromeHaloWarmGlowBrush}" />
+                                <Border Width="64" Height="64" CornerRadius="32"
+                                        Background="{StaticResource NovaIdentityMarkBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="White" />
+                                </Border>
+                            </Grid>
+                            <TextBlock Text="Un coffre pour vos mots de passe" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360" />
+                            <TextBlock Text="Mots de passe et cartes bancaires chiffrés localement, jamais envoyés ailleurs. Lumora peut aussi générer et retenir vos mots de passe à votre place."
+                                       TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                        FontSize="14" Opacity="0.72" />
                         </StackPanel>
 
-                        <!-- Slide 2 : Accessibilite -->
-                        <StackPanel x:Name="WelcomeStep2" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Pensé pour être utilisable par tous" FontSize="22" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-                            <TextBlock Text="Contraste renforcé, lecture facilitée, navigation au clavier, profils de confort prêts à l'emploi : l'accessibilité n'est pas une option cachée, c'est une priorité."
-                                       TextWrapping="Wrap" TextAlignment="Center"
+                        <!-- Slide 2 : Incognito + Tor -->
+                        <StackPanel x:Name="WelcomeStep2" Spacing="16" HorizontalAlignment="Center" Visibility="Collapsed">
+                            <StackPanel.Transitions>
+                                <TransitionCollection>
+                                    <EntranceThemeTransition FromVerticalOffset="24" />
+                                </TransitionCollection>
+                            </StackPanel.Transitions>
+                            <Grid Width="86" Height="86" Margin="0,4,0,0">
+                                <Ellipse Fill="{StaticResource NovaChromeHaloCoolGlowBrush}" />
+                                <Border Width="64" Height="64" CornerRadius="32"
+                                        Background="{StaticResource NovaIdentityMarkBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="White" />
+                                </Border>
+                            </Grid>
+                            <TextBlock Text="Incognito, et Tor si besoin" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360" />
+                            <TextBlock Text="Une fenêtre privée qui ne garde aucune trace, avec un bouton pour faire transiter votre trafic par le réseau Tor et masquer votre adresse IP en un geste."
+                                       TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                        FontSize="14" Opacity="0.72" />
                         </StackPanel>
 
-                        <!-- Slide 3 : Personnalisation -->
-                        <StackPanel x:Name="WelcomeStep3" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Un navigateur qui s'adapte à vous" FontSize="22" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-                            <TextBlock Text="Choisissez un mode d'usage, gardez une interface nue ou ajoutez les modules dont vous avez besoin. Rien n'est imposé."
-                                       TextWrapping="Wrap" TextAlignment="Center"
+                        <!-- Slide 3 : Lecture, traduction, recherche -->
+                        <StackPanel x:Name="WelcomeStep3" Spacing="16" HorizontalAlignment="Center" Visibility="Collapsed">
+                            <StackPanel.Transitions>
+                                <TransitionCollection>
+                                    <EntranceThemeTransition FromVerticalOffset="24" />
+                                </TransitionCollection>
+                            </StackPanel.Transitions>
+                            <Grid Width="86" Height="86" Margin="0,4,0,0">
+                                <Ellipse Fill="{StaticResource NovaChromeHaloWarmGlowBrush}" />
+                                <Border Width="64" Height="64" CornerRadius="32"
+                                        Background="{StaticResource NovaIdentityMarkBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="White" />
+                                </Border>
+                            </Grid>
+                            <TextBlock Text="Lu, écouté, traduit, retrouvé" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360" />
+                            <TextBlock Text="Lecture à voix haute, traduction hors-ligne, et une recherche dans votre historique qui comprend le sens de ce que vous cherchez, pas juste les mots exacts."
+                                       TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                        FontSize="14" Opacity="0.72" />
                         </StackPanel>
+
+                        <!-- Slide 4 : Accessibilite -->
+                        <StackPanel x:Name="WelcomeStep4" Spacing="16" HorizontalAlignment="Center" Visibility="Collapsed">
+                            <StackPanel.Transitions>
+                                <TransitionCollection>
+                                    <EntranceThemeTransition FromVerticalOffset="24" />
+                                </TransitionCollection>
+                            </StackPanel.Transitions>
+                            <Grid Width="86" Height="86" Margin="0,4,0,0">
+                                <Ellipse Fill="{StaticResource NovaChromeHaloCoolGlowBrush}" />
+                                <Border Width="64" Height="64" CornerRadius="32"
+                                        Background="{StaticResource NovaIdentityMarkBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="White" />
+                                </Border>
+                            </Grid>
+                            <TextBlock Text="Confortable pour de vrai" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360" />
+                            <TextBlock Text="Profils de confort prêts à l'emploi, navigation complète au clavier, contrastes renforcés et guide de lecture : l'accessibilité est une priorité, pas une case cachée."
+                                       TextWrapping="Wrap" TextAlignment="Center" Width="340"
+                                       FontSize="14" Opacity="0.72" />
+                        </StackPanel>
+
+                        <!-- Points de progression -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,26,0,18">
+                            <Ellipse x:Name="WelcomeDot0" Width="8" Height="8" Fill="{StaticResource NovaAccentBrush}" />
+                            <Ellipse x:Name="WelcomeDot1" Width="8" Height="8" Fill="{StaticResource NovaChromeStrokeBrush}" />
+                            <Ellipse x:Name="WelcomeDot2" Width="8" Height="8" Fill="{StaticResource NovaChromeStrokeBrush}" />
+                            <Ellipse x:Name="WelcomeDot3" Width="8" Height="8" Fill="{StaticResource NovaChromeStrokeBrush}" />
+                            <Ellipse x:Name="WelcomeDot4" Width="8" Height="8" Fill="{StaticResource NovaChromeStrokeBrush}" />
+                        </StackPanel>
+                        <!-- Texte equivalent pour le lecteur d'ecran (les points ne portent
+                             aucune information a eux seuls) -->
+                        <TextBlock x:Name="WelcomeStepIndicator" Text="1 / 5"
+                                   HorizontalAlignment="Center" Opacity="0.001" FontSize="1"
+                                   AutomationProperties.Name="Étape 1 sur 5" />
 
                         <!-- Separateur -->
                         <Border Height="1"
                                 Background="{ThemeResource DividerStrokeColorDefaultBrush}"
-                                Margin="0,24,0,20" />
+                                Margin="0,0,0,20" />
 
                         <!-- Boutons de navigation -->
                         <Grid>

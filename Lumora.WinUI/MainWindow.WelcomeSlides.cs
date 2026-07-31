@@ -1,4 +1,6 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Shapes;
 
 namespace Lumora.WinUI;
 
@@ -10,9 +12,12 @@ namespace Lumora.WinUI;
 // la version "premier lancement" a deja ete vue.
 public sealed partial class MainWindow
 {
-    private const int WelcomeSlideCount = 4;
+    private const int WelcomeSlideCount = 5;
     private int _welcomeStep;
     private bool _welcomeIsReplay;
+
+    private StackPanel[] WelcomeSteps => new[] { WelcomeStep0, WelcomeStep1, WelcomeStep2, WelcomeStep3, WelcomeStep4 };
+    private Ellipse[] WelcomeDots => new[] { WelcomeDot0, WelcomeDot1, WelcomeDot2, WelcomeDot3, WelcomeDot4 };
 
     // isReplay=false : premier lancement reel, la fin des slides enchaine sur
     // la creation du profil (ShowLoginPanel("create") + ShowLoginOverlayChrome()).
@@ -30,11 +35,26 @@ public sealed partial class MainWindow
 
     private void UpdateWelcomeStep()
     {
-        WelcomeStepIndicator.Text = $"{_welcomeStep + 1} / {WelcomeSlideCount}";
-        WelcomeStep0.Visibility = _welcomeStep == 0 ? Visibility.Visible : Visibility.Collapsed;
-        WelcomeStep1.Visibility = _welcomeStep == 1 ? Visibility.Visible : Visibility.Collapsed;
-        WelcomeStep2.Visibility = _welcomeStep == 2 ? Visibility.Visible : Visibility.Collapsed;
-        WelcomeStep3.Visibility = _welcomeStep == 3 ? Visibility.Visible : Visibility.Collapsed;
+        // AutomationProperties.Name (pas le Text, garde volontairement invisible/
+        // quasi transparent a l'ecran) : seul signal donne au lecteur d'ecran, les
+        // points de progression n'en portent aucun a eux seuls.
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+            WelcomeStepIndicator, $"Étape {_welcomeStep + 1} sur {WelcomeSlideCount}");
+
+        var steps = WelcomeSteps;
+        for (var i = 0; i < steps.Length; i++)
+        {
+            steps[i].Visibility = i == _welcomeStep ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        var dots = WelcomeDots;
+        for (var i = 0; i < dots.Length; i++)
+        {
+            dots[i].Fill = i == _welcomeStep
+                ? (Microsoft.UI.Xaml.Media.Brush)RootShell.Resources["NovaAccentBrush"]
+                : (Microsoft.UI.Xaml.Media.Brush)RootShell.Resources["NovaChromeStrokeBrush"];
+        }
+
         WelcomePrevButton.IsEnabled = _welcomeStep > 0;
         WelcomeNextButton.Content = _welcomeStep == WelcomeSlideCount - 1 ? "Commencer" : "Suivant";
     }
