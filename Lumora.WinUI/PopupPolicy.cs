@@ -19,14 +19,23 @@ namespace Lumora.WinUI;
 //    (0.78.4, durci sur demande : plus d'onglet du tout, barre « Continuer
 //    quand même » en recours) ; seules les popups vers le même site racine
 //    restent ouvrables ;
-//  - un site whitelisté par l'utilisateur garde toutes ses popups.
+//  - un site whitelisté par l'utilisateur garde toutes ses popups ;
+//  - au-delà (0.84.0.6) : un vrai clic vers un domaine cross-site inconnu, sans
+//    aucun des motifs de confiance ci-dessus, n'est techniquement PAS
+//    distinguable d'un détournement — aucun signal ne permet de deviner juste
+//    à tous les coups. Au lieu de laisser passer par défaut (l'ancien
+//    comportement, contourné par les sites qui rouvrent un onglet à chaque
+//    clic), la popup est retenue en attente : l'utilisateur tranche via une
+//    action de récupération explicite (icône dédiée), comme le font Chrome,
+//    Firefox et Edge nativement — pas une supposition automatique.
 public enum PopupVerdict
 {
     Allow,
     BlockAutomatic,
     BlockAdDomain,
     BlockGestureFlood,
-    BlockUnderAdPressure
+    BlockUnderAdPressure,
+    BlockPendingUserChoice
 }
 
 public static class PopupPolicy
@@ -68,15 +77,24 @@ public static class PopupPolicy
         if (popupsAlreadyOpenedForGesture >= 1)
             return PopupVerdict.BlockGestureFlood;
 
+        // Le site garde le droit d'ouvrir SES propres pages (lecteur vidéo,
+        // page de détail...) sans jamais passer par l'attente de choix
+        // ci-dessous : seul le cross-domaine est ambigu.
+        if (IsSameRootSite(popupHost, openerHost))
+            return PopupVerdict.Allow;
+
         // Site sous pression publicitaire : le clic est très probablement
-        // détourné. Seule une popup vers le MÊME site racine reste ouvrable ;
-        // tout domaine tiers (et about:blank, support du document.write
-        // publicitaire) est bloqué net — l'utilisateur garde la barre
-        // « Continuer quand même » en recours.
-        if (openerUnderAdPressure && !IsSameRootSite(popupHost, openerHost))
+        // détourné. Bloqué net — l'utilisateur garde la barre « Continuer
+        // quand même » en recours.
+        if (openerUnderAdPressure)
             return PopupVerdict.BlockUnderAdPressure;
 
-        return PopupVerdict.Allow;
+        // Ni domaine répertorié, ni site sous pression : un vrai clic vers un
+        // domaine cross-site totalement inconnu. Indécidable techniquement
+        // entre popup légitime (partage, paiement) et détournement — retenu
+        // en attente d'un choix explicite plutôt qu'autorisé par défaut
+        // (0.84.0.6, cf. commentaire d'en-tête).
+        return PopupVerdict.BlockPendingUserChoice;
     }
 
     private static bool IsSameRootSite(string popupHost, string openerHost) =>

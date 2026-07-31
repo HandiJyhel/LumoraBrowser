@@ -51,12 +51,18 @@ public class PopupPolicyTests
     }
 
     [Fact]
-    public void ClicVersSiteNormal_Autorise() =>
-        Assert.Equal(PopupVerdict.Allow, Decide("https://wikipedia.org/", isUserInitiated: true));
+    public void ClicVersSiteInconnu_EnAttenteDeChoix()
+    {
+        // 0.84.0.6 : un vrai clic vers un domaine cross-site totalement
+        // inconnu n'est plus autorisé par défaut - techniquement indécidable
+        // entre popup légitime et détournement, donc retenu en attente d'un
+        // choix explicite (icône de récupération), pas silencieusement ouvert.
+        Assert.Equal(PopupVerdict.BlockPendingUserChoice, Decide("https://wikipedia.org/", isUserInitiated: true));
+    }
 
     [Fact]
-    public void ClicVersAboutBlank_Autorise() =>
-        Assert.Equal(PopupVerdict.Allow, Decide("about:blank", isUserInitiated: true));
+    public void ClicVersAboutBlank_EnAttenteDeChoix() =>
+        Assert.Equal(PopupVerdict.BlockPendingUserChoice, Decide("about:blank", isUserInitiated: true));
 
     [Theory]
     [InlineData("https://accounts.google.com/o/oauth2/auth")]
@@ -178,10 +184,13 @@ public class PopupPolicyTests
     }
 
     [Fact]
-    public void SitePropre_PopupAuPremierPlan()
+    public void SitePropre_PopupCrossSite_EnAttenteDeChoixMemeSansPression()
     {
+        // Même hors pression publicitaire mesurée, un popup cross-site depuis
+        // un site par ailleurs sain reste en attente : la pression n'est plus
+        // une condition pour ce cas, seulement une aggravation (0.84.0.6).
         Assert.Equal(
-            PopupVerdict.Allow,
+            PopupVerdict.BlockPendingUserChoice,
             Decide("https://wikipedia.org/", isUserInitiated: true, openerUnderAdPressure: false));
     }
 }

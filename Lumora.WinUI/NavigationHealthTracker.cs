@@ -59,10 +59,33 @@ public sealed class NavigationHealthTracker
     // doivent garder cette légitimité jusqu'à la prochaine navigation.
     private readonly HashSet<int> _userInitiatedNavigationTabs = new();
 
+    // Onglets où une navigation a déjà été bloquée par NavigationHijackPolicy sur
+    // la page courante (0.84.0.4) : preuve comportementale qu'un site est
+    // agressif, indépendante du compteur de requêtes du bouclier réseau (utile
+    // quand le réseau publicitaire en cause est absent des listes de filtres).
+    // Sert de second signal de « pression » pour PopupPolicy. Vidée comme
+    // _userInitiatedNavigationTabs à la prochaine navigation non-redirect.
+    private readonly HashSet<int> _tabsWithBlockedNavigation = new();
+
     // Horodatages des popups OUVERTES (autorisées) par onglet opener : sert au
     // plafond « une popup par geste » et à la détection de tab-under. L'heure
     // est injectée par l'appelant pour rester pur et testable.
     private readonly Dictionary<int, List<DateTimeOffset>> _openedPopupsByTab = new();
+
+    // Nombre TOTAL de popups déjà ouvertes par un onglet, sur toute la durée de
+    // vie de sa page courante (0.84.0.5) — contrairement à _openedPopupsByTab,
+    // jamais élagué par le temps. Cible le site qui rouvre un onglet à CHAQUE
+    // clic séparé : chaque clic déclenche un geste neuf, donc aucun signal de
+    // pression réseau ni de navigation bloquée ne s'accumule jamais sur ce
+    // schéma précis. Dès le deuxième popup, le site a fait ses preuves.
+    private readonly Dictionary<int, int> _totalPopupsOpenedByTab = new();
+
+    // Popups retenues en attente d'un choix explicite de l'utilisateur
+    // (verdict BlockPendingUserChoice), par onglet opener (0.84.0.6) : alimente
+    // l'icône de récupération de la barre d'outils. Oubliées comme les autres
+    // états par-onglet à la prochaine navigation fraîche ou à la fermeture de
+    // l'onglet.
+    private readonly Dictionary<int, List<string>> _pendingPopupsByTab = new();
 
     // Deux window.open à moins d'une seconde d'écart relèvent du même geste
     // utilisateur : aucun humain ne clique deux liens en moins d'une seconde
@@ -91,6 +114,9 @@ public sealed class NavigationHealthTracker
             _mainDocumentHttpErrors.Remove(id);
             _pendingUnknownFailures.Remove(id);
             _userInitiatedNavigationTabs.Remove(id);
+            _tabsWithBlockedNavigation.Remove(id);
+            _totalPopupsOpenedByTab.Remove(id);
+            _pendingPopupsByTab.Remove(id);
         }
 
         if (isUserInitiated)
@@ -109,6 +135,9 @@ public sealed class NavigationHealthTracker
         _pendingUnknownFailures.Remove(tabId);
         _openedPopupsByTab.Remove(tabId);
         _userInitiatedNavigationTabs.Remove(tabId);
+        _tabsWithBlockedNavigation.Remove(tabId);
+        _totalPopupsOpenedByTab.Remove(tabId);
+        _pendingPopupsByTab.Remove(tabId);
     }
 
     public bool IsMainDocument(string? uri, out int tabId) =>
@@ -190,6 +219,16 @@ public sealed class NavigationHealthTracker
     public bool IsUserInitiatedNavigationChain(int tabId) =>
         _userInitiatedNavigationTabs.Contains(tabId);
 
+    // À appeler quand NavigationHijackPolicy bloque une navigation sur cet
+    // onglet (BlockAdDomain ou BlockParasite) : preuve comportementale qu'un
+    // site est agressif, à réutiliser comme signal de pression pour les popups
+    // suivants du même onglet (0.84.0.4).
+    public void RecordBlockedNavigation(int tabId) =>
+        _tabsWithBlockedNavigation.Add(tabId);
+
+    public bool HadBlockedNavigation(int tabId) =>
+        _tabsWithBlockedNavigation.Contains(tabId);
+
     // ── Popups ouvertes et tab-under ─────────────────────────────────────────
 
     // À appeler quand une popup est réellement OUVERTE (verdict Allow*).
@@ -203,6 +242,47 @@ public sealed class NavigationHealthTracker
 
         stamps.RemoveAll(stamp => now - stamp > TabUnderWindow);
         stamps.Add(now);
+
+        _totalPopupsOpenedByTab[openerTabId] = _totalPopupsOpenedByTab.GetValueOrDefault(openerTabId) + 1;
+    }
+
+    // Vrai dès que cet onglet a déjà ouvert au moins une popup auparavant (sur
+    // la page courante) : le prochain popup n'est plus le premier, donc plus
+    // couvert par l'exception « premier clic imbattable ».
+    public bool HasOpenedPopupBefore(int openerTabId) =>
+        _totalPopupsOpenedByTab.GetValueOrDefault(openerTabId) > 0;
+
+    // À appeler quand une popup est retenue en attente (verdict
+    // BlockPendingUserChoice), pour alimenter l'icône de récupération.
+    public void RecordPendingPopup(int openerTabId, string popupUri)
+    {
+        if (!_pendingPopupsByTab.TryGetValue(openerTabId, out var list))
+        {
+            list = new List<string>();
+            _pendingPopupsByTab[openerTabId] = list;
+        }
+
+        list.Add(popupUri);
+    }
+
+    public IReadOnlyList<string> PendingPopups(int openerTabId) =>
+        _pendingPopupsByTab.TryGetValue(openerTabId, out var list)
+            ? list
+            : Array.Empty<string>();
+
+    // À appeler quand l'utilisateur a traité les popups en attente d'un onglet
+    // (ouvertes ou explicitement ignorées).
+    public void ClearPendingPopups(int openerTabId) =>
+        _pendingPopupsByTab.Remove(openerTabId);
+
+    // Retire UNE popup en attente (celle que l'utilisateur vient d'ouvrir),
+    // garde les autres si plusieurs étaient en attente sur le même onglet.
+    public void RemovePendingPopup(int openerTabId, string popupUri)
+    {
+        if (!_pendingPopupsByTab.TryGetValue(openerTabId, out var list)) return;
+
+        list.Remove(popupUri);
+        if (list.Count == 0) _pendingPopupsByTab.Remove(openerTabId);
     }
 
     // Nombre de popups déjà ouvertes par cet onglet dans la fenêtre du geste

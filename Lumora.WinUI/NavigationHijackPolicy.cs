@@ -10,9 +10,10 @@ namespace Lumora.WinUI;
 // pas de question — l'utilisateur reste sur sa page (0.78.3.1).
 //
 // Il n'y a AUCUN comptage de clics : chaque tentative parasite est bloquée,
-// une par une, aussi longtemps que le site essaie. Le signal « site agressif »
-// vient du bouclier réseau (pageUnderAdPressure : des requêtes publicitaires
-// ont déjà été bloquées sur la page) ou d'une popup toute fraîche (tab-under).
+// une par une, aussi longtemps que le site essaie. Depuis 0.84.0.3, le signal
+// « site agressif » n'est plus requis pour bloquer une navigation automatique :
+// l'absence de geste utilisateur suffit (une popup toute fraîche reste un
+// signal supplémentaire pour le cas tab-under, cf. openedPopupRecently).
 //
 // Garde-fous, dans l'ordre :
 //  - une adresse demandée explicitement (barre d'adresse, favori, suggestion)
@@ -25,8 +26,12 @@ namespace Lumora.WinUI;
 //    naviguent chez eux) ;
 //  - un clic utilisateur normal vers un autre site est permis : le bouclier ne
 //    doit jamais transformer une page de résultats en impasse de navigation ;
-//  - au-delà : cross-domaine + site sous pression publicitaire (ou popup
-//    ouverte à l'instant) = parasite → bloqué.
+//  - au-delà : toute navigation SANS geste utilisateur qui change de domaine
+//    est un parasite → bloquée, que le bouclier réseau ait ou non déjà mesuré
+//    une pression publicitaire sur la page. Un réseau publicitaire absent des
+//    listes de filtres ne doit pas obtenir de laissez-passer par défaut
+//    (durci 0.84.0.3, cas vidlox/muvonix.shop : chaîne de redirection
+//    entièrement invisible pour le bouclier réseau).
 public enum NavigationVerdict
 {
     Allow,
@@ -44,7 +49,6 @@ public static class NavigationHijackPolicy
         bool strictBlockEnabled,
         Func<string, bool> isAdHost,
         Func<string, bool> isWhitelistedHost,
-        bool pageUnderAdPressure = false,
         bool openedPopupRecently = false)
     {
         if (wasExplicitlyRequested)
@@ -81,9 +85,11 @@ public static class NavigationHijackPolicy
         if (isUserInitiated && !openedPopupRecently)
             return NavigationVerdict.Allow;
 
-        return pageUnderAdPressure || openedPopupRecently
-            ? NavigationVerdict.BlockParasite
-            : NavigationVerdict.Allow;
+        // Ni un clic réel ni une des raisons ci-dessus : une navigation
+        // automatique qui change de domaine n'a pas d'excuse, qu'elle vienne
+        // d'un tab-under (popup toute fraîche) ou d'un site jamais pris en
+        // faute par le bouclier réseau (réseau publicitaire non répertorié).
+        return NavigationVerdict.BlockParasite;
     }
 
     private static bool IsSameRootSite(string fromHost, string toHost) =>

@@ -279,4 +279,180 @@ public class NavigationHealthTrackerTests
         Assert.True(t.TakeExplicitNavigation("https://site.example"));
     }
 
+    // ── Navigation bloquée : signal de pression pour les popups (0.84.0.4) ──
+
+    [Fact]
+    public void NavigationBloquee_MemoriseePourLOnglet()
+    {
+        var t = new NavigationHealthTracker();
+
+        Assert.False(t.HadBlockedNavigation(9));
+        t.RecordBlockedNavigation(9);
+
+        Assert.True(t.HadBlockedNavigation(9));
+        Assert.False(t.HadBlockedNavigation(10));
+    }
+
+    [Fact]
+    public void NavigationBloquee_OublieeALaProchaineNavigationFraiche()
+    {
+        // Une nouvelle navigation (pas un saut de redirection) tourne la page :
+        // le signal de pression ne doit pas coller à un onglet qui a depuis
+        // navigué ailleurs.
+        var t = new NavigationHealthTracker();
+        t.RecordBlockedNavigation(9);
+
+        t.TrackNavigationStart(9, "https://autre-site.example/", isRedirect: false);
+
+        Assert.False(t.HadBlockedNavigation(9));
+    }
+
+    [Fact]
+    public void NavigationBloquee_SurvitAUnSautDeRedirection()
+    {
+        var t = new NavigationHealthTracker();
+        t.RecordBlockedNavigation(9);
+
+        t.TrackNavigationStart(9, "https://autre-site.example/", isRedirect: true);
+
+        Assert.True(t.HadBlockedNavigation(9));
+    }
+
+    [Fact]
+    public void ForgetTab_OublieAussiLaNavigationBloquee()
+    {
+        var t = new NavigationHealthTracker();
+        t.RecordBlockedNavigation(9);
+
+        t.ForgetTab(9);
+
+        Assert.False(t.HadBlockedNavigation(9));
+    }
+
+    // ── Total de popups par onglet : cible le site qui rouvre un onglet à
+    // chaque clic séparé (0.84.0.5) ─────────────────────────────────────────
+
+    [Fact]
+    public void PremierPopup_NEstPasEncoreUnPopupPrecedent()
+    {
+        var t = new NavigationHealthTracker();
+        var now = DateTimeOffset.UtcNow;
+
+        Assert.False(t.HasOpenedPopupBefore(5));
+        t.RegisterPopupOpened(5, now);
+
+        // Le popup qui vient d'être enregistré ne compte pas comme "avant lui" :
+        // c'est la valeur AVANT le deuxième popup qui doit basculer.
+        Assert.True(t.HasOpenedPopupBefore(5));
+    }
+
+    [Fact]
+    public void DeuxiemePopup_MemeLongtempsApres_EstDetecteCommeRepete()
+    {
+        // Contrairement à CountPopupsInGestureWindow (fenêtre d'1 seconde) et
+        // HadRecentPopup (3 secondes), ce compteur ne s'élague jamais par le
+        // temps : deux clics séparés de plusieurs minutes comptent quand même.
+        var t = new NavigationHealthTracker();
+        var now = DateTimeOffset.UtcNow;
+        t.RegisterPopupOpened(5, now);
+
+        Assert.True(t.HasOpenedPopupBefore(5));
+        Assert.Equal(0, t.CountPopupsInGestureWindow(5, now.AddMinutes(5)));
+        Assert.False(t.HadRecentPopup(5, now.AddMinutes(5)));
+        // ... mais HasOpenedPopupBefore reste vrai, lui, bien après les deux fenêtres ci-dessus.
+        Assert.True(t.HasOpenedPopupBefore(5));
+    }
+
+    [Fact]
+    public void TotalPopups_OublieALaProchaineNavigationFraiche()
+    {
+        var t = new NavigationHealthTracker();
+        t.RegisterPopupOpened(5, DateTimeOffset.UtcNow);
+
+        t.TrackNavigationStart(5, "https://autre-site.example/", isRedirect: false);
+
+        Assert.False(t.HasOpenedPopupBefore(5));
+    }
+
+    [Fact]
+    public void ForgetTab_OublieAussiLeTotalDePopups()
+    {
+        var t = new NavigationHealthTracker();
+        t.RegisterPopupOpened(5, DateTimeOffset.UtcNow);
+
+        t.ForgetTab(5);
+
+        Assert.False(t.HasOpenedPopupBefore(5));
+    }
+
+    // ── Popups en attente d'un choix explicite (0.84.0.6) ────────────────────
+
+    [Fact]
+    public void PopupEnAttente_MemoriseePourLOnglet()
+    {
+        var t = new NavigationHealthTracker();
+
+        Assert.Empty(t.PendingPopups(5));
+        t.RecordPendingPopup(5, "https://exemple.example/");
+
+        Assert.Equal(["https://exemple.example/"], t.PendingPopups(5));
+        Assert.Empty(t.PendingPopups(6));
+    }
+
+    [Fact]
+    public void PopupEnAttente_PlusieursSurLeMemeOnglet_ToutesConservees()
+    {
+        var t = new NavigationHealthTracker();
+        t.RecordPendingPopup(5, "https://un.example/");
+        t.RecordPendingPopup(5, "https://deux.example/");
+
+        Assert.Equal(["https://un.example/", "https://deux.example/"], t.PendingPopups(5));
+    }
+
+    [Fact]
+    public void PopupEnAttente_RetraitDUneSeule_GardeLesAutres()
+    {
+        var t = new NavigationHealthTracker();
+        t.RecordPendingPopup(5, "https://un.example/");
+        t.RecordPendingPopup(5, "https://deux.example/");
+
+        t.RemovePendingPopup(5, "https://un.example/");
+
+        Assert.Equal(["https://deux.example/"], t.PendingPopups(5));
+    }
+
+    [Fact]
+    public void PopupEnAttente_ClearPendingPopups_LesRetireToutes()
+    {
+        var t = new NavigationHealthTracker();
+        t.RecordPendingPopup(5, "https://un.example/");
+        t.RecordPendingPopup(5, "https://deux.example/");
+
+        t.ClearPendingPopups(5);
+
+        Assert.Empty(t.PendingPopups(5));
+    }
+
+    [Fact]
+    public void PopupEnAttente_OublieeALaProchaineNavigationFraiche()
+    {
+        var t = new NavigationHealthTracker();
+        t.RecordPendingPopup(5, "https://exemple.example/");
+
+        t.TrackNavigationStart(5, "https://autre-site.example/", isRedirect: false);
+
+        Assert.Empty(t.PendingPopups(5));
+    }
+
+    [Fact]
+    public void ForgetTab_OublieAussiLesPopupsEnAttente()
+    {
+        var t = new NavigationHealthTracker();
+        t.RecordPendingPopup(5, "https://exemple.example/");
+
+        t.ForgetTab(5);
+
+        Assert.Empty(t.PendingPopups(5));
+    }
+
 }
