@@ -619,7 +619,7 @@ public sealed partial class MainWindow
             {
                 BookmarksSideBarPanel.Children.Add(new TextBlock
                 {
-                    Text = "Barre vide",
+                    Text = "Aucun favori épinglé",
                     Opacity = 0.62,
                     FontSize = 12,
                     TextWrapping = TextWrapping.Wrap
@@ -667,7 +667,7 @@ public sealed partial class MainWindow
         {
             primaryHost.Children.Add(new TextBlock
             {
-                Text = "Barre vide",
+                Text = "Aucun favori épinglé",
                 Opacity = 0.62,
                 FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center
