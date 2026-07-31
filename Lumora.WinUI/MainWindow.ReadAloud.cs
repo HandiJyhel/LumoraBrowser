@@ -30,7 +30,7 @@ public sealed partial class MainWindow
     private void UpdateReadAloudButtonVisibility()
     {
         if (ReadAloudButton is null) return;
-        ReadAloudButton.Opacity = _uiSettings.ReadAloudEnabled ? 1 : 0.5;
+        ReadAloudButton.Opacity = _uiSettings.ReadAloudEnabled ? 1 : 0.72;
         UpdateModulesPinUi();
     }
 

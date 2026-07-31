@@ -16,7 +16,7 @@ public sealed partial class MainWindow
     private void UpdateSearchAssistButtonVisibility()
     {
         if (SearchAssistButton is null) return;
-        SearchAssistButton.Opacity = _uiSettings.SearchAssistEnabled ? 1 : 0.5;
+        SearchAssistButton.Opacity = _uiSettings.SearchAssistEnabled ? 1 : 0.72;
         UpdateModulesPinUi();
     }
 

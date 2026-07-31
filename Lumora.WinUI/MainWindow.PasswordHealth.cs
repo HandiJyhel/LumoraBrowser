@@ -28,10 +28,86 @@ public sealed partial class MainWindow
 
         var report = PasswordHealthAnalyzer.Analyze(credentials);
 
+        // Verification des fuites connues : jamais automatique (requete
+        // sortante vers un service tiers), uniquement sur ce clic explicite
+        // dans la boite de dialogue - voir BreachChecker pour le detail du
+        // k-anonymat (seuls 5 caracteres d'un hash SHA-1 partent, jamais le
+        // mot de passe ni son hash complet).
+        var breachSection = new StackPanel { Spacing = 4 };
+        var breachButton = new Button { Content = "Verifier aussi les fuites connues (en ligne)", Margin = new Thickness(0, 4, 0, 0) };
+        var breachHint = new TextBlock
+        {
+            Text = "Envoie uniquement les 5 premiers caracteres du hash SHA-1 de chaque mot de passe unique (k-anonymat, service Have I Been Pwned) - jamais le mot de passe ni son hash complet.",
+            Opacity = 0.6,
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        breachButton.Click += async (_, _) =>
+        {
+            breachButton.IsEnabled = false;
+            breachButton.Content = "Verification en cours...";
+            breachSection.Children.Clear();
+
+            var uniquePasswords = credentials
+                .Select(c => c.Password)
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var breachedPasswords = new HashSet<string>(StringComparer.Ordinal);
+            var checkFailed = false;
+
+            foreach (var password in uniquePasswords)
+            {
+                try
+                {
+                    if (await BreachChecker.CheckAsync(password) > 0) breachedPasswords.Add(password);
+                }
+                catch
+                {
+                    checkFailed = true;
+                    break;
+                }
+            }
+
+            breachButton.Visibility = Visibility.Collapsed;
+            breachHint.Visibility = Visibility.Collapsed;
+
+            if (checkFailed)
+            {
+                breachSection.Children.Add(new TextBlock
+                {
+                    Text = "Verification impossible (reseau indisponible ou service injoignable).",
+                    Opacity = 0.7,
+                    TextWrapping = TextWrapping.Wrap
+                });
+                return;
+            }
+
+            var breachedCredentials = credentials.Where(c => breachedPasswords.Contains(c.Password)).ToList();
+            if (breachedCredentials.Count == 0)
+            {
+                breachSection.Children.Add(new TextBlock
+                {
+                    Text = "Aucun mot de passe trouve dans les fuites connues.",
+                    TextWrapping = TextWrapping.Wrap
+                });
+                return;
+            }
+
+            breachSection.Children.Add(HealthSectionHeader(
+                $"Trouves dans une fuite connue ({breachedCredentials.Count})",
+                "Changez ces mots de passe des que possible : ils sont deja connus des attaquants."));
+            foreach (var cred in breachedCredentials)
+            {
+                breachSection.Children.Add(HealthItem(PasswordManagerService.DisplayName(cred)));
+            }
+        };
+
         var dialog = new ContentDialog
         {
             Title = "Bilan de sante des mots de passe",
-            Content = BuildHealthReportView(report),
+            Content = BuildHealthReportView(report, breachButton, breachHint, breachSection),
             CloseButtonText = "Fermer",
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = Content.XamlRoot
@@ -39,7 +115,7 @@ public sealed partial class MainWindow
         await dialog.ShowAsync();
     }
 
-    private static UIElement BuildHealthReportView(PasswordHealthReport report)
+    private static UIElement BuildHealthReportView(PasswordHealthReport report, UIElement breachButton, UIElement breachHint, Panel breachSection)
     {
         var panel = new StackPanel { Spacing = 12, MinWidth = 420 };
 
@@ -50,14 +126,18 @@ public sealed partial class MainWindow
             TextWrapping = TextWrapping.Wrap
         });
 
+        panel.Children.Add(breachButton);
+        panel.Children.Add(breachHint);
+        panel.Children.Add(breachSection);
+
         if (report.IsHealthy)
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "Aucun probleme detecte : pas de mot de passe reutilise entre sites, faible ou non change depuis plus de 2 ans.",
+                Text = "Aucun probleme local detecte : pas de mot de passe reutilise entre sites, faible ou non change depuis plus de 2 ans.",
                 TextWrapping = TextWrapping.Wrap
             });
-            return panel;
+            return new ScrollViewer { Content = panel, MaxHeight = 440, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         }
 
         if (report.ReusedGroups.Count > 0)

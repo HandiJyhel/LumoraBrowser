@@ -35,6 +35,7 @@ internal sealed class LumoraProfilePaths
         BrowserDataDir      = Path.Combine(profileDir, "webview2");
         WebAppsFile         = DataFile(NavigationDir, "webapps");
         WebAppIconsDir      = Path.Combine(NavigationDir, "webapp-icons");
+        RssFeedsFile        = DataFile(NavigationDir, "rss-feeds");
     }
 
     public string ProfileDir           { get; }
@@ -62,6 +63,7 @@ internal sealed class LumoraProfilePaths
     public string BrowserDataDir       { get; }
     public string WebAppsFile          { get; }
     public string WebAppIconsDir       { get; }
+    public string RssFeedsFile         { get; }
 
     public static string ProfilesRoot()
     {

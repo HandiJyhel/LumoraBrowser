@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
 
 namespace Lumora.WinUI;
@@ -22,6 +23,16 @@ public partial class App : Application
         WinUiRuntimeTrace.Write("OnLaunched start");
 
         var commandLineArgs = Environment.GetCommandLineArgs();
+        var appId = WebAppLaunchArgs.TryParseAppId(commandLineArgs);
+        var webApp = appId is not null ? TryFindWebApp(appId) : null;
+
+        // Doit être posé AVANT toute création de fenêtre : c'est ce qui évite
+        // que le navigateur principal et chaque application web (même exe,
+        // Lumora.WinUI.exe) se retrouvent regroupés sous une seule icône dans
+        // la barre des tâches / les épinglages Windows.
+        ApplyExplicitAppUserModelId(webApp is not null
+            ? WebAppIdentity.AppUserModelId(webApp.Id)
+            : WebAppIdentity.BrowserAppUserModelId);
 
         if (IncognitoLaunchArgs.IsIncognitoLaunch(commandLineArgs, out var torEnabled, out var incognitoUrl, out var returnToMain))
         {
@@ -34,13 +45,13 @@ public partial class App : Application
             return;
         }
 
-        var appId = WebAppLaunchArgs.TryParseAppId(commandLineArgs);
-        if (appId is not null && TryLaunchWebApp(appId))
+        if (webApp is not null && TryLaunchWebApp(webApp))
         {
             return;
         }
 
-        _window = new MainWindow();
+        var startInGuestMode = GuestLaunchArgs.IsGuestLaunch(commandLineArgs);
+        _window = new MainWindow(startInGuestMode);
         WinUiRuntimeTrace.Write("MainWindow constructed");
         _window.Activate();
         WinUiRuntimeTrace.Write("MainWindow activated");
@@ -48,28 +59,35 @@ public partial class App : Application
         WinUiRuntimeTrace.Write("Browser surface initialized");
     }
 
+    private static LumoraWebApp? TryFindWebApp(string appId)
+    {
+        try
+        {
+            var profile = LumoraProfilePaths.Default();
+            return new WebAppStore(profile.WebAppsFile).Find(appId);
+        }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"Web app lookup failed: {ex.GetType().Name}");
+            return null;
+        }
+    }
+
     // Lancement direct en fenêtre d'application (raccourci Menu Démarrer/Bureau),
     // sans passer par la fenêtre principale. Retombe sur le navigateur normal si
     // l'application n'existe plus dans le registre local (ex. supprimée entre-temps).
-    private bool TryLaunchWebApp(string appId)
+    private bool TryLaunchWebApp(LumoraWebApp app)
     {
         try
         {
             var profile = LumoraProfilePaths.Default();
             WebView2Bootstrap.ConfigureOnce(profile.BrowserDataDir);
-            var store = new WebAppStore(profile.WebAppsFile);
-            var app = store.Find(appId);
-            if (app is null)
-            {
-                WinUiRuntimeTrace.Write($"Web app not found for id {appId}, falling back to MainWindow");
-                return false;
-            }
 
             var appWindow = new LumoraAppWindow(app, profile);
             _window = appWindow;
             appWindow.Activate();
             appWindow.InitializeBrowserSurface();
-            WinUiRuntimeTrace.Write($"LumoraAppWindow activated for {appId}");
+            WinUiRuntimeTrace.Write($"LumoraAppWindow activated for {app.Id}");
             return true;
         }
         catch (Exception ex)
@@ -78,4 +96,19 @@ public partial class App : Application
             return false;
         }
     }
+
+    private static void ApplyExplicitAppUserModelId(string appUserModelId)
+    {
+        try
+        {
+            SetCurrentProcessExplicitAppUserModelID(appUserModelId);
+        }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"AppUserModelID set failed: {ex.GetType().Name}");
+        }
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
 }

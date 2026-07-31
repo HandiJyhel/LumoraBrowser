@@ -176,7 +176,7 @@ public sealed partial class MainWindow
             Title = "Fusionner les doublons ?",
             Content = $"{duplicates.Count} entree(s) en double detectee(s) : meme site, meme identifiant et meme " +
                       "mot de passe enregistres plusieurs fois (souvent des variantes www. ou sous-domaines " +
-                      "issues d'un import).\n\nChaque groupe sera reduit a une seule entree. Deux comptes dont " +
+                      "issus d'un import).\n\nChaque groupe sera reduit a une seule entree. Deux comptes dont " +
                       "le mot de passe differe ne sont jamais fusionnes.",
             PrimaryButtonText = "Fusionner",
             CloseButtonText = "Annuler",

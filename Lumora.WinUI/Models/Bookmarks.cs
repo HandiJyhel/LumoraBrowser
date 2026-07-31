@@ -212,7 +212,7 @@ public sealed class BookmarkStore
         return changed;
     }
 
-    public void AddFolder(string parentId, string title)
+    public string AddFolder(string parentId, string title)
     {
         var nodes = AllNodes();
         if (nodes.All(node => node.Id != parentId || node.Kind != BookmarkKind.Folder))
@@ -220,8 +220,10 @@ public sealed class BookmarkStore
             parentId = ToolbarRootId;
         }
 
-        nodes.Add(new BookmarkNode(NextNodeId(nodes, "folder"), parentId, BookmarkKind.Folder, NextPosition(nodes, parentId), CleanTitle(title, string.Empty), string.Empty));
+        var id = NextNodeId(nodes, "folder");
+        nodes.Add(new BookmarkNode(id, parentId, BookmarkKind.Folder, NextPosition(nodes, parentId), CleanTitle(title, string.Empty), string.Empty));
         WriteNodes(nodes);
+        return id;
     }
 
     public void RenameNode(string id, string title)

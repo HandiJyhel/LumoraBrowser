@@ -54,11 +54,15 @@ public sealed partial class MainWindow
         }
     }
 
-    private static void CopyProfileTo(string destDir)
+    // Trouve en usage reel le 2026-07-22 : ce chemin etait fige sur
+    // "profiles/default", alors que chaque profil a desormais un dossier
+    // nomme d'apres son utilisateur (y compris le tout premier, voir
+    // CreateProfileButton_Click) - copiait donc le mauvais dossier (ou rien,
+    // silencieusement, faute d'existence) des qu'un second utilisateur
+    // existait. Utilise desormais le vrai dossier du profil actif.
+    private void CopyProfileTo(string destDir)
     {
-        var srcDir = new DirectoryInfo(
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                         "Lumora", "profiles", "default"));
+        var srcDir = new DirectoryInfo(_profile.ProfileDir);
         if (!srcDir.Exists) return;
 
         foreach (var srcFile in srcDir.GetFiles("*", SearchOption.AllDirectories))

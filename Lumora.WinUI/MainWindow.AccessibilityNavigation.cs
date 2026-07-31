@@ -76,6 +76,7 @@ public sealed partial class MainWindow
         };
         accelerator.Invoked += (_, args) =>
         {
+            if (IsRightAltKeyDown()) return;
             args.Handled = true;
             onInvoked();
         };
@@ -138,12 +139,48 @@ public sealed partial class MainWindow
         return true;
     }
 
-    private bool TryFocusTabsZone() =>
-        TryFocusCandidate(BrowserTabs) ||
-        TryFocusCandidate(AddressBox);
+    private bool TryFocusTabsZone()
+    {
+        // En plein ecran immersif, BrowserTabs est toujours Collapsed (et
+        // AddressBox aussi, via NavigationToolbar) : TryFocusCandidate ne
+        // verifie que la Visibility locale de l'element, pas celle de ses
+        // ancetres, donc les deux "reussissaient" silencieusement sans que le
+        // focus ne bouge reellement (audit accessibilite moteur/motricite,
+        // palier 0.93.x). Rediriger vers le rail d'onglets vertical, seule
+        // liste d'onglets reellement affichable dans ce mode.
+        if (IsImmersiveFullScreenActive())
+        {
+            if (!_verticalTabsEnabled) return false;
 
-    private bool TryFocusAddressZone() =>
-        TryFocusCandidate(AddressBox);
+            ShowVerticalTabsRailImmersive();
+            if (FindFirstFocusableDescendant(VerticalTabsRail) is { } target)
+            {
+                target.Focus(FocusState.Programmatic);
+                return true;
+            }
+
+            return false;
+        }
+
+        return TryFocusCandidate(BrowserTabs) || TryFocusCandidate(AddressBox);
+    }
+
+    private bool TryFocusAddressZone()
+    {
+        // Meme piege qu'au-dessus : AddressBox vit dans NavigationToolbar,
+        // Collapsed en plein ecran immersif, et la barre compacte de ce mode
+        // (FullScreenAddressText) n'est qu'un texte en lecture seule - aucune
+        // saisie d'adresse n'y est possible. La palette de commande gere deja
+        // une saisie d'adresse/recherche et son placement est deja adapte au
+        // plein ecran (ApplyCommandPalettePlacement) : on l'ouvre a la place.
+        if (IsImmersiveFullScreenActive())
+        {
+            ShowCommandPalette();
+            return true;
+        }
+
+        return TryFocusCandidate(AddressBox);
+    }
 
     private bool TryFocusContentZone()
     {
@@ -169,7 +206,6 @@ public sealed partial class MainWindow
     }
 
     private bool TryFocusToolsZone() =>
-        TryFocusCandidate(NavigationMenuButton) ||
         TryFocusCandidate(ModulesButton);
 
     private bool TryFocusCompanionZone() =>

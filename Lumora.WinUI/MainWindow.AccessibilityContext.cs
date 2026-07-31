@@ -26,6 +26,7 @@ public sealed partial class MainWindow
         };
         accelerator.Invoked += (_, args) =>
         {
+            if (IsRightAltKeyDown()) return;
             args.Handled = true;
             onInvoked();
         };
@@ -113,8 +114,7 @@ public sealed partial class MainWindow
                 return AccessibilityShellZone.Address;
             }
 
-            if (IsDescendantOf(dependencyObject, NavigationMenuButton) ||
-                IsDescendantOf(dependencyObject, ModulesButton))
+            if (IsDescendantOf(dependencyObject, ModulesButton))
             {
                 return AccessibilityShellZone.Tools;
             }

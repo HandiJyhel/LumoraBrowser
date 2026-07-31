@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.Storage;
@@ -14,32 +15,65 @@ namespace Lumora.WinUI;
 // (god file), aucun changement de comportement.
 public sealed partial class MainWindow
 {
-    private MenuFlyout CreateBookmarkFolderFlyout(string folderId)
+    // "rangements Lumora" (texte de remplissage identique sur tous les
+    // dossiers, sans aucune information reelle) remplace par le nombre
+    // d'elements du dossier - signale par l'utilisateur comme l'une des
+    // "2 informations inutiles" du menu, avec le sens d'ouverture vers le
+    // haut (Placement jamais precise, la valeur par defaut de FlyoutBase
+    // est Top, pas Bottom - piege classique WinUI).
+    private string BookmarkFolderChildCountLabel(string folderId)
     {
-        var flyout = new MenuFlyout();
-        AddBookmarkFlyoutItems(flyout.Items, folderId);
-        if (flyout.Items.Count == 0)
+        var count = _allBookmarkNodes.Count(node => node.ParentId == folderId);
+        return count switch
         {
-            flyout.Items.Add(new MenuFlyoutItem
-            {
-                Text = "Dossier vide",
-                IsEnabled = false
-            });
-        }
+            0 => "Dossier vide",
+            1 => "1 element",
+            _ => $"{count} elements"
+        };
+    }
+
+    private MenuFlyout CreateBookmarkFolderFlyout(BookmarkNode folder)
+    {
+        var flyout = new MenuFlyout { Placement = FlyoutPlacementMode.Bottom };
+        AddLumoraMenuHeader(
+            flyout.Items,
+            BookmarkReadableTitle(folder),
+            BookmarkFolderChildCountLabel(folder.Id),
+            "\uE8B7");
+        AddBookmarkFlyoutItems(flyout.Items, folder.Id);
+        HookFlyoutPointerSupport(flyout);
 
         return flyout;
     }
 
     private MenuFlyout CreateBookmarkContextFlyout(BookmarkNode node)
     {
-        var flyout = new MenuFlyout();
+        var flyout = new MenuFlyout { Placement = FlyoutPlacementMode.Bottom };
+        AddLumoraMenuHeader(
+            flyout.Items,
+            node.Kind == BookmarkKind.Url ? BookmarkReadableTitle(node) : $"Dossier : {BookmarkReadableTitle(node)}",
+            node.Kind == BookmarkKind.Url ? TabHeaderHost(node.Url) : BookmarkFolderChildCountLabel(node.Id),
+            node.Kind == BookmarkKind.Url ? "\uE774" : "\uE8B7");
         var openItem = new MenuFlyoutItem
         {
             Text = node.Kind == BookmarkKind.Url ? $"Ouvrir {BookmarkReadableTitle(node)}" : "Ouvrir le dossier",
-            Tag = node
+            Tag = node,
+            Icon = node.Kind == BookmarkKind.Url ? new SymbolIcon(Symbol.OpenFile) : new SymbolIcon(Symbol.Folder)
         };
         openItem.Click += BookmarkContextOpen_Click;
         flyout.Items.Add(openItem);
+
+        if (node.Kind == BookmarkKind.Url)
+        {
+            var openInNewTabItem = new MenuFlyoutItem
+            {
+                Text = "Ouvrir dans un nouvel onglet",
+                Tag = node,
+                Icon = new SymbolIcon(Symbol.Add)
+            };
+            openInNewTabItem.Click += BookmarkContextOpenInNewTab_Click;
+            flyout.Items.Add(openInNewTabItem);
+        }
 
         if (!node.IsRoot)
         {
@@ -48,7 +82,8 @@ public sealed partial class MainWindow
             var renameItem = new MenuFlyoutItem
             {
                 Text = "Renommer",
-                Tag = node
+                Tag = node,
+                Icon = CreateMenuGlyphIcon("\uE8AC")
             };
             renameItem.Click += BookmarkContextRename_Click;
             flyout.Items.Add(renameItem);
@@ -56,11 +91,22 @@ public sealed partial class MainWindow
             var deleteItem = new MenuFlyoutItem
             {
                 Text = "Supprimer",
-                Tag = node
+                Tag = node,
+                Icon = new SymbolIcon(Symbol.Delete)
             };
             deleteItem.Click += BookmarkContextDelete_Click;
             flyout.Items.Add(deleteItem);
         }
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
+        var studioSubItem = new MenuFlyoutSubItem
+        {
+            Text = "Studio Lumora",
+            Icon = CreateMenuGlyphIcon("\uE790")
+        };
+        AddWorkspaceLayoutMenuItems(studioSubItem.Items, includeTheme: true);
+        flyout.Items.Add(studioSubItem);
+        HookFlyoutPointerSupport(flyout);
 
         return flyout;
     }
@@ -79,6 +125,19 @@ public sealed partial class MainWindow
         {
             await RenameBookmarkNodeAsync(node);
         }
+    }
+
+    private void BookmarkContextOpenInNewTab_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: BookmarkNode node } || node.Kind != BookmarkKind.Url)
+        {
+            return;
+        }
+
+        PreloadBookmarkFavicon(node);
+        AddTab(DisplayTitle(node.Url), node.Url, select: true);
+        ShowPanel(BrowserPanel, node.Title);
+        UpdateStatusText($"Favori ouvert dans un nouvel onglet : {BookmarkReadableTitle(node)}");
     }
 
     private void BookmarkContextDelete_Click(object sender, RoutedEventArgs e)

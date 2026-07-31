@@ -451,6 +451,7 @@ public sealed partial class MainWindow
             };
             flyout.Items.Add(item);
         }
+        HookFlyoutPointerSupport(flyout);
         flyout.ShowAt(WalletFillAccept);
     }
 

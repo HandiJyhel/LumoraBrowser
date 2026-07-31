@@ -113,4 +113,127 @@ public class UiSettingsMigrationTests
         Assert.Equal(UiSettings.CurrentSchemaVersion, loaded.SchemaVersion);
         Assert.Equal(UiSettings.Default().SearchEngine, loaded.SearchEngine);
     }
+
+    [Fact]
+    public void Default_seme_les_5_tuiles_epinglees_du_menu_demarrer()
+    {
+        var settings = UiSettings.Default();
+
+        Assert.Equal(UiSettings.DefaultPinnedStartMenuTileIds, settings.PinnedStartMenuTileIds);
+    }
+
+    [Fact]
+    public void PinnedStartMenuTileIds_absent_du_json_conserve_le_defaut_sans_migration_dediee()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora"); // n'existe pas encore
+        var legacyPath = Path.Combine(dir, "ui-settings.json");
+        // JSON d'un profil anterieur a cette fonctionnalite : pas de
+        // PinnedStartMenuTileIds du tout.
+        File.WriteAllText(legacyPath, """{ "SearchEngine": "duckduckgo" }""");
+
+        var loaded = UiSettings.Load(path, legacyPath);
+
+        Assert.Equal(UiSettings.DefaultPinnedStartMenuTileIds, loaded.PinnedStartMenuTileIds);
+    }
+
+    [Fact]
+    public void PinnedStartMenuTileIds_explicitement_vide_reste_vide()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        // L'utilisateur a desepingle toutes les tuiles : la liste vide doit
+        // survivre a un aller-retour, pas revenir aux 5 valeurs par defaut.
+        var original = UiSettings.Default();
+        original.PinnedStartMenuTileIds.Clear();
+
+        original.Save(path);
+        var loaded = UiSettings.Load(path);
+
+        Assert.Empty(loaded.PinnedStartMenuTileIds);
+    }
+
+    [Fact]
+    public void StartMenuTileUsage_survit_a_un_aller_retour_SaveLoad()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var original = UiSettings.Default();
+        var now = DateTimeOffset.UtcNow;
+        original.StartMenuTileUsage.Add(new StartMenuTileUsage(StartMenuTileIds.History, 3, now));
+
+        original.Save(path);
+        var loaded = UiSettings.Load(path);
+
+        var entry = Assert.Single(loaded.StartMenuTileUsage);
+        Assert.Equal(StartMenuTileIds.History, entry.TileId);
+        Assert.Equal(3, entry.OpenCount);
+        Assert.Equal(now, entry.LastOpenedAt);
+    }
+
+    [Fact]
+    public void ModeAccentColors_et_ChromeLayoutStyle_absents_du_json_conservent_le_defaut_sans_migration_dediee()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora"); // n'existe pas encore
+        var legacyPath = Path.Combine(dir, "ui-settings.json");
+        // JSON d'un profil anterieur a cette fonctionnalite : aucun des
+        // nouveaux champs n'existe du tout.
+        File.WriteAllText(legacyPath, """{ "SearchEngine": "duckduckgo" }""");
+
+        var loaded = UiSettings.Load(path, legacyPath);
+
+        Assert.Equal("classic", loaded.ChromeLayoutStyle);
+        Assert.Equal(string.Empty, loaded.ModeAccentColorNeutral);
+        Assert.Equal(string.Empty, loaded.ModeAccentColorFocus);
+        Assert.Equal(string.Empty, loaded.ModeAccentColorReading);
+        Assert.Equal(string.Empty, loaded.ModeAccentColorCreative);
+        Assert.Equal(string.Empty, loaded.ModeAccentColorResearch);
+        Assert.Equal(string.Empty, loaded.ModeAccentColorNight);
+    }
+
+    [Fact]
+    public void ModeAccentColorFocus_et_ChromeLayoutStyle_survivent_a_un_aller_retour_SaveLoad()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var original = UiSettings.Default();
+        original.ModeAccentColorFocus = "#3A8FD1";
+        original.ChromeLayoutStyle = "identitySpine";
+
+        original.Save(path);
+        var loaded = UiSettings.Load(path);
+
+        Assert.Equal("#3A8FD1", loaded.ModeAccentColorFocus);
+        Assert.Equal("identitySpine", loaded.ChromeLayoutStyle);
+        // Les modes non touches restent au defaut Nova (vide).
+        Assert.Equal(string.Empty, loaded.ModeAccentColorNight);
+    }
+
+    [Fact]
+    public void IdentitySpineAutoHide_absent_du_json_reste_desactive_par_defaut()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var legacyPath = Path.Combine(dir, "ui-settings.json");
+        File.WriteAllText(legacyPath, """{ "SearchEngine": "duckduckgo" }""");
+
+        var loaded = UiSettings.Load(path, legacyPath);
+
+        Assert.False(loaded.IdentitySpineAutoHide);
+    }
+
+    [Fact]
+    public void IdentitySpineAutoHide_survit_a_un_aller_retour_SaveLoad()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var original = UiSettings.Default();
+        original.IdentitySpineAutoHide = true;
+
+        original.Save(path);
+        var loaded = UiSettings.Load(path);
+
+        Assert.True(loaded.IdentitySpineAutoHide);
+    }
 }

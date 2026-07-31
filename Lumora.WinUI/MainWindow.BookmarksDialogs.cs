@@ -15,6 +15,8 @@ public sealed partial class MainWindow
 {
     private sealed record BookmarkFolderChoice(string Id, string Label);
 
+    private const string NewBookmarkFolderChoiceId = "__new_folder__";
+
     private async Task<(bool Cancelled, bool DeleteExisting, string Title, string FolderId)> PromptBookmarkEditorAsync(
         string address,
         string suggestedTitle,
@@ -38,6 +40,8 @@ public sealed partial class MainWindow
             IsChecked = existing is not null && BookmarkStore.IsIconOnlyTitle(existing.Title)
         };
 
+        folders.Add(new BookmarkFolderChoice(NewBookmarkFolderChoiceId, "+ Nouveau dossier..."));
+
         var folderBox = new ComboBox
         {
             Header = "Dossier",
@@ -49,10 +53,25 @@ public sealed partial class MainWindow
                                  ?? folders.FirstOrDefault(folder => folder.Id == BookmarkStore.ToolbarRootId)
                                  ?? folders.FirstOrDefault();
 
+        var newFolderNameBox = new TextBox
+        {
+            PlaceholderText = "Nom du nouveau dossier",
+            MinWidth = 360,
+            MaxLength = 160,
+            Visibility = Visibility.Collapsed
+        };
+        folderBox.SelectionChanged += (_, _) =>
+        {
+            newFolderNameBox.Visibility = (folderBox.SelectedItem as BookmarkFolderChoice)?.Id == NewBookmarkFolderChoiceId
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        };
+
         var panel = new StackPanel { Spacing = 12 };
         panel.Children.Add(titleBox);
         panel.Children.Add(iconOnlyBox);
         panel.Children.Add(folderBox);
+        panel.Children.Add(newFolderNameBox);
         panel.Children.Add(new TextBlock
         {
             Text = address,
@@ -85,7 +104,16 @@ public sealed partial class MainWindow
 
         var selected = folderBox.SelectedItem as BookmarkFolderChoice;
         var title = iconOnlyBox.IsChecked == true ? BookmarkStore.InvisibleTitle : titleBox.Text;
-        return (false, false, title, selected?.Id ?? BookmarkStore.ToolbarRootId);
+        var folderId = selected?.Id ?? BookmarkStore.ToolbarRootId;
+        if (folderId == NewBookmarkFolderChoiceId)
+        {
+            var newFolderName = newFolderNameBox.Text?.Trim();
+            folderId = string.IsNullOrWhiteSpace(newFolderName)
+                ? BookmarkStore.ToolbarRootId
+                : _bookmarks.AddFolder(BookmarkStore.ToolbarRootId, newFolderName);
+        }
+
+        return (false, false, title, folderId);
     }
 
     private List<BookmarkFolderChoice> BuildBookmarkFolderChoices() =>

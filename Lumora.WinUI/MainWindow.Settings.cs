@@ -17,6 +17,36 @@ public sealed partial class MainWindow
 {
     // ── Settings ─────────────────────────────────────────────────────────────
 
+    private static string NormalizeTabStripPosition(string? value) =>
+        value?.Trim().ToLowerInvariant() switch
+        {
+            "left" => "left",
+            "right" => "right",
+            "bottom" => "bottom",
+            _ => "top"
+        };
+
+    private static string NormalizeBookmarksBarPosition(string? value) =>
+        value?.Trim().ToLowerInvariant() switch
+        {
+            "left" => "left",
+            "right" => "right",
+            "bottom" => "bottom",
+            _ => "top"
+        };
+
+    private static bool UsesVerticalTabRail(string tabStripPosition) =>
+        tabStripPosition is "left" or "right";
+
+    private static bool UsesSideBookmarksRail(string bookmarksBarPosition) =>
+        bookmarksBarPosition is "left" or "right";
+
+    private string SelectedTabStripPosition() =>
+        NormalizeTabStripPosition((TabStripPositionCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? _tabStripPosition);
+
+    private string SelectedBookmarksBarPosition() =>
+        NormalizeBookmarksBarPosition((BookmarksBarPositionCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? _bookmarksBarPosition);
+
     private void VerticalTabsSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (sender is not ToggleSwitch toggle)
@@ -24,10 +54,19 @@ public sealed partial class MainWindow
             return;
         }
 
-        _verticalTabsEnabled = toggle.IsOn;
+        _tabStripPosition = toggle.IsOn
+            ? (_tabStripPosition == "right" ? "right" : "left")
+            : "top";
+        SetWorkspaceControlsSilently(() =>
+        {
+            SelectComboByTag(TabStripPositionCombo, _tabStripPosition, "top");
+        });
+        _verticalTabsEnabled = UsesVerticalTabRail(_tabStripPosition);
         ApplyVerticalTabsLayout();
-        SaveUiSettings();
-        StatusText.Text = _verticalTabsEnabled ? "Onglets verticaux actives." : "Onglets horizontaux actifs.";
+        SaveWorkspaceUiSettings();
+        StatusText.Text = _verticalTabsEnabled
+            ? $"Onglets verticaux a {_tabStripPosition}."
+            : "Onglets horizontaux actifs.";
     }
 
     private void ApplyStartupPage()
@@ -82,7 +121,7 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         _compactModeEnabled = toggle.IsOn;
         ApplyCompactModeLayout();
-        SaveUiSettings();
+        SaveWorkspaceUiSettings();
         StatusText.Text = _compactModeEnabled ? "Interface compacte activee." : "Interface compacte desactivee.";
     }
 
@@ -130,7 +169,7 @@ public sealed partial class MainWindow
     {
         if (_suppressUiSettingsSave) return;
         ApplyBookmarksBarVisibility();
-        SaveUiSettings();
+        SaveWorkspaceUiSettings();
         StatusText.Text = CompactModeHideBookmarksSwitch.IsOn
             ? "Les favoris seront masques en interface compacte."
             : "Les favoris restent visibles en interface compacte.";
@@ -139,7 +178,7 @@ public sealed partial class MainWindow
     private void FullScreenAutoHideChromeSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
-        SaveUiSettings();
+        SaveWorkspaceUiSettings();
         ApplyFullScreenLayout();
         StatusText.Text = FullScreenAutoHideChromeSwitch.IsOn
             ? "En plein ecran, les barres se revelent au survol."
@@ -202,7 +241,10 @@ public sealed partial class MainWindow
             "Controle Alt 1 a 5 pour aller directement aux onglets, a la barre d'adresse, au contenu actif, aux outils ou au compagnon. " +
             "Controle Alt F relit votre repere courant. Controle Alt R recentre le focus sur la zone utile. " +
             "Controle Alt S active le mode secours. Controle Alt X restaure l'etat de confort precedent. " +
-            "Controle K ouvre la palette de commande. Win H lance la dictee Windows dans un champ de texte.");
+            "Controle K ouvre la palette de commande. Win H lance la dictee Windows dans un champ de texte. " +
+            "Controle T nouvel onglet. Controle W ferme l'onglet actif. Controle L met le focus sur la barre d'adresse. " +
+            "F5 recharge la page. Alt Gauche ou Alt Droite pour la page precedente ou suivante. " +
+            "Controle Tab ou Controle Maj Tab pour changer d'onglet. F11 bascule le plein ecran.");
     }
 
     private void TranslationEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -307,6 +349,30 @@ public sealed partial class MainWindow
         MarkAppearanceOptionsPending();
     }
 
+    private void WorkspacePresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave)
+        {
+            return;
+        }
+
+        if (sender is not FrameworkElement { Tag: string preset } element)
+        {
+            return;
+        }
+
+        var parts = preset.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length != 2)
+        {
+            return;
+        }
+
+        var status = element is Button { Content: string label } && !string.IsNullOrWhiteSpace(label)
+            ? $"Preset {label} applique."
+            : "Preset d'espace Lumora applique.";
+        ApplyWorkspacePresetImmediate(parts[0], parts[1], status);
+    }
+
     private void MarkAppearanceOptionsPending()
     {
         MarkSettingsChangesPending("Changements de personnalisation en attente.");
@@ -334,8 +400,17 @@ public sealed partial class MainWindow
             return;
         }
 
+        var wallpaperWasPending = HasPendingWallpaperChange();
+        var wallpaperChanged = ApplyPendingWallpaperChange();
+        if (wallpaperWasPending && !wallpaperChanged)
+        {
+            SettingsPendingText.Text = "Le fond d'ecran n'a pas pu etre applique. Verifiez l'image choisie.";
+            return;
+        }
+
         var previousUsageMode = _uiSettings.UsageMode;
         SaveUiSettings();
+        var modeAccentColorsChanged = ApplyPendingModeAccentColorChanges();
         if (!string.Equals(previousUsageMode, _uiSettings.UsageMode, StringComparison.OrdinalIgnoreCase))
         {
             _uiSettings.LastIntroducedUsageMode = string.Empty;
@@ -351,14 +426,16 @@ public sealed partial class MainWindow
         RefreshNovaHomePages();
         AppearancePendingText.Text = "Options de personnalisation appliquees.";
         ClearSettingsChangesPending("Changements appliques.");
-        StatusText.Text = avatarChanged
-            ? "Personnalisation appliquee, avatar compris."
+        StatusText.Text = avatarChanged || wallpaperChanged || modeAccentColorsChanged
+            ? "Personnalisation appliquee."
             : "Parametres appliques.";
     }
 
     private void ResetSettingsChangesButton_Click(object sender, RoutedEventArgs e)
     {
         ResetPendingAvatarChange();
+        ResetPendingWallpaperChange();
+        ResetPendingModeAccentColorChanges();
         ApplyUiSettings();
         AppearancePendingText.Text = "Changements annules.";
         ClearSettingsChangesPending("Aucun changement en attente.");
@@ -392,7 +469,7 @@ public sealed partial class MainWindow
         _verticalTabsCompact = !_verticalTabsCompact;
         ApplyVerticalTabsWidth();
         RenderVerticalTabs();
-        SaveUiSettings();
+        SaveWorkspaceUiSettings();
         StatusText.Text = _verticalTabsCompact ? "Onglets verticaux reduits." : "Onglets verticaux elargis.";
     }
 
@@ -433,7 +510,7 @@ public sealed partial class MainWindow
     {
         // Fin du drag : re-render des onglets et sauvegarde
         RenderVerticalTabs();
-        SaveUiSettings();
+        SaveWorkspaceUiSettings();
     }
 
     private void ApplyUiSettings()
@@ -441,7 +518,13 @@ public sealed partial class MainWindow
         _suppressUiSettingsSave = true;
         try
         {
-            _verticalTabsEnabled = _uiSettings.VerticalTabsEnabled;
+            _tabStripPosition = NormalizeTabStripPosition(
+                string.IsNullOrWhiteSpace(_uiSettings.TabStripPosition)
+                    ? (_uiSettings.VerticalTabsEnabled ? "left" : "top")
+                    : _uiSettings.TabStripPosition);
+            _bookmarksBarPosition = NormalizeBookmarksBarPosition(_uiSettings.BookmarksBarPosition);
+            _verticalTabsEnabled = UsesVerticalTabRail(_tabStripPosition);
+            _chromeLayoutStyle = NormalizeChromeLayoutStyle(_uiSettings.ChromeLayoutStyle);
             _verticalTabsCompact = _uiSettings.VerticalTabsCompact;
             _compactModeEnabled = _uiSettings.CompactModeEnabled;
             _verticalTabsExpandedWidth = Math.Clamp(_uiSettings.VerticalTabsWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
@@ -460,6 +543,11 @@ public sealed partial class MainWindow
             SelectComboByTag(UsageModeCombo, _uiSettings.UsageMode, "neutral");
             SelectComboByTag(ModulesUsageModeCombo, _uiSettings.UsageMode, "neutral");
             SelectComboByTag(PersonalizationMotionCombo, _uiSettings.PersonalizationMotionStyle, "luminous");
+            SelectComboByTag(TabStripPositionCombo, _tabStripPosition, "top");
+            SelectComboByTag(BookmarksBarPositionCombo, _bookmarksBarPosition, "top");
+            SelectComboByTag(ChromeLayoutStyleCombo, _chromeLayoutStyle, "classic");
+            IdentitySpineAutoHideSwitch.IsOn = _uiSettings.IdentitySpineAutoHide;
+            InitializeModeAccentColorPickers();
             NewTabFocusSearchSwitch.IsOn = _uiSettings.NewTabFocusSearchOnOpen;
             NewTabShortcutsSwitch.IsOn = _uiSettings.NewTabShortcutsVisible;
             NewTabShortcutsBox.Text = NewTabShortcutsToText(_uiSettings.NewTabShortcuts);
@@ -470,6 +558,7 @@ public sealed partial class MainWindow
             AccessibilityReduceMotionSwitch.IsOn = _uiSettings.AccessibilityReduceMotion;
             AccessibilityVisibleFocusSwitch.IsOn = _uiSettings.AccessibilityVisibleFocus;
             AccessibilityReduceBlueLightSwitch.IsOn = _uiSettings.AccessibilityReduceBlueLight;
+            AccessibilityLargeTargetsSwitch.IsOn = _uiSettings.AccessibilityLargeTargets;
             ReadAloudEnabledSwitch.IsOn = _uiSettings.ReadAloudEnabled;
             UpdateReadAloudButtonVisibility();
             ReadingLensEnabledSwitch.IsOn = _uiSettings.AccessibilityReadingLensEnabled;
@@ -486,6 +575,7 @@ public sealed partial class MainWindow
             UpdateSearchAssistButtonVisibility();
             ApplyCompactModeLayout();
             ApplyVerticalTabsLayout();
+            ApplyChromeLayoutStyle();
             ApplyWindowBackdrop();
             ApplyAccessibilitySettings();
 
@@ -573,9 +663,25 @@ public sealed partial class MainWindow
 
     private void ApplyVerticalTabsLayout()
     {
+        // La colonne identitaire possede deja sa propre presentation des
+        // onglets (MainWindow.IdentitySpine.cs) : cette fonction n'a rien a
+        // faire pendant qu'elle est active, et surtout ne doit jamais
+        // reafficher BrowserTabs/VerticalTabsRail par-dessus (bug "double
+        // onglets" signale par l'utilisateur - le declencheur reel n'etait
+        // pas ici mais dans ApplyCompactModeLayout/ApplyFullScreenLayout qui
+        // pouvaient l'appeler independamment).
+        if (_chromeLayoutStyle == "identitySpine")
+        {
+            return;
+        }
+
         _suppressTabNavigation = true;
         try
         {
+            _verticalTabsEnabled = UsesVerticalTabRail(_tabStripPosition);
+            var horizontalTabsVisible = !_verticalTabsEnabled;
+            var tabsAtBottom = _tabStripPosition == "bottom";
+
             if (IsImmersiveFullScreenActive())
             {
                 BrowserTabs.Visibility = Visibility.Collapsed;
@@ -585,15 +691,28 @@ public sealed partial class MainWindow
                 return;
             }
 
-            // TopTabsRow garde TOUJOURS sa hauteur (38) : c'est la bande de titre
+            // TopTabsRow garde TOUJOURS sa hauteur (52) : c'est la bande de titre
             // reservee au drag de fenetre + aux boutons systeme (min/max/fermer),
             // comme Edge/Arc. La mettre a 0 en mode onglets verticaux faisait
             // remonter NavigationToolbar dans cette zone reservee par Windows,
             // ce qui rendait ses boutons (bouclier, favoris...) inutilisables —
             // les clics y etaient interceptes par le chrome systeme de la fenetre.
-            BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
+            Grid.SetRow(BrowserTabs, tabsAtBottom ? 5 : 1);
+            Grid.SetRow(ModeChromeAccentStrip, tabsAtBottom ? 5 : 1);
+            BottomTabsRow.Height = horizontalTabsVisible && tabsAtBottom
+                ? new GridLength(52)
+                : new GridLength(0);
+            BrowserTabs.Visibility = horizontalTabsVisible ? Visibility.Visible : Visibility.Collapsed;
             VerticalTabsRail.Visibility = _verticalTabsEnabled ? Visibility.Visible : Visibility.Collapsed;
             VerticalTabsResizeThumb.Visibility = _verticalTabsEnabled ? Visibility.Visible : Visibility.Collapsed;
+            var tabsOnRight = _tabStripPosition == "right";
+            WorkspaceLeftTabsColumn.Width = _verticalTabsEnabled && !tabsOnRight ? GridLength.Auto : new GridLength(0);
+            WorkspaceLeftTabsResizeColumn.Width = _verticalTabsEnabled && !tabsOnRight ? GridLength.Auto : new GridLength(0);
+            WorkspaceRightTabsResizeColumn.Width = _verticalTabsEnabled && tabsOnRight ? GridLength.Auto : new GridLength(0);
+            WorkspaceRightTabsColumn.Width = _verticalTabsEnabled && tabsOnRight ? GridLength.Auto : new GridLength(0);
+            Grid.SetColumn(VerticalTabsRail, tabsOnRight ? 5 : 1);
+            Grid.SetColumn(VerticalTabsResizeThumb, tabsOnRight ? 4 : 2);
+            VerticalTabsRail.BorderThickness = tabsOnRight ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
             ApplyVerticalTabsWidth();
             RenderVerticalTabs();
             EnforceMinWindowWidth();
@@ -613,8 +732,14 @@ public sealed partial class MainWindow
             return;
         }
 
+        _tabStripPosition = SelectedTabStripPosition();
+        _bookmarksBarPosition = SelectedBookmarksBarPosition();
+        _verticalTabsEnabled = UsesVerticalTabRail(_tabStripPosition);
         _uiSettings.BookmarksBarVisible = BookmarksBarSwitch.IsOn;
+        _uiSettings.BookmarksBarPosition = _bookmarksBarPosition;
         _uiSettings.VerticalTabsEnabled = _verticalTabsEnabled;
+        _uiSettings.TabStripPosition = _tabStripPosition;
+        _uiSettings.ChromeLayoutStyle = _chromeLayoutStyle;
         _uiSettings.VerticalTabsCompact = _verticalTabsCompact;
         _uiSettings.CompactModeEnabled = _compactModeEnabled;
         _uiSettings.CompactModeHidesBookmarks = CompactModeHideBookmarksSwitch.IsOn;
@@ -646,6 +771,7 @@ public sealed partial class MainWindow
         _uiSettings.AccessibilityReduceMotion = AccessibilityReduceMotionSwitch.IsOn;
         _uiSettings.AccessibilityVisibleFocus = AccessibilityVisibleFocusSwitch.IsOn;
         _uiSettings.AccessibilityReduceBlueLight = AccessibilityReduceBlueLightSwitch.IsOn;
+        _uiSettings.AccessibilityLargeTargets = AccessibilityLargeTargetsSwitch.IsOn;
         _uiSettings.AccessibilityComfortProfile = ResolveAccessibilityComfortProfileFromControls();
         _uiSettings.ReadAloudEnabled = ReadAloudEnabledSwitch.IsOn;
         _uiSettings.AccessibilityReadingLensEnabled = ReadingLensEnabledSwitch.IsOn;
@@ -747,13 +873,24 @@ public sealed partial class MainWindow
             return;
         }
 
-        NavigationRow.Height = new GridLength(_compactModeEnabled ? 38 : 42);
-        TopTabsRow.Height = new GridLength(38);
+        // Meme garde que ApplyVerticalTabsLayout() : la colonne identitaire
+        // gere deja sa propre presentation, cette fonction ne doit pas
+        // reafficher le chrome classique par-dessus (c'etait le declencheur
+        // le plus probable du bug "double onglets" - appelee par tous les
+        // toggles de Reglages, le bouton "Appliquer les changements", et le
+        // menu contextuel Studio Lumora).
+        if (_chromeLayoutStyle == "identitySpine")
+        {
+            return;
+        }
+
+        NavigationRow.Height = new GridLength(_compactModeEnabled ? 58 : 72);
+        TopTabsRow.Height = new GridLength(52);
         RootShell.RowDefinitions[0].Height = new GridLength(0);
         FullScreenTopBar.Visibility = Visibility.Collapsed;
         NavigationToolbar.Visibility = Visibility.Visible;
         BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
-        NavigationToolbar.Padding = _compactModeEnabled ? new Thickness(10, 2, 10, 3) : new Thickness(10, 4, 10, 5);
+        NavigationToolbar.Padding = _compactModeEnabled ? new Thickness(10, 3, 10, 4) : new Thickness(12, 6, 12, 7);
         UpdateFullScreenButton();
         ApplyBookmarksBarVisibility();
         ApplyVerticalTabsLayout();
@@ -762,10 +899,44 @@ public sealed partial class MainWindow
 
     private void ApplyBookmarksBarVisibility()
     {
+        _bookmarksBarPosition = NormalizeBookmarksBarPosition(_bookmarksBarPosition);
         var hiddenByCompactChoice = _compactModeEnabled && CompactModeHideBookmarksSwitch.IsOn;
         var visible = BookmarksBarSwitch.IsOn && !hiddenByCompactChoice && !IsImmersiveFullScreenActive();
-        BookmarksRow.Height = visible ? new GridLength(28) : new GridLength(0);
-        BookmarksBarRow.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+
+        if (_chromeLayoutStyle == "identitySpine")
+        {
+            // Les favoris ne disparaissent pas, ils rejoignent la colonne
+            // identitaire / la capsule flottante a la place (voir
+            // RenderIdentitySpineBookmarks(), appelee via RenderBookmarksBar()
+            // plus bas) - les conteneurs classiques sont neutralises a plat,
+            // meme logique que le reste du chrome classique en colonne
+            // identitaire.
+            BookmarksRow.Height = new GridLength(0);
+            BookmarksBarRow.Visibility = Visibility.Collapsed;
+            WorkspaceBottomBookmarksRow.Height = new GridLength(0);
+            BookmarksBottomRow.Visibility = Visibility.Collapsed;
+            WorkspaceLeftBookmarksColumn.Width = new GridLength(0);
+            WorkspaceRightBookmarksColumn.Width = new GridLength(0);
+            BookmarksSideRail.Visibility = Visibility.Collapsed;
+            RenderBookmarksBar();
+            return;
+        }
+
+        var topVisible = visible && _bookmarksBarPosition == "top";
+        var bottomVisible = visible && _bookmarksBarPosition == "bottom";
+        var sideVisible = visible && UsesSideBookmarksRail(_bookmarksBarPosition);
+        var bookmarksOnRight = _bookmarksBarPosition == "right";
+
+        BookmarksRow.Height = topVisible ? new GridLength(60) : new GridLength(0);
+        BookmarksBarRow.Visibility = topVisible ? Visibility.Visible : Visibility.Collapsed;
+        WorkspaceBottomBookmarksRow.Height = bottomVisible ? new GridLength(42) : new GridLength(0);
+        BookmarksBottomRow.Visibility = bottomVisible ? Visibility.Visible : Visibility.Collapsed;
+        WorkspaceLeftBookmarksColumn.Width = sideVisible && !bookmarksOnRight ? GridLength.Auto : new GridLength(0);
+        WorkspaceRightBookmarksColumn.Width = sideVisible && bookmarksOnRight ? GridLength.Auto : new GridLength(0);
+        Grid.SetColumn(BookmarksSideRail, bookmarksOnRight ? 6 : 0);
+        BookmarksSideRail.BorderThickness = bookmarksOnRight ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
+        BookmarksSideRail.Visibility = sideVisible ? Visibility.Visible : Visibility.Collapsed;
+        RenderBookmarksBar();
     }
 
     private void ApplyFullScreenLayout()
@@ -776,19 +947,42 @@ public sealed partial class MainWindow
             RootShell.RowDefinitions[0].Height = new GridLength(0);
             FullScreenTopBar.Visibility = autoHide ? Visibility.Collapsed : Visibility.Visible;
             FullScreenTopRevealZone.Visibility = autoHide ? Visibility.Visible : Visibility.Collapsed;
-            FullScreenLeftRevealZone.Visibility = autoHide && _verticalTabsEnabled ? Visibility.Visible : Visibility.Collapsed;
+            FullScreenLeftRevealZone.Visibility = autoHide && _verticalTabsEnabled && _tabStripPosition == "left" ? Visibility.Visible : Visibility.Collapsed;
+            FullScreenRightRevealZone.Visibility = autoHide && _verticalTabsEnabled && _tabStripPosition == "right" ? Visibility.Visible : Visibility.Collapsed;
             TopTabsRow.Height = new GridLength(0);
             NavigationRow.Height = new GridLength(0);
             BookmarksRow.Height = new GridLength(0);
-            VerticalTabsColumn.Width = new GridLength(0);
-            VerticalTabsResizeColumn.Width = new GridLength(0);
+            BottomTabsRow.Height = new GridLength(0);
+            WorkspaceBottomBookmarksRow.Height = new GridLength(0);
+            WorkspaceLeftBookmarksColumn.Width = new GridLength(0);
+            WorkspaceLeftTabsColumn.Width = new GridLength(0);
+            WorkspaceLeftTabsResizeColumn.Width = new GridLength(0);
+            WorkspaceRightTabsResizeColumn.Width = new GridLength(0);
+            WorkspaceRightTabsColumn.Width = new GridLength(0);
+            WorkspaceRightBookmarksColumn.Width = new GridLength(0);
             BrowserTabs.Visibility = Visibility.Collapsed;
             NavigationToolbar.Visibility = Visibility.Collapsed;
             BookmarksBarRow.Visibility = Visibility.Collapsed;
+            BookmarksBottomRow.Visibility = Visibility.Collapsed;
+            BookmarksSideRail.Visibility = Visibility.Collapsed;
             VerticalTabsRail.Visibility = !autoHide && _verticalTabsEnabled ? Visibility.Visible : Visibility.Collapsed;
             VerticalTabsResizeThumb.Visibility = Visibility.Collapsed;
+            Grid.SetColumn(VerticalTabsRail, _tabStripPosition == "right" ? 4 : 0);
             Grid.SetColumnSpan(VerticalTabsRail, 3);
-            VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Left;
+            VerticalTabsRail.HorizontalAlignment = _tabStripPosition == "right"
+                ? HorizontalAlignment.Right
+                : HorizontalAlignment.Left;
+
+            if (_chromeLayoutStyle == "identitySpine")
+            {
+                // Le plein ecran immersif (F11, video) doit aussi masquer la
+                // colonne identitaire - sinon elle resterait affichee
+                // par-dessus une video plein ecran.
+                VerticalTabsRail.Visibility = Visibility.Collapsed;
+                IdentitySpineHost.Visibility = Visibility.Collapsed;
+                IdentitySpineAddressHost.Visibility = Visibility.Collapsed;
+                IdentitySpineHomeHero.Visibility = Visibility.Collapsed;
+            }
         }
         else
         {
@@ -798,15 +992,30 @@ public sealed partial class MainWindow
             FullScreenTopBar.Visibility = Visibility.Collapsed;
             FullScreenTopRevealZone.Visibility = Visibility.Collapsed;
             FullScreenLeftRevealZone.Visibility = Visibility.Collapsed;
-            TopTabsRow.Height = new GridLength(38);
-            NavigationRow.Height = new GridLength(_compactModeEnabled ? 38 : 42);
-            VerticalTabsColumn.Width = GridLength.Auto;
-            VerticalTabsResizeColumn.Width = GridLength.Auto;
-            Grid.SetColumnSpan(VerticalTabsRail, 1);
-            VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Stretch;
-            NavigationToolbar.Visibility = Visibility.Visible;
-            BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
-            NavigationToolbar.Padding = _compactModeEnabled ? new Thickness(10, 2, 10, 3) : new Thickness(10, 4, 10, 5);
+            FullScreenRightRevealZone.Visibility = Visibility.Collapsed;
+
+            if (_chromeLayoutStyle == "identitySpine")
+            {
+                // Symetrique de la branche immersive : on restaure la
+                // colonne identitaire plutot que le chrome classique.
+                TopTabsRow.Height = new GridLength(0);
+                NavigationRow.Height = new GridLength(0);
+                IdentitySpineHost.Visibility = Visibility.Visible;
+                IdentitySpineAddressHost.Visibility = Visibility.Visible;
+                UpdateIdentitySpineHomeHeroVisibility(CurrentTab());
+            }
+            else
+            {
+                TopTabsRow.Height = new GridLength(52);
+                NavigationRow.Height = new GridLength(_compactModeEnabled ? 58 : 72);
+                Grid.SetColumn(VerticalTabsRail, _tabStripPosition == "right" ? 5 : 1);
+                Grid.SetColumnSpan(VerticalTabsRail, 1);
+                VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Stretch;
+                NavigationToolbar.Visibility = Visibility.Visible;
+                BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
+                NavigationToolbar.Padding = _compactModeEnabled ? new Thickness(10, 3, 10, 4) : new Thickness(12, 6, 12, 7);
+            }
+
             ApplyBookmarksBarVisibility();
             ApplyVerticalTabsLayout();
         }
@@ -852,9 +1061,18 @@ public sealed partial class MainWindow
         FullScreenTopBar.Visibility = Visibility.Visible;
     }
 
+    // Delai avant masquage automatique de la chrome plein ecran : 900ms de base
+    // (350ms etait trop court pour deplacer la souris et cliquer precisement,
+    // constat de l'audit accessibilite moteur/motricite, palier 0.93.x), etendu
+    // a 2.5s si l'utilisateur a active "Reduire les animations" - signal le
+    // plus proche deja existant pour "laissez-moi plus de temps".
+    private TimeSpan FullScreenAutoHideDelay =>
+        TimeSpan.FromMilliseconds(_uiSettings.AccessibilityReduceMotion ? 2500 : 900);
+
     private void ScheduleFullScreenTopChromeHide()
     {
-        _fullScreenTopChromeHideTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+        _fullScreenTopChromeHideTimer ??= new DispatcherTimer();
+        _fullScreenTopChromeHideTimer.Interval = FullScreenAutoHideDelay;
         _fullScreenTopChromeHideTimer.Tick -= FullScreenTopChromeHideTimer_Tick;
         _fullScreenTopChromeHideTimer.Tick += FullScreenTopChromeHideTimer_Tick;
         _fullScreenTopChromeHideTimer.Stop();
@@ -871,6 +1089,12 @@ public sealed partial class MainWindow
     }
 
     private void FullScreenLeftRevealZone_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (!IsImmersiveFullScreenActive() || !_uiSettings.FullScreenAutoHideChrome || !_verticalTabsEnabled) return;
+        ShowVerticalTabsRailImmersive();
+    }
+
+    private void FullScreenRightRevealZone_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
         if (!IsImmersiveFullScreenActive() || !_uiSettings.FullScreenAutoHideChrome || !_verticalTabsEnabled) return;
         ShowVerticalTabsRailImmersive();
@@ -895,15 +1119,19 @@ public sealed partial class MainWindow
     private void ShowVerticalTabsRailImmersive()
     {
         _verticalTabsRailAutoHideTimer?.Stop();
+        Grid.SetColumn(VerticalTabsRail, _tabStripPosition == "right" ? 4 : 0);
         Grid.SetColumnSpan(VerticalTabsRail, 3);
-        VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Left;
+        VerticalTabsRail.HorizontalAlignment = _tabStripPosition == "right"
+            ? HorizontalAlignment.Right
+            : HorizontalAlignment.Left;
         VerticalTabsRail.Visibility = Visibility.Visible;
         VerticalTabsResizeThumb.Visibility = Visibility.Collapsed;
     }
 
     private void ScheduleVerticalTabsRailHide()
     {
-        _verticalTabsRailAutoHideTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+        _verticalTabsRailAutoHideTimer ??= new DispatcherTimer();
+        _verticalTabsRailAutoHideTimer.Interval = FullScreenAutoHideDelay;
         _verticalTabsRailAutoHideTimer.Tick -= VerticalTabsRailHideTimer_Tick;
         _verticalTabsRailAutoHideTimer.Tick += VerticalTabsRailHideTimer_Tick;
         _verticalTabsRailAutoHideTimer.Stop();
@@ -937,6 +1165,7 @@ public sealed partial class MainWindow
             _appWindow?.SetPresenter(AppWindowPresenterKind.FullScreen);
             ApplyFullScreenLayout();
             UpdateFullScreenButton();
+            StartContentFullScreenWatchdog();
             StatusText.Text = "Mode plein ecran immersif active.";
             return;
         }
@@ -978,11 +1207,46 @@ public sealed partial class MainWindow
 
     private void CompleteContentFullScreenExit(string status)
     {
+        _contentFullScreenWatchdogTimer?.Stop();
         _contentFullScreenCore = null;
         RestorePresenterAfterContentFullScreen();
         ApplyFullScreenLayout();
         UpdateFullScreenButton();
         StatusText.Text = _isFullScreenMode ? "Mode plein ecran Lumora actif." : status;
+    }
+
+    private void StartContentFullScreenWatchdog()
+    {
+        _contentFullScreenWatchdogTimer ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _contentFullScreenWatchdogTimer.Tick -= ContentFullScreenWatchdogTimer_Tick;
+        _contentFullScreenWatchdogTimer.Tick += ContentFullScreenWatchdogTimer_Tick;
+        _contentFullScreenWatchdogTimer.Stop();
+        _contentFullScreenWatchdogTimer.Start();
+    }
+
+    private void ContentFullScreenWatchdogTimer_Tick(object? sender, object e)
+    {
+        if (_contentFullScreenCore is not { } core)
+        {
+            _contentFullScreenWatchdogTimer?.Stop();
+            return;
+        }
+
+        try
+        {
+            if (!core.ContainsFullScreenElement)
+            {
+                CompleteContentFullScreenExit("Mode plein ecran quitte.");
+            }
+        }
+        catch (Exception error)
+        {
+            // Coeur ferme/detruit entre deux sondes (onglet ferme pendant le
+            // plein ecran, deja gere ailleurs via CloseTabView) : le timer
+            // s'arrete tout seul au prochain tick puisque _contentFullScreenCore
+            // aura ete remis a null par ce chemin-la.
+            WinUiRuntimeTrace.Write($"Content fullscreen watchdog: sonde ignoree ({error.GetType().Name})");
+        }
     }
 
     private void CapturePresenterStateBeforeContentFullScreen()

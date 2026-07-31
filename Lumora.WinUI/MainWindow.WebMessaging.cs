@@ -61,7 +61,7 @@ public sealed partial class MainWindow
 
             if (type == "nova.loginDiagnostic")
             {
-                HandleLoginDiagnosticMessage(obj);
+                HandleLoginDiagnosticMessage(e.Source, obj);
                 return;
             }
 
@@ -92,6 +92,12 @@ public sealed partial class MainWindow
             if (type == "nova.fullscreenExit")
             {
                 HandleContentFullScreenExitSignal(sender as CoreWebView2);
+                return;
+            }
+
+            if (type == "nova.consentHandled")
+            {
+                HandleConsentHandledMessage(sender as CoreWebView2, e.Source, obj["method"]?.GetValue<string>());
                 return;
             }
 

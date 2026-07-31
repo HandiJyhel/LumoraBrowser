@@ -16,21 +16,128 @@
         ne pas casser les redirections de connexion type Google/Microsoft).
     -->
     <Grid x:Name="RootGrid" Background="#FF0D1822">
+        <Grid.Resources>
+            <SolidColorBrush x:Key="LumoraWindowBackgroundBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="LumoraWindowChromeBrush" Color="#FF141C2A" />
+            <SolidColorBrush x:Key="LumoraWindowAccentBrush" Color="#FFFFB935" />
+            <SolidColorBrush x:Key="LumoraWindowCalloutBrush" Color="#FF2C2D28" />
+            <SolidColorBrush x:Key="LumoraWindowCalloutStrokeBrush" Color="#FF575648" />
+            <SolidColorBrush x:Key="LumoraWindowSuccessBrush" Color="#FF3DD688" />
+            <SolidColorBrush x:Key="LumoraWindowDangerBrush" Color="#FFE5484D" />
+            <SolidColorBrush x:Key="LumoraWindowTabStripBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="LumoraWindowTextBrush" Color="#FFF5F1EA" />
+            <SolidColorBrush x:Key="LumoraWindowMutedTextBrush" Color="#FFC3B9A5" />
+            <LinearGradientBrush x:Key="LumoraWindowIdentityBrush" StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#FFFFB935" Offset="0" />
+                <GradientStop Color="#FF43DBD1" Offset="1" />
+            </LinearGradientBrush>
+            <Style x:Key="LumoraWebAppActionButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource AccentFillColorDefaultBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextOnAccentFillColorPrimaryBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AccentFillColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="7" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+            </Style>
+        </Grid.Resources>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border x:Name="ExternalDomainBar" Grid.Row="0" Visibility="Collapsed"
-                Background="#FF2C2D28" BorderThickness="0,2,0,1" BorderBrush="#FF575648"
+        <!--
+            Barre de titre personnalisée (ExtendsContentIntoTitleBar) : sans elle,
+            Windows dessine sa propre barre de titre native par-dessus la couleur
+            qu'on lui donne, avec un liseré de séparation entre elle et le contenu
+            qui ne suit pas la palette de l'appli (signalé par l'utilisateur le
+            2026-07-26). Volontairement minimale ici (juste le titre, pas d'onglets
+            comme MainWindow) : toute la largeur (hors zone des boutons système)
+            est une seule région de déplacement, mise à jour par
+            UpdateTitleBarDragRegion().
+        -->
+        <Grid x:Name="CustomTitleBarRow" Grid.Row="0" Height="36"
+              Background="{StaticResource LumoraWindowChromeBrush}">
+            <TextBlock x:Name="CustomTitleBarText"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"
+                       FontSize="12"
+                       TextTrimming="CharacterEllipsis"
+                       Foreground="{StaticResource LumoraWindowTextBrush}" />
+
+            <StackPanel x:Name="TitleBarActionsPanel" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch">
+                <!--
+                    Indicateur de téléchargements : demande explicite du
+                    2026-07-26 (test réel sans aucune indication qu'un
+                    téléchargement avait démarré). Caché tant qu'aucun
+                    téléchargement n'a eu lieu dans cette fenêtre, comme
+                    DownloadsIndicatorButton dans MainWindow.
+                -->
+                <Button x:Name="DownloadsQuickButton"
+                        VerticalAlignment="Stretch"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="0"
+                        Padding="10,0"
+                        Visibility="Collapsed"
+                        ToolTipService.ToolTip="Téléchargements de cette application"
+                        AutomationProperties.Name="Téléchargements de cette application">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE896;" FontSize="14"
+                              Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                    <Button.Flyout>
+                        <Flyout x:Name="DownloadsQuickFlyout" Opening="DownloadsQuickFlyout_Opening" Placement="Bottom">
+                            <StackPanel Width="300" Spacing="10">
+                                <TextBlock Text="Téléchargements" FontWeight="SemiBold" FontSize="14" />
+                                <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="DownloadsQuickPanel" Spacing="8" />
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+
+                <!--
+                    Bouclier de confidentialité : demande explicite du 2026-07-26,
+                    "voir quels modules sont activés ou pas comme sur Chrome" - jusque
+                    là la fenêtre d'application n'avait aucune UI de statut.
+                -->
+                <Button x:Name="ShieldQuickButton"
+                        VerticalAlignment="Stretch"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        CornerRadius="0"
+                        Padding="10,0"
+                        ToolTipService.ToolTip="Protections actives sur cette application"
+                        AutomationProperties.Name="Protections actives sur cette application">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xEA18;" FontSize="13"
+                                  Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                        <TextBlock x:Name="ShieldQuickCountText" FontSize="11"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout x:Name="ShieldQuickFlyout" Opening="ShieldQuickFlyout_Opening" Placement="Bottom">
+                            <StackPanel Width="290" Spacing="10">
+                                <TextBlock Text="Protections de cette application" FontWeight="SemiBold" FontSize="14" />
+                                <TextBlock x:Name="ShieldQuickCounterText" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                                <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="ShieldQuickModulesPanel" Spacing="6" />
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Border x:Name="ExternalDomainBar" Grid.Row="1" Visibility="Collapsed"
+                Background="{StaticResource LumoraWindowCalloutBrush}" BorderThickness="0,2,0,1" BorderBrush="{StaticResource LumoraWindowCalloutStrokeBrush}"
                 AutomationProperties.Name="Navigation hors domaine de l'application"
                 Padding="12,6">
-            <Border.Resources>
-                <LinearGradientBrush x:Key="LumoraAppWindowIdentityBrush" StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#FFFFB935" Offset="0" />
-                    <GradientStop Color="#FF43DBD1" Offset="1" />
-                </LinearGradientBrush>
-            </Border.Resources>
             <Grid ColumnSpacing="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -39,21 +146,20 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Border Grid.Column="0" Width="6" Height="22" CornerRadius="3"
-                        Background="{StaticResource LumoraAppWindowIdentityBrush}"
+                        Background="{StaticResource LumoraWindowIdentityBrush}"
                         VerticalAlignment="Center" />
                 <FontIcon Grid.Column="1" Glyph="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                          Foreground="#FFF5F1EA" VerticalAlignment="Center" />
-                <TextBlock x:Name="ExternalDomainText" Grid.Column="2" Foreground="#FFF5F1EA"
+                          Foreground="{StaticResource LumoraWindowTextBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="ExternalDomainText" Grid.Column="2" Foreground="{StaticResource LumoraWindowTextBrush}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                 <Button x:Name="ExternalDomainReturnButton" Grid.Column="3"
                         Content="Retour à l'application" Click="ExternalDomainReturnButton_Click"
-                        FocusVisualPrimaryBrush="{StaticResource NovaFocusVisualPrimaryBrush}"
-                        FocusVisualSecondaryBrush="{StaticResource NovaFocusVisualSecondaryBrush}"
+                        Style="{StaticResource LumoraWebAppActionButtonStyle}"
                         AutomationProperties.Name="Retour à l'application"
                         Padding="10,2" FontSize="12" />
             </Grid>
         </Border>
 
-        <Grid x:Name="AppWebViewHost" Grid.Row="1" />
+        <Grid x:Name="AppWebViewHost" Grid.Row="2" Background="{StaticResource LumoraWindowBackgroundBrush}" />
     </Grid>
 </Window>

@@ -15,7 +15,14 @@ public sealed partial class MainWindow
         string Title,
         string Detail,
         string Glyph,
-        Action Execute);
+        Action Execute)
+    {
+        // Nom accessible unique : sans ca, un lecteur d'ecran lit Title et
+        // Detail comme deux TextBlock separes, sans la categorie (Kind).
+        public string AccessibleName => string.IsNullOrWhiteSpace(Detail)
+            ? $"{Kind} : {Title}"
+            : $"{Kind} : {Title}, {Detail}";
+    }
 
     private void ToggleCommandPalette()
     {
@@ -158,8 +165,10 @@ public sealed partial class MainWindow
 
         AddSearchOrAddressItem(query, results);
 
-        Add(new("Naviguer", "Nouvel onglet", "Ouvre un nouvel onglet Lumora", "\uE710",
+        Add(new("Naviguer", "Nouvel onglet", "Ouvre un nouvel onglet Lumora (Ctrl+T)", "\uE710",
             () => AddTab("Nouvel onglet", "lumora://accueil", select: true)), 100);
+        Add(new("Naviguer", "Fermer l'onglet", "Ferme l'onglet actif (Ctrl+W)", "\uE711",
+            CloseCurrentTabAccelerator), 99);
         Add(new("Naviguer", "Incognito", "Session ephemere, IP masquee en option via Tor (Ctrl+Shift+N)", "\uE727",
             () => OpenIncognitoWindow()), 98);
         Add(new("Naviguer", "Rouvrir l'onglet ferme", "Restaure le dernier onglet ferme (Ctrl+Shift+T)", "\uE7A7",
@@ -292,6 +301,26 @@ public sealed partial class MainWindow
     private static bool IsControlKeyDown()
     {
         var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control);
+        return (state & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+    }
+
+    private static bool IsShiftKeyDown()
+    {
+        var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift);
+        return (state & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+    }
+
+    // AltGr (touche Alt de droite, presente sur la plupart des claviers europeens)
+    // est rapporte par Windows comme Ctrl+Alt enfonces simultanement - exactement
+    // les combinaisons Ctrl+Alt+chiffre/lettre utilisees par les raccourcis
+    // d'accessibilite (zones, confort rapide, secours, contexte). Sans cette
+    // detection, taper un caractere compose via AltGr (ex. "@" via AltGr+0 en
+    // clavier francais AZERTY) dans un champ de saisie declenchait le raccourci
+    // au lieu de produire le caractere. Trouve en usage reel le 2026-07-22
+    // (mot de passe de creation de profil qui refusait "@").
+    private static bool IsRightAltKeyDown()
+    {
+        var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.RightMenu);
         return (state & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
     }
 

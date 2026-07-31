@@ -23,6 +23,11 @@ internal sealed record BrowserTabState(int Id, string Title, string Address)
     // à la première activation) et l'adresse à charger dès que le moteur est prêt.
     public Microsoft.UI.Xaml.Controls.WebView2? View { get; set; }
     public string? PendingAddress { get; set; }
+
+    // Refus de cookies effectué par ConsentManagerModule sur la page actuelle de cet
+    // onglet : null tant qu'aucun signal n'est arrivé, "direct" ou "panel" sinon.
+    // Remis à null à chaque nouvelle navigation (voir BrowserView_NavigationStarting).
+    public string? ConsentHandledMethod { get; set; }
 }
 
 

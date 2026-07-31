@@ -191,10 +191,16 @@ public sealed partial class MainWindow
         return lines;
     }
 
-    private void HandleLoginDiagnosticMessage(JsonObject obj)
+    // pageUri = e.Source (attesté par WebView2), jamais le champ JSON "root" :
+    // sans ça, n'importe quelle page pourrait revendiquer un root différent du
+    // sien (par ex. le domaine d'une banque pour laquelle le diagnostic est
+    // actif) et polluer le rapport de diagnostic local avec des entrées
+    // falsifiées.
+    private void HandleLoginDiagnosticMessage(string? pageUri, JsonObject obj)
     {
-        var root = obj["root"]?.GetValue<string>() ?? string.Empty;
-        if (!IsLoginDiagnosticSite(root))
+        var claimedRoot = obj["root"]?.GetValue<string>() ?? string.Empty;
+        var actualRoot = LoginDiagnosticRootFor(pageUri);
+        if (actualRoot is null || !actualRoot.Equals(claimedRoot, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -202,6 +208,6 @@ public sealed partial class MainWindow
         var kind = obj["kind"]?.GetValue<string>() ?? "script";
         var url = obj["url"]?.GetValue<string>();
         var detail = obj["detail"]?.GetValue<string>();
-        _loginDiagnostics.Record(root, kind, url, detail, null, "document-script");
+        _loginDiagnostics.Record(actualRoot, kind, url, detail, null, "document-script");
     }
 }

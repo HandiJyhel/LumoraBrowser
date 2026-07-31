@@ -18,15 +18,31 @@ public sealed partial class MainWindow
         string Title,
         string UrlDisplay,
         string KindLabel,
-        AddressSuggestion Suggestion);
+        AddressSuggestion Suggestion)
+    {
+        // Nom accessible unique : sans ca, un lecteur d'ecran lit Title,
+        // UrlDisplay et KindLabel comme trois TextBlock separes.
+        public string AccessibleName => $"{KindLabel} : {Title}, {UrlDisplay}";
+    }
 
     private readonly ObservableCollection<AddressSuggestionDisplay> _addressSuggestionItems = new();
     private bool _suppressAddressSuggestions;
     private bool _addressSuggestionsPointerInside;
     private string _addressSuggestionTypedText = string.Empty;
+    // Delai de grace avant fermeture du popup de suggestions : sans ca, la
+    // perte de focus de la barre (qui precede le survol du popup pendant un
+    // trajet de souris normal) fermait le popup avant que le pointeur ait pu
+    // l'atteindre - signale par l'utilisateur le 2026-07-29 ("on peut pas se
+    // deplacer avec la souris"). 280ms : assez court pour ne pas laisser un
+    // popup fantome trainer, assez long pour un trajet de souris normal vers
+    // la premiere ligne de suggestion.
+    private static readonly TimeSpan AddressSuggestionsCloseGraceDelay = TimeSpan.FromMilliseconds(280);
+    private DispatcherTimer? _addressSuggestionsCloseGraceTimer;
 
     private void AddressBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        UpdateAddressIdentityChrome(AddressBox.Text);
+
         if (_suppressAddressSuggestions) return;
         // Les mises à jour programmatiques (changement d'onglet, navigation)
         // écrivent dans la barre sans qu'elle ait le focus : pas de popup.
@@ -40,6 +56,29 @@ public sealed partial class MainWindow
         // Un clic sur une suggestion retire d'abord le focus de la barre : ne pas
         // fermer le popup avant que ItemClick ait pu s'exécuter.
         if (_addressSuggestionsPointerInside) return;
+        ScheduleAddressSuggestionsClose();
+    }
+
+    // Ferme le popup apres un court delai plutot qu'immediatement, pour laisser
+    // le temps a un trajet de souris normal (barre -> popup) d'y arriver avant
+    // qu'il disparaisse. Annule tout seul si le pointeur entre dans le popup ou
+    // si la barre reprend le focus avant l'echeance (re-verifie au Tick).
+    private void ScheduleAddressSuggestionsClose()
+    {
+        if (!AddressSuggestionsPopup.IsOpen) return;
+
+        _addressSuggestionsCloseGraceTimer ??= new DispatcherTimer { Interval = AddressSuggestionsCloseGraceDelay };
+        _addressSuggestionsCloseGraceTimer.Tick -= AddressSuggestionsCloseGraceTimer_Tick;
+        _addressSuggestionsCloseGraceTimer.Tick += AddressSuggestionsCloseGraceTimer_Tick;
+        _addressSuggestionsCloseGraceTimer.Stop();
+        _addressSuggestionsCloseGraceTimer.Start();
+    }
+
+    private void AddressSuggestionsCloseGraceTimer_Tick(object? sender, object e)
+    {
+        _addressSuggestionsCloseGraceTimer?.Stop();
+        if (_addressSuggestionsPointerInside) return;
+        if (AddressBox.FocusState != FocusState.Unfocused) return;
         CloseAddressSuggestions();
     }
 
@@ -116,6 +155,7 @@ public sealed partial class MainWindow
 
     private void CloseAddressSuggestions()
     {
+        _addressSuggestionsCloseGraceTimer?.Stop();
         AddressSuggestionsPopup.IsOpen = false;
         _addressSuggestionsPointerInside = false;
     }
@@ -205,10 +245,12 @@ public sealed partial class MainWindow
     {
         _addressSuggestionsPointerInside = false;
         // Si la barre a déjà perdu le focus (clic raté à côté d'une suggestion),
-        // le popup ne doit pas rester ouvert.
+        // le popup ne doit pas rester ouvert - mais laisse le même délai de grâce
+        // qu'ailleurs plutôt qu'une fermeture instantanée (ex. sortie transitoire
+        // du popup en visant une ligne proche du bord).
         if (AddressBox.FocusState == FocusState.Unfocused)
         {
-            CloseAddressSuggestions();
+            ScheduleAddressSuggestionsClose();
         }
     }
 

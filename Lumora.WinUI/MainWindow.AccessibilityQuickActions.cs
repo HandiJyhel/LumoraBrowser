@@ -14,9 +14,7 @@ public sealed partial class MainWindow
     private void RegisterAccessibilityQuickActionAccelerators()
     {
         RegisterAccessibilityQuickAccelerator(VirtualKey.Number6, () => ApplyAccessibilityComfortProfile("balanced"));
-        RegisterAccessibilityQuickAccelerator(VirtualKey.Number7, () => ApplyAccessibilityComfortProfile("calm"));
         RegisterAccessibilityQuickAccelerator(VirtualKey.Number8, () => ApplyAccessibilityComfortProfile("vision"));
-        RegisterAccessibilityQuickAccelerator(VirtualKey.Number9, () => ApplyAccessibilityComfortProfile("reading"));
         RegisterAccessibilityQuickAccelerator(VirtualKey.Number0, AnnounceAccessibilityComfortState);
     }
 
@@ -29,6 +27,7 @@ public sealed partial class MainWindow
         };
         accelerator.Invoked += (_, args) =>
         {
+            if (IsRightAltKeyDown()) return;
             args.Handled = true;
             onInvoked();
         };
@@ -82,9 +81,13 @@ public sealed partial class MainWindow
     private void AccessibilityQuickAnnounceButton_Click(object sender, RoutedEventArgs e) =>
         AnnounceAccessibilityComfortState();
 
+    // Le libelle "Confort" et le tooltip/nom d'accessibilite du bouton
+    // fusionne "Mode et confort" sont pilotes par UpdateUsageModeButtonUi()
+    // (MainWindow.UsageMode.cs) depuis la fusion des deux menus - ce texte
+    // ne fait plus que mettre a jour son propre libelle interne.
     private void UpdateAccessibilityQuickButtonUi()
     {
-        if (AccessibilityQuickButton is null)
+        if (AccessibilityQuickCurrentText is null)
         {
             return;
         }
@@ -93,10 +96,7 @@ public sealed partial class MainWindow
         var preset = FindAccessibilityComfortPreset(profileKey);
         var label = profileKey == "custom" ? "Personnalise" : preset?.Label ?? "Confort";
         AccessibilityQuickCurrentText.Text = label;
-        ToolTipService.SetToolTip(
-            AccessibilityQuickButton,
-            $"Confort rapide : {label}. Ctrl+Alt+6 a Ctrl+Alt+9 pour changer, Ctrl+Alt+0 pour relire l'etat, Ctrl+Alt+S pour le mode secours.");
-        AutomationProperties.SetName(AccessibilityQuickButton, $"Confort rapide : {label}");
+        UpdateUsageModeButtonUi();
     }
 
     private void UpdateAccessibilityQuickFlyoutUi()

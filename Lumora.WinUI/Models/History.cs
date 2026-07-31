@@ -20,7 +20,30 @@ public sealed record HistoryListItem(
     string Title,
     string Domain,
     string TimeDisplay,
-    HistoryEntry Entry);
+    HistoryEntry? Entry,
+    string GroupHeaderText = "",
+    Visibility HeaderVisibility = Visibility.Collapsed,
+    Visibility RowVisibility = Visibility.Visible)
+{
+    public static HistoryListItem GroupHeader(string text) => new(
+        "", "", Visibility.Collapsed, Visibility.Collapsed, "", "", "", null,
+        text, Visibility.Visible, Visibility.Collapsed);
+
+    // Nom accessible unique pour le lecteur d'ecran : sans ca, NVDA/JAWS/
+    // Narrateur lisent Title, Domain et TimeDisplay comme trois TextBlock
+    // separes dans un ordre non garanti au lieu d'une phrase coherente.
+    public string AccessibleName
+    {
+        get
+        {
+            var parts = new List<string>(3);
+            if (!string.IsNullOrWhiteSpace(Title)) parts.Add(Title);
+            if (!string.IsNullOrWhiteSpace(Domain)) parts.Add(Domain);
+            if (!string.IsNullOrWhiteSpace(TimeDisplay)) parts.Add(TimeDisplay);
+            return string.Join(", ", parts);
+        }
+    }
+}
 
 internal sealed class HistoryStore
 {

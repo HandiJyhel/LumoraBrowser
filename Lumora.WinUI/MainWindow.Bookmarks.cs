@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.System;
 using WinRT.Interop;
 
 namespace Lumora.WinUI;
@@ -41,48 +43,63 @@ public sealed partial class MainWindow
             : "Barre de favoris masquee.";
     }
 
+    // Garde de reentrance : ContentDialog n'autorise qu'une seule instance
+    // ouverte a la fois par XamlRoot (COMException non geree sinon - vecue en
+    // conditions reelles : deux clics rapides sur l'etoile favoris avant de
+    // repondre au premier dialogue faisaient planter toute l'application).
+    private bool _bookmarkDialogOpen;
+
     private async void AddBookmarkButton_Click(object sender, RoutedEventArgs e)
     {
-        var address = NormalizeAddress(AddressBox.Text);
-        if (!BookmarkStore.IsWebUrl(address) && CurrentTab() is { } currentTab)
+        if (_bookmarkDialogOpen) return;
+        _bookmarkDialogOpen = true;
+        try
         {
-            address = NormalizeAddress(currentTab.Address);
-        }
+            var address = NormalizeAddress(AddressBox.Text);
+            if (!BookmarkStore.IsWebUrl(address) && CurrentTab() is { } currentTab)
+            {
+                address = NormalizeAddress(currentTab.Address);
+            }
 
-        if (!BookmarkStore.IsWebUrl(address))
+            if (!BookmarkStore.IsWebUrl(address))
+            {
+                StatusText.Text = "Ouvre une page web avant de l'ajouter aux favoris.";
+                return;
+            }
+
+            var existing = _allBookmarkNodes.FirstOrDefault(node =>
+                node.Kind == BookmarkKind.Url && SameBookmarkUrl(node.Url, address));
+            var currentTitle = CurrentTab()?.Title ?? DisplayTitle(address);
+            var result = await PromptBookmarkEditorAsync(address, currentTitle, existing);
+            if (result.Cancelled)
+            {
+                StatusText.Text = "Ajout aux favoris annule.";
+                return;
+            }
+
+            if (result.DeleteExisting && existing is not null)
+            {
+                DeleteBookmarkNode(existing);
+                StatusText.Text = "Favori retire.";
+                return;
+            }
+
+            var iconPath = CachedFaviconPathFor(address) ?? existing?.IconPath ?? string.Empty;
+            var saved = _bookmarks.AddOrUpdateUrl(existing?.Id, result.FolderId, address, result.Title, iconPath);
+            ReloadBookmarks();
+            if (saved is not null && saved.ParentId == BookmarkStore.ToolbarRootId)
+            {
+                RevealBookmarkInBar(saved.Id);
+            }
+
+            StatusText.Text = existing is null
+                ? "Favori ajoute dans la barre des favoris."
+                : "Favori mis a jour.";
+        }
+        finally
         {
-            StatusText.Text = "Ouvre une page web avant de l'ajouter aux favoris.";
-            return;
+            _bookmarkDialogOpen = false;
         }
-
-        var existing = _allBookmarkNodes.FirstOrDefault(node =>
-            node.Kind == BookmarkKind.Url && SameBookmarkUrl(node.Url, address));
-        var currentTitle = CurrentTab()?.Title ?? DisplayTitle(address);
-        var result = await PromptBookmarkEditorAsync(address, currentTitle, existing);
-        if (result.Cancelled)
-        {
-            StatusText.Text = "Ajout aux favoris annule.";
-            return;
-        }
-
-        if (result.DeleteExisting && existing is not null)
-        {
-            DeleteBookmarkNode(existing);
-            StatusText.Text = "Favori retire.";
-            return;
-        }
-
-        var iconPath = CachedFaviconPathFor(address) ?? existing?.IconPath ?? string.Empty;
-        var saved = _bookmarks.AddOrUpdateUrl(existing?.Id, result.FolderId, address, result.Title, iconPath);
-        ReloadBookmarks();
-        if (saved is not null && saved.ParentId == BookmarkStore.ToolbarRootId)
-        {
-            RevealBookmarkInBar(saved.Id);
-        }
-
-        StatusText.Text = existing is null
-            ? "Favori ajoute dans la barre des favoris."
-            : "Favori mis a jour.";
     }
 
     private async void ImportHtmlButton_Click(object sender, RoutedEventArgs e) =>
@@ -326,6 +343,18 @@ public sealed partial class MainWindow
         OpenBookmarkNode(item.Node);
     }
 
+    // Entree ouvre l'element selectionne, comme le double-clic - sans ca,
+    // parcourir la liste au clavier (fleches) ne permettait rien d'ouvrir
+    // (audit accessibilite moteur/motricite, palier 0.93.x).
+    private void BookmarksList_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Enter) return;
+        if (BookmarksList.SelectedItem is not BookmarkListItem item) return;
+
+        e.Handled = true;
+        OpenBookmarkNode(item.Node);
+    }
+
     private void BookmarkFoldersList_RightTapped(object sender, RightTappedRoutedEventArgs e) =>
         ShowBookmarkListContextMenu(BookmarkFoldersList, e);
 
@@ -361,11 +390,18 @@ public sealed partial class MainWindow
 
     private void BookmarksBarSwitch_Toggled(object sender, RoutedEventArgs e)
     {
-        if (sender is ToggleSwitch toggle)
+        if (sender is not ToggleSwitch)
         {
-            ApplyBookmarksBarVisibility();
-            SaveUiSettings();
+            return;
         }
+
+        if (_suppressUiSettingsSave)
+        {
+            return;
+        }
+
+        ApplyBookmarksBarVisibility();
+        SaveWorkspaceUiSettings();
     }
     private void LoadFaviconCacheFromBookmarks()
     {
@@ -517,8 +553,6 @@ public sealed partial class MainWindow
         a is not null && b is not null &&
         a.TrimEnd('/').Equals(b.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
 
-    private Brush? _bookmarkStarDefaultForeground;
-
     // Reflète dans la barre d'outils si la page courante est en favori :
     // étoile pleine couleur accent si oui, contour neutre sinon.
     private void UpdateBookmarkStar(string? address = null)
@@ -529,11 +563,16 @@ public sealed partial class MainWindow
                          _allBookmarkNodes.Any(node =>
                              node.Kind == BookmarkKind.Url && SameBookmarkUrl(node.Url, address));
 
-        _bookmarkStarDefaultForeground ??= BookmarkStarIcon.Foreground;
-        BookmarkStarIcon.Glyph = bookmarked ? "\uE735" : "\uE734";
+        BookmarkStarIcon.Glyph = "\uE735";
         BookmarkStarIcon.Foreground = bookmarked
-            ? (Brush)RootShell.Resources["NovaAccentBrush"]
-            : _bookmarkStarDefaultForeground;
+            ? (Brush)RootShell.Resources["NovaBookmarkButtonActiveForegroundBrush"]
+            : (Brush)RootShell.Resources["NovaBookmarkButtonForegroundBrush"];
+        AddBookmarkButton.Background = bookmarked
+            ? (Brush)RootShell.Resources["NovaBookmarkButtonActiveBackgroundBrush"]
+            : (Brush)RootShell.Resources["NovaBookmarkButtonBackgroundBrush"];
+        AddBookmarkButton.BorderBrush = bookmarked
+            ? (Brush)RootShell.Resources["NovaBookmarkButtonActiveBorderBrush"]
+            : (Brush)RootShell.Resources["NovaBookmarkButtonBorderBrush"];
         var label = bookmarked ? "Page en favori - modifier ou retirer" : "Ajouter aux favoris";
         ToolTipService.SetToolTip(AddBookmarkButton, label);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AddBookmarkButton, label);
@@ -545,29 +584,88 @@ public sealed partial class MainWindow
 
     private void RenderBookmarksBar()
     {
+        // Rafraichit aussi les favoris integres a la colonne identitaire, en
+        // tete et avant le traitement classique ci-dessous : meme patron que
+        // RenderVerticalTabs()/RenderIdentitySpineTabs() - tout site d'appel
+        // existant (ajout/suppression/reordonnancement de favori) garde les
+        // deux presentations synchronisees sans call-site supplementaire.
+        if (_chromeLayoutStyle == "identitySpine")
+        {
+            RenderIdentitySpineBookmarks();
+        }
+
         BookmarksBarPanel.Children.Clear();
         OtherBookmarksBarHost.Children.Clear();
+        BookmarksBottomBarPanel.Children.Clear();
+        OtherBookmarksBottomHost.Children.Clear();
+        BookmarksSideBarPanel.Children.Clear();
+        OtherBookmarksSideHost.Children.Clear();
+
         var toolbarNodes = _allBookmarkNodes
             .Where(node => node.ParentId == BookmarkStore.ToolbarRootId)
             .OrderBy(node => node.Position)
             .ToList();
-        var visibleCount = VisibleBookmarkBarCount(toolbarNodes);
+        var otherRoot = _allBookmarkNodes.FirstOrDefault(node => node.Id == BookmarkStore.OtherRootId);
+        var sideLayout = UsesSideBookmarksRail(_bookmarksBarPosition);
+
+        if (sideLayout)
+        {
+            foreach (var node in toolbarNodes)
+            {
+                BookmarksSideBarPanel.Children.Add(CreateBookmarkBarButton(node));
+            }
+
+            if (toolbarNodes.Count == 0)
+            {
+                BookmarksSideBarPanel.Children.Add(new TextBlock
+                {
+                    Text = "Barre vide",
+                    Opacity = 0.62,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap
+                });
+            }
+
+            if (otherRoot is not null)
+            {
+                OtherBookmarksSideHost.Children.Add(new TextBlock
+                {
+                    Text = "Autres favoris",
+                    Opacity = 0.58,
+                    FontSize = 11,
+                    Margin = new Thickness(0, 8, 0, 2)
+                });
+                OtherBookmarksSideHost.Children.Add(CreateBookmarkBarButton(otherRoot));
+            }
+
+            return;
+        }
+
+        var bottomLayout = _bookmarksBarPosition == "bottom";
+        var primaryHost = bottomLayout ? BookmarksBottomBarPanel : BookmarksBarPanel;
+        var secondaryHost = bottomLayout ? OtherBookmarksBottomHost : OtherBookmarksBarHost;
+        var visibleCount = VisibleBookmarkBarCount(toolbarNodes, bottomLayout);
         var visibleNodes = toolbarNodes.Take(visibleCount).ToList();
         var overflowNodes = toolbarNodes.Skip(visibleCount).ToList();
 
         foreach (var node in visibleNodes)
         {
-            BookmarksBarPanel.Children.Add(CreateBookmarkBarButton(node));
+            if (primaryHost.Children.Count > 0)
+            {
+                primaryHost.Children.Add(CreateConstellationConnector());
+            }
+
+            primaryHost.Children.Add(CreateBookmarkBarButton(node));
         }
 
         if (overflowNodes.Count > 0)
         {
-            BookmarksBarPanel.Children.Add(CreateBookmarksOverflowButton(overflowNodes));
+            primaryHost.Children.Add(CreateBookmarksOverflowButton(overflowNodes));
         }
 
         if (toolbarNodes.Count == 0)
         {
-            BookmarksBarPanel.Children.Add(new TextBlock
+            primaryHost.Children.Add(new TextBlock
             {
                 Text = "Barre vide",
                 Opacity = 0.62,
@@ -576,21 +674,22 @@ public sealed partial class MainWindow
             });
         }
 
-        var otherRoot = _allBookmarkNodes.FirstOrDefault(node => node.Id == BookmarkStore.OtherRootId);
         if (otherRoot is not null)
         {
-            OtherBookmarksBarHost.Children.Add(CreateBookmarkBarButton(otherRoot));
+            secondaryHost.Children.Add(CreateBookmarkBarButton(otherRoot));
         }
     }
 
-    private int VisibleBookmarkBarCount(IReadOnlyList<BookmarkNode> nodes)
+    private int VisibleBookmarkBarCount(IReadOnlyList<BookmarkNode> nodes, bool bottomLayout)
     {
         if (nodes.Count <= 0)
         {
             return 0;
         }
 
-        var available = BookmarksBarRow.ActualWidth - OtherBookmarksBarHost.ActualWidth - 56;
+        var row = bottomLayout ? BookmarksBottomRow : BookmarksBarRow;
+        var otherHost = bottomLayout ? OtherBookmarksBottomHost : OtherBookmarksBarHost;
+        var available = row.ActualWidth - otherHost.ActualWidth - 142;
         if (available <= 0)
         {
             return Math.Min(nodes.Count, 20);
@@ -619,36 +718,55 @@ public sealed partial class MainWindow
     {
         if (BookmarkStore.IsIconOnlyTitle(node.Title))
         {
-            return 24d;
+            return 40d;
         }
 
         var title = BookmarkBarTitle(node);
-        var textWidth = Math.Min(Math.Max(title.Length * 7d, 30d), 118d);
-        return 28d + textWidth;
+        var textWidth = Math.Min(Math.Max(title.Length * 8.4d, 48d), 160d);
+        return 50d + textWidth;
     }
+
+    // Repere visuel discret entre deux favoris de la barre : fait vivre le nom
+    // "Constellation" comme un vrai motif (trajectoire de points) plutot que
+    // comme une simple etiquette.
+    private static TextBlock CreateConstellationConnector() => new()
+    {
+        Text = "✦",
+        FontSize = 7,
+        Opacity = 0.3,
+        VerticalAlignment = VerticalAlignment.Center,
+        IsHitTestVisible = false
+    };
 
     private Button CreateBookmarkBarButton(BookmarkNode node)
     {
+        var sideLayout = UsesSideBookmarksRail(_bookmarksBarPosition);
         var button = new Button
         {
             Content = BookmarkButtonContent(node),
             Tag = node,
             ContextFlyout = CreateBookmarkContextFlyout(node),
-            Height = 24,
-            MinHeight = 24,
+            Style = (Style)RootShell.Resources["NovaBookmarkBarButtonStyle"],
+            Height = 36,
+            MinHeight = 36,
             MinWidth = 0,
             Padding = BookmarkStore.IsIconOnlyTitle(node.Title)
-                ? new Thickness(4, 0, 4, 0)
-                : new Thickness(6, 0, 8, 0),
-            CornerRadius = new CornerRadius(4),
-            FontSize = 11,
-            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-            BorderThickness = new Thickness(0)
+                ? new Thickness(10, 0, 10, 0)
+                : new Thickness(12, 0, 14, 0),
+            CornerRadius = new CornerRadius(14),
+            FontSize = 13,
+            HorizontalAlignment = sideLayout ? HorizontalAlignment.Stretch : HorizontalAlignment.Left,
+            HorizontalContentAlignment = HorizontalAlignment.Left
         };
         ApplyNovaControlAccessibility(button, AccessibleBookmarkLabel(node));
+        // Titre tronque visuellement (TextTrimming) sans aucun moyen de le
+        // lire en entier pour un utilisateur voyant qui zoome - le nom
+        // accessible existe deja pour le lecteur d'ecran, rien pour l'oeil
+        // (audit accessibilite basse vision, palier 0.93.x).
+        ToolTipService.SetToolTip(button, BookmarkReadableTitle(node));
         if (node.Kind == BookmarkKind.Folder)
         {
-            button.Flyout = CreateBookmarkFolderFlyout(node.Id);
+            button.Flyout = CreateBookmarkFolderFlyout(node);
         }
         else
         {
@@ -665,19 +783,18 @@ public sealed partial class MainWindow
             Content = new TextBlock
             {
                 Text = "\u00BB",
-                FontSize = 15,
+                FontSize = 16,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                LineHeight = 16,
+                LineHeight = 17,
                 VerticalAlignment = VerticalAlignment.Center
             },
-            Height = 24,
-            MinHeight = 24,
-            Width = 24,
-            MinWidth = 24,
+            Style = (Style)RootShell.Resources["NovaBookmarkBarButtonStyle"],
+            Height = 36,
+            MinHeight = 36,
+            Width = 36,
+            MinWidth = 36,
             Padding = new Thickness(0),
-            CornerRadius = new CornerRadius(4),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(14),
             Flyout = CreateBookmarksOverflowFlyout(overflowNodes)
         };
         ApplyNovaControlAccessibility(button, $"Afficher {overflowNodes.Count} favori(s) supplementaire(s)");
@@ -687,7 +804,10 @@ public sealed partial class MainWindow
 
     private MenuFlyout CreateBookmarksOverflowFlyout(IReadOnlyList<BookmarkNode> overflowNodes)
     {
-        var flyout = new MenuFlyout();
+        // Placement explicite : la valeur par defaut de FlyoutBase est Top,
+        // pas Bottom - meme piege que CreateBookmarkFolderFlyout, signale par
+        // l'utilisateur comme systematique sur tous les menus de favoris.
+        var flyout = new MenuFlyout { Placement = FlyoutPlacementMode.Bottom };
         foreach (var node in overflowNodes)
         {
             if (node.Kind == BookmarkKind.Folder)
@@ -718,10 +838,20 @@ public sealed partial class MainWindow
             flyout.Items.Add(item);
         }
 
+        HookFlyoutPointerSupport(flyout);
+
         return flyout;
     }
 
     private void BookmarksBarRow_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (_allBookmarkNodes.Count > 0)
+        {
+            RenderBookmarksBar();
+        }
+    }
+
+    private void BookmarksLayoutHost_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (_allBookmarkNodes.Count > 0)
         {
@@ -746,15 +876,19 @@ public sealed partial class MainWindow
 
         void BringIntoView()
         {
-            BookmarksBarPanel.UpdateLayout();
-            foreach (var child in BookmarksBarPanel.Children.OfType<FrameworkElement>())
+            var host = UsesSideBookmarksRail(_bookmarksBarPosition)
+                ? BookmarksSideBarPanel
+                : (_bookmarksBarPosition == "bottom" ? BookmarksBottomBarPanel : BookmarksBarPanel);
+            host.UpdateLayout();
+            foreach (var child in host.Children.OfType<FrameworkElement>())
             {
                 if (child.Tag is BookmarkNode node && node.Id == bookmarkId)
                 {
                     child.StartBringIntoView(new BringIntoViewOptions
                     {
                         AnimationDesired = true,
-                        HorizontalAlignmentRatio = 0.5
+                        HorizontalAlignmentRatio = 0.5,
+                        VerticalAlignmentRatio = 0.4
                     });
                     break;
                 }
@@ -790,11 +924,11 @@ public sealed partial class MainWindow
             panel.Children.Add(new TextBlock
             {
                 Text = title,
-                MaxWidth = 118,
+                MaxWidth = 132,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = VerticalAlignment.Center,
-                FontSize = 11,
-                LineHeight = 15
+                FontSize = 12,
+                LineHeight = 16
             });
         }
         return panel;

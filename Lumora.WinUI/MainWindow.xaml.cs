@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string Version = "0.83.54-dev";
+    internal const string Version = "0.93.8.0-dev";
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -45,6 +45,7 @@ public sealed partial class MainWindow : Window
     private readonly LumoraProfilePaths _profile = LumoraProfilePaths.Default();
     private readonly BookmarkStore _bookmarks;
     private readonly WebAppStore _webApps;
+    private RssFeedStore _rssFeeds = null!;
     private readonly ObservableCollection<BookmarkListItem> _bookmarkItems = new();
     private readonly ObservableCollection<BookmarkListItem> _bookmarkFolderItems = new();
     private readonly List<BrowserTabState> _tabs = new();
@@ -54,6 +55,15 @@ public sealed partial class MainWindow : Window
     // Identifiants des groupes vivants déjà rangés dans la bibliothèque : sert au
     // garde-fou (ne pas reproposer de garder un groupe déjà enregistré).
     private readonly HashSet<int> _savedGroupIds = new();
+    // Sélection multiple d'onglets (menu contextuel : regrouper/fermer plusieurs
+    // onglets d'un coup). Distincte de l'onglet actif : Ctrl/Shift+clic l'alimente
+    // en plus de l'activation normale, un clic simple la vide. Non persistée.
+    private readonly HashSet<int> _selectedTabIds = new();
+    private int? _selectionAnchorTabId;
+    // Vue divisée (0.93.4.x) : deux onglets déjà ouverts affichés côte à côte dans
+    // BrowserHost, chacun gardant sa propre identité (historique, adresse, fermeture).
+    // Non persistée entre les sessions - repos volontaire du scope, cf. MainWindow.SplitView.cs.
+    private (int LeftId, int RightId)? _splitView;
     private SavedTabGroupStore _savedTabGroups = null!;
     private NoteStore _notes = null!;
     private AnnotationStore _annotations = null!;
@@ -74,14 +84,41 @@ public sealed partial class MainWindow : Window
     private bool _suppressTabNavigation;
     private bool _suppressTabOrderSync;
     private bool _isGuestMode;
+    // Vrai quand ce process a ete lance via GuestProcessLauncher (--guest) :
+    // _profile pointe deja vers un dossier ephemere (LUMORA_PROFILE_DIR pose
+    // par le lanceur), il faut entrer en mode invite immediatement sans
+    // montrer le picker de profil. Voir InitializeLoginOverlayAsync.
+    private readonly bool _pendingGuestLaunch;
     private bool _verticalTabsEnabled;
     private bool _verticalTabsCompact;
     private bool _compactModeEnabled;
+    private string _tabStripPosition = "top";
+    private string _bookmarksBarPosition = "top";
+    // Style de disposition du chrome ("classic" | "identitySpine") : coexiste
+    // avec _tabStripPosition, qui reste la seule source de verite du style
+    // classique. _identitySpineActive reflete l'etat physique reel (chrome
+    // deja reparente ou non) pour rendre ApplyChromeLayoutStyle() idempotent
+    // - voir MainWindow.IdentitySpine.cs.
+    private string _chromeLayoutStyle = "classic";
+    private bool _identitySpineActive;
+    private bool _navigationToolbarCapsuleMarginCaptured;
+    private Thickness _navigationToolbarCapsuleClassicMargin;
     private bool _isFullScreenMode;
     private string _lastAnnouncedStatus = string.Empty;
     private DateTimeOffset _lastStatusAnnouncementAt = DateTimeOffset.MinValue;
     private int _lastAccessibilityShellZoneIndex = 2;
     private CoreWebView2? _contentFullScreenCore;
+    // Filet de secours pour la sortie du plein ecran contenu (video...) : les
+    // DEUX signaux existants (evenement WinRT ContainsFullScreenElementChanged,
+    // deja documente peu fiable depuis 0.60.6-dev, et le listener JS
+    // fullscreenchange qui postMessage nova.fullscreenExit) peuvent rater une
+    // sortie dans le meme cas (ex. bouton plein ecran du lecteur video qui ne
+    // declenche ni l'un ni l'autre chemin de facon fiable), laissant Lumora
+    // bloque en chrome masque - signale par l'utilisateur le 2026-07-29. Sonde
+    // directement core.ContainsFullScreenElement (l'etat reel, pas un
+    // evenement) toutes les secondes tant qu'on croit etre en plein ecran
+    // contenu : se corrige seul en ~1s au pire si les deux signaux ont manque.
+    private DispatcherTimer? _contentFullScreenWatchdogTimer;
     private bool _wasLumoraFullScreenBeforeContentFullScreen;
     private AppWindowPresenterKind? _presenterKindBeforeContentFullScreen;
     private OverlappedPresenterState? _overlappedStateBeforeContentFullScreen;
@@ -98,6 +135,16 @@ public sealed partial class MainWindow : Window
     private readonly HistoryPanelController _historyPanel;
     private readonly SemanticHistoryIndex _semanticIndex;
     private readonly ObservableCollection<CommandPaletteItem> _commandPaletteItems = new();
+    // Menu Demarrer (ModulesFlyout) : rail de categories (Epingles + sections)
+    // a gauche, volet detail a droite - refonte "maitre/detail" a la Windows 7
+    // (0.93.5.0-dev, remplace l'ancien bascule Epingles/Toutes-les-applications).
+    // Toutes ces vues viennent de StartMenuTileRegistry.All + _uiSettings,
+    // reconstruites ensemble par RebuildStartMenuViewModels() (MainWindow.StartMenu.cs).
+    private readonly ObservableCollection<StartMenuCategoryViewModel> _startMenuCategories = new();
+    private readonly ObservableCollection<StartMenuTileViewModel> _startMenuPinnedTiles = new();
+    private readonly ObservableCollection<StartMenuTileViewModel> _startMenuRecentTiles = new();
+    private readonly ObservableCollection<StartMenuTileViewModel> _startMenuDetailTiles = new();
+    private readonly ObservableCollection<StartMenuTileViewModel> _startMenuFilteredTiles = new();
     private bool _suppressTabSave = true;
     private readonly VaultStore _vault;
     private readonly PasswordManagerService _passwordManager;
@@ -135,6 +182,25 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<CoreWebView2, string> _consentScriptIds = new();
     private readonly Dictionary<CoreWebView2, string> _geolocationSpoofScriptIds = new();
     private readonly Dictionary<CoreWebView2, string> _fingerprintProtectionScriptIds = new();
+    private readonly HashSet<ScrollViewer> _hoverFocusHookedScrollViewers = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<ScrollViewer> _manualWheelHookedScrollViewers = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<UIElement, ScrollViewer> _manualWheelSourceOwners = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<FlyoutBase> _overlayHookedFlyouts = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<Popup> _overlayHookedPopups = new(ReferenceEqualityComparer.Instance);
+    private bool _automaticPointerFocusBootstrapped;
+    // Dernier ScrollViewer survole (mis a jour par ScrollViewer_PointerEntered,
+    // deja declenche pour tout ScrollViewer trouve par AttachScrollViewerPointerSupport,
+    // y compris ceux internes a un ListView). Sert de cible au filet de secours
+    // pose sur ContentHost : le motif "root-fallback-viewer-direct" prouve sur
+    // Parametres puis StartMenu (0.84.1.18/0.84.3.2-dev) appliquait la molette
+    // directement a un ScrollViewer connu au lieu de remonter l'arbre depuis
+    // e.OriginalSource (remontee prouvee non fiable - le descendant regenere par
+    // WinUI apres un ChangeView n'est pas toujours un descendant retrouvable).
+    // Generalise ici a TOUS les panneaux (au lieu d'un hook dedie par panneau,
+    // qui laissait Favoris/Historique/Coffre/Notes/RSS sans filet) : un seul
+    // ScrollViewer "actif" au sens du survol suffit, la molette ne peut de toute
+    // facon agir que sur la zone que l'utilisateur survole.
+    private ScrollViewer? _lastHoveredWheelScrollViewer;
     // Fixe une fois par lancement de Lumora : le bruit anti-fingerprinting reste
     // stable pour toute la session (une page qui redessine son canvas plusieurs
     // fois ne doit pas voir une empreinte differente a chaque fois), mais change
@@ -159,9 +225,14 @@ public sealed partial class MainWindow : Window
         Timeout = TimeSpan.FromSeconds(5)
     };
 
-    public MainWindow()
+    public MainWindow(bool startInGuestMode = false)
     {
         WinUiRuntimeTrace.Write("MainWindow constructor start");
+        _pendingGuestLaunch = startInGuestMode;
+        if (_pendingGuestLaunch)
+        {
+            GuestProcessLauncher.CleanupStaleSessionFolders();
+        }
 
         // Chargé avant ConfigureOnce : le drapeau anti-fuite WebRTC est un argument
         // Chromium figé au démarrage du moteur WebView2, donc il faut connaître le
@@ -180,6 +251,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");
         Title = $"Lumora {Version}";
+        UpdateAddressIdentityChrome(string.Empty);
 
         // Glisser-deposer natif de la barre d'onglets horizontale (CanReorderTabs) :
         // WinUI reordonne directement TabItems (ObservableCollection), donc on
@@ -202,11 +274,20 @@ public sealed partial class MainWindow : Window
         var winId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(winId);
         _appWindow.Changed += AppWindow_Changed;
+        HookRawMouseWheelDiagnostics(hwnd);
         ApplyAppIcon();
         ExtendsContentIntoTitleBar = true;
         ApplyWindowTitleBarColors();
         ApplyTitleBarSafeArea();
-        RootShell.SizeChanged += (_, _) => UpdateTitleBarDragRegion();
+        RootShell.SizeChanged += (_, _) =>
+        {
+            UpdateTitleBarDragRegion();
+            UpdateResponsiveChromeLayout();
+        };
+        HookAutomaticPointerFocus();
+        RootShell.Loaded += (_, _) => HookAutomaticPointerFocus();
+        HookSettingsScrollDiagnostics();
+        UpdateResponsiveChromeLayout();
 
         VerticalTabsResizeThumb.PointerEntered += (_, _) => SetCursorSizeWestEast();
         VerticalTabsResizeThumb.PointerExited  += (_, _) => RestoreDefaultCursor();
@@ -218,6 +299,26 @@ public sealed partial class MainWindow : Window
         // desabonner a la fermeture, sinon fuite de la fenetre + crash au prochain
         // verrouillage/veille Windows.
         Closed += (_, _) => UnhookSystemLockEvents();
+        // Session invite : _profile.ProfileDir est le dossier ephemere pose par
+        // GuestProcessLauncher (voir _pendingGuestLaunch/EnterGuestMode). Un vrai
+        // profil ne doit JAMAIS voir son dossier supprime ici - garde explicite
+        // sur _isGuestMode, qui ne devient vrai que via ce chemin invite.
+        // Fermer chaque WebView2 explicitement AVANT de supprimer : sans ca, le
+        // process moteur Chromium peut garder ses fichiers (Cache, LevelDB...)
+        // verrouilles quelques instants apres le Closed de la fenetre WinUI, et
+        // Directory.Delete echoue silencieusement (meme piege que
+        // LumoraIncognitoWindow, qui ferme deja tab.View avant de supprimer son
+        // dossier de session - verifie en conditions reelles : sans cette fermeture
+        // explicite, le dossier invite survivait bel et bien a la fermeture).
+        Closed += (_, _) =>
+        {
+            if (!_isGuestMode) return;
+            foreach (var tab in _tabs)
+            {
+                try { tab.View?.Close(); } catch { }
+            }
+            DeleteGuestSessionDirectoryWithRetry(_profile.ProfileDir);
+        };
         var commandPaletteAccelerator = new KeyboardAccelerator
         {
             Key = VirtualKey.K,
@@ -243,6 +344,7 @@ public sealed partial class MainWindow : Window
         RegisterAccessibilityQuickActionAccelerators();
         RegisterAccessibilityContextAccelerators();
         RegisterAccessibilityRescueAccelerators();
+        RegisterAccessibilityKeyboardShortcuts();
         // L'accélérateur est porté par la racine (toute la fenêtre). Son infobulle
         // automatique « Ctrl+K » resterait collée car le WebView2 avale l'événement de
         // sortie du pointeur → on la désactive.
@@ -282,6 +384,7 @@ public sealed partial class MainWindow : Window
         _savedTabGroups = new SavedTabGroupStore(
             _profile.SavedTabGroupsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
         _notes = new NoteStore(_profile.NotesFile);
+        _rssFeeds = new RssFeedStore(_profile.RssFeedsFile);
         _annotations = new AnnotationStore(_profile.AnnotationsFile);
         _siteRelocations = new SiteRelocationStore(
             _profile.SiteRelocationsFile, LumoraFile.TryReadAllText, LumoraFile.WriteAllText);
@@ -297,6 +400,34 @@ public sealed partial class MainWindow : Window
         _suppressTabSave = false;
         WinUiRuntimeTrace.Write("MainWindow constructor end");
         _ = InitializeLoginOverlayAsync();
+    }
+
+    // view.Close() rend la main avant que le process moteur WebView2 sous-jacent
+    // ait fini de liberer les fichiers du profil (LevelDB/SQLite) : verifie en
+    // conditions reelles, un Directory.Delete immediatement apres echoue de
+    // facon fiable avec IOException ("used by another process"). Quelques
+    // tentatives espacees suffisent le temps que Chromium termine sa sortie - la
+    // fenetre est de toute facon deja fermee a ce stade, une legere attente
+    // synchrone ici est invisible pour l'utilisateur.
+    private static void DeleteGuestSessionDirectoryWithRetry(string path)
+    {
+        for (var attempt = 0; attempt < 15; attempt++)
+        {
+            try
+            {
+                if (!Directory.Exists(path)) return;
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (IOException)
+            {
+                System.Threading.Thread.Sleep(200);
+            }
+            catch
+            {
+                return;
+            }
+        }
     }
 
     public void InitializeBrowserSurface()
@@ -385,6 +516,20 @@ public sealed partial class MainWindow : Window
     private void SettingsNav_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not RadioButton btn || btn.Tag is not string section) return;
+
+        // Defense en profondeur en plus du masquage des boutons de navigation
+        // (voir SkipProfileButton_Click) : "Mon Lumora" et "Coffre et donnees"
+        // touchent a de la personnalisation persistante et a des identifiants
+        // reels - hors de portee d'une session invite (politique "Live Linux"),
+        // meme si l'entree de navigation ne devrait deja plus etre cliquable.
+        if (_isGuestMode && section is "appearance" or "vault")
+        {
+            section = "overview";
+            SettingsNavOverview.IsChecked = true;
+        }
+
+        if (section == "appearance") RefreshWallpaperUi();
+
         SettingsSectionOverview.Visibility = section == "overview" ? Visibility.Visible : Visibility.Collapsed;
         SettingsSectionNavigation.Visibility = section == "navigation" ? Visibility.Visible : Visibility.Collapsed;
         SettingsSectionAppearance.Visibility = section == "appearance" ? Visibility.Visible : Visibility.Collapsed;
@@ -395,6 +540,7 @@ public sealed partial class MainWindow : Window
         SettingsSectionStorage.Visibility    = section == "storage"    ? Visibility.Visible : Visibility.Collapsed;
         SettingsSectionPrivacy.Visibility    = section == "privacy"    ? Visibility.Visible : Visibility.Collapsed;
         if (section == "privacy") UpdatePrivacyUi();
+        ResetSettingsScrollPosition();
     }
 
     private void SettingsNavigateButton_Click(object sender, RoutedEventArgs e)
@@ -427,6 +573,109 @@ public sealed partial class MainWindow : Window
         SettingsNav_Click(target, new RoutedEventArgs());
     }
 
+    private void ResetSettingsScrollPosition()
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            SettingsContentScrollViewer.UpdateLayout();
+            SettingsContentScrollViewer.ChangeView(null, 0, null, true);
+            // FocusState.Pointer, pas Programmatic : meme lecon que
+            // ScrollViewer_PointerEntered et BrowserHost_PointerEntered - deja
+            // confirmee sur WebView2 comme sur les ScrollViewer natifs. Sur la
+            // 1re section, la souris survole naturellement le contenu et pose
+            // ce focus fiable via ScrollViewer_PointerEntered ; changer de
+            // section reprogrammait un focus Programmatic qui ecrasait ce
+            // focus fiable, cassant la molette jusqu'a un nouveau survol.
+            SettingsContentScrollViewer.Focus(FocusState.Pointer);
+            TraceSettingsScrollState("reset settings scroll position");
+        });
+    }
+
+    private void HookSettingsScrollDiagnostics()
+    {
+        SettingsContentScrollViewer.Loaded += (_, _) => TraceSettingsScrollState("settings viewer loaded");
+        SettingsContentScrollViewer.SizeChanged += (_, _) => TraceSettingsScrollState("settings viewer size changed");
+        SettingsContentScrollViewer.ViewChanged += (_, e) =>
+            TraceSettingsScrollState($"settings viewer view changed intermediate={e.IsIntermediate}");
+        SettingsContentScrollViewer.GettingFocus += (_, _) => TraceSettingsScrollState("settings viewer getting focus");
+        SettingsContentScrollViewer.PointerWheelChanged += (_, e) =>
+        {
+            var point = e.GetCurrentPoint(SettingsContentScrollViewer);
+            WinUiRuntimeTrace.Write(
+                $"Settings viewer raw wheel: delta={point.Properties.MouseWheelDelta} handled={e.Handled} verticalOffset={SettingsContentScrollViewer.VerticalOffset:F0} scrollableHeight={SettingsContentScrollViewer.ScrollableHeight:F0}");
+        };
+        SettingsContentScrollViewer.KeyDown += (_, e) =>
+        {
+            WinUiRuntimeTrace.Write(
+                $"Settings viewer key down: key={e.Key} verticalOffset={SettingsContentScrollViewer.VerticalOffset:F0} scrollableHeight={SettingsContentScrollViewer.ScrollableHeight:F0}");
+        };
+
+        // Diagnostic pur (Go utilisateur du 2026-07-25, suite au test qui a
+        // montre zero evenement molette sur SettingsContentScrollViewer alors
+        // que le survol/focus y arrive bien) : trace posee au niveau du
+        // panneau Parametres tout entier, handledEventsToo pour voir passer
+        // l'evenement meme si un descendant l'a deja marque traite. Objectif :
+        // savoir si la molette entre ne serait-ce qu'une fois dans l'arbre
+        // XAML de Parametres, ou si elle n'y arrive jamais (auquel cas une
+        // autre fenetre - potentiellement le WebView2 sous-jacent - la capte
+        // avant meme que Parametres ne la voie).
+        SettingsPanel.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(SettingsPanel_RootWheelDiagnostics),
+            handledEventsToo: true);
+    }
+
+    private void SettingsPanel_RootWheelDiagnostics(object sender, PointerRoutedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(SettingsPanel);
+        // Ajout (Go utilisateur du 2026-07-25, suite au constat que la molette
+        // s'arrete "au bout d'un moment" meme apres le correctif de focus sur
+        // changement de section) : l'etat du focus au moment exact ou
+        // handled bascule de True a False en continu, pour verifier
+        // l'hypothese que le focus quitte le ScrollViewer (meme famille de
+        // cause que ResetSettingsScrollPosition, mais declenchee ici par la
+        // fin d'une animation de defilement plutot que par un changement de
+        // section).
+        var focusedElement = FocusManager.GetFocusedElement(SettingsPanel.XamlRoot) as FrameworkElement;
+        WinUiRuntimeTrace.Write(
+            $"Settings panel root wheel (diagnostic pur) : originalSource={e.OriginalSource?.GetType().Name} handled={e.Handled} delta={point.Properties.MouseWheelDelta} scrollViewerFocusState={SettingsContentScrollViewer.FocusState} focusedElement={focusedElement?.Name}({focusedElement?.GetType().Name}) browserPanelVisibility={BrowserPanel.Visibility} browserHostVisibility={BrowserHost.Visibility}");
+        TraceWin32FocusState("signal molette recu par le panneau Parametres");
+
+        // Correctif (Go utilisateur du 2026-07-25) : la trace a prouve la
+        // cause reelle - le rattachement statique (une seule fois, a
+        // l'ouverture du panneau) rate certains descendants regeneres
+        // dynamiquement par WinUI (ex: un ContentPresenter recree juste
+        // apres la fin d'une animation de defilement, une fois la vue
+        // "installee" a sa position finale). Preuve directe : handled=False
+        // observe alors qu'AUCUNE trace "Molette ScrollViewer" n'accompagne
+        // l'evenement - ni le natif WinUI ni notre propre rattachement
+        // n'ont jamais ete invoques pour ce descendant precis, quel que
+        // soit le sens du defilement. Le focus (XAML et Win32) reste
+        // identique avant/apres : ce n'est pas une histoire de focus.
+        //
+        // Premiere version de ce filet de secours (0.84.1.17-dev) : remonter
+        // l'arbre visuel depuis e.OriginalSource jusqu'au premier
+        // ScrollViewer ancetre trouve. Teste en reel : ne s'est JAMAIS
+        // declenche dans les cas encore casses (aucune trace
+        // "root-fallback-remontee-directe"), signe que la remontee
+        // n'atteignait pas SettingsContentScrollViewer pour ces sources
+        // precises (topologie d'arbre visuel plus complexe que prevu, ex.
+        // template interne du ScrollViewer lui-meme). Simplification : ce
+        // panneau n'a qu'un seul ScrollViewer de contenu pertinent
+        // (SettingsContentScrollViewer) - inutile de le retrouver par une
+        // remontee incertaine, on l'applique directement.
+        if (!e.Handled)
+        {
+            TryApplyScrollViewerWheel(SettingsContentScrollViewer, e, "root-fallback-viewer-direct");
+        }
+    }
+
+    private void TraceSettingsScrollState(string reason)
+    {
+        WinUiRuntimeTrace.Write(
+            $"Settings viewer state: {reason}; offset={SettingsContentScrollViewer.VerticalOffset:F0}; scrollableHeight={SettingsContentScrollViewer.ScrollableHeight:F0}; extentHeight={SettingsContentScrollViewer.ExtentHeight:F0}; viewportHeight={SettingsContentScrollViewer.ViewportHeight:F0}; computedBar={SettingsContentScrollViewer.ComputedVerticalScrollBarVisibility}");
+    }
+
     // Le hub Modules est un panneau distinct de Parametres : contrairement aux
     // liens de SettingsNavigateButton_Click (utilises DEPUIS Parametres, ou
     // le panneau est deja visible), il faut ici afficher explicitement le
@@ -443,6 +692,14 @@ public sealed partial class MainWindow : Window
         ShowPanel(SettingsPanel, "Mon Lumora");
         SettingsNavAppearance.IsChecked = true;
         SettingsNav_Click(SettingsNavAppearance, new RoutedEventArgs());
+    }
+
+    private void OpenWorkspaceSettings()
+    {
+        StorageCurrentFolderText.Text = _profile.ProfileDir;
+        ShowPanel(SettingsPanel, "Espace de travail");
+        SettingsNavNavigation.IsChecked = true;
+        SettingsNav_Click(SettingsNavNavigation, new RoutedEventArgs());
     }
 
     private void OpenProfileSettings()
@@ -592,6 +849,7 @@ public sealed partial class MainWindow : Window
         DownloadsPanel.Visibility = Visibility.Collapsed;
         SavedTabGroupsPanel.Visibility = Visibility.Collapsed;
         NotesPanel.Visibility = Visibility.Collapsed;
+        RssPanel.Visibility = Visibility.Collapsed;
         VaultPanel.Visibility = Visibility.Collapsed;
         PasskeysPanel.Visibility = Visibility.Collapsed;
         ModulesPanel.Visibility = Visibility.Collapsed;
@@ -602,6 +860,7 @@ public sealed partial class MainWindow : Window
         ReadingLensPanel.Visibility = Visibility.Collapsed;
 
         visiblePanel.Visibility = Visibility.Visible;
+        AttachScrollViewerPointerSupport(visiblePanel);
         UpdateStatusText(DescribePanelStatus(visiblePanel, status));
 
         // Depuis un panneau interne (coffre, historique, paramètres...), la barre
@@ -672,6 +931,303 @@ public sealed partial class MainWindow : Window
                 target.Focus(FocusState.Programmatic);
             }
         });
+    }
+
+    // Quand l'utilisateur survole une zone scrollable ou la page web, Lumora lui
+    // redonne le focus automatiquement : la molette doit agir sans clic préalable.
+    private void HookAutomaticPointerFocus()
+    {
+        if (Content is not FrameworkElement root)
+        {
+            return;
+        }
+
+        AttachScrollViewerPointerSupport(root);
+        HookTransientOverlaySupport(root);
+        HookOpenPopupsForXamlRoot(root.XamlRoot);
+
+        if (_automaticPointerFocusBootstrapped)
+        {
+            return;
+        }
+
+        BrowserHost.PointerEntered += BrowserHost_PointerEntered;
+        ContentHost.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(ContentHost_WheelFallback),
+            handledEventsToo: true);
+        _automaticPointerFocusBootstrapped = true;
+    }
+
+    // Retour a une logique plus WinUI-native : la molette est rattachee au
+    // ScrollViewer reel plutot qu'a tout un panneau ou a la fenetre entiere.
+    // Cela evite les hit-tests fragiles et les doubles traitements entre hooks
+    // globaux, tout en gardant handledEventsToo pour passer devant un handler
+    // interne WinUI qui aurait deja marque l'evenement comme traite.
+    private void AttachScrollViewerPointerSupport(DependencyObject root, ScrollViewer? activeWheelOwner = null)
+    {
+        if (root is ScrollViewer viewer && _hoverFocusHookedScrollViewers.Add(viewer))
+        {
+            viewer.IsTabStop = true;
+            viewer.PointerEntered += ScrollViewer_PointerEntered;
+        }
+
+        if (root is ScrollViewer hookedViewer)
+        {
+            if (_manualWheelHookedScrollViewers.Add(hookedViewer))
+            {
+                hookedViewer.AddHandler(
+                    UIElement.PointerWheelChangedEvent,
+                    new PointerEventHandler(ScrollViewer_PointerWheelChanged),
+                    handledEventsToo: true);
+            }
+
+            activeWheelOwner = hookedViewer;
+        }
+        else if (activeWheelOwner is not null && root is UIElement wheelSource)
+        {
+            HookScrollViewerWheelSource(wheelSource, activeWheelOwner);
+        }
+
+        HookFrameworkElementTransientOverlays(root);
+
+        var childCount = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < childCount; index++)
+        {
+            AttachScrollViewerPointerSupport(VisualTreeHelper.GetChild(root, index), activeWheelOwner);
+        }
+    }
+
+    private void HookScrollViewerWheelSource(UIElement wheelSource, ScrollViewer owner)
+    {
+        if (_manualWheelSourceOwners.TryGetValue(wheelSource, out var existingOwner) &&
+            ReferenceEquals(existingOwner, owner))
+        {
+            return;
+        }
+
+        _manualWheelSourceOwners[wheelSource] = owner;
+        wheelSource.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(ScrollViewerDescendant_PointerWheelChanged),
+            handledEventsToo: true);
+    }
+
+    private void HookTransientOverlaySupport(DependencyObject root)
+    {
+        HookFrameworkElementTransientOverlays(root);
+
+        var childCount = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < childCount; index++)
+        {
+            HookTransientOverlaySupport(VisualTreeHelper.GetChild(root, index));
+        }
+    }
+
+    private void HookFrameworkElementTransientOverlays(DependencyObject root)
+    {
+        if (root is Popup popup)
+        {
+            HookPopupPointerSupport(popup);
+        }
+
+        if (root is not FrameworkElement element)
+        {
+            return;
+        }
+
+        if (element.ContextFlyout is { } contextFlyout)
+        {
+            HookFlyoutPointerSupport(contextFlyout);
+        }
+
+        if (element is Button { Flyout: { } buttonFlyout })
+        {
+            HookFlyoutPointerSupport(buttonFlyout);
+        }
+
+        if (element is SplitButton { Flyout: { } splitButtonFlyout })
+        {
+            HookFlyoutPointerSupport(splitButtonFlyout);
+        }
+
+        if (element is ToggleSplitButton { Flyout: { } toggleSplitButtonFlyout })
+        {
+            HookFlyoutPointerSupport(toggleSplitButtonFlyout);
+        }
+
+        if (element is DropDownButton { Flyout: { } dropDownButtonFlyout })
+        {
+            HookFlyoutPointerSupport(dropDownButtonFlyout);
+        }
+    }
+
+    private void HookFlyoutPointerSupport(FlyoutBase flyout)
+    {
+        if (_overlayHookedFlyouts.Add(flyout))
+        {
+            flyout.Opened += FlyoutPointerSupport_Opened;
+        }
+    }
+
+    private void FlyoutPointerSupport_Opened(object? sender, object e)
+    {
+        if (sender is Flyout { Content: DependencyObject content })
+        {
+            AttachScrollViewerPointerSupport(content);
+            HookTransientOverlaySupport(content);
+        }
+
+        if (Content is FrameworkElement root)
+        {
+            HookOpenPopupsForXamlRoot(root.XamlRoot);
+        }
+    }
+
+    private void HookPopupPointerSupport(Popup popup)
+    {
+        if (_overlayHookedPopups.Add(popup))
+        {
+            popup.Opened += PopupPointerSupport_Opened;
+        }
+
+        if (popup.IsOpen)
+        {
+            HookPopupChildTree(popup);
+        }
+    }
+
+    private void PopupPointerSupport_Opened(object? sender, object e)
+    {
+        if (sender is Popup popup)
+        {
+            HookPopupChildTree(popup);
+        }
+    }
+
+    private void HookPopupChildTree(Popup popup)
+    {
+        if (popup.Child is not UIElement child)
+        {
+            return;
+        }
+
+        AttachScrollViewerPointerSupport(child);
+        HookTransientOverlaySupport(child);
+    }
+
+    private void HookOpenPopupsForXamlRoot(XamlRoot? xamlRoot)
+    {
+        if (xamlRoot is null)
+        {
+            return;
+        }
+
+        foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
+        {
+            HookPopupPointerSupport(popup);
+        }
+    }
+
+    // FocusState.Pointer plutot que Programmatic (meme changement que pour
+    // WebView2 juste en dessous, meme famille de probleme) : l'utilisateur a
+    // confirme que la molette fonctionne desormais sur les pages web mais
+    // pas du tout dans les menus/panneaux natifs de Lumora eux-memes (donc
+    // TOUS les ScrollViewer, pas seulement ceux dans un Flyout au-dessus de
+    // WebView2 - la piste "airspace WebView2" tentee juste avant est
+    // ecartee par ce retour : masquer la page pendant l'ouverture d'un menu
+    // n'avait rien change, revert de ce correctif).
+    private void ScrollViewer_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is ScrollViewer { Visibility: Visibility.Visible, IsEnabled: true } viewer)
+        {
+            viewer.Focus(FocusState.Pointer);
+            _lastHoveredWheelScrollViewer = viewer;
+            TraceWin32FocusState($"survol ScrollViewer {viewer.Name}");
+        }
+    }
+
+    // Filet de secours generique (Go utilisateur du 2026-07-27, suite a la
+    // decouverte que seuls Parametres et le menu demarrer avaient recu le
+    // correctif "root-fallback-viewer-direct" contre le bug de regeneration de
+    // ContentPresenter par WinUI - tout autre panneau avec un ScrollViewer
+    // (Favoris, Historique, Coffre, Notes, RSS...) restait expose au meme risque
+    // sans jamais avoir ete signale par l'utilisateur. Pose une seule fois sur
+    // ContentHost (ancetre commun a tous les panneaux, cf. MainWindow.xaml) au
+    // lieu d'un hook par panneau : couvre aussi bien l'existant que tout futur
+    // panneau, sans nouveau correctif reactif a chaque fois.
+    private void ContentHost_WheelFallback(object sender, PointerRoutedEventArgs e)
+    {
+        if (e.Handled || _lastHoveredWheelScrollViewer is not { } viewer)
+        {
+            return;
+        }
+
+        TryApplyScrollViewerWheel(viewer, e, "content-host-fallback");
+    }
+
+    private void ScrollViewer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if (e.Handled || sender is not ScrollViewer viewer)
+        {
+            return;
+        }
+
+        TryApplyScrollViewerWheel(viewer, e, "viewer");
+    }
+
+    private void ScrollViewerDescendant_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if (e.Handled ||
+            sender is not UIElement wheelSource ||
+            !_manualWheelSourceOwners.TryGetValue(wheelSource, out var viewer))
+        {
+            return;
+        }
+
+        TryApplyScrollViewerWheel(viewer, e, wheelSource.GetType().Name);
+    }
+
+    private void TryApplyScrollViewerWheel(ScrollViewer viewer, PointerRoutedEventArgs e, string sourceLabel)
+    {
+        if (viewer.Visibility != Visibility.Visible ||
+            !viewer.IsEnabled ||
+            viewer.ScrollableHeight <= 0)
+        {
+            return;
+        }
+
+        var delta = e.GetCurrentPoint(viewer).Properties.MouseWheelDelta;
+        if (!WheelScrollMath.TryComputeNextVerticalOffset(viewer.VerticalOffset, viewer.ScrollableHeight, delta, out var newOffset))
+        {
+            return;
+        }
+
+        viewer.ChangeView(null, newOffset, null, false);
+        e.Handled = true;
+        WinUiRuntimeTrace.Write($"Molette ScrollViewer : defilement applique via {sourceLabel} (delta={delta}, nouvel offset={newOffset:F0}).");
+    }
+
+    // FocusState.Pointer plutot que Programmatic : signale par plusieurs
+    // developpeurs WebView2/WinUI3 Desktop comme plus fiable pour faire
+    // remonter le focus jusqu'au contenu reel de la page (Chromium), la ou
+    // Programmatic peut rester au niveau de l'enveloppe XAML sans se
+    // propager - piste tentee pour "la molette reste muette meme apres un
+    // survol/clic" (CoreWebView2Controller.MoveFocus, la solution la plus
+    // directe documentee par Microsoft, n'est pas exposee par le controle
+    // XAML WebView2 de ce SDK - verifie, pas de propriete CoreWebView2Controller
+    // sur Microsoft.UI.Xaml.Controls.WebView2 dans cette version).
+    private void BrowserHost_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        CurrentTab()?.View?.Focus(FocusState.Pointer);
+    }
+
+    private void BrowserView_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is WebView2 view)
+        {
+            view.Focus(FocusState.Pointer);
+        }
     }
 
     private FrameworkElement? FindFirstFocusableDescendant(DependencyObject root)
@@ -800,4 +1356,59 @@ public sealed partial class MainWindow : Window
 
     private static string DisplayAddressForBar(string address) =>
         address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase) ? string.Empty : address;
+
+    private void UpdateAddressIdentityChrome(string? address)
+    {
+        _ = address;
+        UpdateResponsiveChromeLayout();
+    }
+
+    private void NavigationToolbar_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        UpdateResponsiveChromeLayout();
+
+    private void UpdateResponsiveChromeLayout()
+    {
+        if (NavigationToolbar is null || AddressBox is null)
+        {
+            return;
+        }
+
+        var width = NavigationToolbar.ActualWidth;
+        if (width <= 0)
+        {
+            return;
+        }
+
+        var collapseAddressIdentity = width < 1160;
+
+        if (AddressIdentityBadge is not null)
+        {
+            AddressIdentityBadge.Visibility = collapseAddressIdentity ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        AddressBox.Padding = new Thickness(
+            collapseAddressIdentity ? 18 : 54,
+            8,
+            18,
+            8);
+
+        if (NavigationToolbarToolsShell is not null)
+        {
+            NavigationToolbarToolsShell.Opacity = width < 1480 ? 0.9 : 1;
+        }
+    }
+
+    private static string CompactAddressHost(string host)
+    {
+        var compact = host.Trim();
+        if (compact.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+        {
+            compact = compact[4..];
+        }
+
+        return compact.Length <= 18 ? compact : $"{compact[..15]}...";
+    }
+
+    private static string CompactAddressDraft(string value) =>
+        value.Length <= 18 ? value : $"{value[..15]}...";
 }

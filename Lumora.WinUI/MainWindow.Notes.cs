@@ -393,6 +393,8 @@ public sealed partial class MainWindow
         AnnotationViewerHost.Visibility = Visibility.Visible;
         AnnotationPageTitleText.Text = AnnotatedPageDisplayTitle(page);
         AnnotationPageUrlText.Text = page.Url;
+        ToolTipService.SetToolTip(AnnotationPageTitleText, AnnotatedPageDisplayTitle(page));
+        ToolTipService.SetToolTip(AnnotationPageUrlText, page.Url);
         ToolTipService.SetToolTip(AnnotationPageUrlText, page.Url);
         AnnotationMetaText.Text =
             $"{page.Count} annotation(s) - derniere le {page.UpdatedAt.LocalDateTime:g}";

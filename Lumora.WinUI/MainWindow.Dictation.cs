@@ -22,8 +22,7 @@ public sealed partial class MainWindow
 
     private void UpdateDictationButtonVisibility()
     {
-        if (MicDictationButton is null) return;
-        MicDictationButton.Opacity = 1;
+        if (DictationPinnedButton is null) return;
         DictationPinnedButton.Opacity = 1;
         UpdateModulesPinUi();
     }

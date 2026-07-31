@@ -33,6 +33,16 @@ public sealed partial class MainWindow
             ? _navHealth.CountPopupsInGestureWindow(id, DateTimeOffset.Now)
             : 0;
 
+        // Pression publicitaire : mesurée par le bouclier réseau (comptage de
+        // requêtes bloquées), par une navigation déjà détournée sur ce même
+        // onglet (0.84.0.4), OU par un popup déjà ouvert avant sur ce même
+        // onglet (0.84.0.5) — ce troisième signal cible le site qui rouvre un
+        // onglet à CHAQUE clic séparé : chaque clic étant un geste neuf, aucun
+        // des deux premiers signaux ne s'accumule jamais sur ce schéma précis.
+        var openerUnderAdPressure = PageUnderAdPressure ||
+            (openerTabId is int pressureTabId &&
+                (_navHealth.HadBlockedNavigation(pressureTabId) || _navHealth.HasOpenedPopupBefore(pressureTabId)));
+
         return PopupPolicy.Decide(
             popupUri,
             openerUri,
@@ -41,11 +51,15 @@ public sealed partial class MainWindow
             host => blocker?.IsBlocked(host) == true,
             host => blocker?.IsWhitelisted(host) == true,
             popupsForGesture,
-            openerUnderAdPressure: PageUnderAdPressure);
+            openerUnderAdPressure: openerUnderAdPressure);
     }
 
-    // Journalise un blocage de popup et met à jour le bouclier.
-    private void ReportBlockedPopup(PopupVerdict verdict, string? popupUri, string? openerUri)
+    // Journalise un blocage de popup et met à jour le bouclier. Les verdicts
+    // « confiants » (domaine publicitaire, automatique, rafale, pression)
+    // restent silencieux comme depuis 0.78.3.1 ; BlockPendingUserChoice est un
+    // jugement, pas une certitude — il alimente en plus l'icône de
+    // récupération (0.84.0.6) au lieu de disparaître sans recours.
+    private void ReportBlockedPopup(PopupVerdict verdict, string? popupUri, string? openerUri, int? openerTabId)
     {
         _privacy.RecordManualBlock(
             "popup-blocker",
@@ -58,9 +72,16 @@ public sealed partial class MainWindow
             PopupVerdict.BlockAdDomain => $"Popup publicitaire bloquée : {DisplayTitle(popupUri ?? string.Empty)}",
             PopupVerdict.BlockGestureFlood => "Rafale de popups bloquée (une seule fenêtre par clic).",
             PopupVerdict.BlockUnderAdPressure => $"Popup parasite bloquée : {DisplayTitle(popupUri ?? string.Empty)}",
+            PopupVerdict.BlockPendingUserChoice => $"Popup en attente : {DisplayTitle(popupUri ?? string.Empty)} (icône de récupération)",
             _ => "Popup automatique bloquée."
         };
         WinUiRuntimeTrace.Write($"Popup blocked ({verdict}): {popupUri}");
+
+        if (verdict == PopupVerdict.BlockPendingUserChoice && openerTabId is int tabId)
+        {
+            _navHealth.RecordPendingPopup(tabId, string.IsNullOrWhiteSpace(popupUri) ? "about:blank" : popupUri);
+            RefreshPopupRecoveryIndicator();
+        }
     }
 
     // ── Détournements de l'onglet ────────────────────────────────────────────
@@ -70,7 +91,7 @@ public sealed partial class MainWindow
         var blocker = NetworkBlocker;
         var userInitiatedChain = tabId is int navigationTabId &&
                                  _navHealth.IsUserInitiatedNavigationChain(navigationTabId);
-        return NavigationHijackPolicy.Decide(
+        var verdict = NavigationHijackPolicy.Decide(
             fromUri,
             toUri,
             wasExplicitlyRequested: _navHealth.TakeExplicitNavigation(toUri),
@@ -78,8 +99,16 @@ public sealed partial class MainWindow
             strictBlockEnabled: _uiSettings.StrictAdBlockEnabled && blocker?.IsEnabled == true,
             host => blocker?.IsBlocked(host) == true,
             host => blocker?.IsWhitelisted(host) == true,
-            pageUnderAdPressure: PageUnderAdPressure,
             openedPopupRecently: tabId is int id && _navHealth.HadRecentPopup(id, DateTimeOffset.Now));
+
+        // Mémorisé pour durcir les popups suivants du même onglet (0.84.0.4),
+        // même si le réseau publicitaire en cause échappe au bouclier réseau.
+        if (verdict != NavigationVerdict.Allow && tabId is int blockedTabId)
+        {
+            _navHealth.RecordBlockedNavigation(blockedTabId);
+        }
+
+        return verdict;
     }
 
     // Blocage silencieux : journal + bouclier + ligne de statut, rien d'autre.

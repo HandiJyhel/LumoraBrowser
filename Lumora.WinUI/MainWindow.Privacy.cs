@@ -150,11 +150,17 @@ public sealed partial class MainWindow
 
         if (ShieldButton is not null)
         {
-            ToolTipService.SetToolTip(
-                ShieldButton,
-                counters.Total > 0
-                    ? $"Confidentialité - {counters.Ads} pub(s), {counters.Trackers} tracker(s) bloqué(s) sur cette page"
-                    : "Confidentialité");
+            // Le compteur visible (badge) ne bougeait jamais le nom accessible
+            // du bouton : un lecteur d'ecran ne pouvait jamais savoir combien
+            // d'elements etaient bloques sur la page, contrairement a l'utilisateur
+            // voyant. Pas d'annonce live ici (le compte change trop souvent par
+            // page pour etre utile en notification) : juste le nom a jour, lu
+            // quand le bouton recoit le focus ou est interroge.
+            var label = counters.Total > 0
+                ? $"Confidentialité du site - {counters.Ads} pub(s), {counters.Trackers} tracker(s) bloqué(s) sur cette page"
+                : "Confidentialité du site";
+            ToolTipService.SetToolTip(ShieldButton, label);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ShieldButton, label);
         }
     }
 

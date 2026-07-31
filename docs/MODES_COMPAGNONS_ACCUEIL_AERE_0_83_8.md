@@ -1,7 +1,7 @@
 # Modes compagnons et accueil aere 0.83.8-dev
 
 Cette etape poursuit les modes Lumora dans deux directions : rendre l'accueil
-moins compacte et poser la premiere base de compagnons de mode disponibles
+moins compact et poser la premiere base de compagnons de mode disponibles
 pendant la navigation.
 
 ## Accueil

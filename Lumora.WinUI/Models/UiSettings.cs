@@ -22,7 +22,19 @@ internal sealed class UiSettings
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
     public bool BookmarksBarVisible { get; set; } = true;
+    public string BookmarksBarPosition { get; set; } = "top";
     public bool VerticalTabsEnabled { get; set; }
+    public string TabStripPosition { get; set; } = "top";
+    // "classic" (tabstrip + toolbar existants) ou "identitySpine" (colonne
+    // verticale identitaire + capsule d'adresse flottante, pilotee par le
+    // Mode d'usage). Purement additif : coexiste avec TabStripPosition, qui
+    // reste la seule source de verite du style "classic".
+    public string ChromeLayoutStyle { get; set; } = "classic";
+    // Masquage automatique de la colonne identitaire (+ capsule), reveles au
+    // survol comme la barre des taches Windows. Opt-in : jamais actif par
+    // defaut, meme en colonne identitaire (decouvrabilite pour un public deja
+    // fragile face aux navigateurs classiques, cf. AGENTS.md).
+    public bool IdentitySpineAutoHide { get; set; } = false;
     public bool VerticalTabsCompact { get; set; }
     public double VerticalTabsWidth { get; set; } = 230;
     public bool CompactModeEnabled { get; set; }
@@ -57,6 +69,19 @@ internal sealed class UiSettings
     public string CompanionCreativePostIt { get; set; } = string.Empty;
     public string CompanionResearchTrail { get; set; } = string.Empty;
     public string CompanionNightReminder { get; set; } = string.Empty;
+    // Couleur personnalisee par mode d'usage ("#RRGGBB", vide = couleur Nova
+    // par defaut du mode, codee en dur dans ResolveModeChromePalette). Le
+    // second ton du degrade (CoolAccent/WarmAccent) est toujours derive
+    // automatiquement de cette seule couleur (DeriveModeAccentTones,
+    // MainWindow.IdentitySpine.cs), jamais stocke separement. "Equilibre"
+    // (balanced) n'a pas d'entree ici : hors perimetre de ce palier, garde sa
+    // palette par defaut.
+    public string ModeAccentColorNeutral { get; set; } = string.Empty;
+    public string ModeAccentColorFocus { get; set; } = string.Empty;
+    public string ModeAccentColorReading { get; set; } = string.Empty;
+    public string ModeAccentColorCreative { get; set; } = string.Empty;
+    public string ModeAccentColorResearch { get; set; } = string.Empty;
+    public string ModeAccentColorNight { get; set; } = string.Empty;
     // "subtle", "luminous" ou "dynamic". Le reglage accessibilite
     // AccessibilityReduceMotion garde toujours la priorite au rendu statique.
     public string PersonalizationMotionStyle { get; set; } = "luminous";
@@ -105,6 +130,12 @@ internal sealed class UiSettings
     public bool AccessibilityLargeText { get; set; }
     public bool AccessibilityReduceMotion { get; set; }
     public bool AccessibilityVisibleFocus { get; set; } = true;
+    // Agrandit les boutons de la barre de navigation (32 -> 44px, cible confort
+    // AAA) pour les difficultes motrices. Desactive par defaut : la taille
+    // compacte reste la norme, cette aide est choisie par l'utilisateur et non
+    // imposee - retour direct du 2026-07-29 apres un premier essai ou la
+    // taille agrandie avait ete mise par defaut pour tout le monde.
+    public bool AccessibilityLargeTargets { get; set; }
     // Teinte plus chaude (moins de lumiere bleue) sur les pages web visitees,
     // pour la fatigue visuelle en usage prolonge ou en soiree. Volontairement
     // distinct de AccessibilityHighContrast : la basse vision a besoin de
@@ -167,6 +198,19 @@ internal sealed class UiSettings
     // le reste de l'historique (voir SemanticHistoryIndex).
     public bool HistorySemanticSearchEnabled { get; set; }
     public List<string> PinnedModuleIds { get; set; } = [];
+    // Menu Demarrer (ModulesFlyout) : rangee epinglee + historique d'usage
+    // pour "Recent et frequent". Vocabulaire d'ids distinct de
+    // PinnedModuleIds ci-dessus (surface differente, voir StartMenuTiles.cs).
+    public static readonly string[] DefaultPinnedStartMenuTileIds =
+    [
+        StartMenuTileIds.Favoris,
+        StartMenuTileIds.Vault,
+        StartMenuTileIds.ReaderMode,
+        StartMenuTileIds.Wallet,
+        StartMenuTileIds.Settings
+    ];
+    public List<string> PinnedStartMenuTileIds { get; set; } = [.. DefaultPinnedStartMenuTileIds];
+    public List<StartMenuTileUsage> StartMenuTileUsage { get; set; } = [];
     // Préférences du générateur de mots de passe du coffre, partagées entre le
     // dialogue "Nouvel identifiant" et la barre de suggestion automatique.
     public int VaultGeneratorLength { get; set; } = 20;

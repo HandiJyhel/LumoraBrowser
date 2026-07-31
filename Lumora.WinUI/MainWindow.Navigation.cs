@@ -37,6 +37,7 @@ public sealed partial class MainWindow
             return;
         }
 
+        HandleTabSelectionModifiers(tab);
         ActivateTab(tab);
     }
 
@@ -44,9 +45,15 @@ public sealed partial class MainWindow
     // WebView2, le changement d'onglet est un simple basculement de visibilité.
     private void ActivateTab(BrowserTabState tab)
     {
+        // Un clic simple sur un onglet quitte toujours la vue divisee (modele le
+        // plus previsible : le split ne persiste que via son propre menu, jamais
+        // implicitement). Voir MainWindow.SplitView.cs.
+        ExitSplitView();
+
         AddressBox.Text = DisplayAddressForBar(tab.Address);
         UpdateBookmarkStar(tab.Address);
         ShowPanel(BrowserPanel, tab.Title);
+        UpdateIdentitySpineHomeHeroVisibility(tab);
 
         foreach (var other in _tabs)
         {
@@ -84,8 +91,11 @@ public sealed partial class MainWindow
         }
 
         RenderVerticalTabs();
+        RefreshHorizontalTabHeaders();
         SaveTabSession();
         UpdateTitleBarDragRegion();
+        RefreshPopupRecoveryIndicator();
+        RefreshConsentIndicator();
     }
 
     // Création paresseuse du moteur d'un onglet. Ne fait rien tant que la fenêtre
@@ -111,9 +121,13 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch
         };
+        view.PointerEntered += BrowserView_PointerEntered;
         view.NavigationStarting += BrowserView_NavigationStarting;
         view.NavigationCompleted += BrowserView_NavigationCompleted;
         view.CoreWebView2Initialized += BrowserView_CoreWebView2Initialized;
+        // Ne fait rien tant qu'aucune vue divisee n'est active (cf. MainWindow.SplitView.cs) :
+        // sans danger a abonner systematiquement des la creation de l'onglet.
+        view.GotFocus += BrowserView_GotFocus;
 
         tab.View = view;
         if (setPendingAddress)
@@ -183,6 +197,18 @@ public sealed partial class MainWindow
 
     private void CloseTab(BrowserTabState state)
     {
+        // Fermer un onglet qui fait partie de la vue divisee la fait disparaitre :
+        // pas de sens de garder un split a un seul volet, on repasse en vue simple.
+        if (IsTabInSplitView(state.Id))
+        {
+            ExitSplitView();
+        }
+        _selectedTabIds.Remove(state.Id);
+        if (_selectionAnchorTabId == state.Id)
+        {
+            _selectionAnchorTabId = null;
+        }
+
         // Garde-fou : si on ferme le dernier onglet d'un groupe, le groupement va
         // disparaître ; proposer de le ranger dans la bibliothèque avant.
         if (state.GroupId is int closingGroupId &&
@@ -289,6 +315,15 @@ public sealed partial class MainWindow
         sender.CoreWebView2.Settings.IsPasswordAutosaveEnabled = false;
         sender.CoreWebView2.Settings.IsGeneralAutofillEnabled = false;
 
+        // Sans ca, WebView2 suit le theme clair/sombre de WINDOWS (via
+        // prefers-color-scheme cote page), pas celui de Lumora - un site comme
+        // Google s'affichait en sombre alors que Lumora etait passe en clair,
+        // des que le theme systeme differait du theme choisi dans Lumora.
+        // Signale par l'utilisateur. Applique au premier chargement ici ;
+        // ApplyPreferredColorSchemeToOpenTabs() le reapplique a chaud sur les
+        // onglets deja ouverts quand le theme change en cours de session.
+        ApplyPreferredColorScheme(sender.CoreWebView2);
+
         // SmartScreen envoie chaque URL visitée à Microsoft pour vérifier sa
         // réputation : coupé par défaut. Réactivable dans Paramètres > Confidentialité
         // pour qui préfère la protection anti-phishing. Try/catch : réglage absent
@@ -348,6 +383,33 @@ public sealed partial class MainWindow
         {
             WinUiRuntimeTrace.Write($"Navigation vers {pendingAddress} (scripts par-moteur deja enregistres)");
             NavigateTabView(tab, pendingAddress);
+        }
+    }
+
+    private void ApplyPreferredColorScheme(CoreWebView2 core)
+    {
+        try
+        {
+            core.Profile.PreferredColorScheme = LumoraTheme.ResolveIsDarkTheme(_uiSettings)
+                ? CoreWebView2PreferredColorScheme.Dark
+                : CoreWebView2PreferredColorScheme.Light;
+        }
+        catch { }
+    }
+
+    // Reapplique le theme aux onglets DEJA ouverts quand l'utilisateur change de
+    // theme en cours de session (le reglage ci-dessus ne s'appliquait sinon qu'aux
+    // moteurs pas encore crees). Change la valeur lue par prefers-color-scheme,
+    // pas le contenu deja rendu : une page ouverte peut avoir besoin d'un
+    // rechargement pour en tenir compte, comme dans les autres navigateurs.
+    private void ApplyPreferredColorSchemeToOpenTabs()
+    {
+        foreach (var tab in _tabs)
+        {
+            if (tab.View?.CoreWebView2 is { } core)
+            {
+                ApplyPreferredColorScheme(core);
+            }
         }
     }
 
@@ -431,12 +493,21 @@ public sealed partial class MainWindow
             return;
         }
 
+        // Nouvelle page pour cet onglet : l'icône de refus de cookies appartenait à
+        // la page quittée, pas à celle-ci (attend un nouveau signal du script).
+        if (startingTab is not null)
+        {
+            startingTab.ConsentHandledMethod = null;
+        }
+
         // Compteur par-page, domaine du bouclier et statut : uniquement pour l'onglet visible.
         if (IsActiveView(sender))
         {
             _privacy.ResetPageBlockedCount();
             _telemetryBlocker?.ResetPageBlockedCount();
             UpdateToolbarPrivacyIndicator();
+            RefreshPopupRecoveryIndicator();
+            RefreshConsentIndicator();
             // La proposition de carte appartient à la page quittée.
             WalletFillBar.Visibility = Visibility.Collapsed;
             HideSiteNotFoundBar();
@@ -461,6 +532,19 @@ public sealed partial class MainWindow
         }
 
         var isActive = IsActiveView(sender);
+
+        // Filet de securite pour "la molette reste muette" : le focus au
+        // survol (BrowserHost_PointerEntered) ne se redeclenche QUE si le
+        // pointeur ENTRE dans la zone - si la souris est deja au-dessus de
+        // la page au moment ou une navigation se termine (URL tapee puis
+        // Entree sans bouger la souris), aucun survol n'a lieu et le focus
+        // ne bascule jamais sur le contenu charge. Rattrape ici, uniquement
+        // pour l'onglet actif et hors ecran de connexion (ne pas voler le
+        // focus a un mot de passe en cours de saisie).
+        if (isActive && LoginOverlay.Visibility != Visibility.Visible)
+        {
+            sender.Focus(FocusState.Pointer);
+        }
 
         // Repli HTTPS→HTTP : cette navigation venait d'une promotion http→https. Si elle
         // échoue, le site ne supporte probablement pas HTTPS → on propose de continuer en HTTP.
@@ -719,6 +803,62 @@ public sealed partial class MainWindow
         ApplyFaviconToUi(tab, address, originPath);
     }
 
+    // Utilisée uniquement au moment d'installer une application web. Contrairement
+    // à CaptureFaviconForTabAsync (optimisée pour la navigation courante, réutilise
+    // un cache de 24h et essaie d'abord GetFaviconAsync), celle-ci force une
+    // re-capture et inverse l'ordre : le lien <link rel=icon> déclaré par la page
+    // + téléchargement direct passent en premier, GetFaviconAsync en dernier
+    // recours seulement. Constat réel (Wikipedia, 2026-07-26) : GetFaviconAsync
+    // peut renvoyer une icône générique/transitoire de WebView2 (pas encore la
+    // vraie icône du site) qui passe la détection de générique (un seul hash
+    // exact mémorisé, donc fragile) et bloque alors tout essai des méthodes 2/3
+    // via le cache 24h de CaptureFaviconForTabAsync. Pour une action déclarée et
+    // unique comme l'installation, la bonne icône compte plus que la vitesse.
+    private async Task<bool> CaptureAuthoritativeFaviconForInstallAsync(BrowserTabState tab)
+    {
+        var browser = tab.View;
+        var core = browser?.CoreWebView2;
+        if (browser is null || core is null) return false;
+
+        var address = browser.Source?.ToString() ?? tab.Address;
+        if (!BookmarkStore.IsWebUrl(address)) return false;
+
+        var originPath = Path.Combine(_profile.FaviconsDir, $"{HashOrigin(address)}.png");
+        var saved = await DownloadFaviconFallbackAsync(core, address, originPath);
+
+        if (!saved)
+        {
+            try
+            {
+                using var ras = await core.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png);
+                if (ras is not null && ras.Size > 0)
+                {
+                    using var stream = ras.AsStreamForRead();
+                    using var memory = new MemoryStream();
+                    await stream.CopyToAsync(memory);
+                    var png = memory.ToArray();
+                    if (FaviconQuality.IsUsablePng(png))
+                    {
+                        Directory.CreateDirectory(_profile.FaviconsDir);
+                        await File.WriteAllBytesAsync(originPath, png);
+                        saved = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                WinUiRuntimeTrace.Write($"GetFaviconAsync (install fallback) skipped: {ex.GetType().Name}");
+            }
+        }
+
+        if (!saved || !FaviconQuality.IsUsablePngFile(originPath)) return false;
+
+        _faviconCache[address] = originPath;
+        _faviconCache[OriginOf(address)] = originPath;
+        ApplyFaviconToUi(tab, address, originPath);
+        return true;
+    }
+
     private async Task<bool> DownloadFaviconFallbackAsync(CoreWebView2 core, string address, string outputPath)
     {
         // Source 1 : FaviconUri de WebView2 (déjà téléchargé par Chromium, le plus fiable)
@@ -881,7 +1021,7 @@ public sealed partial class MainWindow
             Tag = state.Id,
             IsClosable = !state.Pinned
         };
-        tab.Header = TabHeaderContent(state, compact: state.Pinned);
+        tab.Header = TabHeaderContent(state, compact: state.Pinned, active: false);
         tab.ContextFlyout = CreateTabContextFlyout(state);
         // Nom d'accessibilite explicite : un onglet epingle n'affiche que son icone,
         // le lecteur d'ecran a besoin du titre pour rester utilisable.
@@ -951,6 +1091,7 @@ public sealed partial class MainWindow
         {
             AddressBox.Text = DisplayAddressForBar(address);
             UpdateBookmarkStar(address);
+            UpdateIdentitySpineHomeHeroVisibility(tab);
         }
 
         SaveTabSession();
@@ -963,7 +1104,7 @@ public sealed partial class MainWindow
             .FirstOrDefault(candidate => candidate.Tag is int id && id == tab.Id);
         if (item is not null)
         {
-            item.Header = TabHeaderContent(tab, compact: tab.Pinned);
+            item.Header = TabHeaderContent(tab, compact: tab.Pinned, active: CurrentTab()?.Id == tab.Id || IsTabInSplitView(tab.Id));
             item.IsClosable = !tab.Pinned;
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, tab.Title);
         }
@@ -1165,7 +1306,7 @@ public sealed partial class MainWindow
         var popupVerdict = DecidePopupVerdict(args.Uri, sender.Source, args.IsUserInitiated, parentTab?.Id);
         if (popupVerdict != PopupVerdict.Allow)
         {
-            ReportBlockedPopup(popupVerdict, args.Uri, sender.Source);
+            ReportBlockedPopup(popupVerdict, args.Uri, sender.Source, parentTab?.Id);
             args.Handled = true;
             return;
         }

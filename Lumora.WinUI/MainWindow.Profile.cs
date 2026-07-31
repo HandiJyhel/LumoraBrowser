@@ -19,6 +19,15 @@ public sealed partial class MainWindow
         _profileEntries = LumoraProfileRegistry.Discover(LumoraConfig.Load());
         _userProfile = UserProfile.Load(_profile.ProfileFile, _profile.LegacyProfileFile);
 
+        // Lance via GuestProcessLauncher (--guest) : _profile pointe deja vers le
+        // dossier ephemere dedie a cette session, entrer en invite tout de suite
+        // sans jamais montrer le picker/l'ecran de connexion.
+        if (_pendingGuestLaunch)
+        {
+            EnterGuestMode();
+            return;
+        }
+
         if (_userProfile is null && _profileEntries.Count > 0)
         {
             ShowProfilePicker();
@@ -43,9 +52,7 @@ public sealed partial class MainWindow
                 ShowLoginPanel("password");
         }
 
-        BrowserHost.IsHitTestVisible = false;
-        LoginOverlay.Visibility = Visibility.Visible;
-        LoginOverlay.Focus(FocusState.Programmatic);
+        ShowLoginOverlayChrome();
         RefreshProfileSettings();
     }
 
@@ -61,11 +68,73 @@ public sealed partial class MainWindow
 
         switch (mode)
         {
-            case "create":    CreateProfilePanel.Visibility = Visibility.Visible; break;
+            case "create":
+                CreateProfilePanel.Visibility = Visibility.Visible;
+                // Annuler n'a de sens que s'il existe reellement une session ou un profil
+                // vers lequel revenir ; le lien invite n'a de sens que si aucun profil
+                // n'est deja choisi cette session (sinon "continuer sans profil" swappe
+                // silencieusement une session active en cours vers l'invite). _vault.IsLocked
+                // exclu explicitement (trouve le 2026-07-29 en implementant ProfilePickerCancelButton) :
+                // une session verrouillee (LockSessionNow) garde _userProfile non-null, mais
+                // Annuler ne doit jamais rouvrir la navigation sans repasser par le mot de passe/PIN.
+                CreateProfileCancelButton.Visibility =
+                    (_userProfile is not null && !_vault.IsLocked) || _profileEntries.Count > 0
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+                CreateProfileGuestLink.Visibility =
+                    _userProfile is null ? Visibility.Visible : Visibility.Collapsed;
+                break;
             case "location":  ProfileLocationPanel.Visibility = Visibility.Visible; break;
             case "password":  LoginPasswordPanel.Visibility = Visibility.Visible; break;
             case "pin":       LoginPinPanel.Visibility = Visibility.Visible; break;
             case "migration": MigrationPanel.Visibility = Visibility.Visible; break;
+        }
+
+        FocusActiveLoginPanel(mode);
+    }
+
+    // Trouve en usage reel le 2026-07-22 : il fallait cliquer une premiere fois
+    // dans la fenetre avant de pouvoir taper son code PIN au lancement.
+    // LoginOverlay.Focus(FocusState.Programmatic) (appele a l'affichage de
+    // l'overlay) ne fait rien : LoginOverlay est un Grid, pas un Control, et
+    // seuls les Control peuvent reellement recevoir le focus clavier dans ce
+    // projet (voir CanReceiveProgrammaticFocus). Sans focus reel sur un
+    // Control, aucun evenement KeyDown ne remonte jusqu'a RootKeyDown - d'ou
+    // le PIN "muet" tant qu'on n'a pas clique sur quelque chose (un clic donne
+    // le focus a un Control reel, apres quoi le clavier fonctionne).
+    // DispatcherQueue.TryEnqueue : le focus doit etre pose apres que la mise
+    // en page ait rendu le panneau visible, pas dans la meme passe que le
+    // changement de Visibility.
+    private void FocusActiveLoginPanel(string mode)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            switch (mode)
+            {
+                case "create":    ProfileNameBox.Focus(FocusState.Programmatic); break;
+                case "location":  ChooseProfileLocationButton.Focus(FocusState.Programmatic); break;
+                case "password":  LoginPasswordBox.Focus(FocusState.Programmatic); break;
+                case "pin":       PinDigit1Button.Focus(FocusState.Programmatic); break;
+                case "migration": MigrationSourcesList.Focus(FocusState.Programmatic); break;
+                case "profiles":  ProfilePickerList.Focus(FocusState.Programmatic); break;
+            }
+        });
+    }
+
+    // Retourne a la session en cours si elle existe (creation d'un profil
+    // supplementaire depuis les Parametres), sinon au selecteur de profil s'il y a
+    // au moins un profil detecte sur la machine. Le bouton n'est visible que dans
+    // l'un de ces deux cas (voir ShowLoginPanel) : au tout premier lancement, sans
+    // aucun profil existant, il n'y a rien vers quoi annuler.
+    private void CreateProfileCancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_userProfile is not null && !_vault.IsLocked)
+        {
+            DismissLoginOverlay();
+        }
+        else if (_profileEntries.Count > 0)
+        {
+            ShowProfilePickerOverlay();
         }
     }
 
@@ -78,6 +147,13 @@ public sealed partial class MainWindow
         ProfilePickerContinueButton.IsEnabled = _profileEntries.Count > 0;
         ShowLoginPanel("profiles");
         ProfilePickerPanel.Visibility = Visibility.Visible;
+        // _vault.IsLocked exclu ici : si la session est verrouillee (LockSessionNow),
+        // _userProfile reste non-null mais Annuler ne doit surtout pas permettre de
+        // rouvrir la navigation sans repasser par le mot de passe/PIN.
+        ProfilePickerCancelButton.Visibility =
+            (_userProfile is not null && !_vault.IsLocked) || _isGuestMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         LoginStatusText.Text = _profileEntries.Count == 0
             ? "Aucun profil local trouve."
             : "Choisissez le profil a ouvrir.";
@@ -167,11 +243,20 @@ public sealed partial class MainWindow
     private void ShowProfilePickerButton_Click(object sender, RoutedEventArgs e) =>
         ShowProfilePicker();
 
+    // Meme raison que CreateProfileCancelButton_Click : la visibilite du bouton
+    // (calculee dans ShowProfilePicker) garantit deja qu'on ne l'atteint que
+    // s'il existe une session active (profil ou invite) vers laquelle revenir.
+    private void ProfilePickerCancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((_userProfile is not null && !_vault.IsLocked) || _isGuestMode)
+        {
+            DismissLoginOverlay();
+        }
+    }
+
     private void ShowProfileOverlay()
     {
-        BrowserHost.IsHitTestVisible = false;
-        LoginOverlay.Visibility = Visibility.Visible;
-        LoginOverlay.Focus(FocusState.Programmatic);
+        ShowLoginOverlayChrome();
     }
 
     private void ShowProfilePickerOverlay()
@@ -226,12 +311,19 @@ public sealed partial class MainWindow
     private void ProfileFlyoutSettingsButton_Click(object sender, RoutedEventArgs e)
     {
         ProfileStatusFlyout.Hide();
+        // Le bouton profil vit depuis 0.93.5.0-dev en en-tete du menu Demarrer
+        // (ModulesFlyout) : fermer uniquement ProfileStatusFlyout ne suffit
+        // plus, le menu Demarrer qui l'englobe reste ouvert derriere l'ecran
+        // qu'on vient d'ouvrir (signale par l'utilisateur, capture a l'appui).
+        // Hide() sur un flyout deja ferme est un no-op sans risque.
+        ModulesFlyout.Hide();
         OpenProfileSettings();
     }
 
     private void ProfileFlyoutSwitchButton_Click(object sender, RoutedEventArgs e)
     {
         ProfileStatusFlyout.Hide();
+        ModulesFlyout.Hide();
         ShowProfilePickerOverlay();
         StatusText.Text = "Choisissez un autre utilisateur Lumora.";
     }
@@ -239,6 +331,7 @@ public sealed partial class MainWindow
     private void ProfileFlyoutCreateButton_Click(object sender, RoutedEventArgs e)
     {
         ProfileStatusFlyout.Hide();
+        ModulesFlyout.Hide();
         ShowCreateProfileOverlay();
         StatusText.Text = "Creation d'un nouvel utilisateur Lumora.";
     }
@@ -252,6 +345,14 @@ public sealed partial class MainWindow
         RefreshProfileSettings();
         UpdateProfileStatus();
         InitSessionTimer();
+        InitRssTimer();
+        UpdateRssBadge();
+        // Meme raison que ActivateTab/EnsureTabViewReadyAsync (voir leurs commentaires) :
+        // sans focus explicite sur le WebView2, la molette reste muette tant qu'on n'a
+        // pas clique dans la page. Ecran de connexion desormais focusable (champ mot de
+        // passe, pave PIN...), donc le focus y reste bel et bien apres la connexion s'il
+        // n'est pas explicitement rendu a l'onglet actif ici.
+        CurrentTab()?.View?.Focus(FocusState.Programmatic);
         _ = ClearHomeSearchFieldAfterDelayAsync(blur: true);
         // À la connexion : rapatrier ce que Chromium avait encore, puis vider son coffre
         // (stockage 100% maison → vault.lumora est le seul magasin).
@@ -318,9 +419,7 @@ public sealed partial class MainWindow
         _vault.Lock();
         ShowLoginPanel(_userProfile.HasPinLogin ? "pin" : "password");
         LoginStatusText.Text = statusMessage;
-        BrowserHost.IsHitTestVisible = false;
-        LoginOverlay.Visibility = Visibility.Visible;
-        LoginOverlay.Focus(FocusState.Programmatic);
+        ShowLoginOverlayChrome();
     }
 
     private bool IsAnyTabPlayingAudio() =>
@@ -413,6 +512,21 @@ public sealed partial class MainWindow
         }
         RefreshAvatarUi();
 
+        // La gestion des utilisateurs locaux (chemins reels, ouverture de dossier,
+        // quarantaine) et la reinitialisation de profil n'ont pas de sens pour une
+        // session invite et exposent des donnees d'un vrai profil sans
+        // authentification (trouve en usage reel le 2026-07-22, voir commentaire
+        // XAML de ProfileManagementRestrictedPanel) : bloc entier cache en mode
+        // invite plutot que des gardes au cas par cas, plus sur et plus simple a
+        // verifier.
+        ProfileManagementRestrictedPanel.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;
+        ProfileGuestRestrictedNotice.IsOpen = _isGuestMode;
+        if (_isGuestMode)
+        {
+            ProfileManagementPanel.Children.Clear();
+            return;
+        }
+
         RefreshProfileManagementPanel();
     }
 
@@ -424,6 +538,8 @@ public sealed partial class MainWindow
 
     private void RefreshProfileManagementPanel()
     {
+        if (_isGuestMode) return;
+
         ProfileManagementPanel.Children.Clear();
         _profileEntries = LumoraProfileRegistry.Discover(LumoraConfig.Load());
 
@@ -494,17 +610,30 @@ public sealed partial class MainWindow
         actions.Children.Add(switchButton);
 
         var openButton = new Button { Content = "Ouvrir le dossier" };
-        openButton.Click += (_, _) => OpenProfileDirectory(entry);
+        openButton.Click += async (_, _) => await OpenProfileDirectory(entry);
         actions.Children.Add(openButton);
 
-        var quarantineButton = new Button
+        // Modifier/Supprimer un AUTRE profil que le sien exigent son mot de passe
+        // (RequireTargetProfilePasswordAsync) : aucune notion d'admin dans Lumora,
+        // personne ne peut agir sur le compte d'un tiers sans preuve. Pour son
+        // propre profil actif, les boutons dedies au-dessus (nom/mot de
+        // passe/PIN) suffisent deja - pas de doublon ici.
+        var modifyButton = new Button
         {
-            Content = "Mettre en quarantaine",
+            Content = "Modifier",
+            IsEnabled = !entry.IsActive
+        };
+        modifyButton.Click += async (_, _) => await ModifyProfileAsync(entry);
+        actions.Children.Add(modifyButton);
+
+        var deleteButton = new Button
+        {
+            Content = "Supprimer",
             IsEnabled = !entry.IsActive,
             Foreground = new SolidColorBrush(new Windows.UI.Color { A = 255, R = 220, G = 70, B = 70 })
         };
-        quarantineButton.Click += async (_, _) => await QuarantineProfileAsync(entry);
-        actions.Children.Add(quarantineButton);
+        deleteButton.Click += async (_, _) => await DeleteProfileAsync(entry);
+        actions.Children.Add(deleteButton);
 
         var body = new StackPanel();
         body.Children.Add(header);
@@ -527,8 +656,20 @@ public sealed partial class MainWindow
         SaveSelectedProfileAndRestart(entry);
     }
 
-    private void OpenProfileDirectory(LumoraProfileEntry entry)
+    private async Task OpenProfileDirectory(LumoraProfileEntry entry)
     {
+        // Garde directe en plus du panneau cache (ProfileManagementRestrictedPanel) :
+        // ne jamais reveler/ouvrir le dossier d'un profil depuis une session invite.
+        if (_isGuestMode) return;
+
+        // Ouvrir le dossier d'un AUTRE profil expose son vault.lumora (localisation
+        // + acces filesystem complet) : meme regle que Modifier/Supprimer, aucun
+        // profil n'a de pouvoir sur un autre sans preuve de son mot de passe.
+        if (!entry.IsActive && await RequireTargetProfilePasswordAsync(entry) is null)
+        {
+            return;
+        }
+
         try
         {
             if (!Directory.Exists(entry.ProfileDir))
@@ -550,19 +691,99 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task QuarantineProfileAsync(LumoraProfileEntry entry)
+    // Aucun profil n'a de pouvoir sur un autre dans Lumora (pas de notion
+    // d'admin) : la seule preuve acceptable pour modifier ou supprimer le
+    // compte d'un AUTRE utilisateur est son propre mot de passe, jamais une
+    // simple confirmation de nom deja visible a l'ecran. Charge le profil
+    // cible depuis son dossier (il n'est pas forcement le profil actif en
+    // memoire) et retourne l'instance verifiee, prete a etre modifiee et
+    // resauvegardee par l'appelant.
+    private async Task<UserProfile?> RequireTargetProfilePasswordAsync(LumoraProfileEntry entry)
     {
-        if (entry.IsActive)
+        var paths = LumoraProfilePaths.FromDirectory(entry.ProfileDir);
+        var targetProfile = UserProfile.Load(paths.ProfileFile, paths.LegacyProfileFile);
+        if (targetProfile is null)
         {
-            StatusText.Text = "Le profil actif ne peut pas etre mis en quarantaine.";
+            StatusText.Text = "Profil illisible.";
+            return null;
+        }
+
+        var passwordBox = new PasswordBox { PlaceholderText = "Mot de passe", MinWidth = 300 };
+        var dialog = new ContentDialog
+        {
+            Title = $"Mot de passe de {entry.Name}",
+            Content = passwordBox,
+            PrimaryButtonText = "Continuer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
+
+        var verified = await Task.Run(() => targetProfile.VerifyPassword(passwordBox.Password));
+        if (!verified)
+        {
+            StatusText.Text = "Mot de passe incorrect : profil inchange.";
+            return null;
+        }
+
+        return targetProfile;
+    }
+
+    // Modifier se limite volontairement au nom : contrairement a un
+    // changement de mot de passe (qui exigerait de deverrouiller ET
+    // re-chiffrer le vault.lumora du profil cible, une operation risquee a
+    // faire sans pouvoir la tester en conditions reelles), renommer ne touche
+    // a aucun secret et ne peut pas corrompre le coffre d'un autre profil.
+    private async Task ModifyProfileAsync(LumoraProfileEntry entry)
+    {
+        if (_isGuestMode || entry.IsActive) return;
+
+        var targetProfile = await RequireTargetProfilePasswordAsync(entry);
+        if (targetProfile is null) return;
+
+        var nameBox = new TextBox { Text = targetProfile.Name, MinWidth = 300 };
+        var dialog = new ContentDialog
+        {
+            Title = $"Renommer {entry.Name}",
+            Content = nameBox,
+            PrimaryButtonText = "Enregistrer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+
+        var newName = nameBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            StatusText.Text = "Le nom ne peut pas etre vide.";
             return;
         }
 
-        var nameBox = new TextBox
+        var paths = LumoraProfilePaths.FromDirectory(entry.ProfileDir);
+        (targetProfile with { Name = newName }).Save(paths.ProfileFile);
+        RefreshProfileManagementPanel();
+        StatusText.Text = $"Profil renomme : {newName}.";
+    }
+
+    private async Task DeleteProfileAsync(LumoraProfileEntry entry)
+    {
+        // Garde directe en plus du panneau cache (ProfileManagementRestrictedPanel) :
+        // ne jamais deplacer/desactiver le profil d'un tiers depuis une session invite.
+        if (_isGuestMode) return;
+
+        if (entry.IsActive)
         {
-            PlaceholderText = entry.Name,
-            MinWidth = 320
-        };
+            StatusText.Text = "Le profil actif ne peut pas etre supprime.";
+            return;
+        }
+
+        var targetProfile = await RequireTargetProfilePasswordAsync(entry);
+        if (targetProfile is null) return;
+
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(new TextBlock
         {
@@ -576,39 +797,28 @@ public sealed partial class MainWindow
             Opacity = 0.62,
             FontSize = 12
         });
-        panel.Children.Add(new TextBlock
-        {
-            Text = $"Tapez le nom du profil pour confirmer : {entry.Name}",
-            TextWrapping = TextWrapping.Wrap
-        });
-        panel.Children.Add(nameBox);
 
         var dialog = new ContentDialog
         {
-            Title = "Mettre ce profil en quarantaine ?",
+            Title = $"Supprimer le profil {entry.Name} ?",
             Content = panel,
-            PrimaryButtonText = "Mettre en quarantaine",
+            PrimaryButtonText = "Supprimer",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = Content.XamlRoot
         };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-        if (!string.Equals(nameBox.Text.Trim(), entry.Name, StringComparison.CurrentCultureIgnoreCase))
-        {
-            StatusText.Text = "Confirmation incorrecte : profil conserve.";
-            return;
-        }
 
         try
         {
             var target = LumoraProfileRegistry.QuarantineProfile(entry);
             RefreshProfileManagementPanel();
-            StatusText.Text = $"Profil mis en quarantaine : {target}";
+            StatusText.Text = $"Profil supprime (recuperable) : {target}";
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Mise en quarantaine impossible : {ex.Message}";
+            StatusText.Text = $"Suppression impossible : {ex.Message}";
         }
     }
 
@@ -619,7 +829,27 @@ public sealed partial class MainWindow
         ConfirmPinBox.Visibility = show;
     }
 
+    // "Continuer sans profil" ne peut plus se faire a chaud dans ce process :
+    // WEBVIEW2_USER_DATA_FOLDER est deja fige sur le dossier du profil "par
+    // defaut" depuis le tout debut du process (voir WebView2Bootstrap.ConfigureOnce
+    // dans le constructeur), avant meme ce clic. Rester dans ce process voudrait
+    // dire que les cookies/cache/IndexedDB WebView2 de la session invite
+    // survivraient reellement dans ce dossier "par defaut" a la fermeture, malgre
+    // le message "Aucune donnee persistante n'est gardee" (voir
+    // UpdateProfileFlyoutUi) - c'etait le bug reel avant ce correctif. Meme
+    // contrainte, meme solution que MainWindow.Incognito.cs/OpenIncognitoWindow :
+    // relancer un nouveau process avec le dossier ephemere deja pose, et fermer
+    // celui-ci.
     private void SkipProfileButton_Click(object sender, RoutedEventArgs e)
+    {
+        GuestProcessLauncher.Launch();
+        Close();
+    }
+
+    // Corps de l'ancien SkipProfileButton_Click : appele uniquement depuis le
+    // process invite dedie (voir InitializeLoginOverlayAsync/_pendingGuestLaunch),
+    // dont _profile pointe deja vers le dossier ephemere de la session.
+    private void EnterGuestMode()
     {
         _isGuestMode = true;
         _bookmarks.SetGuestMode(true);
@@ -629,14 +859,33 @@ public sealed partial class MainWindow
         _historyPanel.Downloads.SetGuestMode(true);
         _semanticIndex.SetGuestMode(true);
         _webApps.SetGuestMode(true);
+        _rssFeeds.SetGuestMode(true);
         _savedTabGroups.SetGuestMode(true);
         _siteRelocations.SetGuestMode(true);
         _savedGroupIds.Clear();
+        // Politique "Live Linux" : reglages limites au strict necessaire en mode
+        // invite. Personnalisation (fond d'ecran compris) et Coffre/Portefeuille
+        // touchent a une identite persistante ou a des identifiants reels - ces
+        // entrees de navigation disparaissent entierement plutot que de rester
+        // visibles pour aboutir a un message d'indisponibilite (voir aussi
+        // SettingsNav_Click pour la defense en profondeur si jamais atteintes
+        // autrement). Vie privee/securite et Confort restent utiles meme pour
+        // une session ephemere : ils restent visibles.
+        SettingsNavAppearance.Visibility = Visibility.Collapsed;
+        SettingsNavVault.Visibility = Visibility.Collapsed;
         DismissLoginOverlay();
         // Reconstruire l'UI avec les stores vides
         ReloadBookmarks();
         _historyPanel.Items.Clear();
         _suppressTabSave = true;
+        // CloseTabView (pas seulement retirer de _tabs/BrowserTabs.TabItems) :
+        // sinon le WebView2 de l'onglet de demarrage (ouvert avant meme le choix
+        // du mode invite) reste vivant sans etre suivi nulle part, et le process
+        // moteur Chromium qu'il a lance garde ses fichiers verrouilles - constate
+        // en conditions reelles, ca empechait la suppression du dossier ephemere
+        // a la fermeture de la fenetre invite (voir le Closed du constructeur).
+        foreach (var tab in _tabs.ToList())
+            CloseTabView(tab);
         foreach (var item in BrowserTabs.TabItems.OfType<TabViewItem>().ToList())
             BrowserTabs.TabItems.Remove(item);
         _tabs.Clear();
@@ -679,9 +928,14 @@ public sealed partial class MainWindow
         _pendingProfilePassword = pw;
         _pendingProfilePin = pin;
         _pendingRecoveryKey = recoveryKey;
-        _pendingProfileId = _profileEntries.Count == 0 && UserProfile.Load(_profile.ProfileFile, _profile.LegacyProfileFile) is null
-            ? "default"
-            : LumoraProfileRegistry.CreateProfileId(name);
+        // Trouve en usage reel le 2026-07-22 : le tout premier profil crevait la
+        // convention en gardant l'identifiant sentinelle "default" quel que soit
+        // le prenom saisi, alors que tout profil suivant recevait deja un
+        // dossier nomme d'apres son nom (LumoraProfileRegistry.CreateProfileId).
+        // Avec plusieurs utilisateurs, avoir un "default" a cote de "jean"/"marie"
+        // est illisible - chaque profil, premier inclus, doit avoir un dossier
+        // nomme d'apres son utilisateur.
+        _pendingProfileId = LumoraProfileRegistry.CreateProfileId(name);
         _profileCreationTarget = null;
         ProfileLocationPathText.Text = LumoraProfilePaths.ForProfileId(_pendingProfileId).ProfileDir;
         ShowLoginPanel("location");
@@ -846,7 +1100,19 @@ public sealed partial class MainWindow
     {
         var exe = Environment.ProcessPath;
         if (exe is not null)
-            System.Diagnostics.Process.Start(exe);
+        {
+            var startInfo = new System.Diagnostics.ProcessStartInfo { FileName = exe, UseShellExecute = false };
+            // Un process invite (voir GuestProcessLauncher) ou une verification
+            // pilotee (skill verify) peuvent avoir LUMORA_PROFILE_DIR positionne
+            // pour CE process. RestartApp ne sert qu'a relancer sur le profil
+            // reel choisi (config.ActiveProfileId/CustomProfilePath) : sans ce
+            // retrait, Process.Start heriterait silencieusement cette variable
+            // et LumoraProfilePaths.Default() l'aurait toujours priorisee,
+            // rouvrant l'ancien dossier ephemere/force au lieu du profil
+            // reellement selectionne.
+            startInfo.EnvironmentVariables.Remove(LumoraProfilePaths.ProfileDirectoryEnvironmentVariable);
+            System.Diagnostics.Process.Start(startInfo);
+        }
         Application.Current.Exit();
     }
 
@@ -1048,15 +1314,15 @@ public sealed partial class MainWindow
             _pinBuffer += tag;
         }
 
-        PinDotsDisplay.Text = string.Concat(Enumerable.Repeat("● ", _pinBuffer.Length)) +
-                              string.Concat(Enumerable.Repeat("○ ", 6 - _pinBuffer.Length));
+        PinDotsDisplay.Text = string.Concat(Enumerable.Repeat("✦ ", _pinBuffer.Length)) +
+                              string.Concat(Enumerable.Repeat("✧ ", 6 - _pinBuffer.Length));
         _ = ClearHomeSearchFieldAsync(blur: true);
 
         if (_pinBuffer.Length == 6)
         {
             var pin = _pinBuffer;
             _pinBuffer = string.Empty;
-            PinDotsDisplay.Text = "○ ○ ○ ○ ○ ○";
+            PinDotsDisplay.Text = "✧ ✧ ✧ ✧ ✧ ✧";
 
             var ok = await Task.Run(() => _userProfile!.VerifyPin(pin));
             if (ok)
@@ -1260,6 +1526,14 @@ public sealed partial class MainWindow
 
     private async void ResetProfileButton_Click(object sender, RoutedEventArgs e)
     {
+        // Garde directe en plus du panneau cache (ProfileManagementRestrictedPanel) :
+        // trouve en usage reel le 2026-07-22, ce bouton supprimait tout _profile.ProfileDir
+        // (vault, mots de passe, historique) sans la moindre verification de mode
+        // invite - or _profile pointe encore sur le vrai profil par defaut en mode
+        // invite (seul _userProfile devient null). Sans cette garde, une session
+        // invite pouvait detruire definitivement le vrai profil actif d'un simple clic.
+        if (_isGuestMode) return;
+
         var dlg = new ContentDialog
         {
             Title = "Reinitialiser le profil ?",

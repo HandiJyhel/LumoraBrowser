@@ -65,6 +65,34 @@ public sealed partial class MainWindow : Window
         titleBar.ButtonHoverForegroundColor = foreground;
         titleBar.ButtonPressedBackgroundColor = pressedBackground;
         titleBar.ButtonPressedForegroundColor = foreground;
+
+        ApplyWindowBorderColor(pressedBackground);
+    }
+
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(nint hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
+
+    private const int DwmwaBorderColor = 34;
+
+    // Windows 11 peint par defaut le liseré de fenetre avec la couleur
+    // d'accentuation SYSTEME (reglage utilisateur hors de Lumora), pas avec
+    // le theme clair/sombre de l'app - sur une machine a accent systeme vif
+    // (orange, etc.), ca produit un liseré qui jure avec le chrome Lumora et
+    // se lit a tort comme un bug de theme clair. On force ce liseré sur la
+    // meme couleur que la bordure du chrome (deja theme-consciente) plutot
+    // que de laisser l'OS choisir a la place de l'app.
+    private void ApplyWindowBorderColor(Windows.UI.Color color)
+    {
+        try
+        {
+            var hwnd = WindowNative.GetWindowHandle(this);
+            var colorRef = (color.B << 16) | (color.G << 8) | color.R;
+            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref colorRef, sizeof(int));
+        }
+        catch (Exception error)
+        {
+            WinUiRuntimeTrace.Write($"Window border color skipped: {error.GetType().Name}");
+        }
     }
 
     private static Windows.UI.Color UiColor(byte r, byte g, byte b, byte a = 255) =>
@@ -136,7 +164,7 @@ public sealed partial class MainWindow : Window
         try
         {
             var scale = Content?.XamlRoot?.RasterizationScale ?? 1.0;
-            var rowHeight = TopTabsRow.ActualHeight > 0 ? TopTabsRow.ActualHeight : 38;
+            var rowHeight = TopTabsRow.ActualHeight > 0 ? TopTabsRow.ActualHeight : 52;
             var windowWidth = RootShell.ActualWidth;
             if (windowWidth <= 0) return;
 
@@ -151,6 +179,14 @@ public sealed partial class MainWindow : Window
 
             const double addTabButtonReserve = 56; // bouton "+" : jamais recouvert par la zone de drag
             var dragLeft = Math.Min(leftEdge + addTabButtonReserve, windowWidth - _titleBarSafeRight);
+            if (_chromeLayoutStyle == "identitySpine")
+            {
+                // La colonne identitaire recouvre les premiers pixels de cette
+                // ligne (marque Lumora) : sans ce plancher, la zone de drag
+                // systeme les recouvre aussi et absorbe les clics destines a
+                // la marque.
+                dragLeft = Math.Max(dragLeft, IdentitySpineHost.ActualWidth + 4);
+            }
             var dragRight = Math.Max(dragLeft, windowWidth - _titleBarSafeRight);
             if (dragRight - dragLeft < 8) return;
 
@@ -166,4 +202,81 @@ public sealed partial class MainWindow : Window
         catch { }
     }
 
+    // Diagnostic bas niveau temporaire (Go utilisateur du 2026-07-25) : 8
+    // correctifs XAML successifs sur la molette (routage ScrollViewer, focus,
+    // dedoublonnage...) n'ont jamais ete confirmes par un geste physique reel -
+    // seulement par des tests source ou par UI Automation (ScrollPattern), qui
+    // prouvent que le ScrollViewer sait defiler mais pas que le message Windows
+    // de la molette l'atteint. Avant un 9e patch XAML a l'aveugle, on sous-classe
+    // le WndProc de la fenetre en lecture seule (relai systematique a
+    // CallWindowProc, aucun comportement change) pour tracer si/quand
+    // WM_MOUSEWHEEL (souris classique) ou WM_POINTERWHEEL (pile Pointer,
+    // touchpads/peripheriques recents) atteint reellement la fenetre pendant un
+    // test physique dans un panneau natif comme Parametres.
+    private const int GwlpWndproc = -4;
+    private const uint WmMousewheel = 0x020A;
+    private const uint WmPointerwheel = 0x024E;
+
+    private delegate nint RawWndProcDelegate(nint hWnd, uint msg, nint wParam, nint lParam);
+
+    private nint _originalWndProc;
+    private RawWndProcDelegate? _rawWheelDiagnosticsWndProc;
+    private nint _diagnosticsMainHwnd;
+
+    // SetWindowLongPtr(nint, int, nint) est deja declare dans
+    // MainWindow.SettingsTheme.cs (RemoveWindowLayeredAlpha) - reutilise ici,
+    // une classe partielle ne peut pas redeclarer la meme signature.
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint CallWindowProc(nint lpPrevWndFunc, nint hWnd, uint msg, nint wParam, nint lParam);
+
+    // Diagnostic supplementaire (Go utilisateur du 2026-07-25, suite a un
+    // test ou AUCUN signal molette n'a ete detecte a aucun niveau, meme pas
+    // WM_MOUSEWHEEL/WM_POINTERWHEEL bruts, alors qu'un test precedent en
+    // avait bien capte) : distinguer le focus Windows classique (quelle
+    // fenetre Win32 est reellement ciblee par les entrees) du focus XAML
+    // logique (FocusState) qu'on manipule depuis le debut. Ce sont deux
+    // notions liees mais distinctes ; si Windows ne considere pas Lumora
+    // comme la fenetre active/focus au moment du geste, la molette ne peut
+    // atteindre ni notre hook bas niveau ni le XAML, quel que soit le code
+    // applicatif.
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint GetFocus();
+
+    private void HookRawMouseWheelDiagnostics(nint hwnd)
+    {
+        try
+        {
+            _diagnosticsMainHwnd = hwnd;
+            _rawWheelDiagnosticsWndProc = RawWheelDiagnosticsWndProc;
+            var newProc = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(_rawWheelDiagnosticsWndProc);
+            _originalWndProc = SetWindowLongPtr(hwnd, GwlpWndproc, newProc);
+        }
+        catch (Exception error)
+        {
+            WinUiRuntimeTrace.Write($"Diagnostic bas niveau molette : sous-classement WndProc impossible ({error.GetType().Name}).");
+        }
+    }
+
+    private nint RawWheelDiagnosticsWndProc(nint hWnd, uint msg, nint wParam, nint lParam)
+    {
+        if (msg is WmMousewheel or WmPointerwheel)
+        {
+            var messageName = msg == WmMousewheel ? "WM_MOUSEWHEEL" : "WM_POINTERWHEEL";
+            var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
+            WinUiRuntimeTrace.Write($"Diagnostic bas niveau molette : {messageName} brut recu par la fenetre (delta={delta}).");
+        }
+
+        return CallWindowProc(_originalWndProc, hWnd, msg, wParam, lParam);
+    }
+
+    private void TraceWin32FocusState(string reason)
+    {
+        var foreground = GetForegroundWindow();
+        var focus = GetFocus();
+        WinUiRuntimeTrace.Write(
+            $"Diagnostic focus Win32 ({reason}) : hwndPrincipalLumora={_diagnosticsMainHwnd} foregroundWindow={foreground} estLumora={foreground == _diagnosticsMainHwnd} focusWin32={focus} estLumora={focus == _diagnosticsMainHwnd}.");
+    }
 }

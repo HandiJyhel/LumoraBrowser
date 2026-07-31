@@ -10,6 +10,11 @@ public sealed class UsageModeVisualIdentityTests
         var source = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
 
         Assert.Contains("mode-visual", source, StringComparison.Ordinal);
+        Assert.Contains("NewTabThemeVariablesCss()", source, StringComparison.Ordinal);
+        Assert.Contains("NewTabIsDarkTheme()", source, StringComparison.Ordinal);
+        Assert.Contains("--nt-search-bg", source, StringComparison.Ordinal);
+        Assert.Contains("--nt-shortcut-border", source, StringComparison.Ordinal);
+        Assert.Contains("--nt-add-shortcut-shadow", source, StringComparison.Ordinal);
         Assert.Contains("NewTabModeSignatureBarCss", source, StringComparison.Ordinal);
         Assert.Contains("mode-neutral", source, StringComparison.Ordinal);
         Assert.Contains("neutral-clock", source, StringComparison.Ordinal);
@@ -28,8 +33,10 @@ public sealed class UsageModeVisualIdentityTests
     public void Chrome_lumora_applique_la_palette_du_mode_actif()
     {
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var bookmarks = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
         var settingsTheme = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
         var windowChrome = ReadRepoFile("Lumora.WinUI", "MainWindow.WindowChrome.cs");
+        var appXaml = ReadRepoFile("Lumora.WinUI", "App.xaml");
 
         Assert.Contains("ModeChromeAccentStrip", xaml, StringComparison.Ordinal);
         Assert.Contains("ApplyUsageModeChrome", settingsTheme, StringComparison.Ordinal);
@@ -37,8 +44,102 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("ModeChromePalette", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("SetIdentityGradient", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("UsageModeButton.Background", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("NovaOverlayBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaTextOnAccentBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeButtonBackgroundBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeButtonAccentForegroundBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaModuleButtonBackgroundBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaBookmarkIconButtonStyle", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaBookmarkFontIconStyle", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeSymbolIconStyle", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeFontIconStyle", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaModuleFontIconStyle", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaRaisedIconButtonTemplate", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaRaisedBookmarkBarButtonTemplate", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaBookmarkBarButtonStyle", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeButtonShadowBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeButtonHighlightBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaBookmarkBarButtonBackgroundBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeHaloWarmBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeHaloCoolBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeMistBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaBrandChipBackgroundBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaBrandChipBorderBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("TabView.TabStripHeader", xaml, StringComparison.Ordinal);
+        Assert.Contains("lumière locale", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Lumora\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("NovaBookmarkButtonForegroundBrush", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("NovaBookmarkButtonActiveForegroundBrush", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("NovaBookmarkButtonActiveBackgroundBrush", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("Style = (Style)RootShell.Resources[\"NovaBookmarkBarButtonStyle\"]", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("Height = 36", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("FontSize = 13", bookmarks, StringComparison.Ordinal);
+        Assert.DoesNotContain("_bookmarkStarDefaultForeground", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("SyncSharedAppThemeResources()", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetChromeGradient(", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("NovaChromeGradientBrush", xaml, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaChromeButtonBackgroundBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaModuleButtonBackgroundBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaBookmarkButtonBackgroundBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaBookmarkButtonActiveBackgroundBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaBrandChipBackgroundBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaChromeHaloWarmBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaChromeButtonShadowBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("SetBrush(\"NovaBookmarkBarButtonBackgroundBrush\"", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("Style TargetType=\"ComboBox\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("Style TargetType=\"ToggleSwitch\"", appXaml, StringComparison.Ordinal);
+        Assert.Contains("Style TargetType=\"InfoBar\"", appXaml, StringComparison.Ordinal);
         Assert.Contains("ApplyWindowTitleBarColors();", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("BrushColor(\"NovaChromeSurfaceBrush\"", windowChrome, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Chrome_lumora_devient_composable_pour_les_onglets_et_les_favoris()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var settings = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
+        var bookmarks = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+        var uiSettings = ReadRepoFile("Lumora.WinUI", "Models", "UiSettings.cs");
+
+        Assert.Contains("TabStripPositionCombo", xaml, StringComparison.Ordinal);
+        Assert.Contains("BookmarksBarPositionCombo", xaml, StringComparison.Ordinal);
+        Assert.Contains("WorkspacePresetButton_Click", xaml, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceLeftBookmarksColumn", xaml, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceRightTabsColumn", xaml, StringComparison.Ordinal);
+        Assert.Contains("BookmarksSideRail", xaml, StringComparison.Ordinal);
+        Assert.Contains("BookmarksBottomRow", xaml, StringComparison.Ordinal);
+        Assert.Contains("FullScreenRightRevealZone", xaml, StringComparison.Ordinal);
+        Assert.Contains("TabStripPosition { get; set; } = \"top\"", uiSettings, StringComparison.Ordinal);
+        Assert.Contains("BookmarksBarPosition { get; set; } = \"top\"", uiSettings, StringComparison.Ordinal);
+        Assert.Contains("NormalizeTabStripPosition", settings, StringComparison.Ordinal);
+        Assert.Contains("NormalizeBookmarksBarPosition", settings, StringComparison.Ordinal);
+        Assert.Contains("Grid.SetRow(BrowserTabs, tabsAtBottom ? 5 : 1);", settings, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceBottomBookmarksRow.Height", settings, StringComparison.Ordinal);
+        Assert.Contains("Grid.SetColumn(BookmarksSideRail, bookmarksOnRight ? 6 : 0);", settings, StringComparison.Ordinal);
+        Assert.Contains("BookmarksBottomBarPanel.Children.Clear()", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("BookmarksSideBarPanel.Children.Clear()", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("UsesSideBookmarksRail(_bookmarksBarPosition)", bookmarks, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Fenetres_secondaires_reutilisent_une_palette_lumora_partagee()
+    {
+        var theme = ReadRepoFile("Lumora.WinUI", "LumoraTheme.cs");
+        var incognitoXaml = ReadRepoFile("Lumora.WinUI", "LumoraIncognitoWindow.xaml");
+        var incognitoCodeBehind = ReadRepoFile("Lumora.WinUI", "LumoraIncognitoWindow.xaml.cs");
+        var appWindowXaml = ReadRepoFile("Lumora.WinUI", "LumoraAppWindow.xaml");
+        var appWindowCodeBehind = ReadRepoFile("Lumora.WinUI", "LumoraAppWindow.xaml.cs");
+
+        Assert.Contains("ApplySecondaryWindowTheme", theme, StringComparison.Ordinal);
+        Assert.Contains("ApplySharedAppBrushes", theme, StringComparison.Ordinal);
+        Assert.Contains("ResolveTextOnColor", theme, StringComparison.Ordinal);
+        Assert.Contains("TintSurface", theme, StringComparison.Ordinal);
+        Assert.Contains("IncognitoToolbarButtonStyle", incognitoXaml, StringComparison.Ordinal);
+        Assert.Contains("LumoraWindowAccentBrush", incognitoXaml, StringComparison.Ordinal);
+        Assert.Contains("LumoraTheme.ApplySecondaryWindowTheme", incognitoCodeBehind, StringComparison.Ordinal);
+        Assert.Contains("LumoraWebAppActionButtonStyle", appWindowXaml, StringComparison.Ordinal);
+        Assert.Contains("LumoraWindowIdentityBrush", appWindowXaml, StringComparison.Ordinal);
+        Assert.Contains("LumoraTheme.ApplySecondaryWindowTheme", appWindowCodeBehind, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -87,10 +188,6 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("NovaCompanionGlassBrush", xaml, StringComparison.Ordinal);
         Assert.Contains("NovaModuleHubButtonStyle", xaml, StringComparison.Ordinal);
         Assert.Contains("NovaModuleHubAccentBrush", xaml, StringComparison.Ordinal);
-        Assert.Contains("NavigationMenuDividerColumn", xaml, StringComparison.Ordinal);
-        Assert.Contains("NavigationMenuButtonColumn", xaml, StringComparison.Ordinal);
-        Assert.Contains("Grid.Column=\"21\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("NavigationMenuButton", xaml, StringComparison.Ordinal);
         Assert.Contains("ChromeTint", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("ModeCompanionPrimaryButton_Click", usageMode, StringComparison.Ordinal);
         Assert.Contains("ModeCompanionSaveButton_Click", usageMode, StringComparison.Ordinal);
@@ -169,7 +266,7 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Chrome_bas_regroupe_mode_lumie_et_profil()
+    public void Chrome_bas_regroupe_mode_et_lumie()
     {
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
         var statusBarStart = xaml.IndexOf("<Grid x:Name=\"StatusBarRow\"", StringComparison.Ordinal);
@@ -187,9 +284,28 @@ public sealed class UsageModeVisualIdentityTests
 
         Assert.Contains("ModeCompanionButton", statusBarSection, StringComparison.Ordinal);
         Assert.Contains("UsageModeButton", statusBarSection, StringComparison.Ordinal);
-        Assert.Contains("ProfileStatusButton", statusBarSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ModeCompanionButton", navigationSection, StringComparison.Ordinal);
         Assert.DoesNotContain("UsageModeButton", navigationSection, StringComparison.Ordinal);
+
+        // Le profil a ete deplace en en-tete du menu Demarrer (0.93.5.0-dev,
+        // "comme un vrai menu demarrer Windows") : il ne doit plus etre dans
+        // la barre de statut basse.
+        Assert.DoesNotContain("ProfileStatusButton", statusBarSection, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Menu_demarrer_porte_le_profil_en_entete()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var menuStart = xaml.IndexOf("<StackPanel x:Name=\"ModulesFlyoutRoot\"", StringComparison.Ordinal);
+        var searchBoxStart = xaml.IndexOf("x:Name=\"StartMenuSearchBox\"", StringComparison.Ordinal);
+
+        Assert.True(menuStart >= 0, "ModulesFlyoutRoot introuvable.");
+        Assert.True(searchBoxStart >= 0, "StartMenuSearchBox introuvable.");
+        Assert.True(searchBoxStart > menuStart, "Le profil doit precéder la recherche dans le menu Démarrer.");
+
+        var headerSection = xaml.Substring(menuStart, searchBoxStart - menuStart);
+        Assert.Contains("ProfileStatusButton", headerSection, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -212,17 +328,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_83_41()
+    public void Version_projet_est_alignee_sur_0_93_6_2()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.83.54-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.83.54-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.83.54-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.83.54-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.8.0-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.93.8.0-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.93.8.0-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.8.0-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

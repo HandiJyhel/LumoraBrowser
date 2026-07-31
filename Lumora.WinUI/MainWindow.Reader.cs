@@ -81,7 +81,12 @@ public sealed partial class MainWindow
         {
             case "add":
             {
-                var url = obj["u"]?.GetValue<string>() ?? string.Empty;
+                // L'URL de l'annotation vient de core.Source (attestee par
+                // WebView2), jamais du champ JSON "u" : une page quelconque
+                // pourrait sinon planter une annotation falsifiee sous
+                // n'importe quelle URL de son choix (meme mecanisme de
+                // confiance que OriginFromSource pour les passkeys).
+                var url = core?.Source ?? string.Empty;
                 var created = _annotations.Add(
                     url,
                     obj["ti"]?.GetValue<string>() ?? string.Empty,
@@ -150,7 +155,7 @@ public sealed partial class MainWindow
 
         address ??= CurrentTab()?.Address;
         var isWeb = !string.IsNullOrWhiteSpace(address) && BookmarkStore.IsWebUrl(address);
-        ReaderModeButton.Opacity = isWeb ? 1 : 0.5;
+        ReaderModeButton.Opacity = isWeb ? 1 : 0.72;
         UpdateModulesPinUi();
         if (!isWeb)
         {

@@ -82,9 +82,20 @@ public sealed partial class MainWindow : Window
         var eclipsedByHighContrast = _uiSettings.AccessibilityHighContrast;
         UsageModeLabelText.Text = eclipsedByHighContrast ? "Mode (masque)" : "Mode";
         UsageModeCurrentText.Text = label;
+
+        // Bouton fusionne "Mode et confort" (menus rassembles en un seul
+        // point d'entree a la demande de l'utilisateur, cf. AGENTS.md) - le
+        // tooltip/nom d'accessibilite doit refleter les deux etats, pas
+        // seulement le mode d'usage. Calcule ici plutot que dans
+        // UpdateAccessibilityQuickButtonUi() pour n'avoir qu'un seul
+        // ecrivain du texte du bouton.
+        var comfortProfileKey = ResolveAccessibilityComfortProfileFromControls();
+        var comfortPreset = FindAccessibilityComfortPreset(comfortProfileKey);
+        var comfortLabel = comfortProfileKey == "custom" ? "Personnalise" : comfortPreset?.Label ?? "Confort";
+
         var tooltip = eclipsedByHighContrast
-            ? $"Mode d'usage : {label}. Couleurs remplacees tant que le contraste eleve (Confort) est actif."
-            : $"Mode d'usage : {label}";
+            ? $"Mode d'usage : {label}. Confort : {comfortLabel}. Couleurs remplacees tant que le contraste eleve (Confort) est actif."
+            : $"Mode d'usage : {label}. Confort : {comfortLabel}.";
         ToolTipService.SetToolTip(UsageModeButton, tooltip);
         AutomationProperties.SetName(UsageModeButton, tooltip);
 
@@ -130,7 +141,19 @@ public sealed partial class MainWindow : Window
 
         ToolTipService.SetToolTip(ModeCompanionButton, $"Compagnon {label}");
         AutomationProperties.SetName(ModeCompanionButton, $"Compagnon du mode {label}");
+
+        // Ecran natif "Compagnon du mode" de la colonne identitaire
+        // (MainWindow.IdentitySpine.cs) : meme donnees que ci-dessus, un seul
+        // point d'entree a maintenir en synchro plutot que de traquer chaque
+        // site d'appel de UpdateModeCompanionUi().
+        UpdateIdentitySpineHeroUi(mode, label, companion);
     }
+
+    // Factorise la resolution du compagnon du mode courant : utilisee par
+    // UpdateModeCompanionUi() et par MainWindow.IdentitySpine.cs pour ne
+    // jamais dupliquer les textes par mode (Body/MemoryPlaceholder/...).
+    private ModeCompanionDefinition GetCurrentModeCompanion() =>
+        ModeCompanion((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant());
 
     private void ModeCompanionButton_Click(object sender, RoutedEventArgs e)
     {
@@ -150,10 +173,17 @@ public sealed partial class MainWindow : Window
         await RunModeCompanionActionAsync(ModeCompanion((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant()).SecondaryAction);
     }
 
-    private void ModeCompanionSaveButton_Click(object sender, RoutedEventArgs e)
+    private void ModeCompanionSaveButton_Click(object sender, RoutedEventArgs e) =>
+        SaveCompanionMemoryAndNotify(ModeCompanionMemoryBox.Text);
+
+    // Factorisee pour etre partagee avec l'ecran natif "Compagnon du mode" de
+    // la colonne identitaire (IdentitySpineHeroSaveButton_Click,
+    // MainWindow.IdentitySpine.cs) - une seule ecriture/notification, pas deux
+    // copies du meme code.
+    private void SaveCompanionMemoryAndNotify(string text)
     {
         var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
-        SetCompanionMemory(mode, ModeCompanionMemoryBox.Text);
+        SetCompanionMemory(mode, text);
         _uiSettings.Save(_profile.UiSettingsFile);
         RefreshNovaHomePages();
         StatusText.Text = $"Lumie garde votre {ModeCompanion(mode).MemoryName}.";
@@ -434,7 +464,13 @@ public sealed partial class MainWindow : Window
                 break;
 
             case "night":
-                _uiSettings.ThemeMode = "dark";
+                // Ne force plus ThemeMode="dark" : ecrasait silencieusement
+                // le reglage Theme choisi par l'utilisateur (Parametres >
+                // Theme) des qu'il activait cette posture, sans le prevenir -
+                // signale par l'utilisateur. "Nuit" reste une posture de
+                // confort de lecture nocturne (compact, transparence,
+                // modules de lecture), mais ne pilote plus le theme clair/
+                // sombre a la place de l'utilisateur.
                 _uiSettings.NewTabStyle = "calm";
                 _uiSettings.PersonalizationMotionStyle = "subtle";
                 _uiSettings.NewTabFocusSearchOnOpen = false;
@@ -521,16 +557,6 @@ public sealed partial class MainWindow : Window
         TranslatePinnedButton.Visibility = IsPinned("translate") ? Visibility.Visible : Visibility.Collapsed;
         WebAppsPinnedButton.Visibility = IsPinned("webApps") ? Visibility.Visible : Visibility.Collapsed;
         DictationPinnedButton.Visibility = IsPinned("dictation") ? Visibility.Visible : Visibility.Collapsed;
-
-        UpdatePinToggle(ReaderPinToggleButton, "reader");
-        UpdatePinToggle(NotesPinToggleButton, "notes");
-        UpdatePinToggle(ReadAloudPinToggleButton, "readAloud");
-        UpdatePinToggle(VideoDownloadPinToggleButton, "videoDownload");
-        UpdatePinToggle(SearchAssistPinToggleButton, "searchAssist");
-        UpdatePinToggle(DetachVideoPinToggleButton, "detachVideo");
-        UpdatePinToggle(TranslatePinToggleButton, "translate");
-        UpdatePinToggle(WebAppsPinToggleButton, "webApps");
-        UpdatePinToggle(DictationPinToggleButton, "dictation");
 
         UpdatePinToggle(PanelReaderPinToggleButton, "reader");
         UpdatePinToggle(PanelNotesPinToggleButton, "notes");

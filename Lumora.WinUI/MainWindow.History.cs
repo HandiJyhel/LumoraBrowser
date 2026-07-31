@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
+using Windows.System;
 
 namespace Lumora.WinUI;
 
@@ -21,6 +22,8 @@ public sealed partial class MainWindow
     {
         RenderDownloads();
         ShowPanel(DownloadsPanel, "Telechargements");
+        _unseenDownloadsCount = 0;
+        RefreshDownloadsIndicator();
     }
     private void HistorySearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -41,10 +44,13 @@ public sealed partial class MainWindow
         var semanticItems = await SearchHistorySemanticAsync(query);
         if (!string.Equals(_historyPanel.SearchTerm, query, StringComparison.Ordinal)) return;
 
-        var existingUrls = _historyPanel.Items.Select(i => i.Entry.Url).ToHashSet();
+        var existingUrls = _historyPanel.Items
+            .Where(i => i.Entry is not null)
+            .Select(i => i.Entry!.Url)
+            .ToHashSet();
         foreach (var item in semanticItems)
         {
-            if (existingUrls.Add(item.Entry.Url))
+            if (item.Entry is not null && existingUrls.Add(item.Entry.Url))
             {
                 _historyPanel.Items.Add(item);
             }
@@ -53,7 +59,7 @@ public sealed partial class MainWindow
 
     private void HistoryList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (HistoryList.SelectedItem is not HistoryListItem item)
+        if (HistoryList.SelectedItem is not HistoryListItem { Entry: not null } item)
         {
             return;
         }
@@ -62,15 +68,28 @@ public sealed partial class MainWindow
         ShowPanel(BrowserPanel, item.Entry.Title);
     }
 
+    // Entree ouvre l'element selectionne, comme le double-clic - meme
+    // correctif que BookmarksList (audit accessibilite moteur/motricite,
+    // palier 0.93.x).
+    private void HistoryList_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Enter) return;
+        if (HistoryList.SelectedItem is not HistoryListItem { Entry: not null } item) return;
+
+        e.Handled = true;
+        NavigateCurrentTab(item.Entry.Url, item.Entry.Title);
+        ShowPanel(BrowserPanel, item.Entry.Title);
+    }
+
     private void HistoryList_RightTapped(object sender, RightTappedRoutedEventArgs e)
     {
-        if (FindHistoryItem(e.OriginalSource as DependencyObject) is not HistoryListItem item)
+        if (FindHistoryItem(e.OriginalSource as DependencyObject) is not { Entry: not null } item)
         {
             return;
         }
 
         HistoryList.SelectedItem = item;
-        CreateHistoryContextFlyout(item).ShowAt(HistoryList, e.GetPosition(HistoryList));
+        CreateHistoryContextFlyout(item.Entry).ShowAt(HistoryList, e.GetPosition(HistoryList));
         e.Handled = true;
     }
 
@@ -89,32 +108,48 @@ public sealed partial class MainWindow
         return null;
     }
 
-    private MenuFlyout CreateHistoryContextFlyout(HistoryListItem item)
+    private MenuFlyout CreateHistoryContextFlyout(HistoryEntry entry)
     {
         var flyout = new MenuFlyout();
-        var openItem = new MenuFlyoutItem { Text = "Ouvrir", Tag = item };
+        AddLumoraMenuHeader(
+            flyout.Items,
+            entry.Title,
+            TabHeaderHost(entry.Url),
+            "\uE81C");
+        var openItem = new MenuFlyoutItem { Text = "Ouvrir", Tag = entry };
         openItem.Click += (s, _) =>
         {
-            if (s is MenuFlyoutItem { Tag: HistoryListItem i })
+            if (s is MenuFlyoutItem { Tag: HistoryEntry i })
             {
-                NavigateCurrentTab(i.Entry.Url, i.Entry.Title);
-                ShowPanel(BrowserPanel, i.Entry.Title);
+                NavigateCurrentTab(i.Url, i.Title);
+                ShowPanel(BrowserPanel, i.Title);
             }
         };
         flyout.Items.Add(openItem);
+        var openInNewTabItem = new MenuFlyoutItem { Text = "Ouvrir dans un nouvel onglet", Tag = entry };
+        openInNewTabItem.Click += (s, _) =>
+        {
+            if (s is MenuFlyoutItem { Tag: HistoryEntry i })
+            {
+                AddTab(i.Title, i.Url, select: true);
+                ShowPanel(BrowserPanel, i.Title);
+            }
+        };
+        flyout.Items.Add(openInNewTabItem);
         flyout.Items.Add(new MenuFlyoutSeparator());
-        var removeItem = new MenuFlyoutItem { Text = "Supprimer de l'historique", Tag = item };
+        var removeItem = new MenuFlyoutItem { Text = "Supprimer de l'historique", Tag = entry };
         removeItem.Click += (s, _) =>
         {
-            if (s is MenuFlyoutItem { Tag: HistoryListItem i })
+            if (s is MenuFlyoutItem { Tag: HistoryEntry i })
             {
-                _historyPanel.Store.Remove(i.Entry);
-                _semanticIndex.RemoveByUrl(i.Entry.Url);
+                _historyPanel.Store.Remove(i);
+                _semanticIndex.RemoveByUrl(i.Url);
                 RenderHistory();
                 StatusText.Text = "Entree supprimee de l'historique.";
             }
         };
         flyout.Items.Add(removeItem);
+        HookFlyoutPointerSupport(flyout);
         return flyout;
     }
 
@@ -135,6 +170,11 @@ public sealed partial class MainWindow
 
     private void CoreWebView2_DownloadStarting(CoreWebView2 sender, CoreWebView2DownloadStartingEventArgs args)
     {
+        // Lumora a son propre suivi (panneau Telechargements + historique) :
+        // on desactive la boite de dialogue native d'Edge/WebView2, qui peut
+        // s'afficher detachee de la fenetre, y compris sur un autre ecran.
+        args.Handled = true;
+
         var entry = new DownloadEntry(args.DownloadOperation);
         entry.OnChanged += () => DispatcherQueue.TryEnqueue(() =>
         {
@@ -142,6 +182,7 @@ public sealed partial class MainWindow
             RenderDownloads();
         });
         _historyPanel.Downloads.Upsert(entry.ToHistoryEntry());
+        NotifyDownloadStarted();
         DispatcherQueue.TryEnqueue(() =>
         {
             RenderDownloads();
@@ -161,10 +202,36 @@ public sealed partial class MainWindow
         var entries = string.IsNullOrWhiteSpace(_historyPanel.SearchTerm)
             ? _historyPanel.Store.AllEntries()
             : (IEnumerable<HistoryEntry>)_historyPanel.Store.Search(_historyPanel.SearchTerm);
+
+        // Les entrees arrivent deja triees du plus recent au plus ancien
+        // (HistoryStore.Add insere en tete) : un simple suivi du dernier
+        // groupe rencontre suffit, pas besoin de trier/regrouper a part.
+        string? lastGroup = null;
         foreach (var entry in entries)
         {
+            var group = DateGroupLabel(entry.VisitedAt);
+            if (group != lastGroup)
+            {
+                _historyPanel.Items.Add(HistoryListItem.GroupHeader(group));
+                lastGroup = group;
+            }
+
             _historyPanel.Items.Add(HistoryListItemFor(entry));
         }
+    }
+
+    private static string DateGroupLabel(DateTimeOffset visitedAt)
+    {
+        var today = DateTimeOffset.Now.Date;
+        var days = (today - visitedAt.Date).Days;
+        return days switch
+        {
+            0 => "Aujourd'hui",
+            1 => "Hier",
+            >= 2 and <= 6 => "Cette semaine",
+            >= 7 and <= 30 => "Ce mois-ci",
+            _ => "Plus tot"
+        };
     }
 
     private HistoryListItem HistoryListItemFor(HistoryEntry entry)

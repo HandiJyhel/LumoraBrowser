@@ -18,7 +18,7 @@ public sealed partial class MainWindow
     private void UpdateReadingLensButtonVisibility()
     {
         if (ReadingLensButton is null) return;
-        ReadingLensButton.Opacity = _uiSettings.AccessibilityReadingLensEnabled ? 1 : 0.5;
+        ReadingLensButton.Opacity = _uiSettings.AccessibilityReadingLensEnabled ? 1 : 0.72;
     }
 
     private async void ReadingLensButton_Click(object sender, RoutedEventArgs e)

@@ -38,6 +38,7 @@ public sealed partial class MainWindow
         };
         accelerator.Invoked += (_, args) =>
         {
+            if (IsRightAltKeyDown()) return;
             args.Handled = true;
             onInvoked();
         };

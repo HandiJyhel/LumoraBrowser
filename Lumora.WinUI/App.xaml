@@ -26,6 +26,67 @@
             <SolidColorBrush x:Key="NovaControlSurfaceBrush" Color="#FF1A2231" />
             <SolidColorBrush x:Key="NovaControlSurfaceRaisedBrush" Color="#FF222A3A" />
             <SolidColorBrush x:Key="NovaControlStrokeBrush" Color="#FF40495B" />
+            <SolidColorBrush x:Key="NovaSuccessBrush" Color="#FF3DD688" />
+            <SolidColorBrush x:Key="NovaSuccessSurfaceBrush" Color="#FF1F3C39" />
+            <SolidColorBrush x:Key="NovaWarningBrush" Color="#FFFFB935" />
+            <SolidColorBrush x:Key="NovaWarningSurfaceBrush" Color="#FF3B3121" />
+            <SolidColorBrush x:Key="NovaDangerBrush" Color="#FFE5484D" />
+            <SolidColorBrush x:Key="NovaDangerSurfaceBrush" Color="#FF412428" />
+            <Style TargetType="TextBox">
+                <Setter Property="Background" Value="{StaticResource NovaControlSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaControlStrokeBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaControlForegroundBrush}" />
+                <Setter Property="PlaceholderForeground" Value="{StaticResource NovaControlMutedForegroundBrush}" />
+                <Setter Property="SelectionHighlightColor" Value="{StaticResource AccentFillColorSecondaryBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+            <Style TargetType="PasswordBox">
+                <Setter Property="Background" Value="{StaticResource NovaControlSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaControlStrokeBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaControlForegroundBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+            <Style TargetType="ComboBox">
+                <Setter Property="Background" Value="{StaticResource NovaControlSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaControlStrokeBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaControlForegroundBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+            <Style TargetType="ToggleSwitch">
+                <Setter Property="Foreground" Value="{StaticResource NovaControlForegroundBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+            <!-- RadioButton/CheckBox n'avaient aucun style applicatif par
+                 defaut : ils gardaient le focus visuel systeme, incoherent
+                 avec le jaune vif NovaFocusVisualPrimaryBrush utilise partout
+                 ailleurs dans la chrome (audit accessibilite basse vision,
+                 palier 0.93.x). Pas de changement de couleur/taille propre au
+                 controle, seulement le focus. -->
+            <Style TargetType="RadioButton">
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+            <Style TargetType="CheckBox">
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+            <Style TargetType="InfoBar">
+                <Setter Property="Background" Value="{StaticResource NovaControlSurfaceRaisedBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaControlStrokeBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Foreground" Value="{StaticResource NovaControlForegroundBrush}" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

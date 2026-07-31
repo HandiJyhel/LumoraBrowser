@@ -27,6 +27,7 @@ public sealed class AccessibilityRegressionTests
         var passkeys = ReadRepoFile("Lumora.WinUI", "MainWindow.Passkeys.cs");
         var wallet = ReadRepoFile("Lumora.WinUI", "MainWindow.Wallet.cs");
         var vaultQuickAccess = ReadRepoFile("Lumora.WinUI", "MainWindow.VaultQuickAccess.cs");
+        var identitySpine = ReadRepoFile("Lumora.WinUI", "MainWindow.IdentitySpine.cs");
 
         Assert.Contains("Retirer {moduleName} de la barre de modules", usageMode, StringComparison.Ordinal);
         Assert.Contains("Epingler {moduleName} dans la barre de modules", usageMode, StringComparison.Ordinal);
@@ -45,6 +46,7 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("ApplyNovaControlAccessibility(fillBtn, $\"Utiliser la carte {title} sur la page active\")", wallet, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(unlockBtn, \"Deverrouiller le coffre\")", vaultQuickAccess, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(copyTotpBtn, $\"Copier le code TOTP pour", vaultQuickAccess, StringComparison.Ordinal);
+        Assert.Contains("ApplyNovaControlAccessibility(button, $\"Onglet {tab.Title}\")", identitySpine, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -128,9 +130,15 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("Controle Alt R recentre le focus sur la zone utile.", settings, StringComparison.Ordinal);
         Assert.Contains("Controle Alt S active le mode secours.", settings, StringComparison.Ordinal);
         Assert.Contains("Controle Alt X restaure l'etat de confort precedent.", settings, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"AccessibilityQuickButton\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"AccessibilityQuickFlyout\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Ctrl+Alt+6 a Ctrl+Alt+9", xaml, StringComparison.Ordinal);
+        // Menus "Mode" et "Confort" fusionnes en un seul point d'entree
+        // (UsageModeButton/UsageModeFlyout) a la demande explicite de
+        // l'utilisateur - AccessibilityQuickButton/AccessibilityQuickFlyout
+        // n'existent plus en tant qu'elements XAML autonomes.
+        Assert.DoesNotContain("x:Name=\"AccessibilityQuickButton\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Name=\"AccessibilityQuickFlyout\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"UsageModeButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Opening=\"AccessibilityQuickFlyout_Opening\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Ctrl+Alt+6 et Ctrl+Alt+8", xaml, StringComparison.Ordinal);
         Assert.Contains("Ctrl+Alt+F", xaml, StringComparison.Ordinal);
         Assert.Contains("Ctrl+Alt+R", xaml, StringComparison.Ordinal);
         Assert.Contains("Ctrl+Alt+S", xaml, StringComparison.Ordinal);
@@ -155,8 +163,10 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("AccessibilityQuickPresetButton_Click", accessibilityQuickActions, StringComparison.Ordinal);
         Assert.Contains("AccessibilityQuickToggleButton_Click", accessibilityQuickActions, StringComparison.Ordinal);
         Assert.Contains("VirtualKey.Number6", accessibilityQuickActions, StringComparison.Ordinal);
-        Assert.Contains("VirtualKey.Number9", accessibilityQuickActions, StringComparison.Ordinal);
+        Assert.Contains("VirtualKey.Number8", accessibilityQuickActions, StringComparison.Ordinal);
         Assert.Contains("VirtualKey.Number0", accessibilityQuickActions, StringComparison.Ordinal);
+        Assert.DoesNotContain("VirtualKey.Number7", accessibilityQuickActions, StringComparison.Ordinal);
+        Assert.DoesNotContain("VirtualKey.Number9", accessibilityQuickActions, StringComparison.Ordinal);
         Assert.Contains("DescribeAccessibilityComfortState()", accessibilityQuickActions, StringComparison.Ordinal);
         Assert.Contains("AnnounceAccessibilityComfortState()", accessibilityQuickActions, StringComparison.Ordinal);
         Assert.Contains("UpdateAccessibilityQuickButtonUi();", comfortProfiles, StringComparison.Ordinal);
