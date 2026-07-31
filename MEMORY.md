@@ -16261,3 +16261,57 @@ entre diapositives et le deplacement de la pilule de progression.
 **Version :** `0.93.8.0-dev` (inchangee - ajustement d'une
 fonctionnalite deja ajoutee cette session, meme raisonnement que les
 deux passes precedentes).
+
+## 2026-08-01 (suite) - Faux plantage signale : exe fige dans _Archives, pas le code actuel
+
+**Signalement de l'utilisateur** : l'application plantait en essayant
+d'aller voir l'ecran de bienvenue depuis Parametres. Diagnostic serieux
+avant de toucher au code (meme reflexe que le crash natif precedent) :
+
+- **Observateur d'evenements Windows** (`Get-WinEvent`, provider
+  "Application Error") a bien confirme un crash reel a 00:28:32
+  (violation d'acces `0xc0000005` dans `coreclr.dll`), MAIS le chemin de
+  l'executable fautif etait
+  `G:\...\_Archives\LumoraBrowser-v0.93.8.0-dev-2026-07-31\artifacts\tmp\
+  winui-run\Lumora.WinUI\x64\Debug\current\Lumora.WinUI.exe` - **une
+  copie figee dans le dossier d'archive**, pas le depot de travail.
+- Verification : le fichier a `LastWriteTime` du jour meme (01/08 a
+  00:27:51, 41s avant le crash) - quelqu'un a donc lance
+  `scripts\run-winui.ps1` **depuis l'interieur du dossier archive**
+  (celui-ci contient sa propre copie de `scripts\`, donc le script y
+  calcule son `$repoRoot` sur l'archive et non sur le vrai depot) -
+  tres probablement un terminal reste ouvert sur ce chemin par erreur.
+- **Contre-verification sur le vrai depot** : `scripts\run-winui.ps1`
+  lance depuis `LumoraBrowser` (le vrai depot, code du jour inclus -
+  transition en glissement + pilule mobile des slides), navigation
+  repetee dans Parametres (mode invite, plusieurs clics sur
+  "Personnaliser", ouverture/fermeture) : **aucun crash**, processus
+  reactif tout du long.
+
+**Conclusion** : ce plantage ne vient pas du code actuel - c'est un
+piege deja documente dans la memoire personnelle ("exe perime hors
+artifacts/tmp/winui-build") qui touche cette fois une copie d'archive
+au lieu d'un reliquat local. Aucun correctif de code necessaire. Point
+de vigilance a partager : ne jamais lancer `run-winui.ps1` (ni aucun
+executable Lumora) depuis un chemin sous `_Archives\` - toujours
+verifier le dossier de travail avant de lancer un script de ce genre.
+
+## 2026-08-01 (suite) - Version : 0.93.8.0-dev -> 0.93.9.0-dev
+
+Demande explicite de l'utilisateur ("avec tous les correctifs faut
+quand meme pas deconner"), montee du **troisieme chiffre** (comme
+precise noir sur blanc par l'utilisateur : "0.93.9.0-dev"). A noter
+pour la coherence future : le texte de la section Versionnement
+d'`AGENTS.md` dit encore "Troisieme nombre : mise a jour mineure ou
+correction de bug" - une formulation plus ancienne que la regle du
+2026-07-27 dans `CLAUDE.md` (3e chiffre = ajout, 4e = micro-correctif).
+Pas touche ici puisque l'utilisateur a donne le numero exact lui-meme ;
+a clarifier avec lui si l'occasion se presente, sans lui redemander
+inutilement.
+
+Mise a jour coherente des 4 emplacements verifies par le test
+`Version_projet_est_alignee_sur_0_93_9_0` (`Lumora.Tests/
+UsageModeVisualIdentityTests.cs`, renomme au passage pour rester lisible) :
+`MainWindow.xaml.cs`, `AGENTS.md`, `build-clean-test-artifact.ps1`,
+`build-installer.ps1`. Build (MSBuild VS 2026) + `dotnet test` :
+695/696 (meme echec preexistant sans rapport).
