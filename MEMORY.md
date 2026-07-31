@@ -16097,3 +16097,56 @@ futur signalement de fermeture brutale sans message d'erreur.
 
 **Version :** `0.93.8.0-dev` (inchangee - correctif critique, aucun
 changement de comportement voulu).
+
+## 2026-07-31 (suite) - Slides de bienvenue : refonte contenu + visuel apres retour utilisateur
+
+**Retour direct de l'utilisateur sur la premiere version** (deux points
+distincts, tous deux reconnus fondes) :
+- **Contenu** : les slides parlaient de la politique du navigateur (vie
+  privee, adaptation aux gens) et non de ses fonctions concretes -
+  "ca c'est pas des fonctions, c'est la politique du Navigateur".
+- **Visuel** : "le truc le plus basique du monde... plus joyeux, plus
+  anime avec des petits effets quand meme".
+
+**Refonte du contenu** : 5 diapositives - `WelcomeStep0` (accueil),
+`WelcomeStep1` Coffre/Portefeuille, `WelcomeStep2` Incognito + Tor,
+`WelcomeStep3` Lecture/Traduction/Recherche, `WelcomeStep4`
+Accessibilite - chacune une fonction reellement livree dans Lumora,
+plus la politique/philosophie.
+
+**Refonte du visuel** : chaque slide porte desormais une icone
+(Segoe MDL2, glyphes deja utilises ailleurs dans le code - `\uE72E`,
+`\uE774`, `\uE736`, `\uE721` - pas de glyphe invente, lecon retenue du
+crash natif plus haut) dans un badge circulaire 64x64 sur fond
+`NovaIdentityMarkBrush`, entoure d'un halo (`NovaChromeHaloWarmGlowBrush`/
+`NovaChromeHaloCoolGlowBrush` en alternance). Chaque panneau de slide a
+un `EntranceThemeTransition` (transition standard WinUI, pas de
+DIY) pour une entree animee. Les points de progression (5 `Ellipse`)
+remplacent l'ancien texte d'etape brut, colores en `NovaAccentBrush`
+(etape courante) / `NovaChromeStrokeBrush` (autres) - le texte d'etape
+brut est conserve mais rendu quasi invisible (`Opacity="0.001"`),
+garde uniquement pour `AutomationProperties.Name` (lecteur d'ecran).
+
+**Verifie en reel** (profil jetable, pas le profil de l'utilisateur) :
+build + lancement, Parametres > Mon Lumora > "Revoir l'ecran de
+bienvenue", capture d'ecran confirmant le rendu (icone + halo + points),
+puis parcours complet des 5 diapositives via "Suivant"/"Commencer" avec
+verification `Responding` du processus apres chaque clic - aucun crash,
+processus reactif de bout en bout. Build (MSBuild VS 2026 - `dotnet
+build` direct echoue dans cet environnement pour une raison sans
+rapport, voir note plus bas) + `dotnet test` : 695/696 (meme echec
+preexistant sans rapport).
+
+**Note environnement (pas un bug Lumora)** : `dotnet build` seul echoue
+sur ce poste avec `MSB4062` sur
+`Microsoft.Build.Packaging.Pri.Tasks.dll` - le SDK dotnet 10.0.302
+installe ne contient pas ce dossier `Microsoft\VisualStudio\v18.0\
+AppxPackage\`, seul Visual Studio 2026 (`C:\Program Files\Microsoft
+Visual Studio\18\Community\MSBuild\...`) l'a. Contournement : builder
+via le MSBuild.exe de VS 2026 plutot que `dotnet build` directement.
+
+**Toujours ecarte pour ce lot** (rappel, inchange) : selecteur de
+langue FR/EN.
+
+**Version :** `0.93.8.0-dev` (inchangee - ajustement d'une fonctionnalite
+deja ajoutee cette session, pas un nouvel ajout).
