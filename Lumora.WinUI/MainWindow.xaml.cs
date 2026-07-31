@@ -37,6 +37,19 @@ namespace Lumora.WinUI;
 public sealed partial class MainWindow : Window
 {
     internal const string Version = "0.93.8.0-dev";
+
+    // Numero de version RENDU PUBLIC, distinct du numero de version de
+    // developpement ci-dessus. Les deux suivent des logiques totalement
+    // separees : "Version" ci-dessus est le compteur interne granulaire
+    // (palier.ajout.correctif, regi par les regles de AGENTS.md), tandis que
+    // "ReleaseVersion" est le numero que verra le grand public pour une vraie
+    // sortie publique - il commence a "1.0.0" par convention, independamment
+    // d'ou en est le compteur interne, et n'a pas a suivre les memes regles de
+    // palier. Reste `null` tant qu'aucune release n'est coupee (l'ecran A
+    // propos affiche alors "Version de developpement * {Version}" comme
+    // aujourd'hui) ; a renseigner ("1.0.0") au moment precis de couper une
+    // vraie release, pour que l'ecran A propos n'affiche plus que ce numero.
+    internal const string? ReleaseVersion = null;
     private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     private const double VerticalTabsDefaultWidth = 210;
@@ -368,7 +381,7 @@ public sealed partial class MainWindow : Window
         BookmarksList.ItemsSource = _bookmarkItems;
         BookmarkFoldersList.ItemsSource = _bookmarkFolderItems;
         AboutProfilePathText.Text = _profile.ProfileDir;
-        AboutVersionText.Text = Version;
+        ApplyVersionDisplay();
         LoadAboutAuthenticity();
         ApplyUiSettings();
         InitPrivacyEngine();
@@ -493,6 +506,27 @@ public sealed partial class MainWindow : Window
         AboutSectionCredits.Visibility = section == "credits" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionTechnical.Visibility = section == "technical" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionProfile.Visibility = section == "profile" ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // Affiche soit "Version de developpement * X.Y.Z.W-dev" (ReleaseVersion
+    // non renseignee, cas normal en developpement), soit juste "Version 1.0.0"
+    // une fois qu'une vraie release est coupee (ReleaseVersion renseignee) -
+    // voir le commentaire sur ReleaseVersion pour la distinction des deux
+    // numeros.
+    private void ApplyVersionDisplay()
+    {
+        if (string.IsNullOrEmpty(ReleaseVersion))
+        {
+            AboutVersionLabelText.Text = "Version de développement";
+            AboutVersionSeparatorText.Visibility = Visibility.Visible;
+            AboutVersionText.Text = Version;
+        }
+        else
+        {
+            AboutVersionLabelText.Text = "Version";
+            AboutVersionSeparatorText.Visibility = Visibility.Collapsed;
+            AboutVersionText.Text = ReleaseVersion;
+        }
     }
 
     private void LoadAboutAuthenticity()
