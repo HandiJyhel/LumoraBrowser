@@ -143,6 +143,13 @@ Assert-RequiredPath -Path $appExe -Message "Exécutable introuvable dans l'artef
 Assert-RequiredPath -Path $verificationSource -Message "VERIFICATION.txt introuvable dans l'artefact propre"
 Assert-RequiredPath -Path $logoSource -Message "Logo Lumora PNG introuvable dans l'artefact propre"
 
+$fixedRuntimeSource = Join-Path $appSourceDir "FixedRuntime"
+if (-not (Test-Path $fixedRuntimeSource) -or $null -eq (Get-ChildItem -LiteralPath $fixedRuntimeSource -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+    throw "Runtime WebView2 Fixed Version absent de l'artefact propre ($fixedRuntimeSource). " +
+        "Lance scripts\prepare-webview2-fixedversion.ps1 puis reconstruis le build propre avant l'installateur : " +
+        "une release sans ce dossier ne peut pas afficher de page web."
+}
+
 Clear-InstallerWorkspace `
     -OutputRoot $outputRoot `
     -StagingRoot $stagingRoot `
@@ -213,7 +220,7 @@ SHA256 : $setupHash
 Signature Sigstore : non signée pour ce build
 Signature Windows : non signée Authenticode
 Installation : dossier visible et modifiable ; par défaut sans privilège administrateur sous LOCALAPPDATA
-Contenu : application Lumora et modules intégrés inclus ; nom complet Lumora Browser ; logo LumoraApp.png embarqué avec rendu haute qualité ; options à cocher redessinées et visibles ; code d'installateur réorganisé en template propre ; WebView2 téléchargé depuis Microsoft si le runtime manque ; moteur Tor installable via une case à cocher (décochée par défaut), téléchargé depuis dist.torproject.org et vérifié par empreinte SHA256 épinglée dans le code de Lumora
+Contenu : application Lumora et modules intégrés inclus ; nom complet Lumora Browser ; logo LumoraApp.png embarqué avec rendu haute qualité ; options à cocher redessinées et visibles ; code d'installateur réorganisé en template propre ; WebView2 embarqué en mode Fixed Version (aucun téléchargement, autorisation App Container posée via icacls à l'installation) ; moteur Tor installable via une case à cocher (décochée par défaut), téléchargé depuis dist.torproject.org et vérifié par empreinte SHA256 épinglée dans le code de Lumora
 Profil : aucun profil embarqué ; aucun dossier de profil forcé au lancement
 Source build propre : $($cleanArtifact.FullName)
 

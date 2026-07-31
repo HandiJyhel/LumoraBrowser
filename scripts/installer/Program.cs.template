@@ -1,11 +1,8 @@
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.IO.Compression;
-using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using Lumora.WinUI.Tor;
 using Microsoft.Win32;
 
@@ -13,7 +10,6 @@ namespace Lumora.Setup;
 
 internal sealed record InstallerOptions(
     string InstallRoot,
-    bool EnsureWebView2Runtime,
     bool CleanInstalledProfile,
     bool CreateDesktopShortcut,
     bool CreateStartMenuShortcut,
@@ -44,7 +40,6 @@ internal sealed class InstallerForm : Form
     private readonly Button _installButton = new();
     private readonly Button _cancelButton = new();
     private readonly Button _browseButton = new();
-    private readonly LumoraOptionCheckBox _webView2CheckBox = new();
     private readonly LumoraOptionCheckBox _cleanProfileCheckBox = new();
     private readonly LumoraOptionCheckBox _desktopShortcutCheckBox = new();
     private readonly LumoraOptionCheckBox _startMenuShortcutCheckBox = new();
@@ -259,7 +254,7 @@ internal sealed class InstallerForm : Form
 
         AddSectionLine(panel, "Inclus : application, modules Lumora et ressources du navigateur.", 44, LumoraPalette.BodyText);
         AddSectionLine(panel, "Non inclus : profils, favoris, historique, mots de passe, cookies et données personnelles.", 70, LumoraPalette.BodyText);
-        AddSectionLine(panel, "WebView2 : téléchargé depuis Microsoft uniquement si le runtime manque.", 98, LumoraPalette.MutedForeground);
+        AddSectionLine(panel, "WebView2 : moteur embarqué avec Lumora, aucun téléchargement nécessaire.", 98, LumoraPalette.MutedForeground);
 
         Controls.Add(panel);
     }
@@ -270,26 +265,9 @@ internal sealed class InstallerForm : Form
         panel.Controls.Add(CreateSectionTitle("Options"));
 
         ConfigureCheckBox(
-            _webView2CheckBox,
-            "Télécharger et installer WebView2 si le runtime manque",
-            new Point(18, 40),
-            new Size(416, 30),
-            true);
-
-        panel.Controls.Add(new Label
-        {
-            Text = "Téléchargement officiel Microsoft, vérifié par signature. Lumora reste local après installation.",
-            AutoSize = false,
-            Location = new Point(56, 72),
-            Size = new Size(360, 38),
-            ForeColor = LumoraPalette.MutedForeground,
-            BackColor = LumoraPalette.PanelSurface
-        });
-
-        ConfigureCheckBox(
             _cleanProfileCheckBox,
             "Installation propre : supprimer le profil installé précédent",
-            new Point(18, 116),
+            new Point(18, 40),
             new Size(416, 30),
             true);
 
@@ -300,7 +278,7 @@ internal sealed class InstallerForm : Form
         ConfigureCheckBox(
             _torCheckBox,
             "Installer et activer Tor (anonymat réseau)",
-            new Point(18, 156),
+            new Point(18, 80),
             new Size(416, 30),
             false);
 
@@ -313,13 +291,12 @@ internal sealed class InstallerForm : Form
                    " vraiment t'en servir. Téléchargement vérifié par empreinte SHA256 fixée dans le code de Lumora" +
                    " (dist.torproject.org).",
             AutoSize = false,
-            Location = new Point(56, 190),
+            Location = new Point(56, 114),
             Size = new Size(640, 50),
             ForeColor = LumoraPalette.MutedForeground,
             BackColor = LumoraPalette.PanelSurface
         });
 
-        panel.Controls.Add(_webView2CheckBox);
         panel.Controls.Add(_cleanProfileCheckBox);
         panel.Controls.Add(_desktopShortcutCheckBox);
         panel.Controls.Add(_startMenuShortcutCheckBox);
@@ -434,7 +411,6 @@ internal sealed class InstallerForm : Form
 
             var options = new InstallerOptions(
                 InstallRoot: Path.GetFullPath(installRootInput),
-                EnsureWebView2Runtime: _webView2CheckBox.Checked,
                 CleanInstalledProfile: _cleanProfileCheckBox.Checked,
                 CreateDesktopShortcut: _desktopShortcutCheckBox.Checked,
                 CreateStartMenuShortcut: _startMenuShortcutCheckBox.Checked,
@@ -502,11 +478,6 @@ internal sealed class InstallerForm : Form
                 "Lumora Browser est actuellement ouvert. Ferme completement l'application, puis relance l'installateur.");
         }
 
-        if (options.EnsureWebView2Runtime)
-        {
-            EnsureWebView2Runtime();
-        }
-
         SetStatus("Préparation du dossier d'installation...", 18);
         Directory.CreateDirectory(installRoot);
         if (Directory.Exists(newAppDir))
@@ -529,6 +500,9 @@ internal sealed class InstallerForm : Form
             Directory.Delete(appDir, recursive: true);
         }
         Directory.Move(newAppDir, appDir);
+
+        SetStatus("Autorisation du moteur WebView2 embarqué...", 52);
+        GrantFixedRuntimeAccess(appDir);
 
         if (options.CleanInstalledProfile && Directory.Exists(profileDir))
         {
@@ -652,7 +626,7 @@ internal sealed class InstallerForm : Form
             "Emplacement : " + installRoot + Environment.NewLine +
             "Exécutable : " + appExe + Environment.NewLine +
             "Modules : modules Lumora intégrés à l'application." + Environment.NewLine +
-            "WebView2 : " + (IsWebView2RuntimeInstalled() ? "runtime détecté" : "runtime non détecté après installation") + Environment.NewLine +
+            "WebView2 : moteur embarqué (Fixed Version), aucune dépendance système." + Environment.NewLine +
             "Tor : " + (File.Exists(torExePath) ? "moteur installé (bouton Tor de la fenêtre Incognito)" : "non installé - disponible à la demande depuis le bouton Tor de la fenêtre Incognito") + Environment.NewLine +
             "Profil : aucun profil imposé au lancement ; le choix se fait dans Lumora." + Environment.NewLine +
             "Vérification : " + Path.Combine(Path.GetDirectoryName(appExe)!, "VERIFICATION.txt") + Environment.NewLine + Environment.NewLine +
@@ -696,81 +670,49 @@ internal sealed class InstallerForm : Form
         }
     }
 
-    private void EnsureWebView2Runtime()
+    // Runtime WebView2 embarque en mode "Fixed Version" (voir WebView2Bootstrap.cs
+    // cote app) : plus de telechargement/installation systeme, mais depuis la
+    // v120 du runtime, une app non empaquetee doit explicitement autoriser les
+    // App Containers (sandbox du processus Renderer) a lire/executer ce
+    // dossier, sinon WebView2 echoue silencieusement au demarrage sur Windows 10.
+    // Procedure documentee par Microsoft (ALL APPLICATION PACKAGES / ALL
+    // RESTRICTED APPLICATION PACKAGES) : https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution
+    private void GrantFixedRuntimeAccess(string appDir)
     {
-        if (IsWebView2RuntimeInstalled())
+        var fixedRuntimeDir = Path.Combine(appDir, "FixedRuntime");
+        if (!Directory.Exists(fixedRuntimeDir))
         {
-            SetStatus("Runtime WebView2 déjà présent.", 10);
-            return;
+            throw new InvalidOperationException(
+                "Le moteur WebView2 embarqué (FixedRuntime) est absent de ce build - installation impossible. " +
+                "Ce build de Lumora n'a pas été packagé correctement (voir scripts/prepare-webview2-fixedversion.ps1).");
         }
 
-        SetStatus("Runtime WebView2 absent : téléchargement Microsoft...", 6);
-        var tempInstaller = Path.Combine(Path.GetTempPath(), "Lumora-WebView2Setup.exe");
-        if (File.Exists(tempInstaller))
-        {
-            File.Delete(tempInstaller);
-        }
+        RunIcacls(fixedRuntimeDir, "*S-1-15-2-2:(OI)(CI)(RX)");
+        RunIcacls(fixedRuntimeDir, "*S-1-15-2-1:(OI)(CI)(RX)");
+    }
 
-        DownloadWebView2Bootstrapper(tempInstaller);
-
-        SetStatus("Vérification de la signature Microsoft...", 8);
-        if (!IsSignedByMicrosoft(tempInstaller))
-        {
-            File.Delete(tempInstaller);
-            throw new InvalidOperationException("Le programme WebView2 téléchargé n'est pas signé Microsoft. Installation arrêtée.");
-        }
-
-        SetStatus("Installation du runtime WebView2...", 12);
+    private static void RunIcacls(string path, string grantArgument)
+    {
         var process = Process.Start(new ProcessStartInfo
         {
-            FileName = tempInstaller,
-            Arguments = "/silent /install",
-            UseShellExecute = true,
-            Verb = "runas"
+            FileName = "icacls.exe",
+            Arguments = $"\"{path}\" /grant {grantArgument} /T /C",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
         });
 
         if (process is null)
         {
-            throw new InvalidOperationException("Impossible de lancer l'installation WebView2.");
+            throw new InvalidOperationException("Impossible de lancer icacls pour autoriser le moteur WebView2.");
         }
 
         process.WaitForExit();
-        if (process.ExitCode != 0 && !IsWebView2RuntimeInstalled())
+        if (process.ExitCode != 0)
         {
-            throw new InvalidOperationException($"Installation WebView2 incomplète (code {process.ExitCode}). Relance l'installateur ou installe WebView2 Runtime depuis Microsoft.");
-        }
-
-        if (!IsWebView2RuntimeInstalled())
-        {
-            throw new InvalidOperationException("WebView2 n'est toujours pas détecté après installation.");
-        }
-
-        SetStatus("Runtime WebView2 installé.", 16);
-    }
-
-    private static void DownloadWebView2Bootstrapper(string destinationPath)
-    {
-        const string url = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
-        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("LumoraSetup/1.0");
-        var bytes = http.GetByteArrayAsync(url).GetAwaiter().GetResult();
-        if (bytes.Length < 100_000)
-        {
-            throw new InvalidOperationException("Téléchargement WebView2 incomplet.");
-        }
-        File.WriteAllBytes(destinationPath, bytes);
-    }
-
-    private static bool IsSignedByMicrosoft(string filePath)
-    {
-        try
-        {
-            using var certificate = new X509Certificate2(X509Certificate.CreateFromSignedFile(filePath));
-            return certificate.Subject.Contains("Microsoft Corporation", StringComparison.OrdinalIgnoreCase);
-        }
-        catch (CryptographicException)
-        {
-            return false;
+            var error = process.StandardError.ReadToEnd();
+            throw new InvalidOperationException($"icacls a échoué (code {process.ExitCode}) sur {path} : {error}");
         }
     }
 
@@ -782,41 +724,6 @@ internal sealed class InstallerForm : Form
         foreach (var process in Process.GetProcessesByName("Lumora.WinUI"))
         {
             using (process)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    // Detection par nom d'affichage dans les entrees de desinstallation Windows,
-    // plutot que par un GUID de client EdgeUpdate fige : ce GUID n'est pas un
-    // identifiant stable et documente de facon fiable (une premiere tentative
-    // basee sur un GUID suppose s'est revelee fausse a l'usage). Le nom
-    // d'affichage "Microsoft Edge WebView2 Runtime" est ce que Windows montre
-    // lui-meme dans "Applications installees" : verifiable, stable, sans
-    // dependre d'un identifiant interne a Microsoft.
-    private static bool IsWebView2RuntimeInstalled()
-    {
-        return HasWebView2UninstallEntry(Registry.LocalMachine, @"Software\Microsoft\Windows\CurrentVersion\Uninstall") ||
-               HasWebView2UninstallEntry(Registry.LocalMachine, @"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall") ||
-               HasWebView2UninstallEntry(Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\Uninstall");
-    }
-
-    private static bool HasWebView2UninstallEntry(RegistryKey root, string uninstallSubKey)
-    {
-        using var uninstallKey = root.OpenSubKey(uninstallSubKey);
-        if (uninstallKey is null)
-        {
-            return false;
-        }
-
-        foreach (var name in uninstallKey.GetSubKeyNames())
-        {
-            using var entry = uninstallKey.OpenSubKey(name);
-            var displayName = entry?.GetValue("DisplayName") as string;
-            if (displayName is not null && displayName.Contains("WebView2", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

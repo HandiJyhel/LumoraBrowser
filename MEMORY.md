@@ -15622,3 +15622,65 @@ release, pas fait dans cette session.
 
 **Aucun bump de version** : decisions de gouvernance/licence, pas de
 changement de comportement du logiciel.
+
+## 2026-07-31 (suite) - WebView2 : bascule Evergreen -> Fixed Version (code fait, telechargement manuel restant)
+
+**Contexte** : rappel explicite de l'utilisateur - une release doit etre
+entierement autonome, rien a telecharger pour l'utilisateur final.
+Verifie precedemment : l'installateur telechargeait WebView2 depuis
+Microsoft si le runtime manquait (mode Evergreen Bootstrapper).
+
+**Recherche prealable (verifiee, pas devinee)** : documentation officielle
+Microsoft (`learn.microsoft.com/microsoft-edge/webview2/concepts/distribution`)
+consultee pour la procedure exacte du mode "Fixed Version". Point important
+pour une app **non empaquetee** (WinUI3, `WindowsPackageType=None`) : pas
+de `Package.Current.InstalledLocation` disponible (reserve aux apps MSIX),
+utiliser `AppContext.BaseDirectory` a la place. Depuis la version 120 du
+runtime, une app non empaquetee doit explicitement autoriser les App
+Containers (sandbox du processus Renderer) via `icacls` sur le dossier
+FixedRuntime deploye, sinon WebView2 echoue silencieusement sur Windows 10.
+
+**Changements de code** :
+- `WebView2Bootstrap.cs` : pose `WEBVIEW2_BROWSER_EXECUTABLE_FOLDER` vers
+  `FixedRuntime\<version>` (a cote de l'exe) avant toute creation de
+  WebView2, coherent avec le pattern deja documente ("seule la config par
+  variables d'environnement est fiable, pas un `CoreWebView2Environment`
+  explicite" - voir logs du 18 juillet).
+- `Lumora.WinUI.csproj` : nouvelle proprete `WebView2FixedVersion` +
+  `Content Include` conditionnel (`Condition="Exists(...)"`) pour copier
+  ce dossier au build sans faire echouer la compilation s'il est absent.
+- `.gitignore` : `Lumora.WinUI/FixedRuntime/` exclu (250+ Mo, jamais
+  commis, prepare localement).
+- `scripts/prepare-webview2-fixedversion.ps1` (nouveau) : verifie le
+  SHA256 d'un `.cab` fourni contre un hash epingle dans le script avant
+  d'extraire quoi que ce soit (meme logique que `TorTrustedRelease` pour
+  le moteur Tor - un binaire tiers ne s'utilise jamais avant que son
+  empreinte soit epinglee, pas juste verifiee une fois en l'air).
+- `scripts/installer/Program.cs.template` : case a cocher "Telecharger et
+  installer WebView2" + toute la logique Evergreen (`EnsureWebView2Runtime`,
+  `DownloadWebView2Bootstrapper`, `IsSignedByMicrosoft`,
+  `IsWebView2RuntimeInstalled`, `HasWebView2UninstallEntry`) retirees.
+  Remplacees par `GrantFixedRuntimeAccess`/`RunIcacls`, etape obligatoire
+  (pas une case a cocher) executee juste apres l'extraction des fichiers
+  - refuse l'installation si le dossier FixedRuntime est absent du
+    payload plutot que d'installer silencieusement un navigateur casse.
+- `scripts/build-installer.ps1` : refuse de packager si `FixedRuntime` est
+  vide dans l'artefact propre, texte de synthese mis a jour.
+
+**Blocage reel, pas contourne** : aucune URL stable/scriptable n'existe
+pour telecharger le `.cab` Fixed Version (page Microsoft generee en
+JavaScript selon la selection version/architecture) - verifie via
+recherche web, y compris sur l'outil communautaire `ProKn1fe/WebView2.Runtime`
+qui demande lui aussi un telechargement manuel. Interdiction de deviner une
+URL (regle du projet). **Reste donc a la charge de l'utilisateur** :
+telecharger le `.cab` x64 depuis la page officielle, lancer
+`prepare-webview2-fixedversion.ps1` (affiche le SHA256 sans rien extraire
+tant qu'il n'est pas colle dans le script), puis mettre a jour
+`WebView2FixedVersion`/`FixedRuntimeVersion` avec la vraie version.
+
+**Verification** : build MSBuild relance apres les changements (voir
+resultat dans la session) - le `Content Include` conditionnel ne casse pas
+la compilation en l'absence du dossier FixedRuntime, comme prevu.
+
+**Aucun bump de version** : chantier en cours, pas encore fonctionnel de
+bout en bout (etape manuelle restante).

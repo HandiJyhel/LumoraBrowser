@@ -21,6 +21,11 @@ Lumora.WinUI/artifacts/
 **/EBWebView/
 **/WebView2/
 
+# Runtime WebView2 "Fixed Version" embarque (250+ Mo, prepare localement par
+# scripts/prepare-webview2-fixedversion.ps1 a partir d'un .cab telecharge
+# manuellement depuis Microsoft - jamais commis dans le depot)
+/Lumora.WinUI/FixedRuntime/
+
 # Configs locaux d'outils IA (personnels, pas partages projet)
 /.codex/
 /.claude/settings.json
