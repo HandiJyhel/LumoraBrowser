@@ -6,6 +6,7 @@
 2. À partir de maintenant, Claude ne doit écrire que dans les fichiers du dépôt, surtout pour le fichier mémoire. 
 3. Après toute mise à jour d'une partie du code, Claude doit s'assurer que l'application reste complètement fonctionnelle (build + tests, et vérification réelle de la fonction touchée si c'est raisonnablement possible) avant de considérer la tâche terminée.
 4. Il est rare que l'utilisateur propose quelque chose de complètement idiot. S'il sent lui-même qu'une idée qu'il avance est bancale, il le dira et demandera l'avis de Claude à ce moment-là. En dehors de ce cas, une demande de l'utilisateur n'est jamais faite pour rien : Claude doit la prendre au sérieux telle quelle, sans la remettre en doute par défaut.
+5. Le fichier mémoire du dépôt nommé `MEMORY.md` doit être constamment mis à jour à chaque passe ou chaque modification du logiciel.
 
 Quand l'utilisateur commence une session ou un message par "salut" (ou une salutation equivalente en debut de conversation), lis integralement `AGENTS.md` et `MEMORY.md` a la racine du depot AVANT toute autre action, meme si la demande qui suit semble simple ou urgente.
 

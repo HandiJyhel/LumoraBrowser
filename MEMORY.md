@@ -16578,3 +16578,71 @@ question posee explicitement a l'utilisateur (ajout vs micro-
 correction, chantier mixte), reponse : quatrieme chiffre. Les 4
 emplacements mis a jour, test renomme en
 `Version_projet_est_alignee_sur_0_93_9_3`.
+
+## 2026-08-01 (suite) - 2e grief visuel Incognito (lisere de titre) + barre de recherche DuckDuckGo sur l'accueil
+
+**Signalement de l'utilisateur** (nouvelle capture, rognee sur la
+seule barre de titre) : "ça fait une espece de sandwich, c'est moche".
+Diagnostic par lecture de pixels sur une capture existante (colonne
+x=200 de haut en bas) plutot que par supposition : liseré exterieur
+deja correct (violet, `#B48AFF`, corrige la session precedente), mais
+une ligne orange (`#CA5010`, couleur d'accent SYSTEME, pas l'ambre
+Nova) trouvee exactement a la jonction entre la barre de titre et le
+contenu (y=45-46 sur une image de 1523px).
+
+**Cause** : `MainWindow.WindowChrome.cs.ApplyWindowBorderColor` force
+uniquement `DWMWA_BORDER_COLOR` (34, le lisere exterieur 1px) - jamais
+`DWMWA_CAPTION_COLOR` (35, la couleur de fond de la zone de titre geree
+par DWM). `AppWindow.TitleBar.BackgroundColor` (deja configure cote
+WinUI pour Incognito) ne suffit pas a couvrir entierement cette
+jonction sur cette machine : Windows y laissait passer l'accent
+systeme. Corrige en forcant explicitement les deux attributs DWM
+(34 et 35) sur la meme couleur violette `LumoraWindowAccentBrush`.
+Hypothese testee empiriquement (build + capture + lecture de pixel
+avant/apres) avant d'etre presentee comme confirmee - la ligne a
+disparu (`#CA5010` -> `#201A30`, couleur chrome uniforme).
+
+**Demande separee dans le meme message** : ajouter une barre de
+recherche sur la page d'accueil Incognito (`IncognitoWelcomeHtml.cs`),
+qui doit passer par le moteur de recherche Incognito (DuckDuckGo,
+`IncognitoSearchEngine`), jamais par Google meme si c'est le moteur
+global de l'utilisateur. Implementee en reprenant telle quelle la
+logique JS de detection URL/recherche de la page nouvel onglet du
+navigateur normal (`MainWindow.NewTabHome.cs`, fonction `go()`) plutot
+qu'une nouvelle implementation - simple champ `<input autofocus>` dans
+un `<form onsubmit="go(event)">`, navigation cote client
+(`location.href`), aucun pont C#/WebView2 necessaire pour ce cas de
+base. URL DuckDuckGo construite avec le meme parametre de langue
+(`kl={lang}-{lang}`, `CultureInfo.CurrentUICulture`) que
+`AddressNormalizer.SearchUrl` pour un comportement identique a la
+barre d'adresse.
+
+**Effet de bord trouve et corrige en verifiant en direct** :
+`InitializeWindow()` posait un focus programmatique sur
+`IncognitoAddressBox` des l'ouverture de la page d'accueil (code
+preexistant, avant cette barre de recherche) - volait le focus clavier
+a l'`autofocus` HTML du nouveau champ, le rendant inoperant au
+clavier. Retire : la page d'accueil garde desormais le focus que son
+propre HTML lui donne.
+
+**Limite de verification assumee** : le rendu visuel de la barre de
+recherche est confirme par capture d'ecran, et sa logique/l'usage
+exclusif de DuckDuckGo par 2 nouveaux tests unitaires
+(`IncognitoWelcomeHtmlTests.cs`, meme fichier deja existant) - mais la
+soumission clavier reelle A L'INTERIEUR du contenu WebView2 n'a pas pu
+etre automatisee (PostMessage WM_CHAR vers le bridge
+`DesktopChildSiteBridge` a fini par taper dans la barre d'adresse
+native au lieu du champ HTML - focus Win32 vs focus DOM Chromium ne
+coincident pas de façon fiable via cette technique ; UIA
+`FindFirst(ControlType.Document)` n'a pas non plus abouti). Assume
+explicitement aupres de l'utilisateur plutot que de pretendre une
+verification complete.
+
+**Verification** : build (MSBuild VS 2026) + `dotnet test` : 698/699
+(meme echec preexistant sans rapport, +2 tests par rapport a la
+session precedente pour la barre de recherche, tous verts).
+
+Deux commits distincts pour cette journee de travail Incognito :
+`0027815` (orthographe + identite visuelle + interrupteur Tor honnete,
+0.93.9.3-dev) et `beeb3ec` (lisere de titre + barre de recherche),
+demandes par l'utilisateur.
