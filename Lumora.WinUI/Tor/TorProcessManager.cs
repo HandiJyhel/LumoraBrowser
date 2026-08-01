@@ -105,7 +105,7 @@ internal sealed class TorProcessManager : IDisposable
         if (!await VerifyEngineIntegrityAsync(profile))
         {
             SetState(TorEngineState.Error,
-                "Le moteur Tor present ne correspond a aucune version verifiee. Lancement refuse par securite.");
+                "Le moteur Tor présent ne correspond à aucune version vérifiée. Lancement refusé par sécurité.");
             return false;
         }
 
@@ -208,7 +208,7 @@ internal sealed class TorProcessManager : IDisposable
 
         if (_cookieAuthPath is null || !File.Exists(_cookieAuthPath))
         {
-            return (false, "Authentification du controle Tor indisponible.");
+            return (false, "Authentification du contrôle Tor indisponible.");
         }
 
         try

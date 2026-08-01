@@ -49,7 +49,7 @@ public sealed partial class MainWindow
 
     private async void ChangeAvatarButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invite."; return; }
+        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
 
         var picker = new FileOpenPicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
@@ -64,14 +64,14 @@ public sealed partial class MainWindow
             _pendingAvatarSourcePath = file.Path;
             _pendingAvatarRemoval = false;
             ProfileAvatarBrush.ImageSource = new BitmapImage(new Uri(file.Path, UriKind.Absolute));
-            AvatarPendingText.Text = "Nouvelle image prete. Cliquez sur Appliquer les changements pour l'utiliser partout.";
+            AvatarPendingText.Text = "Nouvelle image prête. Cliquez sur Appliquer les changements pour l'utiliser partout.";
             AvatarPendingText.Visibility = Visibility.Visible;
             MarkSettingsChangesPending("Avatar en attente de validation.");
             StatusText.Text = "Image de profil en attente de validation.";
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Erreur lors de l'apercu de l'image : {ex.Message}";
+            StatusText.Text = $"Erreur lors de l'aperçu de l'image : {ex.Message}";
         }
     }
 

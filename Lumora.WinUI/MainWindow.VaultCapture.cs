@@ -60,9 +60,9 @@ public sealed partial class MainWindow
         // Cas "changement de domaine" : le meme compte existe deja sous un autre
         // domaine. On propose de rattacher le nouveau, pas juste d'"enregistrer".
         CredentialSaveText.Text = offer.LinkedFromDomain is { } linkedFrom
-            ? $"Ce compte est deja enregistre pour {linkedFrom}. Ajouter aussi {offer.DisplayOrigin} ?"
+            ? $"Ce compte est déjà enregistré pour {linkedFrom}. Ajouter aussi {offer.DisplayOrigin} ?"
             : offer.IsUpdate
-                ? $"Mettre a jour le mot de passe pour {forWhom} ?"
+                ? $"Mettre à jour le mot de passe pour {forWhom} ?"
                 : $"Enregistrer le mot de passe pour {forWhom} ?";
         CredentialSaveBar.Visibility = Visibility.Visible;
     }
@@ -79,7 +79,7 @@ public sealed partial class MainWindow
                 cred.Password,
                 cred.LoginUrl,
                 cred.Label));
-        StatusText.Text = $"Identifiants enregistres pour {cred.Origin}.";
+        StatusText.Text = $"Identifiants enregistrés pour {cred.Origin}.";
     }
 
     private void CredentialSaveDismiss_Click(object sender, RoutedEventArgs e)

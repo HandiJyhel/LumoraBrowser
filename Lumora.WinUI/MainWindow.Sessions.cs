@@ -41,14 +41,14 @@ public sealed partial class MainWindow
                 // Chemin rapide : un seul appel natif (cookies + stockage des sites),
                 // aucune énumération.
                 await core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.AllSite);
-                UpdateStatusText("Sessions de la visite precedente purgees.");
+                UpdateStatusText("Sessions de la visite précédente purgées.");
                 WinUiRuntimeTrace.Write("Startup session purge: all site data cleared");
                 ExplainSessionPurgeOnce();
                 return;
             }
 
             var removed = await DeleteUntrustedCookiesAsync(core);
-            UpdateStatusText($"Sessions purgees ({removed} cookie(s)), sites de confiance conserves.");
+            UpdateStatusText($"Sessions purgées ({removed} cookie(s)), sites de confiance conservés.");
             WinUiRuntimeTrace.Write($"Startup session purge: {removed} cookies removed");
             if (removed > 0) ExplainSessionPurgeOnce();
         }
@@ -104,7 +104,7 @@ public sealed partial class MainWindow
 
     private void SessionsMenu_Click(object sender, RoutedEventArgs e)
     {
-        ShowPanel(SessionsPanel, "Sites connectes");
+        ShowPanel(SessionsPanel, "Sites connectés");
         _ = RefreshSessionsPanelAsync();
     }
 
@@ -116,7 +116,7 @@ public sealed partial class MainWindow
         var core = _browserView?.CoreWebView2;
         if (core is null) return;
         var removed = await DeleteUntrustedCookiesAsync(core);
-        UpdateStatusText($"Sessions oubliees ({removed} cookie(s)), sites de confiance conserves.");
+        UpdateStatusText($"Sessions oubliées ({removed} cookie(s)), sites de confiance conservés.");
         await RefreshSessionsPanelAsync();
     }
 
@@ -128,7 +128,7 @@ public sealed partial class MainWindow
         {
             SessionsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Moteur web non initialise.",
+                Text = "Moteur web non initialisé.",
                 Opacity = 0.65,
                 FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 8, 0, 0)
@@ -155,7 +155,7 @@ public sealed partial class MainWindow
         {
             SessionsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Aucune session active. Les sites que vous visiterez apparaitront ici.",
+                Text = "Aucune session active. Les sites que vous visiterez apparaîtront ici.",
                 Opacity = 0.65,
                 FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 8, 0, 0)
@@ -197,8 +197,8 @@ public sealed partial class MainWindow
 
         var trustToggle = new ToggleSwitch
         {
-            OnContent = "Session conservee",
-            OffContent = "Purgee au demarrage",
+            OnContent = "Session conservée",
+            OffContent = "Purgée au démarrage",
             FontSize = AccessibilitySecondaryFontSize(),
             IsOn = IsTrustedSessionSite(rootDomain),
             VerticalAlignment = VerticalAlignment.Center,
@@ -206,7 +206,7 @@ public sealed partial class MainWindow
         };
         ApplyNovaControlAccessibility(trustToggle, $"Politique de session pour {rootDomain}");
         ToolTipService.SetToolTip(trustToggle,
-            "Site de confiance : sa session survit a la purge du demarrage.");
+            "Site de confiance : sa session survit à la purge du démarrage.");
         // Handler attaché après IsOn pour ne pas déclencher pendant la construction.
         trustToggle.Toggled += (_, _) => SetTrustedSessionSite(rootDomain, trustToggle.IsOn);
         Grid.SetColumn(trustToggle, 1);
@@ -258,8 +258,8 @@ public sealed partial class MainWindow
 
         _uiSettings.Save(_profile.UiSettingsFile);
         UpdateStatusText(trusted
-            ? $"{rootDomain} : session conservee au demarrage."
-            : $"{rootDomain} : session purgee au prochain demarrage.");
+            ? $"{rootDomain} : session conservée au démarrage."
+            : $"{rootDomain} : session purgée au prochain démarrage.");
     }
 
     // ── Proposition « Rester connecté ? » au login détecté ────────────────────
@@ -279,7 +279,7 @@ public sealed partial class MainWindow
         }
 
         _pendingSessionKeepRoot = root;
-        SessionKeepText.Text = $"Rester connecte a {root} apres la fermeture de Lumora ?";
+        SessionKeepText.Text = $"Rester connecté à {root} après la fermeture de Lumora ?";
         SessionKeepBar.Visibility = Visibility.Visible;
     }
 
@@ -306,7 +306,7 @@ public sealed partial class MainWindow
         var core = _browserView?.CoreWebView2;
         if (core is null) return;
         var removed = await DeleteUntrustedCookiesAsync(core, rootDomain);
-        UpdateStatusText($"{rootDomain} oublie ({removed} cookie(s) supprimes).");
+        UpdateStatusText($"{rootDomain} oublié ({removed} cookie(s) supprimés).");
         await RefreshSessionsPanelAsync();
     }
 
@@ -316,8 +316,8 @@ public sealed partial class MainWindow
         _uiSettings.SessionPurgeEnabled = SessionPurgeSwitch.IsOn;
         _uiSettings.Save(_profile.UiSettingsFile);
         UpdateStatusText(_uiSettings.SessionPurgeEnabled
-            ? "Purge des sessions au demarrage activee."
-            : "Purge des sessions au demarrage desactivee.");
+            ? "Purge des sessions au démarrage activée."
+            : "Purge des sessions au démarrage désactivée.");
     }
 
     private void SessionsManageLink_Click(object sender, RoutedEventArgs e) =>

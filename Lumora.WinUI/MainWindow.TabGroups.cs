@@ -313,7 +313,7 @@ public sealed partial class MainWindow
         AddLumoraMenuHeader(
             flyout.Items,
             tab.Title,
-            $"{(tab.Pinned ? "epingle" : "onglet")} • {TabHeaderHost(tab.Address)}",
+            $"{(tab.Pinned ? "épinglé" : "onglet")} • {TabHeaderHost(tab.Address)}",
             tab.Pinned ? "\uE718" : "\uE8AB");
 
         // Case a cocher en tete de menu : seul point d'entree decouvrable de la
@@ -322,7 +322,7 @@ public sealed partial class MainWindow
         // sur cet onglet - meme bascule, meme _selectionAnchorTabId.
         var selectItem = new ToggleMenuFlyoutItem
         {
-            Text = "Selectionner",
+            Text = "Sélectionner",
             Tag = tab,
             IsChecked = _selectedTabIds.Contains(tab.Id)
         };
@@ -333,7 +333,7 @@ public sealed partial class MainWindow
         // qui sert tous les jours (demande explicite - un navigateur simple doit
         // rendre la gestion d'onglets simple, meme si des sous-menus subsistent
         // ailleurs pour ce qui a une vraie raison d'en etre un).
-        var pinItem = new MenuFlyoutItem { Text = tab.Pinned ? "Desepingler l'onglet" : "Epingler l'onglet", Tag = tab };
+        var pinItem = new MenuFlyoutItem { Text = tab.Pinned ? "Désépingler l'onglet" : "Épingler l'onglet", Tag = tab };
         pinItem.Click += TabContextTogglePin_Click;
         flyout.Items.Add(pinItem);
 
@@ -361,7 +361,7 @@ public sealed partial class MainWindow
 
         var tabIndex = _tabs.IndexOf(tab);
         var hasClosableTabsToRight = tabIndex >= 0 && _tabs.Skip(tabIndex + 1).Any(t => !t.Pinned);
-        var closeToRightItem = new MenuFlyoutItem { Text = "Fermer les onglets a droite", Tag = tab, IsEnabled = hasClosableTabsToRight };
+        var closeToRightItem = new MenuFlyoutItem { Text = "Fermer les onglets à droite", Tag = tab, IsEnabled = hasClosableTabsToRight };
         closeToRightItem.Click += CloseTabsToRight_Click;
         flyout.Items.Add(closeToRightItem);
 
@@ -387,14 +387,14 @@ public sealed partial class MainWindow
 
         if (IsTabInSplitView(tab.Id))
         {
-            var restoreItem = new MenuFlyoutItem { Text = "Retablir la vue simple", Tag = tab };
+            var restoreItem = new MenuFlyoutItem { Text = "Rétablir la vue simple", Tag = tab };
             restoreItem.Click += RestoreSingleView_Click;
             flyout.Items.Add(restoreItem);
             flyout.Items.Add(new MenuFlyoutSeparator());
         }
         else if (_tabs.Count > 1)
         {
-            var splitSubItem = new MenuFlyoutSubItem { Text = "Diviser l'ecran avec..." };
+            var splitSubItem = new MenuFlyoutSubItem { Text = "Diviser l'écran avec..." };
             foreach (var other in _tabs.Where(t => t.Id != tab.Id))
             {
                 var otherItem = new MenuFlyoutItem { Text = other.Title, Tag = (tab, other) };
@@ -440,7 +440,7 @@ public sealed partial class MainWindow
             "actions groupees",
             "");
 
-        var groupSubItem = new MenuFlyoutSubItem { Text = "Regrouper la selection" };
+        var groupSubItem = new MenuFlyoutSubItem { Text = "Regrouper la sélection" };
         foreach (var group in _tabGroups)
         {
             var addItem = new MenuFlyoutItem { Text = group.Name, Tag = (selection, group) };
@@ -458,19 +458,19 @@ public sealed partial class MainWindow
 
         if (selection.Count == 2)
         {
-            var splitItem = new MenuFlyoutItem { Text = "Diviser l'ecran avec ces 2 onglets", Tag = selection };
+            var splitItem = new MenuFlyoutItem { Text = "Diviser l'écran avec ces 2 onglets", Tag = selection };
             splitItem.Click += SplitViewWithSelection_Click;
             flyout.Items.Add(splitItem);
         }
 
         flyout.Items.Add(new MenuFlyoutSeparator());
 
-        var closeItem = new MenuFlyoutItem { Text = $"Fermer les {selection.Count} onglets selectionnes", Tag = selection };
+        var closeItem = new MenuFlyoutItem { Text = $"Fermer les {selection.Count} onglets sélectionnés", Tag = selection };
         closeItem.Click += CloseSelection_Click;
         flyout.Items.Add(closeItem);
 
         flyout.Items.Add(new MenuFlyoutSeparator());
-        var clearItem = new MenuFlyoutItem { Text = "Annuler la selection" };
+        var clearItem = new MenuFlyoutItem { Text = "Annuler la sélection" };
         clearItem.Click += (_, _) => ClearTabSelection();
         flyout.Items.Add(clearItem);
     }
@@ -506,7 +506,7 @@ public sealed partial class MainWindow
     {
         if (sender is MenuFlyoutItem { Tag: BrowserTabState tab })
         {
-            CopyPlainTextToClipboard(tab.Address, "Adresse copiee.");
+            CopyPlainTextToClipboard(tab.Address, "Adresse copiée.");
         }
     }
 

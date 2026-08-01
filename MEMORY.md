@@ -16646,3 +16646,101 @@ Deux commits distincts pour cette journee de travail Incognito :
 `0027815` (orthographe + identite visuelle + interrupteur Tor honnete,
 0.93.9.3-dev) et `beeb3ec` (lisere de titre + barre de recherche),
 demandes par l'utilisateur.
+
+## 2026-08-01 (suite) - Passe orthographe complete + reorganisation Accessibilite/Confidentialite/Mon Lumora (0.93.10.0-dev)
+
+Suite directe du punch-list du 2026-08-01 (fautes partout + Confort et
+Vie privee locale trop fouillis) : l'utilisateur relance explicitement
+les deux chantiers dans une nouvelle session, en ajoutant que Confort
+doit desormais s'appeler Accessibilite.
+
+**Volet 1 (orthographe)** : deux audits en parallele (sous-agents,
+lecture seule) pour cartographier la page Parametres et relever les
+fautes, puis un agent de correction (51 fichiers, ~300 corrections,
+essentiellement des accents manquants sur participes passes -
+"activee"/"desactivee"/"creee"). Piege rencontre par cet agent et
+corrige par lui-meme : sur les fichiers avec glyphes d'icones en
+`\uE7xx`, l'outil d'edition reecrivait parfois les accents en
+echappements `\u00XX` - detecte par grep systematique, corrige par
+script Python cible sans toucher aux glyphes d'icones.
+
+**Fautes manquees par le premier passage, trouvees en relisant a la
+main** : la liste de motifs donnee a l'agent n'incluait pas
+"demarrage"/"securite"/"Etat" - plusieurs chaines visibles restees
+fautives (InfoBar de purge de sessions, "URL de demarrage", "Etat
+Lumora" en AutomationProperties.Name, plusieurs boutons "Reinitialiser"
+sans accent dans Mon Lumora, messages de statut Tor/yt-dlp/traduction/
+recherche semantique). Corrigees manuellement apres un balayage grep
+plus large. Consequence en cascade : 8 tests avaient des assertions
+Assert.Contains sur le TEXTE FAUTIF d'origine (le test verifiait la
+presence de la faute, pas son absence) - chaque correction de source
+faisait progresser le test un peu plus loin dans la meme methode
+jusqu'a la ligne suivante non mise a jour. Corrige iterativement
+(tourner les tests, mettre a jour l'assertion suivante, retourner)
+jusqu'a n'avoir plus que l'echec preexistant connu (CSS placeholder de
+recherche, sans rapport, deja documente dans les sessions precedentes).
+
+**Volet 2 (reorganisation)**, apres un choix explicite via
+`AskUserQuestion` (reorganiser sans rien couper - comme en 0.83.54-dev
+- Mon Lumora inclus dans le chantier, Vie privee locale renommee
+Confidentialite) :
+- **Accessibilite** (ex-Confort) : "Confort moteur" (1 seul item)
+  fusionne dans "Affichage de Lumora" ; "Reduire la lumiere bleue"
+  deplace du groupe chrome vers un nouveau groupe "Contenu des pages
+  web" (avec Espacement du texte et Renforcer les couleurs, qui
+  agissent aussi sur le contenu web) ; "Assistants vocaux" renomme
+  "Aides a la lecture" (2 des 3 items n'etaient pas vocaux - loupe et
+  guide de lecture sont visuels). Renomme partout : nav Parametres,
+  carte Vue d'ensemble, bouton raccourci Espace de travail, footer
+  "Confort rapide", flyout rapide.
+- **Confidentialite** (ex-Vie privee locale) : 14 reglages a plat
+  (juste des traits 1px) regroupes en 4 familles avec sous-titres -
+  "Publicites, popups et traceurs" (bloqueur reseau + masquage visuel +
+  popups/redirections, avant disperses a 3 endroits differents de la
+  page), "Anti-pistage technique" (CNAME, WebRTC, geolocalisation,
+  empreinte, cookies), "Securite de connexion" (HTTPS + SmartScreen,
+  avec une note qui signale explicitement que SmartScreen est la seule
+  protection de la page qui envoie des donnees a Microsoft), "Hygiene
+  de session" (anti-telemetrie, nettoyage URL, sessions ephemeres), puis
+  Exceptions en dernier. Renomme partout (nav, vue d'ensemble).
+- **Mon Lumora** : 5 groupes - Identite (avatar, fond d'ecran), Theme
+  et couleurs (theme, palette, mode d'usage, couleurs par mode, avant
+  eparpilles), Disposition (carte Disposition Lumora + favoris/compact/
+  plein ecran/animations), Nouvel onglet, Decouverte (ecran de
+  bienvenue).
+
+**Incident evite en cours de route** : lors du premier montage de la
+section Mon Lumora, la carte "Disposition Lumora" complete (+ 4
+ToggleSwitch + le debut du bloc "Nouvel onglet") a ete retiree du
+`old_string` d'un Edit sans etre remise dans le `new_string` -
+suppression involontaire, contraire au "sans rien couper" choisi.
+Detectee immediatement par relecture du fichier juste apres l'edit
+(pas par le test, qui serait reste vert puisque rien ne verifie
+l'exhaustivite de cette section precise), reinseree integralement au
+bon endroit. Verifie ensuite par comptage des `x:Name` critiques
+(chacun trouve exactement une fois - un doublon aurait fait echouer la
+compilation XAML) et par re-execution complete des tests.
+
+**Verification reelle (skill `verify`)** : build MSBuild propre,
+`dotnet test` 698/699 (meme echec preexistant), puis script UIA
+(PowerShell, `SelectionItemPattern.Select`/`InvokePattern.Invoke` selon
+le type de controle) pilotant l'app reelle en mode invite. Capture
+d'ecran des pages Accessibilite et Confidentialite : regroupements,
+accents et libelles corrects, aucun crash. Page Mon Lumora non
+verifiable par capture en mode invite - **comportement preexistant, pas
+une regression** : `MainWindow.Profile.cs:890` masque deliberement ce
+nav en mode invite (`SettingsNavAppearance.Visibility = Collapsed`) ;
+ses controles avaient deja ete confirmes presents par UIA (bonnes
+proprietes AutomationId, aucun manquant) juste avant le passage en mode
+invite. Note technique : le clic sur "Continuer sans profil" relance
+l'application dans un nouveau process (PID different) - a gerer dans le
+script de verification en repointant sur la nouvelle fenetre plutot que
+de crier a l'echec.
+
+**Version** : `0.93.9.3-dev` -> `0.93.10.0-dev`, troisieme chiffre -
+question posee explicitement (ajout vs micro-correction), reponse :
+troisieme chiffre (le renommage de 2 pages + leur restructuration
+visible compte comme un ajout, pas une simple correction). 4
+emplacements mis a jour (`MainWindow.xaml.cs`, `AGENTS.md`,
+`build-installer.ps1`, `build-clean-test-artifact.ps1`), test renomme
+en `Version_projet_est_alignee_sur_0_93_10_0`.

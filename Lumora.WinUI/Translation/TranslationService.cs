@@ -57,7 +57,7 @@ internal sealed class TranslationService : IDisposable
             var dir = Path.Combine(ModelsDir, info.PairId);
             await EnsureModelDownloadedAsync(info, dir, progress, cancellationToken);
 
-            progress?.Report("Chargement du modele de traduction...");
+            progress?.Report("Chargement du modèle de traduction...");
             var engine = await TranslationEngine.LoadAsync(dir);
             _loadedEngines[info.PairId] = engine;
             return engine;
@@ -78,7 +78,7 @@ internal sealed class TranslationService : IDisposable
             var destination = Path.Combine(dir, file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(destination)) continue;
 
-            progress?.Report($"Telechargement du modele de traduction ({info.SourceLang} -> {info.TargetLang}) : {file.RelativePath}...");
+            progress?.Report($"Téléchargement du modèle de traduction ({info.SourceLang} -> {info.TargetLang}) : {file.RelativePath}...");
             var url = $"https://huggingface.co/{info.HuggingFaceRepo}/resolve/main/{file.RelativePath}";
 
             var tempPath = destination + ".part";
@@ -90,7 +90,7 @@ internal sealed class TranslationService : IDisposable
                 await input.CopyToAsync(output, cancellationToken);
             }
 
-            progress?.Report($"Verification de l'integrite : {file.RelativePath}...");
+            progress?.Report($"Vérification de l'intégrité : {file.RelativePath}...");
             await ModelIntegrity.VerifyOrDeleteAsync(tempPath, file.Sha256, cancellationToken);
             File.Move(tempPath, destination, overwrite: true);
         }

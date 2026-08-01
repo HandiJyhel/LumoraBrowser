@@ -16,7 +16,7 @@ public sealed partial class MainWindow
     private async void VaultAddButton_Click(object sender, RoutedEventArgs e)
     {
         var (draft, cancelled) = await PromptNewCredentialAsync();
-        if (cancelled) { StatusText.Text = "Ajout annule."; return; }
+        if (cancelled) { StatusText.Text = "Ajout annulé."; return; }
 
         if (!_passwordManager.Save(draft))
         {
@@ -25,7 +25,7 @@ public sealed partial class MainWindow
         }
 
         RefreshVaultPanel();
-        StatusText.Text = $"Identifiant enregistre : {draft.Username}";
+        StatusText.Text = $"Identifiant enregistré : {draft.Username}";
     }
 
     private void VaultSort_Click(object sender, RoutedEventArgs e)
@@ -51,7 +51,7 @@ public sealed partial class MainWindow
             {
                 Text = string.IsNullOrWhiteSpace(query)
                     ? "Aucun identifiant dans le gestionnaire."
-                    : "Aucun identifiant ne correspond a cette recherche.",
+                    : "Aucun identifiant ne correspond à cette recherche.",
                 Opacity = 0.65,
                 Margin = new Thickness(0, 8, 0, 0)
             });
@@ -123,7 +123,7 @@ public sealed partial class MainWindow
 
         button.Content = new TextBlock
         {
-            Text = hasUser ? cred.Username : "(aucun identifiant enregistre)",
+            Text = hasUser ? cred.Username : "(aucun identifiant enregistré)",
             Opacity = hasUser ? 0.85 : 0.5,
             FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic,
             TextTrimming = TextTrimming.CharacterEllipsis
@@ -208,7 +208,7 @@ public sealed partial class MainWindow
         var hasUser = !string.IsNullOrWhiteSpace(cred.Username);
         VaultDetailPanel.Children.Add(new TextBlock
         {
-            Text = hasUser ? cred.Username : "(aucun identifiant enregistre)",
+            Text = hasUser ? cred.Username : "(aucun identifiant enregistré)",
             Opacity = hasUser ? 0.8 : 0.45,
             FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic
         });
@@ -220,11 +220,11 @@ public sealed partial class MainWindow
         actions.Children.Add(openBtn);
 
         var copyUser = new Button { Content = "Copier identifiant", IsEnabled = hasUser };
-        copyUser.Click += (_, _) => CopyPasswordManagerText(cred.Username, "Identifiant copie.");
+        copyUser.Click += (_, _) => CopyPasswordManagerText(cred.Username, "Identifiant copié.");
         actions.Children.Add(copyUser);
 
         var copyPassword = new Button { Content = "Copier mot de passe" };
-        copyPassword.Click += (_, _) => CopyPasswordManagerText(cred.Password, "Mot de passe copie.");
+        copyPassword.Click += (_, _) => CopyPasswordManagerText(cred.Password, "Mot de passe copié.");
         actions.Children.Add(copyPassword);
         VaultDetailPanel.Children.Add(actions);
 
@@ -236,12 +236,12 @@ public sealed partial class MainWindow
             var box = new TextBox
             {
                 Text = cred.Label,
-                PlaceholderText = "Nom personnalise (ex. Amazon perso)",
+                PlaceholderText = "Nom personnalisé (ex. Amazon perso)",
                 MinWidth = 320
             };
             var dlg = new ContentDialog
             {
-                Title = "Nom personnalise",
+                Title = "Nom personnalisé",
                 Content = box,
                 PrimaryButtonText = "Enregistrer",
                 CloseButtonText = "Annuler",
@@ -251,7 +251,7 @@ public sealed partial class MainWindow
             if (await dlg.ShowAsync() != ContentDialogResult.Primary) return;
             _passwordManager.RenameById(cred.Id, box.Text);
             RefreshVaultPanel();
-            StatusText.Text = "Nom mis a jour.";
+            StatusText.Text = "Nom mis à jour.";
         };
         manageActions.Children.Add(renameBtn);
 
@@ -261,7 +261,7 @@ public sealed partial class MainWindow
             var confirm = new ContentDialog
             {
                 Title = "Supprimer cet identifiant ?",
-                Content = $"{(!string.IsNullOrWhiteSpace(cred.Label) ? cred.Label + "\n" : "")}{cred.Origin}\n\nCette action est definitive.",
+                Content = $"{(!string.IsNullOrWhiteSpace(cred.Label) ? cred.Label + "\n" : "")}{cred.Origin}\n\nCette action est définitive.",
                 PrimaryButtonText = "Supprimer",
                 CloseButtonText = "Annuler",
                 DefaultButton = ContentDialogButton.Close,
@@ -270,7 +270,7 @@ public sealed partial class MainWindow
             if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
             _passwordManager.DeleteById(cred.Id);
             _selectedVaultCredential = null;
-            StatusText.Text = "Identifiant supprime.";
+            StatusText.Text = "Identifiant supprimé.";
             RefreshVaultPanel();
         };
         manageActions.Children.Add(deleteBtn);
@@ -280,7 +280,7 @@ public sealed partial class MainWindow
 
         VaultDetailPanel.Children.Add(new TextBlock
         {
-            Text = $"Mis a jour : {DateTimeOffset.FromUnixTimeSeconds(cred.UpdatedAt).LocalDateTime:dd/MM/yyyy HH:mm}",
+            Text = $"Mis à jour : {DateTimeOffset.FromUnixTimeSeconds(cred.UpdatedAt).LocalDateTime:dd/MM/yyyy HH:mm}",
             Opacity = 0.5,
             FontSize = 12
         });
@@ -295,7 +295,7 @@ public sealed partial class MainWindow
         var container = new StackPanel { Spacing = 8, Margin = new Thickness(0, 6, 0, 0) };
         container.Children.Add(new TextBlock
         {
-            Text = "Authentification a deux facteurs",
+            Text = "Authentification à deux facteurs",
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             FontSize = 13,
             Opacity = 0.8
@@ -339,14 +339,14 @@ public sealed partial class MainWindow
 
         var totpActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var copyCodeBtn = new Button { Content = "Copier le code" };
-        copyCodeBtn.Click += (_, _) => CopyPasswordManagerText(codeText.Text, "Code TOTP copie.");
+        copyCodeBtn.Click += (_, _) => CopyPasswordManagerText(codeText.Text, "Code TOTP copié.");
         totpActions.Children.Add(copyCodeBtn);
 
         var removeTotpBtn = new Button { Content = "Supprimer le TOTP" };
         removeTotpBtn.Click += (_, _) =>
         {
             _passwordManager.SetTotpById(cred.Id, null);
-            StatusText.Text = "TOTP supprime.";
+            StatusText.Text = "TOTP supprimé.";
             RefreshVaultPanel();
         };
         totpActions.Children.Add(removeTotpBtn);
@@ -364,7 +364,7 @@ public sealed partial class MainWindow
         };
         var errorText = new TextBlock
         {
-            Text = "Secret invalide. Verifiez qu'il s'agit bien d'un secret TOTP (base32) ou d'une URI otpauth://.",
+            Text = "Secret invalide. Vérifiez qu'il s'agit bien d'un secret TOTP (base32) ou d'une URI otpauth://.",
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
             Visibility = Visibility.Collapsed
@@ -373,7 +373,7 @@ public sealed partial class MainWindow
         var panel = new StackPanel { Spacing = 8 };
         panel.Children.Add(new TextBlock
         {
-            Text = "Collez le secret fourni par le site (affiche generalement sous le QR code lors de l'activation), ou l'URI otpauth:// complete si vous l'avez exportee.",
+            Text = "Collez le secret fourni par le site (affiché généralement sous le QR code lors de l'activation), ou l'URI otpauth:// complète si vous l'avez exportée.",
             Opacity = 0.7,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap
@@ -404,7 +404,7 @@ public sealed partial class MainWindow
         if (account is null) return; // garde-fou : déjà validé par PrimaryButtonClick
 
         _passwordManager.SetTotpById(cred.Id, account.Secret, account.Digits, account.Period);
-        StatusText.Text = "Code TOTP ajoute.";
+        StatusText.Text = "Code TOTP ajouté.";
         RefreshVaultPanel();
     }
 
@@ -415,7 +415,7 @@ public sealed partial class MainWindow
         var target = !string.IsNullOrWhiteSpace(cred.LoginUrl) ? cred.LoginUrl : cred.Origin;
         if (!BookmarkStore.IsWebUrl(target))
         {
-            StatusText.Text = "Aucune page de connexion enregistree pour cet identifiant.";
+            StatusText.Text = "Aucune page de connexion enregistrée pour cet identifiant.";
             return;
         }
 
@@ -499,7 +499,7 @@ public sealed partial class MainWindow
         // passe (nombre de mots), tirage crypto-sûr. Les réglages choisis ici
         // sont mémorisés et réutilisés par la barre de suggestion automatique.
         var isPassphrase = _uiSettings.VaultGeneratorMode == "passphrase";
-        var modeRandomRadio = new RadioButton { Content = "Aleatoire", GroupName = "PwGenMode", IsChecked = !isPassphrase };
+        var modeRandomRadio = new RadioButton { Content = "Aléatoire", GroupName = "PwGenMode", IsChecked = !isPassphrase };
         var modePassphraseRadio = new RadioButton { Content = "Phrase de passe", GroupName = "PwGenMode", IsChecked = isPassphrase };
         var modeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
         modeRow.Children.Add(modeRandomRadio);

@@ -22,7 +22,7 @@ public sealed partial class MainWindow
         if (sender is not MenuFlyoutItem { Tag: TabGroup group }) return;
         if (SaveLiveGroup(group))
         {
-            StatusText.Text = $"Groupe « {group.Name} » enregistre. Retrouvez-le dans Naviguer > Groupes enregistres.";
+            StatusText.Text = $"Groupe « {group.Name} » enregistré. Retrouvez-le dans Naviguer > Groupes enregistrés.";
         }
         else
         {
@@ -104,7 +104,7 @@ public sealed partial class MainWindow
         {
             SavedTabGroupsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Aucun groupe enregistre pour l'instant. Depuis un groupe d'onglets, choisissez « Enregistrer le groupe » pour le retrouver ici.",
+                Text = "Aucun groupe enregistré pour l'instant. Depuis un groupe d'onglets, choisissez « Enregistrer le groupe » pour le retrouver ici.",
                 Opacity = 0.65,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 8, 0, 0)
@@ -158,7 +158,7 @@ public sealed partial class MainWindow
         });
         infoPanel.Children.Add(new TextBlock
         {
-            Text = $"{group.TabCount} onglet(s) · enregistre {SavedGroupWhen(group.SavedAt)}",
+            Text = $"{group.TabCount} onglet(s) · enregistré {SavedGroupWhen(group.SavedAt)}",
             Opacity = 0.6,
             FontSize = AccessibilitySecondaryFontSize()
         });
@@ -185,7 +185,7 @@ public sealed partial class MainWindow
             Margin = new Thickness(12, 0, 0, 0)
         };
         var openButton = new Button { Content = "Ouvrir", Tag = group.Id, FontSize = AccessibilitySecondaryFontSize() };
-        ApplyNovaControlAccessibility(openButton, $"Ouvrir le groupe enregistre {group.Name}");
+        ApplyNovaControlAccessibility(openButton, $"Ouvrir le groupe enregistré {group.Name}");
         openButton.Click += OpenSavedGroup_Click;
         actions.Children.Add(openButton);
         var deleteButton = new Button
@@ -195,7 +195,7 @@ public sealed partial class MainWindow
             FontSize = AccessibilitySecondaryFontSize(),
             Style = (Style)RootShell.Resources["NovaCompactButtonStyle"]
         };
-        ApplyNovaControlAccessibility(deleteButton, $"Supprimer le groupe enregistre {group.Name}");
+        ApplyNovaControlAccessibility(deleteButton, $"Supprimer le groupe enregistré {group.Name}");
         deleteButton.Click += DeleteSavedGroup_Click;
         actions.Children.Add(deleteButton);
         Grid.SetColumn(actions, 2);
@@ -252,7 +252,7 @@ public sealed partial class MainWindow
         if (_savedTabGroups.Remove(id))
         {
             RenderSavedTabGroups();
-            StatusText.Text = "Groupe enregistre supprime.";
+            StatusText.Text = "Groupe enregistré supprimé.";
         }
     }
 }

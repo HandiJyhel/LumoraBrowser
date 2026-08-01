@@ -261,8 +261,8 @@ public sealed partial class MainWindow
         SaveUiSettings();
         SyncTogglePair(WebRtcLeakProtectionSwitch, ModulesWebRtcSwitch, enabled);
         StatusText.Text = enabled
-            ? "Anti-fuite WebRTC activee : redemarrez Lumora pour l'appliquer."
-            : "Anti-fuite WebRTC desactivee : redemarrez Lumora pour l'appliquer.";
+            ? "Anti-fuite WebRTC activée : redémarrez Lumora pour l'appliquer."
+            : "Anti-fuite WebRTC désactivée : redémarrez Lumora pour l'appliquer.";
     }
 
     // Bascule deux ToggleSwitch representant le meme reglage (hub Modules +
@@ -361,7 +361,7 @@ public sealed partial class MainWindow
         _uiSettings.GeolocationSpoofLongitude = lon;
         SaveUiSettings();
         await RegisterGeolocationSpoofScriptsAsync();
-        StatusText.Text = "Position fictive mise a jour et appliquee aux onglets ouverts.";
+        StatusText.Text = "Position fictive mise à jour et appliquée aux onglets ouverts.";
     }
 
     // ── Anti-fingerprinting ────────────────────────────────────────────────────

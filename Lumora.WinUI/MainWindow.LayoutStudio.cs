@@ -69,12 +69,12 @@ public sealed partial class MainWindow
             case "toggle:bookmarks":
                 BookmarksBarSwitch.IsOn = !BookmarksBarSwitch.IsOn;
                 SaveWorkspaceUiSettings();
-                UpdateStatusText(BookmarksBarSwitch.IsOn ? "Barre de favoris visible." : "Barre de favoris masquee.");
+                UpdateStatusText(BookmarksBarSwitch.IsOn ? "Barre de favoris visible." : "Barre de favoris masquée.");
                 return;
             case "toggle:compact":
                 CompactModeSwitch.IsOn = !CompactModeSwitch.IsOn;
                 SaveWorkspaceUiSettings();
-                UpdateStatusText(_compactModeEnabled ? "Interface compacte activee." : "Interface compacte desactivee.");
+                UpdateStatusText(_compactModeEnabled ? "Interface compacte activée." : "Interface compacte désactivée.");
                 return;
         }
     }
@@ -92,7 +92,7 @@ public sealed partial class MainWindow
 
         ApplyVerticalTabsLayout();
         SaveWorkspaceUiSettings();
-        UpdateStatusText(statusOverride ?? $"Onglets places a {WorkspacePositionLabel(_tabStripPosition)}.");
+        UpdateStatusText(statusOverride ?? $"Onglets placés à {WorkspacePositionLabel(_tabStripPosition)}.");
     }
 
     private void ApplyBookmarksBarPositionImmediate(string position, string? statusOverride = null)
@@ -106,7 +106,7 @@ public sealed partial class MainWindow
 
         ApplyBookmarksBarVisibility();
         SaveWorkspaceUiSettings();
-        UpdateStatusText(statusOverride ?? $"Favoris places a {WorkspacePositionLabel(_bookmarksBarPosition)}.");
+        UpdateStatusText(statusOverride ?? $"Favoris placés à {WorkspacePositionLabel(_bookmarksBarPosition)}.");
     }
 
     private void ApplyThemeModeImmediate(string mode)
@@ -121,7 +121,7 @@ public sealed partial class MainWindow
         _uiSettings.Save(_profile.UiSettingsFile);
         ApplyAccessibilitySettings();
         RefreshNovaHomePages();
-        UpdateStatusText($"Lumora {ThemeModeLabel(_uiSettings.ThemeMode).ToLowerInvariant()} active.");
+        UpdateStatusText($"Lumora {ThemeModeLabel(_uiSettings.ThemeMode).ToLowerInvariant()} activé.");
     }
 
     private void SetWorkspaceControlsSilently(Action updateControls)
@@ -190,8 +190,8 @@ public sealed partial class MainWindow
         };
         tabs.Items.Add(CreateWorkspaceMenuItem("Placer en haut", "tabs:top", new SymbolIcon(Symbol.Up)));
         tabs.Items.Add(CreateWorkspaceMenuItem("Placer en bas", "tabs:bottom", CreateMenuGlyphIcon("\uE74B")));
-        tabs.Items.Add(CreateWorkspaceMenuItem("Placer a gauche", "tabs:left", new SymbolIcon(Symbol.Back)));
-        tabs.Items.Add(CreateWorkspaceMenuItem("Placer a droite", "tabs:right", new SymbolIcon(Symbol.Forward)));
+        tabs.Items.Add(CreateWorkspaceMenuItem("Placer à gauche", "tabs:left", new SymbolIcon(Symbol.Back)));
+        tabs.Items.Add(CreateWorkspaceMenuItem("Placer à droite", "tabs:right", new SymbolIcon(Symbol.Forward)));
         items.Add(tabs);
 
         var bookmarks = new MenuFlyoutSubItem
@@ -201,8 +201,8 @@ public sealed partial class MainWindow
         };
         bookmarks.Items.Add(CreateWorkspaceMenuItem("Placer en haut", "bookmarks:top", new SymbolIcon(Symbol.Up)));
         bookmarks.Items.Add(CreateWorkspaceMenuItem("Placer en bas", "bookmarks:bottom", CreateMenuGlyphIcon("\uE74B")));
-        bookmarks.Items.Add(CreateWorkspaceMenuItem("Placer a gauche", "bookmarks:left", new SymbolIcon(Symbol.Back)));
-        bookmarks.Items.Add(CreateWorkspaceMenuItem("Placer a droite", "bookmarks:right", new SymbolIcon(Symbol.Forward)));
+        bookmarks.Items.Add(CreateWorkspaceMenuItem("Placer à gauche", "bookmarks:left", new SymbolIcon(Symbol.Back)));
+        bookmarks.Items.Add(CreateWorkspaceMenuItem("Placer à droite", "bookmarks:right", new SymbolIcon(Symbol.Forward)));
         bookmarks.Items.Add(new MenuFlyoutSeparator());
         bookmarks.Items.Add(CreateWorkspaceMenuItem(
             BookmarksBarSwitch.IsOn ? "Masquer la barre de favoris" : "Afficher la barre de favoris",
@@ -222,12 +222,12 @@ public sealed partial class MainWindow
 
         var theme = new MenuFlyoutSubItem
         {
-            Text = "Luminosite Lumora",
+            Text = "Luminosité Lumora",
             Icon = CreateMenuGlyphIcon("\uE706")
         };
         theme.Items.Add(CreateWorkspaceMenuItem("Sombre", "theme:dark", CreateMenuGlyphIcon("\uE708")));
         theme.Items.Add(CreateWorkspaceMenuItem("Clair", "theme:light", CreateMenuGlyphIcon("\uE706")));
-        theme.Items.Add(CreateWorkspaceMenuItem("Systeme", "theme:system", CreateMenuGlyphIcon("\uE770")));
+        theme.Items.Add(CreateWorkspaceMenuItem("Système", "theme:system", CreateMenuGlyphIcon("\uE770")));
         items.Add(theme);
     }
 
@@ -255,7 +255,7 @@ public sealed partial class MainWindow
             var payload = actionTag["preset:".Length..].Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (payload.Length == 2)
             {
-                ApplyWorkspacePresetImmediate(payload[0], payload[1], "Preset d'espace Lumora applique.");
+                ApplyWorkspacePresetImmediate(payload[0], payload[1], "Preset d'espace Lumora appliqué.");
             }
             return;
         }
@@ -328,7 +328,7 @@ public sealed partial class MainWindow
         NormalizeThemeMode(mode) switch
         {
             "light" => "Lumora clair",
-            "system" => "Lumora systeme",
+            "system" => "Lumora système",
             _ => "Lumora sombre"
         };
 

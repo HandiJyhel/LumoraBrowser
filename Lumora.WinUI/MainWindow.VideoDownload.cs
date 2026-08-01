@@ -43,15 +43,15 @@ public sealed partial class MainWindow
 
         if (candidate is null)
         {
-            VideoDownloadTitleText.Text = "Aucune video YouTube detectee sur cet onglet.";
-            VideoDownloadStatusText.Text = "Ouvre une page video YouTube, puis relance ce module.";
+            VideoDownloadTitleText.Text = "Aucune vidéo YouTube détectée sur cet onglet.";
+            VideoDownloadStatusText.Text = "Ouvre une page vidéo YouTube, puis relance ce module.";
             return;
         }
 
         VideoDownloadTitleText.Text = candidate.Title;
         if (!candidate.IsYouTube)
         {
-            VideoDownloadStatusText.Text = "Cette premiere version du module cible les pages video YouTube.";
+            VideoDownloadStatusText.Text = "Cette première version du module cible les pages vidéo YouTube.";
             return;
         }
 
@@ -59,10 +59,10 @@ public sealed partial class MainWindow
         VideoDownloadStartButton.IsEnabled = enginePath is not null && !_videoDownloadInProgress;
         VideoDownloadQualityCombo.IsEnabled = enginePath is not null && !_videoDownloadInProgress;
         VideoDownloadStatusText.Text = enginePath is null
-            ? "Installe le moteur pour activer le telechargement de cette video."
+            ? "Installe le moteur pour activer le téléchargement de cette vidéo."
             : FfmpegLocator.FindLocalFfmpeg() is null
-                ? "Pret a telecharger (qualite limitee : ffmpeg absent pour fusionner les flux au-dela de 720p)."
-                : "Pret a telecharger cette video YouTube dans la qualite choisie ci-dessous.";
+                ? "Prêt à télécharger (qualité limitée : ffmpeg absent pour fusionner les flux au-delà de 720p)."
+                : "Prêt à télécharger cette vidéo YouTube dans la qualité choisie ci-dessous.";
     }
 
     private void VideoDownloadQualityCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -83,7 +83,7 @@ public sealed partial class MainWindow
         var enginePath = YtDlpEngineProvider.FindLocalEngine();
         VideoDownloadEngineText.Text = enginePath is null
             ? "Moteur YouTube local introuvable."
-            : $"Moteur local detecte : {Path.GetFileName(enginePath)}";
+            : $"Moteur local détecté : {Path.GetFileName(enginePath)}";
 
         VideoDownloadInstallEngineButton.Visibility = enginePath is null
             ? Visibility.Visible
@@ -95,14 +95,14 @@ public sealed partial class MainWindow
     {
         if (_videoDownloadInProgress)
         {
-            VideoDownloadStatusText.Text = "Un telechargement video est deja en cours.";
+            VideoDownloadStatusText.Text = "Un téléchargement vidéo est déjà en cours.";
             return;
         }
 
         var candidate = _videoDownloadCandidate;
         if (candidate is null || !candidate.IsYouTube)
         {
-            VideoDownloadStatusText.Text = "Aucune video YouTube active.";
+            VideoDownloadStatusText.Text = "Aucune vidéo YouTube active.";
             return;
         }
 
@@ -133,7 +133,7 @@ public sealed partial class MainWindow
         {
             await YtDlpEngineProvider.DownloadEngineAsync(progress);
             RefreshVideoEngineState();
-            VideoDownloadStatusText.Text = "Moteur installe. Pret a telecharger cette video YouTube.";
+            VideoDownloadStatusText.Text = "Moteur installé. Prêt à télécharger cette vidéo YouTube.";
             VideoDownloadStartButton.IsEnabled = _videoDownloadCandidate is not null
                 && _videoDownloadCandidate.IsYouTube
                 && !_videoDownloadInProgress;
@@ -226,8 +226,8 @@ public sealed partial class MainWindow
         try
         {
             var qualityLabel = VideoDownloadFormat.Label(quality);
-            VideoDownloadStatusText.Text = $"Telechargement YouTube en cours ({qualityLabel})...";
-            StatusText.Text = $"Telechargement video demarre: {candidate.Title}";
+            VideoDownloadStatusText.Text = $"Téléchargement YouTube en cours ({qualityLabel})...";
+            StatusText.Text = $"Téléchargement vidéo démarré : {candidate.Title}";
 
             var process = new Process
             {
@@ -252,7 +252,7 @@ public sealed partial class MainWindow
                         RenderDownloads();
                         VideoDownloadProgressBar.IsIndeterminate = totalBytes <= 0;
                         VideoDownloadProgressBar.Value = percent;
-                        VideoDownloadStatusText.Text = $"Telechargement... {percent:0.0}%";
+                        VideoDownloadStatusText.Text = $"Téléchargement... {percent:0.0}%";
                     });
                 }
             };
@@ -285,8 +285,8 @@ public sealed partial class MainWindow
                     State = DownloadHistoryEntry.Completed,
                     CompletedAt = DateTimeOffset.Now
                 });
-                VideoDownloadStatusText.Text = $"Telechargement termine : {fileName}";
-                StatusText.Text = $"Video telechargee: {fileName}";
+                VideoDownloadStatusText.Text = $"Téléchargement terminé : {fileName}";
+                StatusText.Text = $"Vidéo téléchargée : {fileName}";
             }
             else
             {
@@ -295,8 +295,8 @@ public sealed partial class MainWindow
                     State = DownloadHistoryEntry.Failed,
                     CompletedAt = DateTimeOffset.Now
                 });
-                VideoDownloadStatusText.Text = $"Echec du telechargement : {LastUsefulLine(error) ?? "moteur video indisponible."}";
-                StatusText.Text = "Telechargement video echoue.";
+                VideoDownloadStatusText.Text = $"Échec du téléchargement : {LastUsefulLine(error) ?? "moteur vidéo indisponible."}";
+                StatusText.Text = "Téléchargement vidéo échoué.";
             }
 
             RenderDownloads();
@@ -309,8 +309,8 @@ public sealed partial class MainWindow
                 CompletedAt = DateTimeOffset.Now
             });
             RenderDownloads();
-            VideoDownloadStatusText.Text = $"Telechargement impossible : {ex.Message}";
-            StatusText.Text = "Telechargement video impossible.";
+            VideoDownloadStatusText.Text = $"Téléchargement impossible : {ex.Message}";
+            StatusText.Text = "Téléchargement vidéo impossible.";
         }
         finally
         {

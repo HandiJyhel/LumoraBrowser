@@ -159,10 +159,10 @@ public sealed partial class MainWindow
         {
             $"Version Lumora: {Version}",
             $"URL active: {SiteLoginDiagnosticRecorder.SanitizeUrl(site.Address)}",
-            $"Compatibilite connexion: {(IsLoginCompatibilitySite(site.RootDomain) ? "active" : "inactive")}",
+            $"Compatibilité connexion: {(IsLoginCompatibilitySite(site.RootDomain) ? "active" : "inactive")}",
             $"Diagnostic connexion: {(IsLoginDiagnosticSite(site.RootDomain) ? "actif" : "inactif")}",
-            $"Purge de session au demarrage: {(_uiSettings.SessionPurgeEnabled ? "active" : "inactive")}",
-            $"Session conservee pour ce site: {(IsTrustedSessionSite(site.RootDomain) ? "oui" : "non")}"
+            $"Purge de session au démarrage: {(_uiSettings.SessionPurgeEnabled ? "active" : "inactive")}",
+            $"Session conservée pour ce site: {(IsTrustedSessionSite(site.RootDomain) ? "oui" : "non")}"
         };
 
         var core = _browserView?.CoreWebView2;

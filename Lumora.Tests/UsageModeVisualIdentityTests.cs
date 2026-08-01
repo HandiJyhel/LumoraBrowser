@@ -316,9 +316,9 @@ public sealed class UsageModeVisualIdentityTests
         var profile = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
 
         Assert.Contains("ProfileStatusFlyout", xaml, StringComparison.Ordinal);
-        Assert.Contains("Parametres utilisateur", xaml, StringComparison.Ordinal);
+        Assert.Contains("Paramètres utilisateur", xaml, StringComparison.Ordinal);
         Assert.Contains("Changer d'utilisateur", xaml, StringComparison.Ordinal);
-        Assert.Contains("Creer un utilisateur", xaml, StringComparison.Ordinal);
+        Assert.Contains("Créer un utilisateur", xaml, StringComparison.Ordinal);
         Assert.Contains("ToolTipService.ToolTip=\"Ouvrir le menu profil\"", xaml, StringComparison.Ordinal);
         Assert.Contains("private void OpenProfileSettings()", mainWindow, StringComparison.Ordinal);
         Assert.Contains("SettingsNavProfile.IsChecked = true", mainWindow, StringComparison.Ordinal);
@@ -328,17 +328,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_93_9_3()
+    public void Version_projet_est_alignee_sur_0_93_10_0()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.93.9.3-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.93.9.3-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.93.9.3-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.93.9.3-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.10.0-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.93.10.0-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.93.10.0-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.10.0-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

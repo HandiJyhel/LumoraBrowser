@@ -84,7 +84,7 @@ public sealed class AccessibilityComfortNamingTests
         var source = ReadRepoFile("Lumora.WinUI", "MainWindow.UsageMode.cs");
 
         Assert.Contains("var eclipsedByHighContrast = _uiSettings.AccessibilityHighContrast;", source, StringComparison.Ordinal);
-        Assert.Contains("Couleurs remplacees tant que le contraste eleve (Confort) est actif.", source, StringComparison.Ordinal);
+        Assert.Contains("Couleurs remplacées tant que le contraste élevé (Confort) est actif.", source, StringComparison.Ordinal);
     }
 
     [Fact]

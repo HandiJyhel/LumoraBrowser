@@ -30,18 +30,18 @@ public sealed class AccessibilityRegressionTests
         var identitySpine = ReadRepoFile("Lumora.WinUI", "MainWindow.IdentitySpine.cs");
 
         Assert.Contains("Retirer {moduleName} de la barre de modules", usageMode, StringComparison.Ordinal);
-        Assert.Contains("Epingler {moduleName} dans la barre de modules", usageMode, StringComparison.Ordinal);
+        Assert.Contains("Épingler {moduleName} dans la barre de modules", usageMode, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(renameBtn", webApps, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(deleteBtn", webApps, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(openBtn", webApps, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(openBtn, $\"Ouvrir le telechargement", history, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(removeBtn, $\"Retirer le telechargement", history, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(openButton, $\"Ouvrir le groupe enregistre", savedGroups, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(deleteButton, $\"Supprimer le groupe enregistre", savedGroups, StringComparison.Ordinal);
+        Assert.Contains("ApplyNovaControlAccessibility(openBtn, $\"Ouvrir le téléchargement", history, StringComparison.Ordinal);
+        Assert.Contains("ApplyNovaControlAccessibility(removeBtn, $\"Retirer le téléchargement", history, StringComparison.Ordinal);
+        Assert.Contains("ApplyNovaControlAccessibility(openButton, $\"Ouvrir le groupe enregistré", savedGroups, StringComparison.Ordinal);
+        Assert.Contains("ApplyNovaControlAccessibility(deleteButton, $\"Supprimer le groupe enregistré", savedGroups, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(combo, $\"{descriptor.Label} pour {rootDomain}\")", siteControl, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(trustToggle, $\"Politique de session pour {rootDomain}\")", sessions, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(forgetBtn, $\"Oublier les cookies du site {rootDomain}\")", sessions, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(deleteBtn, $\"Supprimer la cle d'acces pour {entry.Origin}\")", passkeys, StringComparison.Ordinal);
+        Assert.Contains("ApplyNovaControlAccessibility(deleteBtn, $\"Supprimer la clé d'accès pour {entry.Origin}\")", passkeys, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(editBtn, $\"Modifier la carte {title}\")", wallet, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(fillBtn, $\"Utiliser la carte {title} sur la page active\")", wallet, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(unlockBtn, \"Deverrouiller le coffre\")", vaultQuickAccess, StringComparison.Ordinal);
@@ -84,9 +84,9 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("private void UpdateStatusText(", xamlCs, StringComparison.Ordinal);
         Assert.Contains("RaiseNotificationEvent(", xamlCs, StringComparison.Ordinal);
         Assert.Contains("AutomationNotificationProcessing.MostRecent", xamlCs, StringComparison.Ordinal);
-        Assert.Contains("AutomationProperties.Name=\"Etat Lumora\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("AutomationProperties.HelpText=\"Annonce les changements importants de navigation, de securite et d'accessibilite.\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("UpdateStatusText(\"Sessions de la visite precedente purgees.\")", sessions, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"État Lumora\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.HelpText=\"Annonce les changements importants de navigation, de sécurité et d'accessibilité.\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("UpdateStatusText(\"Sessions de la visite précédente purgées.\")", sessions, StringComparison.Ordinal);
         Assert.Contains("UpdateStatusText(\"Clés d'accès indisponibles en mode invité.\")", passkeys, StringComparison.Ordinal);
         Assert.Contains("UpdateStatusText(\"Portefeuille indisponible en mode invité.\")", wallet, StringComparison.Ordinal);
     }
@@ -124,12 +124,12 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("Faire annoncer les raccourcis", xaml, StringComparison.Ordinal);
         Assert.Contains("Faire annoncer les raccourcis Lumora", xaml, StringComparison.Ordinal);
         Assert.Contains("AccessibilityShortcutHelpButton_Click", settings, StringComparison.Ordinal);
-        Assert.Contains("UpdateStatusText(\"Aide clavier Lumora annoncee.\", announce: false);", settings, StringComparison.Ordinal);
+        Assert.Contains("UpdateStatusText(\"Aide clavier Lumora annoncée.\", announce: false);", settings, StringComparison.Ordinal);
         Assert.Contains("Raccourcis Lumora : F6 ou Maj plus F6 pour changer de zone.", settings, StringComparison.Ordinal);
-        Assert.Contains("Controle Alt F relit votre repere courant.", settings, StringComparison.Ordinal);
-        Assert.Contains("Controle Alt R recentre le focus sur la zone utile.", settings, StringComparison.Ordinal);
-        Assert.Contains("Controle Alt S active le mode secours.", settings, StringComparison.Ordinal);
-        Assert.Contains("Controle Alt X restaure l'etat de confort precedent.", settings, StringComparison.Ordinal);
+        Assert.Contains("Contrôle Alt F relit votre repère courant.", settings, StringComparison.Ordinal);
+        Assert.Contains("Contrôle Alt R recentre le focus sur la zone utile.", settings, StringComparison.Ordinal);
+        Assert.Contains("Contrôle Alt S active le mode secours.", settings, StringComparison.Ordinal);
+        Assert.Contains("Contrôle Alt X restaure l'état de confort précédent.", settings, StringComparison.Ordinal);
         // Menus "Mode" et "Confort" fusionnes en un seul point d'entree
         // (UsageModeButton/UsageModeFlyout) a la demande explicite de
         // l'utilisateur - AccessibilityQuickButton/AccessibilityQuickFlyout
@@ -306,11 +306,11 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("SiteControlComfortZoomCombo", xaml, StringComparison.Ordinal);
         Assert.Contains("SiteControlComfortLargeTextToggle", xaml, StringComparison.Ordinal);
         Assert.Contains("SiteControlComfortReduceMotionToggle", xaml, StringComparison.Ordinal);
-        Assert.Contains("Reinitialiser le confort de ce site", xaml, StringComparison.Ordinal);
+        Assert.Contains("Réinitialiser le confort de ce site", xaml, StringComparison.Ordinal);
         // Le confort par site utilise un mecanisme (CSS injecte) totalement
         // independant du confort global (chrome WinUI) : le texte doit le
         // dire explicitement pour ne pas laisser croire a un lien qui n'existe pas.
-        Assert.Contains("independant du Confort global", siteComfort, StringComparison.Ordinal);
+        Assert.Contains("indépendant du Confort global", siteComfort, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

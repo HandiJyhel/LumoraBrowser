@@ -51,8 +51,8 @@ public sealed partial class MainWindow
         ApplyChromeLayoutStyle();
         SaveWorkspaceUiSettings();
         UpdateStatusText(_chromeLayoutStyle == "identitySpine"
-            ? "Colonne identitaire activee."
-            : "Disposition classique retablie.");
+            ? "Colonne identitaire activée."
+            : "Disposition classique rétablie.");
     }
 
     // Appelee depuis ApplyUiSettings() (comme ApplyVerticalTabsLayout()) :
@@ -234,8 +234,8 @@ public sealed partial class MainWindow
 
         SaveWorkspaceUiSettings();
         UpdateStatusText(_uiSettings.IdentitySpineAutoHide
-            ? "Masquage automatique de la colonne identitaire active."
-            : "Masquage automatique de la colonne identitaire desactive.");
+            ? "Masquage automatique de la colonne identitaire activé."
+            : "Masquage automatique de la colonne identitaire désactivé.");
     }
 
     // ── Pastilles d'onglets de la colonne ────────────────────────────────────

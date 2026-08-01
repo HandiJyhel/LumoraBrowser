@@ -40,8 +40,8 @@ internal static class ModelIntegrity
         {
             try { File.Delete(filePath); } catch { }
             throw new InvalidDataException(
-                $"Integrite invalide pour {Path.GetFileName(filePath)} : empreinte attendue {expectedSha256Hex}, obtenue {actual}. " +
-                "Fichier supprime par precaution - le telechargement sera retente au prochain usage.");
+                $"Intégrité invalide pour {Path.GetFileName(filePath)} : empreinte attendue {expectedSha256Hex}, obtenue {actual}. " +
+                "Fichier supprimé par précaution - le téléchargement sera retenté au prochain usage.");
         }
     }
 }

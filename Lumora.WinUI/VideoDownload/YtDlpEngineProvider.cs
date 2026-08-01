@@ -81,13 +81,13 @@ internal static class YtDlpEngineProvider
             await input.CopyToAsync(output, cancellationToken);
         }
 
-        progress?.Report("Verification de l'integrite du fichier telecharge...");
+        progress?.Report("Vérification de l'intégrité du fichier téléchargé...");
         var actualHash = await ComputeSha256Async(tempPath, cancellationToken);
         if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
         {
             File.Delete(tempPath);
             throw new InvalidOperationException(
-                "Le fichier telecharge ne correspond pas au hash officiel publie par yt-dlp. Installation annulee par securite.");
+                "Le fichier téléchargé ne correspond pas au hash officiel publié par yt-dlp. Installation annulée par sécurité.");
         }
 
         File.Move(tempPath, destination, overwrite: true);

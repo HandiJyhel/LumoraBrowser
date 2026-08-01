@@ -24,7 +24,7 @@ public sealed partial class MainWindow
 
     private void UpdateWizardStep()
     {
-        WizardStepIndicator.Text = $"Etape {_wizardStep + 1} / 4";
+        WizardStepIndicator.Text = $"Étape {_wizardStep + 1} / 4";
         WizardStep0.Visibility = _wizardStep == 0 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep1.Visibility = _wizardStep == 1 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep2.Visibility = _wizardStep == 2 ? Visibility.Visible : Visibility.Collapsed;

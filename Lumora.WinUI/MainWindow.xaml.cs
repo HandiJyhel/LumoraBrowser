@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.9.3-dev";
+    internal const string Version = "0.93.10.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -748,7 +748,7 @@ public sealed partial class MainWindow : Window
     {
         UpdateProfileFlyoutUi();
         UpdateStatusText(_isGuestMode
-            ? "Menu profil invite disponible."
+            ? "Menu profil invité disponible."
             : "Menu profil Lumora disponible.");
     }
 
@@ -835,7 +835,7 @@ public sealed partial class MainWindow : Window
         await OfferTranslationIfNeededAsync(view, address);
         if (TranslateBar.Visibility != Visibility.Visible)
         {
-            UpdateStatusText("Aucune traduction proposee pour cette page.");
+            UpdateStatusText("Aucune traduction proposée pour cette page.");
         }
     }
 

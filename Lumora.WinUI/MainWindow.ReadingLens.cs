@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     {
         if (!_uiSettings.AccessibilityReadingLensEnabled)
         {
-            StatusText.Text = "Activez la loupe de lecture dans Reglages > Confort pour l'utiliser.";
+            StatusText.Text = "Activez la loupe de lecture dans Réglages > Confort pour l'utiliser.";
             return;
         }
 

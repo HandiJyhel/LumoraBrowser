@@ -35,7 +35,7 @@ public sealed partial class MainWindow
         _selectedAnnotatedPageUrl = null;
         RefreshNotesPanel();
         NoteTitleBox.Focus(FocusState.Programmatic);
-        StatusText.Text = "Nouvelle note creee.";
+        StatusText.Text = "Nouvelle note créée.";
     }
 
     private void NotesSearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -136,7 +136,7 @@ public sealed partial class MainWindow
         }
 
         NoteMetaText.Text = NoteMetaLine(updated);
-        StatusText.Text = "Note enregistree.";
+        StatusText.Text = "Note enregistrée.";
     }
 
     private async void NoteDeleteButton_Click(object sender, RoutedEventArgs e)
@@ -151,7 +151,7 @@ public sealed partial class MainWindow
         var dialog = new ContentDialog
         {
             Title = "Supprimer la note",
-            Content = $"Supprimer definitivement « {(note is null ? "cette note" : NoteStore.DisplayTitle(note))} » ?",
+            Content = $"Supprimer définitivement « {(note is null ? "cette note" : NoteStore.DisplayTitle(note))} » ?",
             PrimaryButtonText = "Supprimer",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,
@@ -165,7 +165,7 @@ public sealed partial class MainWindow
         _notes.Remove(_selectedNoteId);
         _selectedNoteId = null;
         RefreshNotesPanel();
-        StatusText.Text = "Note supprimee.";
+        StatusText.Text = "Note supprimée.";
     }
 
     private void NoteLinkButton_Click(object sender, RoutedEventArgs e)
@@ -209,7 +209,7 @@ public sealed partial class MainWindow
             }
 
             ApplyNoteLinkUi(updated);
-            StatusText.Text = $"Note rattachee a : {DisplayTitle(address)}";
+            StatusText.Text = $"Note rattachée à : {DisplayTitle(address)}";
         }
     }
 
@@ -236,7 +236,7 @@ public sealed partial class MainWindow
         var dialog = new ContentDialog
         {
             Title = "Oublier cette page",
-            Content = $"Supprimer definitivement les {page?.Count ?? 0} annotation(s) de « {AnnotatedPageDisplayTitle(page)} » ?",
+            Content = $"Supprimer définitivement les {page?.Count ?? 0} annotation(s) de « {AnnotatedPageDisplayTitle(page)} » ?",
             PrimaryButtonText = "Supprimer",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,
@@ -251,7 +251,7 @@ public sealed partial class MainWindow
         _selectedAnnotatedPageUrl = null;
         RefreshNotesPanel();
         UpdateReaderModeUi();
-        StatusText.Text = "Annotations de la page supprimees.";
+        StatusText.Text = "Annotations de la page supprimées.";
     }
 
     private void AnnotationDeleteOne_Click(object sender, RoutedEventArgs e)
@@ -266,7 +266,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        StatusText.Text = "Annotation supprimee.";
+        StatusText.Text = "Annotation supprimée.";
         UpdateReaderModeUi();
         // La page peut avoir perdu sa dernière annotation : reconstruire la
         // liste entière (l'entrée disparaît alors proprement).
@@ -299,7 +299,7 @@ public sealed partial class MainWindow
             {
                 var item = new ListViewItem { Content = AnnotatedPageListItemContent(page), Tag = $"page|{page.Url}" };
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item,
-                    $"Page annotee : {AnnotatedPageDisplayTitle(page)}");
+                    $"Page annotée : {AnnotatedPageDisplayTitle(page)}");
                 NotesList.Items.Add(item);
             }
 
@@ -397,7 +397,7 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(AnnotationPageUrlText, page.Url);
         ToolTipService.SetToolTip(AnnotationPageUrlText, page.Url);
         AnnotationMetaText.Text =
-            $"{page.Count} annotation(s) - derniere le {page.UpdatedAt.LocalDateTime:g}";
+            $"{page.Count} annotation(s) - dernière le {page.UpdatedAt.LocalDateTime:g}";
 
         AnnotationsList.Items.Clear();
         foreach (var annotation in _annotations.ForPage(page.Url))
@@ -433,7 +433,7 @@ public sealed partial class MainWindow
         });
         panel.Children.Add(header);
 
-        var meta = $"{page.Count} passage(s) surligne(s) - {HistoryTimeFormatter.Format(page.UpdatedAt)}";
+        var meta = $"{page.Count} passage(s) surligné(s) - {HistoryTimeFormatter.Format(page.UpdatedAt)}";
         if (Uri.TryCreate(page.Url, UriKind.Absolute, out var parsed))
         {
             meta = $"{meta} - {parsed.Host}";
@@ -524,5 +524,5 @@ public sealed partial class MainWindow
     }
 
     private static string NoteMetaLine(Note note) =>
-        $"Creee le {note.CreatedAt.LocalDateTime:g} - modifiee le {note.UpdatedAt.LocalDateTime:g}";
+        $"Créée le {note.CreatedAt.LocalDateTime:g} - modifiée le {note.UpdatedAt.LocalDateTime:g}";
 }

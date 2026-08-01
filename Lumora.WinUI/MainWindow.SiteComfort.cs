@@ -23,7 +23,7 @@ public sealed partial class MainWindow
         await ApplySiteComfortAsync(CurrentTab()?.View, site.Address);
         StatusText.Text = zoomPercent == SiteComfortPolicy.DefaultZoomPercent
             ? $"{site.RootDomain} suit de nouveau le zoom standard."
-            : $"{site.RootDomain} s'ouvre maintenant avec un zoom prefere de {zoomPercent} %.";
+            : $"{site.RootDomain} s'ouvre maintenant avec un zoom préféré de {zoomPercent} %.";
     }
 
     private async void SiteControlComfortLargeTextToggle_Toggled(object sender, RoutedEventArgs e)
@@ -36,7 +36,7 @@ public sealed partial class MainWindow
         RefreshSiteComfortUi(site.RootDomain);
         await ApplySiteComfortAsync(CurrentTab()?.View, site.Address);
         StatusText.Text = SiteControlComfortLargeTextToggle.IsOn
-            ? $"Texte renforce pour {site.RootDomain}."
+            ? $"Texte renforcé pour {site.RootDomain}."
             : $"Texte du site {site.RootDomain} revenu au confort global.";
     }
 
@@ -50,7 +50,7 @@ public sealed partial class MainWindow
         RefreshSiteComfortUi(site.RootDomain);
         await ApplySiteComfortAsync(CurrentTab()?.View, site.Address);
         StatusText.Text = SiteControlComfortReduceMotionToggle.IsOn
-            ? $"Animations limitees pour {site.RootDomain}."
+            ? $"Animations limitées pour {site.RootDomain}."
             : $"Animations du site {site.RootDomain} revenues au confort global.";
     }
 
@@ -62,7 +62,7 @@ public sealed partial class MainWindow
         SaveUiSettings();
         RefreshSiteComfortUi(site.RootDomain);
         await ApplySiteComfortAsync(CurrentTab()?.View, site.Address);
-        StatusText.Text = $"Confort du site reinitialise pour {site.RootDomain}.";
+        StatusText.Text = $"Confort du site réinitialisé pour {site.RootDomain}.";
     }
 
     private void RefreshSiteComfortUi(string rootDomain)
@@ -74,7 +74,7 @@ public sealed partial class MainWindow
 
         SiteControlComfortText.Text = hasOverrides
             ? BuildSiteComfortSummary(rootDomain, zoomPercent, largeText, reduceMotion)
-            : "Reglage independant du Confort global (Reglages > Confort) : vous pouvez memoriser ici, pour ce site precis uniquement, un zoom, un texte plus lisible ou des animations limitees.";
+            : "Réglage indépendant du Confort global (Réglages > Confort) : vous pouvez mémoriser ici, pour ce site précis uniquement, un zoom, un texte plus lisible ou des animations limitées.";
 
         _suppressSiteComfortUi = true;
         try
@@ -106,12 +106,12 @@ public sealed partial class MainWindow
 
         if (reduceMotion)
         {
-            details.Add("animations reduites");
+            details.Add("animations réduites");
         }
 
         return details.Count == 0
-            ? $"Aucun confort specifique memorise pour {rootDomain}."
-            : $"{rootDomain} reutilisera : {string.Join(", ", details)}.";
+            ? $"Aucun confort spécifique mémorisé pour {rootDomain}."
+            : $"{rootDomain} réutilisera : {string.Join(", ", details)}.";
     }
 
     private async Task ApplySiteComfortAsync(WebView2? view, string? address)

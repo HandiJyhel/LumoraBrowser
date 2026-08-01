@@ -50,12 +50,12 @@ internal static class TorEngineProvider
                 await input.CopyToAsync(output, cancellationToken);
             }
 
-            progress?.Report("Verification de l'integrite de l'archive...");
+            progress?.Report("Vérification de l'intégrité de l'archive...");
             var archiveHash = await ComputeSha256Async(archivePath, cancellationToken);
             if (!string.Equals(archiveHash, TorTrustedRelease.ArchiveSha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    "L'archive telechargee ne correspond pas au hash officiel epingle. Installation annulee par securite.");
+                    "L'archive téléchargée ne correspond pas au hash officiel épinglé. Installation annulée par sécurité.");
             }
 
             progress?.Report("Extraction du moteur Tor...");
@@ -71,7 +71,7 @@ internal static class TorEngineProvider
                 || !string.Equals(exeHash, expectedExeHash, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    "Le moteur Tor extrait ne correspond pas a la version verifiee. Installation annulee par securite.");
+                    "Le moteur Tor extrait ne correspond pas à la version vérifiée. Installation annulée par sécurité.");
             }
 
             var torDir = Path.GetDirectoryName(destinationExePath)

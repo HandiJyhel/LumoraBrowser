@@ -110,14 +110,14 @@ public sealed partial class MainWindow
             if (type == "newtab_personalize")
             {
                 OpenPersonalizationSettings();
-                StatusText.Text = "Personnalisez votre mode, votre accueil et vos reperes Lumora.";
+                StatusText.Text = "Personnalisez votre mode, votre accueil et vos repères Lumora.";
                 return;
             }
 
             if (type == "newtab_modules")
             {
                 ShowPanel(ModulesPanel, "Modules Lumora");
-                StatusText.Text = "Choisissez les modules a epingler dans la barre Lumora.";
+                StatusText.Text = "Choisissez les modules à épingler dans la barre Lumora.";
                 return;
             }
 
@@ -127,7 +127,7 @@ public sealed partial class MainWindow
                 _uiSettings.LastIntroducedUsageMode = mode;
                 _uiSettings.Save(_profile.UiSettingsFile);
                 RefreshNovaHomePages();
-                StatusText.Text = $"Presentation du mode {UsageModeLabel(mode)} masquee.";
+                StatusText.Text = $"Présentation du mode {UsageModeLabel(mode)} masquée.";
                 return;
             }
 
@@ -282,7 +282,7 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode)
         {
-            StatusText.Text = "Raccourcis indisponibles en mode invite.";
+            StatusText.Text = "Raccourcis indisponibles en mode invité.";
             return;
         }
 
@@ -294,7 +294,7 @@ public sealed partial class MainWindow
             _uiSettings.NewTabShortcuts.RemoveAt(index);
             SaveNewTabShortcutSettings();
             RefreshNovaHomePages();
-            StatusText.Text = $"Raccourci supprime : {title}.";
+            StatusText.Text = $"Raccourci supprimé : {title}.";
             return;
         }
 
@@ -309,7 +309,7 @@ public sealed partial class MainWindow
         if (type == "newtab_edit_shortcut" && index >= 0 && index < _uiSettings.NewTabShortcuts.Count)
         {
             _uiSettings.NewTabShortcuts[index] = shortcut;
-            StatusText.Text = $"Raccourci modifie : {shortcut.Title}.";
+            StatusText.Text = $"Raccourci modifié : {shortcut.Title}.";
         }
         else
         {
@@ -326,7 +326,7 @@ public sealed partial class MainWindow
             // mais ne s'affiche jamais : l'utilisateur qui vient d'utiliser ce
             // bouton veut evidemment VOIR le raccourci qu'il vient de creer.
             _uiSettings.NewTabShortcutsVisible = true;
-            StatusText.Text = $"Raccourci ajoute : {shortcut.Title}.";
+            StatusText.Text = $"Raccourci ajouté : {shortcut.Title}.";
         }
 
         SaveNewTabShortcutSettings();

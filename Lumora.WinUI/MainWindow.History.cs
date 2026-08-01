@@ -21,7 +21,7 @@ public sealed partial class MainWindow
     private void DownloadsMenu_Click(object sender, RoutedEventArgs e)
     {
         RenderDownloads();
-        ShowPanel(DownloadsPanel, "Telechargements");
+        ShowPanel(DownloadsPanel, "Téléchargements");
         _unseenDownloadsCount = 0;
         RefreshDownloadsIndicator();
     }
@@ -145,7 +145,7 @@ public sealed partial class MainWindow
                 _historyPanel.Store.Remove(i);
                 _semanticIndex.RemoveByUrl(i.Url);
                 RenderHistory();
-                StatusText.Text = "Entree supprimee de l'historique.";
+                StatusText.Text = "Entrée supprimée de l'historique.";
             }
         };
         flyout.Items.Add(removeItem);
@@ -158,14 +158,14 @@ public sealed partial class MainWindow
         _historyPanel.Store.Clear();
         _semanticIndex.Clear();
         RenderHistory();
-        StatusText.Text = "Historique efface.";
+        StatusText.Text = "Historique effacé.";
     }
 
     private void ClearDownloadsButton_Click(object sender, RoutedEventArgs e)
     {
         _historyPanel.Downloads.Clear();
         RenderDownloads();
-        StatusText.Text = "Historique des telechargements efface.";
+        StatusText.Text = "Historique des téléchargements effacé.";
     }
 
     private void CoreWebView2_DownloadStarting(CoreWebView2 sender, CoreWebView2DownloadStartingEventArgs args)
@@ -186,7 +186,7 @@ public sealed partial class MainWindow
         DispatcherQueue.TryEnqueue(() =>
         {
             RenderDownloads();
-            StatusText.Text = $"Telechargement demarre: {entry.FileName}";
+            StatusText.Text = $"Téléchargement démarré : {entry.FileName}";
         });
     }
 
@@ -230,7 +230,7 @@ public sealed partial class MainWindow
             1 => "Hier",
             >= 2 and <= 6 => "Cette semaine",
             >= 7 and <= 30 => "Ce mois-ci",
-            _ => "Plus tot"
+            _ => "Plus tôt"
         };
     }
 
@@ -264,7 +264,7 @@ public sealed partial class MainWindow
         {
             DownloadsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Aucun telechargement local.",
+                Text = "Aucun téléchargement local.",
                 Opacity = 0.65,
                 Margin = new Thickness(0, 8, 0, 0)
             });
@@ -328,21 +328,21 @@ public sealed partial class MainWindow
         if (dl.IsCompleted && fileExists)
         {
             var openBtn = new Button { Content = "Ouvrir", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
-            ApplyNovaControlAccessibility(openBtn, $"Ouvrir le telechargement {dl.FileName}");
+            ApplyNovaControlAccessibility(openBtn, $"Ouvrir le téléchargement {dl.FileName}");
             openBtn.Click += (_, _) => OpenDownloadFile(dl.LocalPath);
             footerPanel.Children.Add(openBtn);
             var folderBtn = new Button { Content = "Dossier", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
-            ApplyNovaControlAccessibility(folderBtn, $"Ouvrir le dossier du telechargement {dl.FileName}");
+            ApplyNovaControlAccessibility(folderBtn, $"Ouvrir le dossier du téléchargement {dl.FileName}");
             folderBtn.Click += (_, _) => OpenDownloadFolder(dl.LocalPath);
             footerPanel.Children.Add(folderBtn);
         }
         var removeBtn = new Button { Content = "Retirer", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
-        ApplyNovaControlAccessibility(removeBtn, $"Retirer le telechargement {dl.FileName} de l'historique");
+        ApplyNovaControlAccessibility(removeBtn, $"Retirer le téléchargement {dl.FileName} de l'historique");
         removeBtn.Click += (_, _) =>
         {
             _historyPanel.Downloads.Remove(dl.Id);
             RenderDownloads();
-            StatusText.Text = "Telechargement retire de l'historique.";
+            StatusText.Text = "Téléchargement retiré de l'historique.";
         };
         footerPanel.Children.Add(removeBtn);
 

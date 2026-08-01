@@ -405,14 +405,14 @@ public sealed partial class MainWindow
     {
         "focus" => "Cap Focus actif",
         "reading" => "Cap Lecture actif",
-        "creative" => "Cap Creation actif",
+        "creative" => "Cap Création actif",
         "research" => "Cap Recherche actif",
         "night" => "Cap Nuit actif",
         _ => "Cap quotidien Lumora"
     };
 
     private string NewTabStageText() =>
-        $"Composez un navigateur plus personnel sans casser votre rythme : {NewTabGreeting().ToLowerInvariant()}, modules locaux, repères visuels et ambiance Lumora restent a portee.";
+        $"Composez un navigateur plus personnel sans casser votre rythme : {NewTabGreeting().ToLowerInvariant()}, modules locaux, repères visuels et ambiance Lumora restent à portée.";
 
     private string NewTabSearchFormHtml(string extraClass = "")
     {

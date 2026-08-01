@@ -65,7 +65,7 @@ public sealed partial class MainWindow
         ApplyVerticalTabsLayout();
         SaveWorkspaceUiSettings();
         StatusText.Text = _verticalTabsEnabled
-            ? $"Onglets verticaux a {_tabStripPosition}."
+            ? $"Onglets verticaux à {_tabStripPosition}."
             : "Onglets horizontaux actifs.";
     }
 
@@ -122,7 +122,7 @@ public sealed partial class MainWindow
         _compactModeEnabled = toggle.IsOn;
         ApplyCompactModeLayout();
         SaveWorkspaceUiSettings();
-        StatusText.Text = _compactModeEnabled ? "Interface compacte activee." : "Interface compacte desactivee.";
+        StatusText.Text = _compactModeEnabled ? "Interface compacte activée." : "Interface compacte désactivée.";
     }
 
     private void CompactModeButton_Click(object sender, RoutedEventArgs e)
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
     {
         if (_appWindow is null)
         {
-            StatusText.Text = "Plein ecran indisponible.";
+            StatusText.Text = "Plein écran indisponible.";
             return;
         }
 
@@ -151,18 +151,18 @@ public sealed partial class MainWindow
         ApplyFullScreenLayout();
         UpdateFullScreenButton();
         StatusText.Text = _isFullScreenMode
-            ? "Mode plein ecran active."
-            : "Mode plein ecran quitte.";
+            ? "Mode plein écran activé."
+            : "Mode plein écran quitté.";
     }
 
     private void UpdateFullScreenButton()
     {
         var immersive = IsImmersiveFullScreenActive();
         CompactModeButton.Content = new SymbolIcon(immersive ? Symbol.BackToWindow : Symbol.FullScreen);
-        ToolTipService.SetToolTip(CompactModeButton, immersive ? "Quitter le plein ecran" : "Plein ecran");
+        ToolTipService.SetToolTip(CompactModeButton, immersive ? "Quitter le plein écran" : "Plein écran");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
             CompactModeButton,
-            immersive ? "Quitter le plein ecran" : "Plein ecran");
+            immersive ? "Quitter le plein écran" : "Plein écran");
     }
 
     private void CompactModeHideBookmarksSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -171,7 +171,7 @@ public sealed partial class MainWindow
         ApplyBookmarksBarVisibility();
         SaveWorkspaceUiSettings();
         StatusText.Text = CompactModeHideBookmarksSwitch.IsOn
-            ? "Les favoris seront masques en interface compacte."
+            ? "Les favoris seront masqués en interface compacte."
             : "Les favoris restent visibles en interface compacte.";
     }
 
@@ -181,8 +181,8 @@ public sealed partial class MainWindow
         SaveWorkspaceUiSettings();
         ApplyFullScreenLayout();
         StatusText.Text = FullScreenAutoHideChromeSwitch.IsOn
-            ? "En plein ecran, les barres se revelent au survol."
-            : "En plein ecran, la barre compacte reste visible.";
+            ? "En plein écran, les barres se révèlent au survol."
+            : "En plein écran, la barre compacte reste visible.";
     }
 
     private void NewTabTitleBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -215,8 +215,8 @@ public sealed partial class MainWindow
         _uiSettings.CommandPaletteEnabled = CommandPaletteEnabledSwitch.IsOn;
         SaveUiSettings();
         StatusText.Text = _uiSettings.CommandPaletteEnabled
-            ? "Palette Ctrl+K activee."
-            : "Palette Ctrl+K desactivee.";
+            ? "Palette Ctrl+K activée."
+            : "Palette Ctrl+K désactivée.";
     }
 
     private void CommandPaletteContextSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -230,21 +230,21 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         UpdateAccessibilityComfortProfileFromControls();
         ApplyAccessibilityComfortSideEffects();
-        UpdateStatusText("Options d'accessibilite appliquees.");
+        UpdateStatusText("Options d'accessibilité appliquées.");
     }
 
     private void AccessibilityShortcutHelpButton_Click(object sender, RoutedEventArgs e)
     {
-        UpdateStatusText("Aide clavier Lumora annoncee.", announce: false);
+        UpdateStatusText("Aide clavier Lumora annoncée.", announce: false);
         AnnounceAccessibilityContext(
             "Raccourcis Lumora : F6 ou Maj plus F6 pour changer de zone. " +
-            "Controle Alt 1 a 5 pour aller directement aux onglets, a la barre d'adresse, au contenu actif, aux outils ou au compagnon. " +
-            "Controle Alt F relit votre repere courant. Controle Alt R recentre le focus sur la zone utile. " +
-            "Controle Alt S active le mode secours. Controle Alt X restaure l'etat de confort precedent. " +
-            "Controle K ouvre la palette de commande. Win H lance la dictee Windows dans un champ de texte. " +
-            "Controle T nouvel onglet. Controle W ferme l'onglet actif. Controle L met le focus sur la barre d'adresse. " +
-            "F5 recharge la page. Alt Gauche ou Alt Droite pour la page precedente ou suivante. " +
-            "Controle Tab ou Controle Maj Tab pour changer d'onglet. F11 bascule le plein ecran.");
+            "Contrôle Alt 1 à 5 pour aller directement aux onglets, à la barre d'adresse, au contenu actif, aux outils ou au compagnon. " +
+            "Contrôle Alt F relit votre repère courant. Contrôle Alt R recentre le focus sur la zone utile. " +
+            "Contrôle Alt S active le mode secours. Contrôle Alt X restaure l'état de confort précédent. " +
+            "Contrôle K ouvre la palette de commande. Win H lance la dictée Windows dans un champ de texte. " +
+            "Contrôle T nouvel onglet. Contrôle W ferme l'onglet actif. Contrôle L met le focus sur la barre d'adresse. " +
+            "F5 recharge la page. Alt Gauche ou Alt Droite pour la page précédente ou suivante. " +
+            "Contrôle Tab ou Contrôle Maj Tab pour changer d'onglet. F11 bascule le plein écran.");
     }
 
     private void TranslationEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -253,7 +253,7 @@ public sealed partial class MainWindow
         SaveUiSettings();
         if (!TranslationEnabledSwitch.IsOn)
             TranslateBar.Visibility = Visibility.Collapsed;
-        StatusText.Text = TranslationEnabledSwitch.IsOn ? "Traduction de page activee." : "Traduction de page desactivee.";
+        StatusText.Text = TranslationEnabledSwitch.IsOn ? "Traduction de page activée." : "Traduction de page désactivée.";
     }
 
     private void ReadAloudEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -261,7 +261,7 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         UpdateAccessibilityComfortProfileFromControls();
         ApplyAccessibilityComfortSideEffects();
-        UpdateStatusText(ReadAloudEnabledSwitch.IsOn ? "Lecture a voix haute activee." : "Lecture a voix haute desactivee.");
+        UpdateStatusText(ReadAloudEnabledSwitch.IsOn ? "Lecture à voix haute activée." : "Lecture à voix haute désactivée.");
     }
 
     private void ReadingLensEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -269,7 +269,7 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         UpdateAccessibilityComfortProfileFromControls();
         ApplyAccessibilityComfortSideEffects();
-        UpdateStatusText(ReadingLensEnabledSwitch.IsOn ? "Loupe de lecture activee." : "Loupe de lecture desactivee.");
+        UpdateStatusText(ReadingLensEnabledSwitch.IsOn ? "Loupe de lecture activée." : "Loupe de lecture désactivée.");
     }
 
     private void ReadingGuideEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -278,15 +278,15 @@ public sealed partial class MainWindow
         UpdateAccessibilityComfortProfileFromControls();
         ApplyAccessibilityComfortSideEffects();
         UpdateStatusText(ReadingGuideEnabledSwitch.IsOn
-            ? "Guide de lecture immersif active."
-            : "Guide de lecture immersif desactive.");
+            ? "Guide de lecture immersif activé."
+            : "Guide de lecture immersif désactivé.");
     }
 
     private void ReadingGuideBandHeightCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
         ApplyAccessibilityComfortSideEffects();
-        UpdateStatusText($"Bande de lecture reglee sur {NormalizeReadingGuideBandHeight(SelectedReadingGuideBandHeight())} px.");
+        UpdateStatusText($"Bande de lecture réglée sur {NormalizeReadingGuideBandHeight(SelectedReadingGuideBandHeight())} px.");
     }
 
     private void AccessibilityTextSpacingCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -294,7 +294,7 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         SaveUiSettings();
         _ = ApplyAccessibilityVisionToAllTabsAsync();
-        UpdateStatusText("Espacement du texte des pages mis a jour.");
+        UpdateStatusText("Espacement du texte des pages mis à jour.");
     }
 
     private void AccessibilityColorBoostSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -303,8 +303,8 @@ public sealed partial class MainWindow
         SaveUiSettings();
         _ = ApplyAccessibilityVisionToAllTabsAsync();
         UpdateStatusText(AccessibilityColorBoostSwitch.IsOn
-            ? "Renforcement des couleurs active sur les pages."
-            : "Renforcement des couleurs desactive.");
+            ? "Renforcement des couleurs activé sur les pages."
+            : "Renforcement des couleurs désactivé.");
     }
 
     private void AddressSuggestionsSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -314,8 +314,8 @@ public sealed partial class MainWindow
         if (!AddressSuggestionsSwitch.IsOn)
             CloseAddressSuggestions();
         StatusText.Text = AddressSuggestionsSwitch.IsOn
-            ? "Suggestions de la barre d'adresse activees (calcul 100% local)."
-            : "Suggestions de la barre d'adresse desactivees.";
+            ? "Suggestions de la barre d'adresse activées (calcul 100% local)."
+            : "Suggestions de la barre d'adresse désactivées.";
     }
 
     private void SearchAssistEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -324,8 +324,8 @@ public sealed partial class MainWindow
         SaveUiSettings();
         UpdateSearchAssistButtonVisibility();
         StatusText.Text = SearchAssistEnabledSwitch.IsOn
-            ? "Assistant IA de recherche active (telechargement au premier usage)."
-            : "Assistant IA de recherche desactive.";
+            ? "Assistant IA de recherche activé (téléchargement au premier usage)."
+            : "Assistant IA de recherche désactivé.";
     }
 
     private void HistorySemanticSearchEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -333,8 +333,8 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         SaveUiSettings();
         StatusText.Text = HistorySemanticSearchEnabledSwitch.IsOn
-            ? "Recherche intelligente activee (telechargement au premier usage, ~120 Mo)."
-            : "Recherche intelligente desactivee.";
+            ? "Recherche intelligente activée (téléchargement au premier usage, ~120 Mo)."
+            : "Recherche intelligente désactivée.";
     }
 
     private void ThemeModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -368,8 +368,8 @@ public sealed partial class MainWindow
         }
 
         var status = element is Button { Content: string label } && !string.IsNullOrWhiteSpace(label)
-            ? $"Preset {label} applique."
-            : "Preset d'espace Lumora applique.";
+            ? $"Preset {label} appliqué."
+            : "Preset d'espace Lumora appliqué.";
         ApplyWorkspacePresetImmediate(parts[0], parts[1], status);
     }
 
@@ -396,7 +396,7 @@ public sealed partial class MainWindow
         var avatarChanged = ApplyPendingAvatarChange();
         if (avatarWasPending && !avatarChanged)
         {
-            SettingsPendingText.Text = "L'avatar n'a pas pu etre applique. Verifiez l'image choisie.";
+            SettingsPendingText.Text = "L'avatar n'a pas pu être appliqué. Vérifiez l'image choisie.";
             return;
         }
 
@@ -404,7 +404,7 @@ public sealed partial class MainWindow
         var wallpaperChanged = ApplyPendingWallpaperChange();
         if (wallpaperWasPending && !wallpaperChanged)
         {
-            SettingsPendingText.Text = "Le fond d'ecran n'a pas pu etre applique. Verifiez l'image choisie.";
+            SettingsPendingText.Text = "Le fond d'écran n'a pas pu être appliqué. Vérifiez l'image choisie.";
             return;
         }
 
@@ -424,11 +424,11 @@ public sealed partial class MainWindow
         ApplyCompactModeLayout();
         ApplyFullScreenLayout();
         RefreshNovaHomePages();
-        AppearancePendingText.Text = "Options de personnalisation appliquees.";
-        ClearSettingsChangesPending("Changements appliques.");
+        AppearancePendingText.Text = "Options de personnalisation appliquées.";
+        ClearSettingsChangesPending("Changements appliqués.");
         StatusText.Text = avatarChanged || wallpaperChanged || modeAccentColorsChanged
-            ? "Personnalisation appliquee."
-            : "Parametres appliques.";
+            ? "Personnalisation appliquée."
+            : "Paramètres appliqués.";
     }
 
     private void ResetSettingsChangesButton_Click(object sender, RoutedEventArgs e)
@@ -437,9 +437,9 @@ public sealed partial class MainWindow
         ResetPendingWallpaperChange();
         ResetPendingModeAccentColorChanges();
         ApplyUiSettings();
-        AppearancePendingText.Text = "Changements annules.";
+        AppearancePendingText.Text = "Changements annulés.";
         ClearSettingsChangesPending("Aucun changement en attente.");
-        StatusText.Text = "Changements annules.";
+        StatusText.Text = "Changements annulés.";
     }
 
     // ── Resize fenêtre : MinWidth dynamique ──────────────────────────────────
@@ -470,7 +470,7 @@ public sealed partial class MainWindow
         ApplyVerticalTabsWidth();
         RenderVerticalTabs();
         SaveWorkspaceUiSettings();
-        StatusText.Text = _verticalTabsCompact ? "Onglets verticaux reduits." : "Onglets verticaux elargis.";
+        StatusText.Text = _verticalTabsCompact ? "Onglets verticaux réduits." : "Onglets verticaux élargis.";
     }
 
     private void VerticalTabsResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -817,9 +817,9 @@ public sealed partial class MainWindow
         }
         else
         {
-            VerticalTabsCompactButton.Content = ExpandedRailAction(Symbol.ClosePane, "Reduire");
+            VerticalTabsCompactButton.Content = ExpandedRailAction(Symbol.ClosePane, "Réduire");
         }
-        ToolTipService.SetToolTip(VerticalTabsCompactButton, _verticalTabsCompact ? "Agrandir les onglets verticaux" : "Reduire les onglets verticaux");
+        ToolTipService.SetToolTip(VerticalTabsCompactButton, _verticalTabsCompact ? "Agrandir les onglets verticaux" : "Réduire les onglets verticaux");
     }
 
     private FrameworkElement ExpandedRailAction(Symbol symbol, string label)
@@ -1166,13 +1166,13 @@ public sealed partial class MainWindow
             ApplyFullScreenLayout();
             UpdateFullScreenButton();
             StartContentFullScreenWatchdog();
-            StatusText.Text = "Mode plein ecran immersif active.";
+            StatusText.Text = "Mode plein écran immersif activé.";
             return;
         }
 
         if (!ReferenceEquals(_contentFullScreenCore, core)) return;
 
-        CompleteContentFullScreenExit("Mode plein ecran quitte.");
+        CompleteContentFullScreenExit("Mode plein écran quitté.");
     }
 
     // Meme restauration que BrowserCore_ContainsFullScreenElementChanged, mais
@@ -1184,7 +1184,7 @@ public sealed partial class MainWindow
         if (core is null) return;
         if (!ReferenceEquals(_contentFullScreenCore, core)) return;
 
-        CompleteContentFullScreenExit("Mode plein ecran quitte.");
+        CompleteContentFullScreenExit("Mode plein écran quitté.");
     }
 
     private async Task ExitContentFullScreenAsync()
@@ -1202,7 +1202,7 @@ public sealed partial class MainWindow
             }
         }
 
-        CompleteContentFullScreenExit("Mode plein ecran quitte.");
+        CompleteContentFullScreenExit("Mode plein écran quitté.");
     }
 
     private void CompleteContentFullScreenExit(string status)
@@ -1212,7 +1212,7 @@ public sealed partial class MainWindow
         RestorePresenterAfterContentFullScreen();
         ApplyFullScreenLayout();
         UpdateFullScreenButton();
-        StatusText.Text = _isFullScreenMode ? "Mode plein ecran Lumora actif." : status;
+        StatusText.Text = _isFullScreenMode ? "Mode plein écran Lumora actif." : status;
     }
 
     private void StartContentFullScreenWatchdog()
@@ -1236,7 +1236,7 @@ public sealed partial class MainWindow
         {
             if (!core.ContainsFullScreenElement)
             {
-                CompleteContentFullScreenExit("Mode plein ecran quitte.");
+                CompleteContentFullScreenExit("Mode plein écran quitté.");
             }
         }
         catch (Exception error)

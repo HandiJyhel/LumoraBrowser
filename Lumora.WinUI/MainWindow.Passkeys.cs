@@ -138,7 +138,7 @@ public sealed partial class MainWindow
             Padding = new Thickness(8, 4, 8, 4),
             VerticalAlignment = VerticalAlignment.Center
         };
-        ApplyNovaControlAccessibility(deleteBtn, $"Supprimer la cle d'acces pour {entry.Origin}");
+        ApplyNovaControlAccessibility(deleteBtn, $"Supprimer la clé d'accès pour {entry.Origin}");
         deleteBtn.Content = new FontIcon
         {
             Glyph = "\uE74D",

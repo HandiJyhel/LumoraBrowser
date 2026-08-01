@@ -35,17 +35,17 @@ public sealed partial class MainWindow
         var progress = new Progress<string>(msg => StatusText.Text = msg);
         try
         {
-            StatusText.Text = "Reflexion en cours (modele local)...";
+            StatusText.Text = "Réflexion en cours (modèle local)...";
             var suggestion = await _searchAssistService.RewriteQueryAsync(query, progress);
             if (string.IsNullOrWhiteSpace(suggestion))
             {
-                StatusText.Text = "Aucune suggestion generee.";
+                StatusText.Text = "Aucune suggestion générée.";
                 return;
             }
 
             SearchAssistSuggestionText.Text = suggestion;
             SearchAssistFlyout.ShowAt(flyoutTarget);
-            StatusText.Text = "Suggestion prete.";
+            StatusText.Text = "Suggestion prête.";
         }
         catch (Exception ex)
         {

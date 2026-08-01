@@ -40,7 +40,7 @@ public sealed partial class MainWindow
         SaveUiSettings();
         StatusText.Text = BookmarksBarSwitch.IsOn && !_compactModeEnabled
             ? "Barre de favoris visible."
-            : "Barre de favoris masquee.";
+            : "Barre de favoris masquée.";
     }
 
     // Garde de reentrance : ContentDialog n'autorise qu'une seule instance
@@ -73,14 +73,14 @@ public sealed partial class MainWindow
             var result = await PromptBookmarkEditorAsync(address, currentTitle, existing);
             if (result.Cancelled)
             {
-                StatusText.Text = "Ajout aux favoris annule.";
+                StatusText.Text = "Ajout aux favoris annulé.";
                 return;
             }
 
             if (result.DeleteExisting && existing is not null)
             {
                 DeleteBookmarkNode(existing);
-                StatusText.Text = "Favori retire.";
+                StatusText.Text = "Favori retiré.";
                 return;
             }
 
@@ -93,8 +93,8 @@ public sealed partial class MainWindow
             }
 
             StatusText.Text = existing is null
-                ? "Favori ajoute dans la barre des favoris."
-                : "Favori mis a jour.";
+                ? "Favori ajouté dans la barre des favoris."
+                : "Favori mis à jour.";
         }
         finally
         {
@@ -121,12 +121,12 @@ public sealed partial class MainWindow
 
         if (selectedIndex < 0 || selectedIndex >= _importSources.Count)
         {
-            StatusText.Text = "Aucune source navigateur compatible detectee.";
+            StatusText.Text = "Aucune source navigateur compatible détectée.";
             return;
         }
 
         var source = _importSources[selectedIndex];
-        StatusText.Text = $"Recuperation des icones {source.Browser}...";
+        StatusText.Text = $"Récupération des icônes {source.Browser}...";
         var icons = await source.CopyFaviconsAsync(_profile.FaviconsDir);
         foreach (var pair in icons)
         {
@@ -139,8 +139,8 @@ public sealed partial class MainWindow
             : _bookmarks.MergeImport(tree);
         ReloadBookmarks();
         var mode = replaceExisting ? "remplacement" : "fusion";
-        StatusText.Text = $"Import navigateur ({mode}) {source.Label}: {imported} favoris traites, {icons.Count} icones recuperees.";
-        ShowBookmarksFolder(BookmarkStore.ToolbarRootId, "Favoris importes");
+        StatusText.Text = $"Import navigateur ({mode}) {source.Label}: {imported} favoris traités, {icons.Count} icônes récupérées.";
+        ShowBookmarksFolder(BookmarkStore.ToolbarRootId, "Favoris importés");
     }
 
     private async void ExportHtmlButton_Click(object sender, RoutedEventArgs e) =>
@@ -151,19 +151,19 @@ public sealed partial class MainWindow
         var selected = SelectedBookmarkNodes().Where(node => !node.IsRoot).ToList();
         if (selected.Count == 0)
         {
-            StatusText.Text = "Selectionne un ou plusieurs favoris a supprimer.";
+            StatusText.Text = "Sélectionne un ou plusieurs favoris à supprimer.";
             return;
         }
 
         var confirmed = await ConfirmBookmarkActionAsync(
-            "Supprimer la selection",
+            "Supprimer la sélection",
             selected.Count == 1
                 ? $"Supprimer {BookmarkReadableTitle(selected[0])} ?"
-                : $"Supprimer {selected.Count} elements et leurs sous-dossiers ?",
+                : $"Supprimer {selected.Count} éléments et leurs sous-dossiers ?",
             "Supprimer");
         if (!confirmed)
         {
-            StatusText.Text = "Suppression annulee.";
+            StatusText.Text = "Suppression annulée.";
             return;
         }
 
@@ -175,19 +175,19 @@ public sealed partial class MainWindow
         }
 
         ReloadBookmarks();
-        StatusText.Text = $"{removed} element(s) supprime(s) des favoris.";
+        StatusText.Text = $"{removed} élément(s) supprimé(s) des favoris.";
     }
 
     private void SelectAllBookmarksButton_Click(object sender, RoutedEventArgs e)
     {
         if (_bookmarkItems.Count == 0)
         {
-            StatusText.Text = "Aucun favori a selectionner dans ce dossier.";
+            StatusText.Text = "Aucun favori à sélectionner dans ce dossier.";
             return;
         }
 
         BookmarksList.SelectAll();
-        StatusText.Text = $"{_bookmarkItems.Count} element(s) selectionne(s).";
+        StatusText.Text = $"{_bookmarkItems.Count} élément(s) sélectionné(s).";
     }
 
     private async void ClearBookmarksButton_Click(object sender, RoutedEventArgs e)
@@ -195,17 +195,17 @@ public sealed partial class MainWindow
         var count = _allBookmarkNodes.Count(node => !node.IsRoot);
         if (count == 0)
         {
-            StatusText.Text = "Aucun favori a vider.";
+            StatusText.Text = "Aucun favori à vider.";
             return;
         }
 
         var confirmed = await ConfirmBookmarkActionAsync(
             "Vider tous les favoris",
-            $"Supprimer les {count} favoris et dossiers de Lumora ? Une sauvegarde locale sera creee avant la suppression.",
+            $"Supprimer les {count} favoris et dossiers de Lumora ? Une sauvegarde locale sera créée avant la suppression.",
             "Vider");
         if (!confirmed)
         {
-            StatusText.Text = "Vidage annule.";
+            StatusText.Text = "Vidage annulé.";
             return;
         }
 
@@ -214,7 +214,7 @@ public sealed partial class MainWindow
         _bookmarkSearch = string.Empty;
         BookmarksSearchBox.Text = string.Empty;
         ReloadBookmarks();
-        StatusText.Text = $"{removed} element(s) supprime(s). Pret pour tester une importation propre.";
+        StatusText.Text = $"{removed} élément(s) supprimé(s). Prêt pour tester une importation propre.";
     }
 
     private async void NewBookmarkFolderButton_Click(object sender, RoutedEventArgs e)
@@ -222,13 +222,13 @@ public sealed partial class MainWindow
         var title = await PromptTextAsync("Nouveau dossier", "Nom du dossier", string.Empty);
         if (string.IsNullOrWhiteSpace(title))
         {
-            StatusText.Text = "Creation de dossier annulee.";
+            StatusText.Text = "Création de dossier annulée.";
             return;
         }
 
         _bookmarks.AddFolder(_currentBookmarkFolderId, title.Trim());
         ReloadBookmarks();
-        StatusText.Text = $"Dossier cree: {title.Trim()}";
+        StatusText.Text = $"Dossier créé : {title.Trim()}";
     }
 
     private async void RenameBookmarkButton_Click(object sender, RoutedEventArgs e)
@@ -239,7 +239,7 @@ public sealed partial class MainWindow
             : (BookmarkFoldersList.SelectedItem as BookmarkListItem)?.Node;
         if (node is null)
         {
-            StatusText.Text = "Selectionne un seul favori ou dossier a renommer.";
+            StatusText.Text = "Sélectionne un seul favori ou dossier à renommer.";
             return;
         }
 
@@ -250,7 +250,7 @@ public sealed partial class MainWindow
     {
         if (node.IsRoot)
         {
-            StatusText.Text = "Les racines de favoris ne peuvent pas etre supprimees.";
+            StatusText.Text = "Les racines de favoris ne peuvent pas être supprimées.";
             return;
         }
 
@@ -262,27 +262,27 @@ public sealed partial class MainWindow
         }
 
         ReloadBookmarks();
-        StatusText.Text = "Element supprime des favoris.";
+        StatusText.Text = "Élément supprimé des favoris.";
     }
 
     private async Task RenameBookmarkNodeAsync(BookmarkNode node)
     {
         if (node.IsRoot)
         {
-            StatusText.Text = "Les racines de favoris ne peuvent pas etre renommees.";
+            StatusText.Text = "Les racines de favoris ne peuvent pas être renommées.";
             return;
         }
 
         var title = await PromptTextAsync("Renommer", "Nouveau nom", BookmarkStore.IsIconOnlyTitle(node.Title) ? string.Empty : node.Title);
         if (title is null)
         {
-            StatusText.Text = "Renommage annule.";
+            StatusText.Text = "Renommage annulé.";
             return;
         }
 
         _bookmarks.RenameNode(node.Id, title);
         ReloadBookmarks();
-        StatusText.Text = $"Element renomme: {BookmarkReadableTitle(node with { Title = title })}";
+        StatusText.Text = $"Élément renommé : {BookmarkReadableTitle(node with { Title = title })}";
     }
 
     private bool IsDescendantOf(string ancestorId, string nodeId)
@@ -325,7 +325,7 @@ public sealed partial class MainWindow
     {
         if (BookmarksList.SelectedItems.Count > 1)
         {
-            StatusText.Text = $"{BookmarksList.SelectedItems.Count} element(s) selectionne(s).";
+            StatusText.Text = $"{BookmarksList.SelectedItems.Count} élément(s) sélectionné(s).";
         }
         else if (BookmarksList.SelectedItem is BookmarkListItem item)
         {
@@ -797,8 +797,8 @@ public sealed partial class MainWindow
             CornerRadius = new CornerRadius(14),
             Flyout = CreateBookmarksOverflowFlyout(overflowNodes)
         };
-        ApplyNovaControlAccessibility(button, $"Afficher {overflowNodes.Count} favori(s) supplementaire(s)");
-        ToolTipService.SetToolTip(button, "Favoris supplementaires");
+        ApplyNovaControlAccessibility(button, $"Afficher {overflowNodes.Count} favori(s) supplémentaire(s)");
+        ToolTipService.SetToolTip(button, "Favoris supplémentaires");
         return button;
     }
 
@@ -970,7 +970,7 @@ public sealed partial class MainWindow
     {
         if (BookmarkStore.IsIconOnlyTitle(node.Title))
         {
-            return "(icone seule)";
+            return "(icône seule)";
         }
 
         return string.IsNullOrWhiteSpace(node.Title) ? "(sans nom)" : node.Title.Trim();

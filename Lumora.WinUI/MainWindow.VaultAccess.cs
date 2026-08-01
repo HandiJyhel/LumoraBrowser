@@ -53,7 +53,7 @@ public sealed partial class MainWindow
         if (!_vault.HasMasterPassword) return true;
         if (!_vault.IsLocked) return true;
 
-        var pw = await PromptMasterPasswordAsync("Coffre verrouille - entrez le mot de passe du profil", confirm: false);
+        var pw = await PromptMasterPasswordAsync("Coffre verrouillé - entrez le mot de passe du profil", confirm: false);
         if (string.IsNullOrWhiteSpace(pw)) return false;
 
         return _vault.Unlock(pw);
@@ -89,7 +89,7 @@ public sealed partial class MainWindow
 
         if (!await RequireVaultAccessAsync())
         {
-            UpdateStatusText("Acces au coffre refuse : code incorrect ou annule.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+            UpdateStatusText("Accès au coffre refusé : code incorrect ou annulé.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             return;
         }
 
@@ -108,7 +108,7 @@ public sealed partial class MainWindow
 
         if (!await RequireVaultAccessAsync())
         {
-            UpdateStatusText("Acces au coffre refuse : import annule.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+            UpdateStatusText("Accès au coffre refusé : import annulé.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             return;
         }
 

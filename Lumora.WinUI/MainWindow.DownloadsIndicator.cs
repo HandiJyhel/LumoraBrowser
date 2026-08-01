@@ -33,8 +33,8 @@ public sealed partial class MainWindow
         // lecteur d'ecran ne pouvait jamais savoir qu'un telechargement etait
         // arrive sans ouvrir le panneau.
         var label = _unseenDownloadsCount > 0
-            ? $"Telechargements - {_unseenDownloadsCount} nouveau(x)"
-            : "Telechargements";
+            ? $"Téléchargements - {_unseenDownloadsCount} nouveau(x)"
+            : "Téléchargements";
         AutomationProperties.SetName(DownloadsIndicatorButton, label);
     }
 
@@ -49,7 +49,7 @@ public sealed partial class MainWindow
         {
             DownloadsIndicatorPanel.Children.Add(new TextBlock
             {
-                Text = "Aucun telechargement recent.",
+                Text = "Aucun téléchargement récent.",
                 Opacity = 0.65
             });
             return;
@@ -65,6 +65,6 @@ public sealed partial class MainWindow
     {
         DownloadsIndicatorFlyout.Hide();
         RenderDownloads();
-        ShowPanel(DownloadsPanel, "Telechargements");
+        ShowPanel(DownloadsPanel, "Téléchargements");
     }
 }

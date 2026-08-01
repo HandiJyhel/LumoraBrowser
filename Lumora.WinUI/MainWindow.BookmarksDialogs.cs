@@ -36,7 +36,7 @@ public sealed partial class MainWindow
         };
         var iconOnlyBox = new CheckBox
         {
-            Content = "Nom invisible (icone seule dans la barre)",
+            Content = "Nom invisible (icône seule dans la barre)",
             IsChecked = existing is not null && BookmarkStore.IsIconOnlyTitle(existing.Title)
         };
 

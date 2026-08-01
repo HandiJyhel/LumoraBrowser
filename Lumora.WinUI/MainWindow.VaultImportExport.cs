@@ -24,7 +24,7 @@ public sealed partial class MainWindow
         var choice = await PromptPasswordImportSourceAsync(sources);
         if (choice < 0)
         {
-            StatusText.Text = "Import annule.";
+            StatusText.Text = "Import annulé.";
             return;
         }
 
@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         panel.Children.Add(list);
         panel.Children.Add(new TextBlock
         {
-            Text = "L'import depuis un navigateur lit son magasin local et le dechiffre sur cette machine (DPAPI), sans extension ni reseau.",
+            Text = "L'import depuis un navigateur lit son magasin local et le déchiffre sur cette machine (DPAPI), sans extension ni réseau.",
             Opacity = 0.6,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap
@@ -88,8 +88,8 @@ public sealed partial class MainWindow
             var confirm = new ContentDialog
             {
                 Title = "Importer ces identifiants ?",
-                Content = $"{creds.Count} identifiant(s) detecte(s) dans {source.Browser} ({source.Profile}).\n\n" +
-                          "Ils seront dechiffres localement puis stockes dans vault.lumora.",
+                Content = $"{creds.Count} identifiant(s) détecté(s) dans {source.Browser} ({source.Profile}).\n\n" +
+                          "Ils seront déchiffrés localement puis stockés dans vault.lumora.",
                 PrimaryButtonText = "Importer",
                 CloseButtonText = "Annuler",
                 DefaultButton = ContentDialogButton.Primary,
@@ -97,13 +97,13 @@ public sealed partial class MainWindow
             };
             if (await confirm.ShowAsync() != ContentDialogResult.Primary)
             {
-                StatusText.Text = "Import navigateur annule.";
+                StatusText.Text = "Import navigateur annulé.";
                 return;
             }
 
             var n = _passwordManager.ImportClear(creds);
             RefreshVaultPanel();
-            StatusText.Text = $"Import termine : {n} identifiant(s) ajoute(s) ou mis a jour depuis {source.Browser}.";
+            StatusText.Text = $"Import terminé : {n} identifiant(s) ajouté(s) ou mis à jour depuis {source.Browser}.";
         }
         catch (Exception ex)
         {
@@ -156,8 +156,8 @@ public sealed partial class MainWindow
         var n = SyncFromBrowserStore();
         RefreshVaultPanel();
         StatusText.Text = n > 0
-            ? $"Coffre synchronise : {n} identifiant(s) depuis le navigateur."
-            : "Coffre a jour.";
+            ? $"Coffre synchronisé : {n} identifiant(s) depuis le navigateur."
+            : "Coffre à jour.";
     }
 
     // Fusion des doublons d'import (meme site racine, meme identifiant, meme mot
@@ -174,10 +174,10 @@ public sealed partial class MainWindow
         var confirm = new ContentDialog
         {
             Title = "Fusionner les doublons ?",
-            Content = $"{duplicates.Count} entree(s) en double detectee(s) : meme site, meme identifiant et meme " +
-                      "mot de passe enregistres plusieurs fois (souvent des variantes www. ou sous-domaines " +
-                      "issus d'un import).\n\nChaque groupe sera reduit a une seule entree. Deux comptes dont " +
-                      "le mot de passe differe ne sont jamais fusionnes.",
+            Content = $"{duplicates.Count} entrée(s) en double détectée(s) : même site, même identifiant et même " +
+                      "mot de passe enregistrés plusieurs fois (souvent des variantes www. ou sous-domaines " +
+                      "issus d'un import).\n\nChaque groupe sera réduit à une seule entrée. Deux comptes dont " +
+                      "le mot de passe diffère ne sont jamais fusionnés.",
             PrimaryButtonText = "Fusionner",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Primary,
@@ -185,13 +185,13 @@ public sealed partial class MainWindow
         };
         if (await confirm.ShowAsync() != ContentDialogResult.Primary)
         {
-            StatusText.Text = "Fusion annulee.";
+            StatusText.Text = "Fusion annulée.";
             return;
         }
 
         var n = _passwordManager.MergeDuplicates();
         RefreshVaultPanel();
-        StatusText.Text = $"Fusion terminee : {n} doublon(s) supprime(s).";
+        StatusText.Text = $"Fusion terminée : {n} doublon(s) supprimé(s).";
     }
 
     // ── Export / Import (maîtrise du fichier par l'utilisateur) ────────────────
@@ -201,14 +201,14 @@ public sealed partial class MainWindow
         if (_vault.IsLocked && !await UnlockVaultIfNeededAsync()) return;
 
         var items = _passwordManager.ExportClear();
-        if (items.Count == 0) { StatusText.Text = "Coffre vide : rien a exporter."; return; }
+        if (items.Count == 0) { StatusText.Text = "Coffre vide : rien à exporter."; return; }
 
         // Avertissement explicite : l'export produit un fichier EN CLAIR.
         var warn = new ContentDialog
         {
             Title = "Exporter en clair ?",
-            Content = "Le fichier CSV genere contiendra vos mots de passe EN CLAIR, non chiffres. " +
-                      "Rangez-le en lieu sur et supprimez-le apres usage. Continuer ?",
+            Content = "Le fichier CSV généré contiendra vos mots de passe EN CLAIR, non chiffrés. " +
+                      "Rangez-le en lieu sûr et supprimez-le après usage. Continuer ?",
             PrimaryButtonText = "Exporter",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,
@@ -237,7 +237,7 @@ public sealed partial class MainWindow
                 CredentialCsv.Escape(c.Username), CredentialCsv.Escape(c.Password)));
 
         await Windows.Storage.FileIO.WriteTextAsync(file, sb.ToString());
-        StatusText.Text = $"Export termine : {items.Count} identifiant(s) vers {file.Name}.";
+        StatusText.Text = $"Export terminé : {items.Count} identifiant(s) vers {file.Name}.";
     }
 
     private async void VaultImportButton_Click(object sender, RoutedEventArgs e)
@@ -269,7 +269,7 @@ public sealed partial class MainWindow
             {
                 Title = "Importer ce fichier CSV ?",
                 Content = $"{items.Count} identifiant(s) reconnu(s) dans {file.Name}.\n\n" +
-                          "Le CSV contient des mots de passe en clair. Apres import, ils seront stockes dans vault.lumora.",
+                          "Le CSV contient des mots de passe en clair. Après import, ils seront stockés dans vault.lumora.",
                 PrimaryButtonText = "Importer",
                 CloseButtonText = "Annuler",
                 DefaultButton = ContentDialogButton.Primary,
@@ -277,13 +277,13 @@ public sealed partial class MainWindow
             };
             if (await confirm.ShowAsync() != ContentDialogResult.Primary)
             {
-                StatusText.Text = "Import CSV annule.";
+                StatusText.Text = "Import CSV annulé.";
                 return;
             }
 
             var n = _passwordManager.ImportClear(items);
             RefreshVaultPanel();
-            StatusText.Text = $"Import termine : {n} identifiant(s) ajoute(s) ou mis a jour.";
+            StatusText.Text = $"Import terminé : {n} identifiant(s) ajouté(s) ou mis à jour.";
         }
         catch (Exception ex)
         {

@@ -67,7 +67,7 @@ internal sealed class SearchAssistService : IDisposable
 
             await EnsureModelDownloadedAsync(progress, cancellationToken);
 
-            progress?.Report("Chargement du modele local...");
+            progress?.Report("Chargement du modèle local...");
             _ogaHandle ??= new OgaHandle();
             _model = new Model(ModelDir);
             _tokenizer = new Tokenizer(_model);
@@ -88,7 +88,7 @@ internal sealed class SearchAssistService : IDisposable
             var destination = Path.Combine(ModelDir, file.RelativePath);
             if (File.Exists(destination)) continue;
 
-            progress?.Report($"Telechargement du modele de recherche assistee : {file.RelativePath}...");
+            progress?.Report($"Téléchargement du modèle de recherche assistée : {file.RelativePath}...");
             var url = $"https://huggingface.co/{HuggingFaceRepo}/resolve/main/{ModelSubPath}/{file.RelativePath}";
 
             var tempPath = destination + ".part";
@@ -100,7 +100,7 @@ internal sealed class SearchAssistService : IDisposable
                 await input.CopyToAsync(output, cancellationToken);
             }
 
-            progress?.Report($"Verification de l'integrite : {file.RelativePath}...");
+            progress?.Report($"Vérification de l'intégrité : {file.RelativePath}...");
             await ModelIntegrity.VerifyOrDeleteAsync(tempPath, file.Sha256, cancellationToken);
             File.Move(tempPath, destination, overwrite: true);
         }

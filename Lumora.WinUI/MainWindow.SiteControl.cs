@@ -95,8 +95,8 @@ public sealed partial class MainWindow
         try
         {
             var path = await ExportLoginDiagnosticAsync(site);
-            UpdateStatusText($"Diagnostic exporte : {path}");
-            SiteControlDiagnosticText.Text = $"Diagnostic exporte : {path}";
+            UpdateStatusText($"Diagnostic exporté : {path}");
+            SiteControlDiagnosticText.Text = $"Diagnostic exporté : {path}";
         }
         catch (Exception error)
         {
@@ -109,13 +109,13 @@ public sealed partial class MainWindow
         if (CurrentSite() is not { } site) return;
         if (_isGuestMode)
         {
-            UpdateStatusText("Coffre indisponible en mode invite.");
+            UpdateStatusText("Coffre indisponible en mode invité.");
             return;
         }
 
         if (!await RequireVaultAccessAsync())
         {
-            UpdateStatusText("Acces au coffre refuse : code incorrect ou annule.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+            UpdateStatusText("Accès au coffre refusé : code incorrect ou annulé.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             return;
         }
 
@@ -496,7 +496,7 @@ public sealed partial class MainWindow
             {
                 panel.Children.Add(new TextBlock
                 {
-                    Text = "Aucun blocage recent.",
+                    Text = "Aucun blocage récent.",
                     Opacity = 0.65,
                     FontSize = 12
                 });
@@ -680,7 +680,7 @@ public sealed partial class MainWindow
         SiteControlRecentHistoryPanel.Children.Clear();
         SiteControlRecentHistoryPanel.Children.Add(new TextBlock
         {
-            Text = "Dernieres pages du site",
+            Text = "Dernières pages du site",
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             Margin = new Thickness(0, 4, 0, 0)
         });
@@ -689,7 +689,7 @@ public sealed partial class MainWindow
         {
             SiteControlRecentHistoryPanel.Children.Add(new TextBlock
             {
-                Text = "Aucune page recente.",
+                Text = "Aucune page récente.",
                 Opacity = 0.65
             });
             return;

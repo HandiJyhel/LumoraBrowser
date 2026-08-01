@@ -94,7 +94,7 @@ public sealed partial class MainWindow
 
         var profileKey = ResolveAccessibilityComfortProfileFromControls();
         var preset = FindAccessibilityComfortPreset(profileKey);
-        var label = profileKey == "custom" ? "Personnalise" : preset?.Label ?? "Confort";
+        var label = profileKey == "custom" ? "Personnalisé" : preset?.Label ?? "Confort";
         AccessibilityQuickCurrentText.Text = label;
         UpdateUsageModeButtonUi();
     }
@@ -109,11 +109,11 @@ public sealed partial class MainWindow
         var profileKey = ResolveAccessibilityComfortProfileFromControls();
         var normalized = NormalizeAccessibilityComfortProfile(profileKey);
         var preset = FindAccessibilityComfortPreset(normalized);
-        var label = normalized == "custom" ? "Personnalise" : preset?.Label ?? "Confort";
+        var label = normalized == "custom" ? "Personnalisé" : preset?.Label ?? "Confort";
 
         AccessibilityQuickProfileTitleText.Text = $"Profil courant : {label}";
         AccessibilityQuickProfileSummaryText.Text = normalized == "custom"
-            ? "Melange manuel detecte : vos interrupteurs actuels gardent la priorite."
+            ? "Mélange manuel détecté : vos interrupteurs actuels gardent la priorité."
             : preset?.Summary ?? "Choisissez un profil de confort.";
         AccessibilityQuickStateText.Text = DescribeAccessibilityComfortState();
         UpdateAccessibilityQuickContextUi();
@@ -124,19 +124,19 @@ public sealed partial class MainWindow
             AccessibilityQuickGuideHintText,
             ReadingGuideEnabledSwitch.IsOn,
             "Le guide de lecture immersif est actif.",
-            "Le guide de lecture immersif est desactive.");
+            "Le guide de lecture immersif est désactivé.");
         UpdateAccessibilityQuickToggleCopy(
             AccessibilityQuickLensButton,
             AccessibilityQuickLensHintText,
             ReadingLensEnabledSwitch.IsOn,
             "La loupe de lecture est active.",
-            "La loupe de lecture est desactivee.");
+            "La loupe de lecture est désactivée.");
         UpdateAccessibilityQuickToggleCopy(
             AccessibilityQuickReadAloudButton,
             AccessibilityQuickReadAloudHintText,
             ReadAloudEnabledSwitch.IsOn,
-            "La lecture a voix haute locale est active.",
-            "La lecture a voix haute locale est desactivee.");
+            "La lecture à voix haute locale est active.",
+            "La lecture à voix haute locale est désactivée.");
 
         MarkQuickPreset(AccessibilityQuickBalancedButton, normalized, "balanced");
         MarkQuickPreset(AccessibilityQuickVisionButton, normalized, "vision");
@@ -172,7 +172,7 @@ public sealed partial class MainWindow
         var parts = new List<string>();
         var profileKey = ResolveAccessibilityComfortProfileFromControls();
         var preset = FindAccessibilityComfortPreset(profileKey);
-        parts.Add($"Profil {((profileKey == "custom") ? "personnalise" : preset?.Label ?? "confort")}.");
+        parts.Add($"Profil {((profileKey == "custom") ? "personnalisé" : preset?.Label ?? "confort")}.");
 
         if (AccessibilityLargeTextSwitch.IsOn)
         {
@@ -181,17 +181,17 @@ public sealed partial class MainWindow
 
         if (AccessibilityHighContrastSwitch.IsOn)
         {
-            parts.Add("Contraste renforce actif.");
+            parts.Add("Contraste renforcé actif.");
         }
 
         if (AccessibilityReduceMotionSwitch.IsOn)
         {
-            parts.Add("Transitions reduites.");
+            parts.Add("Transitions réduites.");
         }
 
         if (AccessibilityReduceBlueLightSwitch.IsOn)
         {
-            parts.Add("Lumiere bleue reduite sur les pages.");
+            parts.Add("Lumière bleue réduite sur les pages.");
         }
 
         if (ReadingGuideEnabledSwitch.IsOn)
@@ -206,17 +206,17 @@ public sealed partial class MainWindow
 
         if (ReadAloudEnabledSwitch.IsOn)
         {
-            parts.Add("Lecture a voix haute locale disponible.");
+            parts.Add("Lecture à voix haute locale disponible.");
         }
 
         if (HasAccessibilityRescueSnapshot())
         {
-            parts.Add("Retour a l'etat d'avant disponible.");
+            parts.Add("Retour à l'état d'avant disponible.");
         }
 
         if (parts.Count == 1)
         {
-            parts.Add("Aide ponctuelle desactivee.");
+            parts.Add("Aide ponctuelle désactivée.");
         }
 
         return string.Join(" ", parts);
@@ -225,7 +225,7 @@ public sealed partial class MainWindow
     private void AnnounceAccessibilityComfortState()
     {
         UpdateAccessibilityQuickFlyoutUi();
-        UpdateStatusText("Etat de confort annonce.", announce: false);
+        UpdateStatusText("État de confort annoncé.", announce: false);
         AnnounceAccessibilityContext(DescribeAccessibilityComfortState(), AutomationNotificationKind.Other);
     }
 }

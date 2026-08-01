@@ -49,7 +49,7 @@ public sealed partial class MainWindow
         var zoneDefinition = Array.Find(AccessibilityShellZones, definition => definition.Zone == zone);
         var parts = new List<string>
         {
-            $"Repere actuel : {zoneDefinition?.Label ?? "zone active"}.",
+            $"Repère actuel : {zoneDefinition?.Label ?? "zone active"}.",
             DescribeAccessibilityCurrentSurface()
         };
 
@@ -60,7 +60,7 @@ public sealed partial class MainWindow
 
         if (includeShortcuts)
         {
-            parts.Add("Ctrl Alt F relit ce repere. Ctrl Alt R recentre le focus.");
+            parts.Add("Ctrl Alt F relit ce repère. Ctrl Alt R recentre le focus.");
         }
 
         return string.Join(" ", parts);
@@ -69,7 +69,7 @@ public sealed partial class MainWindow
     private void AnnounceAccessibilityNavigationContext()
     {
         UpdateAccessibilityQuickContextUi();
-        UpdateStatusText("Repere de navigation annonce.", announce: false);
+        UpdateStatusText("Repère de navigation annoncé.", announce: false);
         AnnounceAccessibilityContext(DescribeAccessibilityNavigationContext(), AutomationNotificationKind.Other);
     }
 
@@ -95,7 +95,7 @@ public sealed partial class MainWindow
         }
 
         UpdateAccessibilityQuickContextUi();
-        UpdateStatusText("Focus recentre sur le repere utile.", announce: false);
+        UpdateStatusText("Focus recentré sur le repère utile.", announce: false);
         AnnounceAccessibilityContext(DescribeAccessibilityNavigationContext(includeShortcuts: false), AutomationNotificationKind.Other);
     }
 
@@ -151,7 +151,7 @@ public sealed partial class MainWindow
 
         if (ReferenceEquals(panel, SettingsPanel))
         {
-            return $"Surface : Parametres, section {CurrentSettingsSectionLabel()}.";
+            return $"Surface : Paramètres, section {CurrentSettingsSectionLabel()}.";
         }
 
         return $"Surface : {DescribeAccessibilityPanelLabel(panel)}.";
@@ -204,7 +204,7 @@ public sealed partial class MainWindow
 
         return string.IsNullOrWhiteSpace(label)
             ? string.Empty
-            : $"Controle cible : {label}.";
+            : $"Contrôle cible : {label}.";
     }
 
     private string CurrentSettingsSectionLabel()
@@ -212,30 +212,30 @@ public sealed partial class MainWindow
         if (SettingsSectionAccessibility.Visibility == Visibility.Visible) return "Confort";
         if (SettingsSectionAppearance.Visibility == Visibility.Visible) return "Apparence";
         if (SettingsSectionNavigation.Visibility == Visibility.Visible) return "Navigation";
-        if (SettingsSectionStartup.Visibility == Visibility.Visible) return "Demarrage";
+        if (SettingsSectionStartup.Visibility == Visibility.Visible) return "Démarrage";
         if (SettingsSectionVault.Visibility == Visibility.Visible) return "Coffre";
         if (SettingsSectionProfile.Visibility == Visibility.Visible) return "Profil";
         if (SettingsSectionStorage.Visibility == Visibility.Visible) return "Stockage";
-        if (SettingsSectionPrivacy.Visibility == Visibility.Visible) return "Confidentialite";
+        if (SettingsSectionPrivacy.Visibility == Visibility.Visible) return "Confidentialité";
 
-        return "Vue generale";
+        return "Vue générale";
     }
 
     private string DescribeAccessibilityPanelLabel(FrameworkElement panel) =>
         panel switch
         {
-            _ when ReferenceEquals(panel, AboutPanel) => "A propos de Lumora",
+            _ when ReferenceEquals(panel, AboutPanel) => "À propos de Lumora",
             _ when ReferenceEquals(panel, BookmarksPanel) => "Favoris",
             _ when ReferenceEquals(panel, ImportPanel) => "Import et export des favoris",
             _ when ReferenceEquals(panel, HistoryPanel) => "Historique",
-            _ when ReferenceEquals(panel, DownloadsPanel) => "Telechargements",
-            _ when ReferenceEquals(panel, SavedTabGroupsPanel) => "Groupes enregistres",
+            _ when ReferenceEquals(panel, DownloadsPanel) => "Téléchargements",
+            _ when ReferenceEquals(panel, SavedTabGroupsPanel) => "Groupes enregistrés",
             _ when ReferenceEquals(panel, NotesPanel) => "Notes",
             _ when ReferenceEquals(panel, VaultPanel) => "Gestionnaire de mots de passe",
-            _ when ReferenceEquals(panel, PasskeysPanel) => "Cles d'acces",
+            _ when ReferenceEquals(panel, PasskeysPanel) => "Clés d'accès",
             _ when ReferenceEquals(panel, ModulesPanel) => "Modules Lumora",
             _ when ReferenceEquals(panel, SiteControlPanel) => "Centre du site",
-            _ when ReferenceEquals(panel, SessionsPanel) => "Sites connectes",
+            _ when ReferenceEquals(panel, SessionsPanel) => "Sites connectés",
             _ when ReferenceEquals(panel, WalletPanel) => "Portefeuille",
             _ when ReferenceEquals(panel, WebAppsPanel) => "Applications",
             _ when ReferenceEquals(panel, ReadingLensPanel) => "Loupe de lecture",

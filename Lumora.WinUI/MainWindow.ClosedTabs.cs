@@ -27,7 +27,7 @@ public sealed partial class MainWindow
         var record = _closedTabs.Pop();
         if (record is null)
         {
-            StatusText.Text = "Aucun onglet ferme recemment.";
+            StatusText.Text = "Aucun onglet fermé récemment.";
             return;
         }
 
@@ -46,6 +46,6 @@ public sealed partial class MainWindow
             : null;
 
         AddTab(record.Title, record.Address, select: true, groupId: groupId, pinned: record.Pinned);
-        StatusText.Text = $"Onglet restaure : {record.Title}";
+        StatusText.Text = $"Onglet restauré : {record.Title}";
     }
 }

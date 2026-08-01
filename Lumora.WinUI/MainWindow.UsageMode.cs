@@ -54,8 +54,8 @@ public sealed partial class MainWindow : Window
         ApplyUiSettings();
         RefreshNovaHomePages();
         StatusText.Text = string.Equals(usageMode, "neutral", StringComparison.OrdinalIgnoreCase)
-            ? "Mode Lumora applique : Neutre. Accueil simplifie et modules essentiels conserves."
-            : $"Mode Lumora applique : {UsageModeLabel(usageMode)}. Une presentation du mode est disponible sur l'accueil.";
+            ? "Mode Lumora appliqué : Neutre. Accueil simplifié et modules essentiels conservés."
+            : $"Mode Lumora appliqué : {UsageModeLabel(usageMode)}. Une présentation du mode est disponible sur l'accueil.";
     }
 
     private void UpdateUsageModeButtonUi()
@@ -80,7 +80,7 @@ public sealed partial class MainWindow : Window
         // navigation n'avait plus d'effet visuel - trouve en audit le
         // 2026-07-20.
         var eclipsedByHighContrast = _uiSettings.AccessibilityHighContrast;
-        UsageModeLabelText.Text = eclipsedByHighContrast ? "Mode (masque)" : "Mode";
+        UsageModeLabelText.Text = eclipsedByHighContrast ? "Mode (masqué)" : "Mode";
         UsageModeCurrentText.Text = label;
 
         // Bouton fusionne "Mode et confort" (menus rassembles en un seul
@@ -91,10 +91,10 @@ public sealed partial class MainWindow : Window
         // ecrivain du texte du bouton.
         var comfortProfileKey = ResolveAccessibilityComfortProfileFromControls();
         var comfortPreset = FindAccessibilityComfortPreset(comfortProfileKey);
-        var comfortLabel = comfortProfileKey == "custom" ? "Personnalise" : comfortPreset?.Label ?? "Confort";
+        var comfortLabel = comfortProfileKey == "custom" ? "Personnalisé" : comfortPreset?.Label ?? "Confort";
 
         var tooltip = eclipsedByHighContrast
-            ? $"Mode d'usage : {label}. Confort : {comfortLabel}. Couleurs remplacees tant que le contraste eleve (Confort) est actif."
+            ? $"Mode d'usage : {label}. Confort : {comfortLabel}. Couleurs remplacées tant que le contraste élevé (Confort) est actif."
             : $"Mode d'usage : {label}. Confort : {comfortLabel}.";
         ToolTipService.SetToolTip(UsageModeButton, tooltip);
         AutomationProperties.SetName(UsageModeButton, tooltip);
@@ -262,13 +262,13 @@ public sealed partial class MainWindow : Window
 
             case "bookmarks":
                 BookmarksMenu_Click(this, new RoutedEventArgs());
-                StatusText.Text = "Compagnon Recherche : sources gardees ouvertes.";
+                StatusText.Text = "Compagnon Recherche : sources gardées ouvertes.";
                 break;
 
             case "command_palette":
                 if (!_uiSettings.CommandPaletteEnabled)
                 {
-                    StatusText.Text = "Palette Ctrl+K desactivee.";
+                    StatusText.Text = "Palette Ctrl+K désactivée.";
                     return;
                 }
 
@@ -310,7 +310,7 @@ public sealed partial class MainWindow : Window
                 "Ouvrir Ctrl+K sans quitter la page."),
             "focus" => new ModeCompanionDefinition(
                 "\uE8A7",
-                "Gardez votre objectif et les commandes rapides sous la main sans revenir a l'accueil.",
+                "Gardez votre objectif et les commandes rapides sous la main sans revenir à l'accueil.",
                 "Objectif courant",
                 "votre objectif",
                 "Ex. terminer cette tâche, vérifier un bug, rester sur une seule priorité...",
@@ -320,8 +320,8 @@ public sealed partial class MainWindow : Window
                 "Lancer une action sans quitter la page.",
                 "fullscreen",
                 "\uE740",
-                "Plein ecran",
-                "Reduire le chrome quand la tache demande du calme."),
+                "Plein écran",
+                "Réduire le chrome quand la tâche demande du calme."),
             "reading" => new ModeCompanionDefinition(
                 "\uE736",
                 "Lecture, annotations, notes et voix locale restent accessibles pendant la navigation.",
@@ -338,18 +338,18 @@ public sealed partial class MainWindow : Window
                 "Retrouver vos notes locales."),
             "creative" => new ModeCompanionDefinition(
                 "\uE70B",
-                "Le post-it de creation devient un compagnon : vos idees restent proches pendant les pages web.",
+                "Le post-it de création devient un compagnon : vos idées restent proches pendant les pages web.",
                 "Post-it de création",
                 "votre post-it",
                 "Ex. idée, brouillon, piste créative à ne pas perdre...",
                 "notes",
                 "\uE70B",
                 "Post-it et notes",
-                "Ouvrir le carnet local pour capturer ou reprendre une idee.",
+                "Ouvrir le carnet local pour capturer ou reprendre une idée.",
                 "search_assist",
                 "\uE721",
-                "Relancer l'idee",
-                "Reformuler une piste avec l'assistant local si active."),
+                "Relancer l'idée",
+                "Reformuler une piste avec l'assistant local si activé."),
             "research" => new ModeCompanionDefinition(
                 "\uE721",
                 "Collectez et comparez sans perdre le fil : historique, favoris et actions rapides restent proches.",
@@ -359,14 +359,14 @@ public sealed partial class MainWindow : Window
                 "history",
                 "\uE81C",
                 "Historique local",
-                "Reprendre les pistes explorees sur cet appareil.",
+                "Reprendre les pistes explorées sur cet appareil.",
                 "bookmarks",
                 "\uE734",
-                "Sources gardees",
+                "Sources gardées",
                 "Ouvrir les favoris pour classer et comparer."),
             "night" => new ModeCompanionDefinition(
                 "\uE708",
-                "Un compagnon plus calme pour lire, ecouter ou reduire l'eclat sans chercher les commandes.",
+                "Un compagnon plus calme pour lire, écouter ou réduire l'éclat sans chercher les commandes.",
                 "Rappel calme",
                 "votre rappel",
                 "Ex. à reprendre demain, page à finir plus tard, action minimale...",
@@ -376,11 +376,11 @@ public sealed partial class MainWindow : Window
                 "Basculer la page active en lecture.",
                 "read_aloud",
                 "\uE767",
-                "Ecoute locale",
-                "Ouvrir la lecture a voix haute locale."),
+                "Écoute locale",
+                "Ouvrir la lecture à voix haute locale."),
             _ => new ModeCompanionDefinition(
                 "\uE9D2",
-                "Compagnon leger : modules et commandes utiles restent disponibles sans surcharger l'accueil.",
+                "Compagnon léger : modules et commandes utiles restent disponibles sans surcharger l'accueil.",
                 "Mémo Lumora",
                 "votre mémo",
                 "Ex. rappel de navigation, page à consulter, petite note...",
@@ -543,7 +543,7 @@ public sealed partial class MainWindow : Window
             toggle.IsChecked = isPinned;
             var label = isPinned
                 ? $"Retirer {moduleName} de la barre de modules"
-                : $"Epingler {moduleName} dans la barre de modules";
+                : $"Épingler {moduleName} dans la barre de modules";
             ToolTipService.SetToolTip(toggle, label);
             AutomationProperties.SetName(toggle, label);
         }
@@ -575,7 +575,7 @@ public sealed partial class MainWindow : Window
             "neutral" => "Neutre",
             "focus" => "Focus",
             "reading" => "Lecture",
-            "creative" => "Creation",
+            "creative" => "Création",
             "research" => "Recherche",
             "night" => "Nuit",
             _ => "Equilibre"

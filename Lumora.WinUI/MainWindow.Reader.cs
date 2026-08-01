@@ -58,12 +58,12 @@ public sealed partial class MainWindow
             if (result.Contains("on", StringComparison.Ordinal))
             {
                 StatusText.Text = annotations.Count > 0
-                    ? $"Mode lecture : {annotations.Count} annotation(s) reaffichee(s). Selectionnez du texte pour en ajouter."
-                    : "Mode lecture : selectionnez du texte pour le surligner ou le commenter.";
+                    ? $"Mode lecture : {annotations.Count} annotation(s) réaffichée(s). Sélectionnez du texte pour en ajouter."
+                    : "Mode lecture : sélectionnez du texte pour le surligner ou le commenter.";
             }
             else
             {
-                StatusText.Text = "Mode lecture quitte.";
+                StatusText.Text = "Mode lecture quitté.";
             }
         }
         catch (Exception ex)
@@ -106,8 +106,8 @@ public sealed partial class MainWindow
                 }
 
                 StatusText.Text = _isGuestMode
-                    ? "Passage surligne (mode invite : conserve pour cette session seulement)."
-                    : "Passage surligne et enregistre.";
+                    ? "Passage surligné (mode invité : conservé pour cette session seulement)."
+                    : "Passage surligné et enregistré.";
                 UpdateReaderModeUi();
                 return;
             }
@@ -116,7 +116,7 @@ public sealed partial class MainWindow
                 var id = obj["id"]?.GetValue<string>() ?? string.Empty;
                 if (_annotations.UpdateComment(id, obj["c"]?.GetValue<string>() ?? string.Empty) is not null)
                 {
-                    StatusText.Text = "Commentaire enregistre.";
+                    StatusText.Text = "Commentaire enregistré.";
                 }
                 return;
             }
@@ -125,7 +125,7 @@ public sealed partial class MainWindow
                 var id = obj["id"]?.GetValue<string>() ?? string.Empty;
                 if (_annotations.Remove(id))
                 {
-                    StatusText.Text = "Annotation supprimee.";
+                    StatusText.Text = "Annotation supprimée.";
                     UpdateReaderModeUi();
                 }
                 return;
@@ -135,12 +135,12 @@ public sealed partial class MainWindow
                 var count = obj["n"]?.GetValue<int>() ?? 0;
                 if (count > 0)
                 {
-                    StatusText.Text = $"{count} annotation(s) n'ont pas retrouve leur passage (la page a peut-etre change).";
+                    StatusText.Text = $"{count} annotation(s) n'ont pas retrouvé leur passage (la page a peut-être changé).";
                 }
                 return;
             }
             case "reader-closed":
-                StatusText.Text = "Mode lecture quitte.";
+                StatusText.Text = "Mode lecture quitté.";
                 return;
         }
     }
@@ -170,7 +170,7 @@ public sealed partial class MainWindow
         ReaderAnnotationBadgeText.Text = count > 99 ? "99+" : count.ToString();
 
         var label = count > 0
-            ? $"Mode lecture - {count} annotation(s) enregistree(s) sur cette page"
+            ? $"Mode lecture - {count} annotation(s) enregistrée(s) sur cette page"
             : "Mode lecture - surligner et commenter cette page";
         ToolTipService.SetToolTip(ReaderModeButton, label);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ReaderModeButton, label);

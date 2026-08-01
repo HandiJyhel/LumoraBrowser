@@ -171,8 +171,8 @@ public sealed partial class MainWindow
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         LoginStatusText.Text = _profileEntries.Count == 0
-            ? "Aucun profil local trouve."
-            : "Choisissez le profil a ouvrir.";
+            ? "Aucun profil local trouvé."
+            : "Choisissez le profil à ouvrir.";
     }
 
     private void ProfilePickerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -301,10 +301,10 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode)
         {
-            ProfileFlyoutTitleText.Text = "Mode invite";
-            ProfileFlyoutSubtitleText.Text = "Aucune donnee persistante n'est gardee a la fermeture tant qu'aucun profil n'est choisi.";
+            ProfileFlyoutTitleText.Text = "Mode invité";
+            ProfileFlyoutSubtitleText.Text = "Aucune donnée persistante n'est gardée à la fermeture tant qu'aucun profil n'est choisi.";
             ProfileFlyoutCurrentUserText.Text = "Session sans profil";
-            ProfileFlyoutCurrentStateText.Text = "Creer un utilisateur ou choisir un profil local pour retrouver vos donnees ensuite.";
+            ProfileFlyoutCurrentStateText.Text = "Créer un utilisateur ou choisir un profil local pour retrouver vos données ensuite.";
             return;
         }
 
@@ -313,15 +313,15 @@ public sealed partial class MainWindow
         {
             ProfileFlyoutTitleText.Text = currentName;
             ProfileFlyoutSubtitleText.Text = "Ce menu regroupe les actions de profil, de compte local et de gestion d'utilisateurs.";
-            ProfileFlyoutCurrentUserText.Text = $"Connecte : {currentName}";
-            ProfileFlyoutCurrentStateText.Text = "Changer d'utilisateur, ouvrir les parametres du profil ou en creer un nouveau.";
+            ProfileFlyoutCurrentUserText.Text = $"Connecté : {currentName}";
+            ProfileFlyoutCurrentStateText.Text = "Changer d'utilisateur, ouvrir les paramètres du profil ou en créer un nouveau.";
             return;
         }
 
         ProfileFlyoutTitleText.Text = "Profil Lumora";
-        ProfileFlyoutSubtitleText.Text = "Choisissez un profil local pour separer vos donnees, sessions et reglages.";
+        ProfileFlyoutSubtitleText.Text = "Choisissez un profil local pour séparer vos données, sessions et réglages.";
         ProfileFlyoutCurrentUserText.Text = "Aucun profil actif";
-        ProfileFlyoutCurrentStateText.Text = "Creer ou choisir un profil local pour garder vos donnees sur cet appareil.";
+        ProfileFlyoutCurrentStateText.Text = "Créer ou choisir un profil local pour garder vos données sur cet appareil.";
     }
 
     private void ProfileFlyoutSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -349,7 +349,7 @@ public sealed partial class MainWindow
         ProfileStatusFlyout.Hide();
         ModulesFlyout.Hide();
         ShowCreateProfileOverlay();
-        StatusText.Text = "Creation d'un nouvel utilisateur Lumora.";
+        StatusText.Text = "Création d'un nouvel utilisateur Lumora.";
     }
 
     private void DismissLoginOverlay()
@@ -417,7 +417,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        LockSessionNow("Session verrouillee automatiquement.");
+        LockSessionNow("Session verrouillée automatiquement.");
     }
 
     // Verrouillage effectif du coffre + ecran de re-login. Point d'entree commun au
@@ -468,14 +468,14 @@ public sealed partial class MainWindow
     {
         if (e.Reason != Microsoft.Win32.SessionSwitchReason.SessionLock) return;
         DispatcherQueue.TryEnqueue(() =>
-            LockSessionNow("Coffre verrouille : session Windows verrouillee."));
+            LockSessionNow("Coffre verrouillé : session Windows verrouillée."));
     }
 
     private void OnSystemPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
     {
         if (e.Mode != Microsoft.Win32.PowerModes.Suspend) return;
         DispatcherQueue.TryEnqueue(() =>
-            LockSessionNow("Coffre verrouille : mise en veille."));
+            LockSessionNow("Coffre verrouillé : mise en veille."));
     }
 
     private void SessionTimeoutCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -515,12 +515,12 @@ public sealed partial class MainWindow
     {
         if (_userProfile is null)
         {
-            ProfileNameDisplay.Text = "Aucun profil configure.";
+            ProfileNameDisplay.Text = "Aucun profil configuré.";
             ProfilePinSwitch.IsEnabled = false;
         }
         else
         {
-            ProfileNameDisplay.Text = $"Connecte en tant que : {_userProfile.Name}\nDossier : {_profile.ProfileDir}";
+            ProfileNameDisplay.Text = $"Connecté en tant que : {_userProfile.Name}\nDossier : {_profile.ProfileDir}";
             ProfilePinSwitch.IsEnabled = true;
             _suppressUiSettingsSave = true;
             ProfilePinSwitch.IsOn = _userProfile.HasPinLogin;
@@ -549,7 +549,7 @@ public sealed partial class MainWindow
     private void RefreshProfilesButton_Click(object sender, RoutedEventArgs e)
     {
         RefreshProfileManagementPanel();
-        StatusText.Text = "Liste des profils actualisee.";
+        StatusText.Text = "Liste des profils actualisée.";
     }
 
     private void RefreshProfileManagementPanel()
@@ -563,7 +563,7 @@ public sealed partial class MainWindow
         {
             ProfileManagementPanel.Children.Add(new TextBlock
             {
-                Text = "Aucun profil local detecte.",
+                Text = "Aucun profil local détecté.",
                 Opacity = 0.65
             });
             return;
@@ -593,7 +593,7 @@ public sealed partial class MainWindow
 
         var type = new TextBlock
         {
-            Text = entry.IsCustom ? "Emplacement personnalise" : "Profil local",
+            Text = entry.IsCustom ? "Emplacement personnalisé" : "Profil local",
             Opacity = 0.62,
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center
@@ -740,7 +740,7 @@ public sealed partial class MainWindow
         var verified = await Task.Run(() => targetProfile.VerifyPassword(passwordBox.Password));
         if (!verified)
         {
-            StatusText.Text = "Mot de passe incorrect : profil inchange.";
+            StatusText.Text = "Mot de passe incorrect : profil inchangé.";
             return null;
         }
 
@@ -775,14 +775,14 @@ public sealed partial class MainWindow
         var newName = nameBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(newName))
         {
-            StatusText.Text = "Le nom ne peut pas etre vide.";
+            StatusText.Text = "Le nom ne peut pas être vide.";
             return;
         }
 
         var paths = LumoraProfilePaths.FromDirectory(entry.ProfileDir);
         (targetProfile with { Name = newName }).Save(paths.ProfileFile);
         RefreshProfileManagementPanel();
-        StatusText.Text = $"Profil renomme : {newName}.";
+        StatusText.Text = $"Profil renommé : {newName}.";
     }
 
     private async Task DeleteProfileAsync(LumoraProfileEntry entry)
@@ -793,7 +793,7 @@ public sealed partial class MainWindow
 
         if (entry.IsActive)
         {
-            StatusText.Text = "Le profil actif ne peut pas etre supprime.";
+            StatusText.Text = "Le profil actif ne peut pas être supprimé.";
             return;
         }
 
@@ -803,7 +803,7 @@ public sealed partial class MainWindow
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(new TextBlock
         {
-            Text = "Le profil sera deplace dans un dossier de quarantaine. Il ne sera pas detruit immediatement.",
+            Text = "Le profil sera déplacé dans un dossier de quarantaine. Il ne sera pas détruit immédiatement.",
             TextWrapping = TextWrapping.Wrap
         });
         panel.Children.Add(new TextBlock
@@ -830,7 +830,7 @@ public sealed partial class MainWindow
         {
             var target = LumoraProfileRegistry.QuarantineProfile(entry);
             RefreshProfileManagementPanel();
-            StatusText.Text = $"Profil supprime (recuperable) : {target}";
+            StatusText.Text = $"Profil supprimé (récupérable) : {target}";
         }
         catch (Exception ex)
         {
@@ -919,10 +919,10 @@ public sealed partial class MainWindow
         var pw2  = ConfirmPasswordBox.Password;
 
         if (string.IsNullOrWhiteSpace(name))
-        { LoginStatusText.Text = "Veuillez entrer un prenom ou pseudo."; return; }
+        { LoginStatusText.Text = "Veuillez entrer un prénom ou pseudo."; return; }
 
         if (pw.Length < 8)
-        { LoginStatusText.Text = "Le mot de passe doit faire au moins 8 caracteres."; return; }
+        { LoginStatusText.Text = "Le mot de passe doit faire au moins 8 caractères."; return; }
 
         if (pw != pw2)
         { LoginStatusText.Text = "Les mots de passe ne correspondent pas."; return; }
@@ -1057,7 +1057,7 @@ public sealed partial class MainWindow
         var entry = _migrationEntries[idx];
         if (entry.Source is null)
         {
-            LoginStatusText.Text = $"{entry.Name} n'est pas detecte sur ce PC.";
+            LoginStatusText.Text = $"{entry.Name} n'est pas détecté sur ce PC.";
             return;
         }
 
@@ -1101,7 +1101,7 @@ public sealed partial class MainWindow
         {
             var imported = _bookmarks.MergeImport(tree);
             ReloadBookmarks();
-            StatusText.Text = $"Import {browserName} : {imported} favoris importes.";
+            StatusText.Text = $"Import {browserName} : {imported} favoris importés.";
             DismissLoginOverlay();
         }
     }
@@ -1174,14 +1174,14 @@ public sealed partial class MainWindow
         if (_userProfile is null) return;
         if (!_userProfile.HasRecoveryKey)
         {
-            LoginStatusText.Text = "Aucune cle de recuperation n'est configuree pour ce profil.";
+            LoginStatusText.Text = "Aucune clé de récupération n'est configurée pour ce profil.";
             return;
         }
 
         var dialog = new ContentDialog
         {
-            Title = "Recuperer le profil",
-            PrimaryButtonText = "Recuperer",
+            Title = "Récupérer le profil",
+            PrimaryButtonText = "Récupérer",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot
@@ -1190,14 +1190,14 @@ public sealed partial class MainWindow
         var panel = new StackPanel { Spacing = 10 };
         var recoveryBox = new TextBox
         {
-            Header = "Cle de recuperation",
+            Header = "Clé de récupération",
             PlaceholderText = "NOVA-......-......-......",
             MinWidth = 320
         };
         var newBox = new PasswordBox
         {
             Header = "Nouveau mot de passe",
-            PlaceholderText = "Minimum 8 caracteres",
+            PlaceholderText = "Minimum 8 caractères",
             MinWidth = 320
         };
         var confirmBox = new PasswordBox
@@ -1210,7 +1210,7 @@ public sealed partial class MainWindow
         panel.Children.Add(confirmBox);
         panel.Children.Add(new TextBlock
         {
-            Text = "La cle de recuperation reste locale. Sans cette cle, Lumora ne peut pas contourner le chiffrement.",
+            Text = "La clé de récupération reste locale. Sans cette clé, Lumora ne peut pas contourner le chiffrement.",
             TextWrapping = TextWrapping.Wrap,
             Opacity = 0.68,
             FontSize = 12
@@ -1222,12 +1222,12 @@ public sealed partial class MainWindow
         var recoveryKey = recoveryBox.Text;
         if (!_userProfile.VerifyRecoveryKey(recoveryKey))
         {
-            LoginStatusText.Text = "Cle de recuperation incorrecte.";
+            LoginStatusText.Text = "Clé de récupération incorrecte.";
             return;
         }
         if (newBox.Password.Length < 8)
         {
-            LoginStatusText.Text = "Le nouveau mot de passe doit faire au moins 8 caracteres.";
+            LoginStatusText.Text = "Le nouveau mot de passe doit faire au moins 8 caractères.";
             return;
         }
         if (newBox.Password != confirmBox.Password)
@@ -1237,7 +1237,7 @@ public sealed partial class MainWindow
         }
         if (!_vault.UnlockWithRecoveryKey(recoveryKey))
         {
-            LoginStatusText.Text = "La cle est valide pour le profil, mais le coffre n'a pas de recuperation active.";
+            LoginStatusText.Text = "La clé est valide pour le profil, mais le coffre n'a pas de récupération active.";
             return;
         }
 
@@ -1245,7 +1245,7 @@ public sealed partial class MainWindow
         _userProfile = _userProfile.WithNewPassword(newBox.Password).WithoutPin();
         _userProfile.Save(_profile.ProfileFile);
         LoginPasswordBox.Password = string.Empty;
-        LoginStatusText.Text = "Mot de passe reinitialise avec la cle de recuperation.";
+        LoginStatusText.Text = "Mot de passe réinitialisé avec la clé de récupération.";
         DismissLoginOverlay();
     }
 
@@ -1362,7 +1362,7 @@ public sealed partial class MainWindow
         if (_userProfile is null) return;
         var dialog = new ContentDialog
         {
-            Title = "Nouveau prenom ou pseudo",
+            Title = "Nouveau prénom ou pseudo",
             PrimaryButtonText = "Enregistrer",
             CloseButtonText = "Annuler",
             XamlRoot = Content.XamlRoot
@@ -1376,7 +1376,7 @@ public sealed partial class MainWindow
         _userProfile.Save(_profile.ProfileFile);
         RefreshProfileSettings();
         UpdateProfileStatus();
-        StatusText.Text = "Nom de profil mis a jour.";
+        StatusText.Text = "Nom de profil mis à jour.";
     }
 
     private async void ChangeProfilePasswordButton_Click(object sender, RoutedEventArgs e)
@@ -1403,7 +1403,7 @@ public sealed partial class MainWindow
         if (!await Task.Run(() => _userProfile.VerifyPassword(oldBox.Password)))
         { StatusText.Text = "Mot de passe actuel incorrect."; return; }
         if (newBox.Password.Length < 8)
-        { StatusText.Text = "Le nouveau mot de passe doit faire au moins 8 caracteres."; return; }
+        { StatusText.Text = "Le nouveau mot de passe doit faire au moins 8 caractères."; return; }
         if (newBox.Password != confBox.Password)
         { StatusText.Text = "Les mots de passe ne correspondent pas."; return; }
 
@@ -1432,7 +1432,7 @@ public sealed partial class MainWindow
                 _vault.EnablePinUnlock(pin);
         }
 
-        StatusText.Text = "Mot de passe du profil mis a jour.";
+        StatusText.Text = "Mot de passe du profil mis à jour.";
     }
 
     private async void CreateRecoveryKeyButton_Click(object sender, RoutedEventArgs e)
@@ -1440,7 +1440,7 @@ public sealed partial class MainWindow
         if (_userProfile is null) return;
         if (!await RequireVaultAccessAsync())
         {
-            StatusText.Text = "Cle de recuperation non creee : acces au coffre refuse.";
+            StatusText.Text = "Clé de récupération non créée : accès au coffre refusé.";
             return;
         }
 
@@ -1449,12 +1449,12 @@ public sealed partial class MainWindow
         _userProfile.Save(_profile.ProfileFile);
         if (!_vault.SetRecoveryKey(recoveryKey))
         {
-            StatusText.Text = "Impossible de rattacher la cle de recuperation au coffre.";
+            StatusText.Text = "Impossible de rattacher la clé de récupération au coffre.";
             return;
         }
 
         await ShowRecoveryKeyDialogAsync(recoveryKey);
-        StatusText.Text = "Nouvelle cle de recuperation activee.";
+        StatusText.Text = "Nouvelle clé de récupération activée.";
     }
 
     private async Task ShowRecoveryKeyDialogAsync(string recoveryKey)
@@ -1468,16 +1468,16 @@ public sealed partial class MainWindow
         };
         var copyButton = new Button
         {
-            Content = "Copier la cle",
+            Content = "Copier la clé",
             HorizontalAlignment = HorizontalAlignment.Left
         };
         copyButton.Click += (_, _) =>
-            CopySecretToClipboard(recoveryKey, "Cle de recuperation copiee.", clearAfterSeconds: 0);
+            CopySecretToClipboard(recoveryKey, "Clé de récupération copiée.", clearAfterSeconds: 0);
 
         var panel = new StackPanel { Spacing = 12 };
         panel.Children.Add(new TextBlock
         {
-            Text = "Notez cette cle maintenant. Elle permet de recuperer le profil et le coffre si le mot de passe est oublie. Lumora ne peut pas la retrouver a votre place.",
+            Text = "Notez cette clé maintenant. Elle permet de récupérer le profil et le coffre si le mot de passe est oublié. Lumora ne peut pas la retrouver à votre place.",
             TextWrapping = TextWrapping.Wrap
         });
         panel.Children.Add(keyBox);
@@ -1485,9 +1485,9 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Cle de recuperation Lumora",
+            Title = "Clé de récupération Lumora",
             Content = panel,
-            PrimaryButtonText = "J'ai note la cle",
+            PrimaryButtonText = "J'ai noté la clé",
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Content.XamlRoot
         };
@@ -1503,7 +1503,7 @@ public sealed partial class MainWindow
         {
             var dialog = new ContentDialog
             {
-                Title = "Definir le code PIN",
+                Title = "Définir le code PIN",
                 PrimaryButtonText = "Enregistrer",
                 CloseButtonText = "Annuler",
                 XamlRoot = Content.XamlRoot
@@ -1537,7 +1537,7 @@ public sealed partial class MainWindow
         }
 
         _userProfile.Save(_profile.ProfileFile);
-        StatusText.Text = ProfilePinSwitch.IsOn ? "Code PIN active." : "Code PIN desactive.";
+        StatusText.Text = ProfilePinSwitch.IsOn ? "Code PIN activé." : "Code PIN désactivé.";
     }
 
     private async void ResetProfileButton_Click(object sender, RoutedEventArgs e)
@@ -1552,9 +1552,9 @@ public sealed partial class MainWindow
 
         var dlg = new ContentDialog
         {
-            Title = "Reinitialiser le profil ?",
-            Content = "Cette action supprime definitivement toutes vos donnees : favoris, historique, onglets, parametres, coffre et identifiants de connexion. Cette operation est irreversible.",
-            PrimaryButtonText = "Reinitialiser",
+            Title = "Réinitialiser le profil ?",
+            Content = "Cette action supprime définitivement toutes vos données : favoris, historique, onglets, paramètres, coffre et identifiants de connexion. Cette opération est irréversible.",
+            PrimaryButtonText = "Réinitialiser",
             CloseButtonText = "Annuler",
             XamlRoot = Content.XamlRoot
         };

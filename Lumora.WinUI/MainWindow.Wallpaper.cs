@@ -93,7 +93,7 @@ public sealed partial class MainWindow
 
     private async void ChangeWallpaperButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invite."; return; }
+        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
 
         var picker = new FileOpenPicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
@@ -108,14 +108,14 @@ public sealed partial class MainWindow
             _pendingWallpaperSourcePath = file.Path;
             _pendingWallpaperRemoval = false;
             WallpaperPreviewBrush.ImageSource = new BitmapImage(new Uri(file.Path, UriKind.Absolute));
-            WallpaperPendingText.Text = "Nouveau fond d'ecran pret. Cliquez sur Appliquer les changements pour l'utiliser.";
+            WallpaperPendingText.Text = "Nouveau fond d'écran prêt. Cliquez sur Appliquer les changements pour l'utiliser.";
             WallpaperPendingText.Visibility = Visibility.Visible;
-            MarkSettingsChangesPending("Fond d'ecran en attente de validation.");
-            StatusText.Text = "Fond d'ecran en attente de validation.";
+            MarkSettingsChangesPending("Fond d'écran en attente de validation.");
+            StatusText.Text = "Fond d'écran en attente de validation.";
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Erreur lors de l'apercu de l'image : {ex.Message}";
+            StatusText.Text = $"Erreur lors de l'aperçu de l'image : {ex.Message}";
         }
     }
 
@@ -128,8 +128,8 @@ public sealed partial class MainWindow
             WallpaperPreviewBrush.ImageSource = null;
             WallpaperPendingText.Text = "Suppression en attente. Cliquez sur Appliquer les changements pour confirmer.";
             WallpaperPendingText.Visibility = Visibility.Visible;
-            MarkSettingsChangesPending("Suppression du fond d'ecran en attente.");
-            StatusText.Text = "Suppression du fond d'ecran en attente de validation.";
+            MarkSettingsChangesPending("Suppression du fond d'écran en attente.");
+            StatusText.Text = "Suppression du fond d'écran en attente de validation.";
         }
         catch (Exception ex)
         {
@@ -171,7 +171,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Erreur lors de la validation du fond d'ecran : {ex.Message}";
+            StatusText.Text = $"Erreur lors de la validation du fond d'écran : {ex.Message}";
             return false;
         }
     }

@@ -43,7 +43,7 @@ public sealed class BookmarkBarRegressionTests
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksDialogs.cs");
 
         Assert.Contains("public const string InvisibleTitle = \"\\u200B\";", model, StringComparison.Ordinal);
-        Assert.Contains("Nom invisible (icone seule dans la barre)", code, StringComparison.Ordinal);
+        Assert.Contains("Nom invisible (icône seule dans la barre)", code, StringComparison.Ordinal);
         Assert.Contains("BookmarkStore.InvisibleTitle", code, StringComparison.Ordinal);
     }
 

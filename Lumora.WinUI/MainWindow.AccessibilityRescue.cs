@@ -67,14 +67,14 @@ public sealed partial class MainWindow
 
         if (string.Equals(ResolveAccessibilityComfortProfileFromControls(), "rescue", StringComparison.OrdinalIgnoreCase))
         {
-            UpdateStatusText("Mode secours deja actif. Ctrl+Alt+X pour revenir a l'etat d'avant.");
+            UpdateStatusText("Mode secours déjà actif. Ctrl+Alt+X pour revenir à l'état d'avant.");
             return;
         }
 
         ApplyAccessibilityComfortProfile("rescue");
         UpdateAccessibilityQuickFlyoutUi();
         AnnounceAccessibilityContext(
-            "Mode secours active. Lisibilite renforcee et repères stabilises. Controle Alt X permet de revenir a l'etat precedent.",
+            "Mode secours activé. Lisibilité renforcée et repères stabilisés. Contrôle Alt X permet de revenir à l'état précédent.",
             AutomationNotificationKind.Other);
     }
 
@@ -82,16 +82,16 @@ public sealed partial class MainWindow
     {
         if (_accessibilityRescueSnapshot is not { } snapshot)
         {
-            UpdateStatusText("Aucun etat de confort precedent a restaurer.");
+            UpdateStatusText("Aucun état de confort précédent à restaurer.");
             return;
         }
 
         ApplyAccessibilityComfortSnapshot(snapshot);
         _accessibilityRescueSnapshot = null;
         UpdateAccessibilityQuickFlyoutUi();
-        UpdateStatusText("Etat de confort precedent restaure.");
+        UpdateStatusText("État de confort précédent restauré.");
         AnnounceAccessibilityContext(
-            "Etat de confort precedent restaure. Le mode secours est quitte.",
+            "État de confort précédent restauré. Le mode secours est quitté.",
             AutomationNotificationKind.Other);
     }
 
@@ -126,10 +126,10 @@ public sealed partial class MainWindow
     {
         var rescueActive = string.Equals(ResolveAccessibilityComfortProfileFromControls(), "rescue", StringComparison.OrdinalIgnoreCase);
         var statusText = rescueActive
-            ? "Mode secours actif. Le retour a l'etat d'avant reste disponible."
+            ? "Mode secours actif. Le retour à l'état d'avant reste disponible."
             : HasAccessibilityRescueSnapshot()
-                ? "Un etat precedent est memorise. Vous pouvez encore y revenir."
-                : "Aucun retour memorise pour l'instant.";
+                ? "Un état précédent est mémorisé. Vous pouvez encore y revenir."
+                : "Aucun retour mémorisé pour l'instant.";
 
         if (AccessibilityQuickRescueStatusText is not null)
         {

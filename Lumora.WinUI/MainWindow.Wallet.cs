@@ -201,7 +201,7 @@ public sealed partial class MainWindow
         };
 
         var copyNumber = new Button { Content = "Copier le numéro", FontSize = AccessibilitySecondaryFontSize() };
-        ApplyNovaControlAccessibility(copyNumber, $"Copier le numero de la carte {title}");
+        ApplyNovaControlAccessibility(copyNumber, $"Copier le numéro de la carte {title}");
         copyNumber.Click += (_, _) =>
             CopySecretToClipboard(card.Number, "Numéro de carte copié (effacé dans 30 s).", clearAfterSeconds: 30);
         actions.Children.Add(copyNumber);

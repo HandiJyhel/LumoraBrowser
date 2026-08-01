@@ -115,8 +115,8 @@ public sealed partial class MainWindow
         var status = feed.LastError is not null
             ? $"Erreur : {feed.LastError}"
             : feed.LastFetchedAt is { } fetched
-                ? $"Actualise {fetched:dd/MM HH:mm}"
-                : "Jamais actualise";
+                ? $"Actualisé {fetched:dd/MM HH:mm}"
+                : "Jamais actualisé";
         panel.Children.Add(new TextBlock { Text = status, Opacity = 0.6, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
         return panel;
     }
@@ -154,7 +154,7 @@ public sealed partial class MainWindow
             _rssFeeds.MarkFetched(feedId, title: null, ex.Message);
             _currentRssArticles = Array.Empty<RssArticle>();
             RssArticlesList.Items.Clear();
-            RssArticlesStatusText.Text = $"Echec du chargement : {ex.Message}";
+            RssArticlesStatusText.Text = $"Échec du chargement : {ex.Message}";
         }
         finally
         {
@@ -277,7 +277,7 @@ public sealed partial class MainWindow
         _rssFeeds.Remove(feed.Id);
         _selectedRssFeedId = null;
         RefreshRssFeedsList();
-        StatusText.Text = $"{feed.Title} : flux supprime.";
+        StatusText.Text = $"{feed.Title} : flux supprimé.";
     }
 
     private bool _rssAddDialogOpen;
@@ -342,7 +342,7 @@ public sealed partial class MainWindow
                 }
                 if (_rssFeeds.ContainsUrl(url))
                 {
-                    errorText.Text = "Ce flux est deja suivi.";
+                    errorText.Text = "Ce flux est déjà suivi.";
                     errorText.Visibility = Visibility.Visible;
                     args.Cancel = true;
                     return;
@@ -362,7 +362,7 @@ public sealed partial class MainWindow
             }
             catch (Exception ex)
             {
-                errorText.Text = $"Impossible de recuperer ce flux : {ex.Message}";
+                errorText.Text = $"Impossible de récupérer ce flux : {ex.Message}";
                 errorText.Visibility = Visibility.Visible;
                 args.Cancel = true;
             }
@@ -382,7 +382,7 @@ public sealed partial class MainWindow
             // flux" malgre le flux visiblement selectionne dans la liste
             // (constate en conditions reelles).
             DisplayFetchedArticles(addedFeed, fetchResult.Articles);
-            StatusText.Text = "Flux RSS ajoute.";
+            StatusText.Text = "Flux RSS ajouté.";
         }
     }
 }

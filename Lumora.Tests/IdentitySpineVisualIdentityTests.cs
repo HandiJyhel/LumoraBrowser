@@ -79,7 +79,7 @@ public sealed class IdentitySpineVisualIdentityTests
             ("ModeColorPickerNeutral", "ModeColorSwatchNeutralButton", "Couleur du mode Neutre"),
             ("ModeColorPickerFocus", "ModeColorSwatchFocusButton", "Couleur du mode Focus"),
             ("ModeColorPickerReading", "ModeColorSwatchReadingButton", "Couleur du mode Lecture"),
-            ("ModeColorPickerCreative", "ModeColorSwatchCreativeButton", "Couleur du mode Creation"),
+            ("ModeColorPickerCreative", "ModeColorSwatchCreativeButton", "Couleur du mode Création"),
             ("ModeColorPickerResearch", "ModeColorSwatchResearchButton", "Couleur du mode Recherche"),
             ("ModeColorPickerNight", "ModeColorSwatchNightButton", "Couleur du mode Nuit"),
         })

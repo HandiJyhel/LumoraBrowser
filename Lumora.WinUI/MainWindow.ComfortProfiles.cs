@@ -39,7 +39,7 @@ public sealed partial class MainWindow
         new(
             "balanced",
             "Aucune aide",
-            "Point de depart : aucune aide de confort activee (seul le focus visible reste, comme partout ailleurs dans Lumora). Choisissez un profil ci-dessous pour activer des aides.",
+            "Point de départ : aucune aide de confort activée (seul le focus visible reste, comme partout ailleurs dans Lumora). Choisissez un profil ci-dessous pour activer des aides.",
             HighContrast: false,
             LargeText: false,
             ReduceMotion: false,
@@ -50,8 +50,8 @@ public sealed partial class MainWindow
             ReadingGuide: false),
         new(
             "vision",
-            "Vision fatiguee",
-            "Adoucit l'affichage pour les yeux fatigues : teinte plus chaude (moins de lumiere bleue), texte agrandi et transitions limitees. Pas de contraste force - le contraste renforce est fait pour la basse vision, pas pour la fatigue, et va dans le sens inverse de ce qu'on cherche ici.",
+            "Vision fatiguée",
+            "Adoucit l'affichage pour les yeux fatigués : teinte plus chaude (moins de lumière bleue), texte agrandi et transitions limitées. Pas de contraste forcé - le contraste renforcé est fait pour la basse vision, pas pour la fatigue, et va dans le sens inverse de ce qu'on cherche ici.",
             HighContrast: false,
             LargeText: true,
             ReduceMotion: true,
@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         new(
             "rescue",
             "Mode secours",
-            "Reprend la main tres vite quand une page ou l'interface devient penible: texte agrandi, contraste renforce, repères nets et aide de lecture prête.",
+            "Reprend la main très vite quand une page ou l'interface devient pénible : texte agrandi, contraste renforcé, repères nets et aide de lecture prête.",
             HighContrast: true,
             LargeText: true,
             ReduceMotion: true,
@@ -100,12 +100,12 @@ public sealed partial class MainWindow
             if (ResolveAccessibilityComfortProfileFromControls() != "custom")
             {
                 UpdateAccessibilityComfortProfileFromControls();
-                StatusText.Text = "Le profil Personnalise apparait automatiquement des que vous melangez les reglages a la main.";
+                StatusText.Text = "Le profil Personnalisé apparaît automatiquement dès que vous mélangez les réglages à la main.";
                 return;
             }
 
             UpdateAccessibilityComfortProfileSummary("custom");
-            StatusText.Text = "Profil personnalise : reglez chaque aide de confort a votre rythme.";
+            StatusText.Text = "Profil personnalisé : réglez chaque aide de confort à votre rythme.";
             return;
         }
 
@@ -151,8 +151,8 @@ public sealed partial class MainWindow
         ApplyAccessibilityComfortSideEffects();
 
         UpdateStatusText(string.Equals(preset.Key, "rescue", StringComparison.OrdinalIgnoreCase)
-            ? "Mode secours active. Ctrl+Alt+X pour revenir a l'etat d'avant."
-            : $"Profil de confort active : {preset.Label}.");
+            ? "Mode secours activé. Ctrl+Alt+X pour revenir à l'état d'avant."
+            : $"Profil de confort activé : {preset.Label}.");
     }
 
     // Point d'application unique pour tout changement de confort (preset,
@@ -238,13 +238,13 @@ public sealed partial class MainWindow
         if (normalized == "rescue")
         {
             AccessibilityComfortProfileSummaryText.Text =
-                "Mode secours actif : ce n'est pas un profil de cette liste, voir la carte \"Mode secours\" juste en dessous pour revenir a l'etat d'avant.";
+                "Mode secours actif : ce n'est pas un profil de cette liste, voir la carte \"Mode secours\" juste en dessous pour revenir à l'état d'avant.";
             return;
         }
 
         var preset = FindAccessibilityComfortPreset(normalized);
         AccessibilityComfortProfileSummaryText.Text = normalized == "custom"
-            ? "Personnalise : Lumora a detecte un melange manuel de reglages. Les interrupteurs ci-dessous gardent toujours la priorite."
+            ? "Personnalisé : Lumora a détecté un mélange manuel de réglages. Les interrupteurs ci-dessous gardent toujours la priorité."
             : preset?.Summary ?? "Choisissez un profil pour appliquer une base de confort locale.";
     }
 

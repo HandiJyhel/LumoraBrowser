@@ -22,7 +22,7 @@ public sealed partial class MainWindow
 
     private async void ChangeFolderButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invite."; return; }
+        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
 
         var picker = new FolderPicker();
         picker.SuggestedStartLocation = PickerLocationId.Desktop;
@@ -35,7 +35,7 @@ public sealed partial class MainWindow
         var newPath = folder.Path;
         if (string.Equals(newPath, _profile.ProfileDir, StringComparison.OrdinalIgnoreCase))
         {
-            StatusText.Text = "Ce dossier est deja le dossier actuel.";
+            StatusText.Text = "Ce dossier est déjà le dossier actuel.";
             return;
         }
 
@@ -76,7 +76,7 @@ public sealed partial class MainWindow
 
     private async void ExportBackupButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invite."; return; }
+        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
 
         var password = await PromptBackupPasswordAsync("Exporter une sauvegarde", confirm: true);
         if (password is null) return;
@@ -92,7 +92,7 @@ public sealed partial class MainWindow
         try
         {
             LumoraBackup.Export(file.Path, password, _profile);
-            StatusText.Text = "Sauvegarde exportee avec succes.";
+            StatusText.Text = "Sauvegarde exportée avec succès.";
         }
         catch (Exception ex)
         {
@@ -102,7 +102,7 @@ public sealed partial class MainWindow
 
     private async void ImportBackupButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invite."; return; }
+        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
 
         var picker = new FileOpenPicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
@@ -121,7 +121,7 @@ public sealed partial class MainWindow
             LumoraBackup.Import(file.Path, password, _profile);
             ReloadBookmarks();
             StorageImportBar.IsOpen = true;
-            StatusText.Text = "Sauvegarde importee.";
+            StatusText.Text = "Sauvegarde importée.";
         }
         catch (CryptographicException)
         {
@@ -139,11 +139,11 @@ public sealed partial class MainWindow
     private async void ClearBrowsingDataButton_Click(object sender, RoutedEventArgs e)
     {
         var core = _browserView?.CoreWebView2;
-        if (core is null) { StatusText.Text = "Moteur web non initialise."; return; }
+        if (core is null) { StatusText.Text = "Moteur web non initialisé."; return; }
         try
         {
             await core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.AllSite);
-            StatusText.Text = "Donnees de navigation supprimees (cookies, cache, sessions).";
+            StatusText.Text = "Données de navigation supprimées (cookies, cache, sessions).";
         }
         catch (Exception ex)
         {
@@ -162,7 +162,7 @@ public sealed partial class MainWindow
         {
             var hint = new TextBlock
             {
-                Text = "Conservez ce mot de passe : il sera necessaire pour restaurer vos donnees.",
+                Text = "Conservez ce mot de passe : il sera nécessaire pour restaurer vos données.",
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = 0.7,
                 FontSize = 12

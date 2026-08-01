@@ -369,7 +369,7 @@ public sealed partial class MainWindow
         // Ne bloque pas la navigation : sans lien avec la détection de page.
         _ = MigrateAndClearBrowserPasswordsAsync(sender.CoreWebView2);
 
-        StatusText.Text = "Moteur web WinUI initialise.";
+        StatusText.Text = "Moteur web WinUI initialisé.";
         WinUiRuntimeTrace.Write("CoreWebView2 initialized");
 
         // Sessions éphémères : purge des cookies de la visite précédente AVANT la
@@ -637,7 +637,7 @@ public sealed partial class MainWindow
 
         if (isActive)
         {
-            StatusText.Text = args.IsSuccess ? $"Page chargee: {title}" : $"Navigation echouee: {args.WebErrorStatus}";
+            StatusText.Text = args.IsSuccess ? $"Page chargée: {title}" : $"Navigation échouée: {args.WebErrorStatus}";
             if (args.IsSuccess && BookmarkStore.IsWebUrl(address))
             {
                 // Reprise d'activité : signaler les annotations laissées sur cette
@@ -645,7 +645,7 @@ public sealed partial class MainWindow
                 var annotationCount = _annotations.CountForPage(address);
                 if (annotationCount > 0)
                 {
-                    StatusText.Text = $"Page chargee: {title} - {annotationCount} annotation(s) a retrouver en mode lecture.";
+                    StatusText.Text = $"Page chargée: {title} - {annotationCount} annotation(s) à retrouver en mode lecture.";
                 }
                 OpenReaderIfPending(address);
             }
@@ -680,8 +680,8 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Connexion non securisee",
-            Content = $"{uri.Host} ne prend pas en charge HTTPS. Continuer en HTTP ? La connexion ne sera pas chiffree.",
+            Title = "Connexion non sécurisée",
+            Content = $"{uri.Host} ne prend pas en charge HTTPS. Continuer en HTTP ? La connexion ne sera pas chiffrée.",
             PrimaryButtonText = "Continuer en HTTP",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,
@@ -962,7 +962,7 @@ public sealed partial class MainWindow
         }
         else
         {
-            StatusText.Text = "Aucune page precedente.";
+            StatusText.Text = "Aucune page précédente.";
         }
     }
 
@@ -984,7 +984,7 @@ public sealed partial class MainWindow
     private void StopButton_Click(object sender, RoutedEventArgs e)
     {
         _browserView?.CoreWebView2?.Stop();
-        StatusText.Text = "Chargement arrete.";
+        StatusText.Text = "Chargement arrêté.";
     }
 
     private void GoButton_Click(object sender, RoutedEventArgs e) =>
@@ -1346,7 +1346,7 @@ public sealed partial class MainWindow
             }
             else
             {
-                StatusText.Text = "Fenetre de connexion impossible a ouvrir.";
+                StatusText.Text = "Fenêtre de connexion impossible à ouvrir.";
             }
         }
         finally

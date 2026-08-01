@@ -87,7 +87,7 @@ public sealed partial class MainWindow
             var chunks = blocks.Select(b => b.Text).Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
             if (chunks.Count == 0)
             {
-                ReadAloudStatusText.Text = "Aucun texte lisible trouve sur cette page.";
+                ReadAloudStatusText.Text = "Aucun texte lisible trouvé sur cette page.";
                 return;
             }
 

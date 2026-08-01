@@ -42,7 +42,7 @@ internal sealed class EmbeddingService : IDisposable
 
             await EnsureModelDownloadedAsync(progress, cancellationToken);
 
-            progress?.Report("Chargement du modele de recherche semantique...");
+            progress?.Report("Chargement du modèle de recherche sémantique...");
             _engine = await EmbeddingEngine.LoadAsync(ModelDir);
             return _engine;
         }
@@ -61,7 +61,7 @@ internal sealed class EmbeddingService : IDisposable
             var destination = Path.Combine(ModelDir, file.RelativePath.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(destination)) continue;
 
-            progress?.Report($"Telechargement du modele de recherche semantique : {file.RelativePath}...");
+            progress?.Report($"Téléchargement du modèle de recherche sémantique : {file.RelativePath}...");
             var url = $"https://huggingface.co/{EmbeddingModelCatalog.HuggingFaceRepo}/resolve/main/{file.RelativePath}";
 
             var tempPath = destination + ".part";
@@ -73,7 +73,7 @@ internal sealed class EmbeddingService : IDisposable
                 await input.CopyToAsync(output, cancellationToken);
             }
 
-            progress?.Report($"Verification de l'integrite : {file.RelativePath}...");
+            progress?.Report($"Vérification de l'intégrité : {file.RelativePath}...");
             await ModelIntegrity.VerifyOrDeleteAsync(tempPath, file.Sha256, cancellationToken);
             File.Move(tempPath, destination, overwrite: true);
         }

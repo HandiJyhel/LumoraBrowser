@@ -114,8 +114,8 @@ public sealed partial class MainWindow
         _siteNotFoundSuggestedUrl = suggestion;
 
         SiteNotFoundText.Text = httpStatus is int code
-            ? $"Site introuvable : {host} ne repond plus (erreur {code}). Il a peut-etre change d'adresse."
-            : $"Site introuvable : le domaine {host} ne repond plus. Il a peut-etre change d'adresse.";
+            ? $"Site introuvable : {host} ne répond plus (erreur {code}). Il a peut-être changé d'adresse."
+            : $"Site introuvable : le domaine {host} ne répond plus. Il a peut-être changé d'adresse.";
 
         if (suggestion is not null && Uri.TryCreate(suggestion, UriKind.Absolute, out var suggestedUri))
         {
@@ -224,8 +224,8 @@ public sealed partial class MainWindow
             ? toUri.Host
             : relocation.ToOrigin;
         SiteMovedText.Text = plan.TotalChanges == 1
-            ? $"{relocation.FromRootDomain} a demenage vers {toHost}. Mettre a jour l'entree qui pointe encore vers l'ancienne adresse ?"
-            : $"{relocation.FromRootDomain} a demenage vers {toHost}. Mettre a jour {plan.TotalChanges} favoris/raccourcis qui pointent encore vers l'ancienne adresse ?";
+            ? $"{relocation.FromRootDomain} a déménagé vers {toHost}. Mettre à jour l'entrée qui pointe encore vers l'ancienne adresse ?"
+            : $"{relocation.FromRootDomain} a déménagé vers {toHost}. Mettre à jour {plan.TotalChanges} favoris/raccourcis qui pointent encore vers l'ancienne adresse ?";
         SiteMovedBar.Visibility = Visibility.Visible;
     }
 
@@ -264,7 +264,7 @@ public sealed partial class MainWindow
             RefreshNovaHomePages();
         }
 
-        StatusText.Text = $"{plan.TotalChanges} adresse(s) mise(s) a jour vers le nouveau domaine.";
+        StatusText.Text = $"{plan.TotalChanges} adresse(s) mise(s) à jour vers le nouveau domaine.";
     }
 
     private void SiteMovedDismiss_Click(object sender, RoutedEventArgs e)

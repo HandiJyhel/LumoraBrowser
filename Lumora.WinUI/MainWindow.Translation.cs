@@ -41,8 +41,8 @@ public sealed partial class MainWindow
         {
             _pendingTranslationSourceLang = detected;
             TranslateText.Text = detected == "en"
-                ? "Cette page semble etre en anglais. La traduire en francais ?"
-                : $"Cette page semble etre dans une autre langue ({detected}). La traduire en francais ?";
+                ? "Cette page semble être en anglais. La traduire en français ?"
+                : $"Cette page semble être dans une autre langue ({detected}). La traduire en français ?";
             TranslateBar.Visibility = Visibility.Visible;
         }
         else

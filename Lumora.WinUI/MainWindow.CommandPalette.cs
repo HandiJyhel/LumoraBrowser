@@ -146,8 +146,8 @@ public sealed partial class MainWindow
 
         CommandPaletteList.SelectedIndex = _commandPaletteItems.Count > 0 ? 0 : -1;
         CommandPaletteHintText.Text = _commandPaletteItems.Count == 0
-            ? "Aucun resultat."
-            : "Entree pour ouvrir, Echap pour fermer.";
+            ? "Aucun résultat."
+            : "Entrée pour ouvrir, Échap pour fermer.";
     }
 
     private IEnumerable<CommandPaletteItem> BuildCommandPaletteItems(string query)
@@ -169,51 +169,51 @@ public sealed partial class MainWindow
             () => AddTab("Nouvel onglet", "lumora://accueil", select: true)), 100);
         Add(new("Naviguer", "Fermer l'onglet", "Ferme l'onglet actif (Ctrl+W)", "\uE711",
             CloseCurrentTabAccelerator), 99);
-        Add(new("Naviguer", "Incognito", "Session ephemere, IP masquee en option via Tor (Ctrl+Shift+N)", "\uE727",
+        Add(new("Naviguer", "Incognito", "Session éphémère, IP masquée en option via Tor (Ctrl+Shift+N)", "\uE727",
             () => OpenIncognitoWindow()), 98);
-        Add(new("Naviguer", "Rouvrir l'onglet ferme", "Restaure le dernier onglet ferme (Ctrl+Shift+T)", "\uE7A7",
+        Add(new("Naviguer", "Rouvrir l'onglet fermé", "Restaure le dernier onglet fermé (Ctrl+Shift+T)", "\uE7A7",
             () => ReopenLastClosedTab()), 97);
-        Add(new("Naviguer", "Groupes enregistres", "Retrouver et rouvrir vos groupes d'onglets ranges", "\uE7C1",
+        Add(new("Naviguer", "Groupes enregistrés", "Retrouver et rouvrir vos groupes d'onglets rangés", "\uE7C1",
             () => SavedTabGroupsMenu_Click(this, new RoutedEventArgs())), 96);
-        Add(new("Naviguer", "Accueil", "Retourne a la page d'accueil Lumora", "\uE80F",
+        Add(new("Naviguer", "Accueil", "Retourne à la page d'accueil Lumora", "\uE80F",
             () => HomeMenu_Click(this, new RoutedEventArgs())), 95);
-        Add(new("Controle du site", "Site actuel", "Ouvre le centre du site visible", "\uE774",
+        Add(new("Contrôle du site", "Site actuel", "Ouvre le centre du site visible", "\uE774",
             () => ShowSiteControlForCurrentPage()), 94);
-        Add(new("Lumora", "Modules Lumora", "Ouvre les outils integres : lecture, media, traduction, actions rapides", "\uE7B8",
+        Add(new("Lumora", "Modules Lumora", "Ouvre les outils intégrés : lecture, média, traduction, actions rapides", "\uE7B8",
             () => ModulesMenu_Click(this, new RoutedEventArgs())), 93);
-        Add(new("Lumora", "Parametres", "Ouvre les parametres de Lumora", "\uE713",
+        Add(new("Lumora", "Paramètres", "Ouvre les paramètres de Lumora", "\uE713",
             () => SettingsMenu_Click(this, new RoutedEventArgs())), 90);
         Add(new("Coffre local", "Gestionnaire de mots de passe", "Ouvre le coffre local vault.lumora", "\uE72E",
             () => VaultMenu_Click(this, new RoutedEventArgs())), 88);
-        Add(new("Coffre local", "Importer des mots de passe", "Depuis un CSV (Proton Pass, Bitwarden...) ou un navigateur installe (Chrome, Edge, Brave...)", "\uE8B5",
+        Add(new("Coffre local", "Importer des mots de passe", "Depuis un CSV (Proton Pass, Bitwarden...) ou un navigateur installé (Chrome, Edge, Brave...)", "\uE8B5",
             () => ImportPasswordsMenu_Click(this, new RoutedEventArgs())), 88);
         Add(new("Coffre local", "Portefeuille", "Cartes de paiement locales (vault.lumora)", "\uE8C7",
             () => WalletMenu_Click(this, new RoutedEventArgs())), 87);
-        Add(new("Coffre local", "Bilan de sante des mots de passe", "Reutilises, faibles ou anciens - analyse 100% locale", "\uE9D9",
+        Add(new("Coffre local", "Bilan de santé des mots de passe", "Réutilisés, faibles ou anciens - analyse 100% locale", "\uE9D9",
             () => VaultHealthButton_Click(this, new RoutedEventArgs())), 85);
-        Add(new("Donnees locales", "Historique", "Ouvre l'historique local", "\uE81C",
+        Add(new("Données locales", "Historique", "Ouvre l'historique local", "\uE81C",
             () => HistoryMenu_Click(this, new RoutedEventArgs())), 86);
-        Add(new("Donnees locales", "Telechargements", "Ouvre les telechargements de cette session", "\uE896",
+        Add(new("Données locales", "Téléchargements", "Ouvre les téléchargements de cette session", "\uE896",
             () => DownloadsMenu_Click(this, new RoutedEventArgs())), 84);
-        Add(new("Donnees locales", "Notes", "Notes libres et pages annotees en mode lecture", "\uE70B",
+        Add(new("Données locales", "Notes", "Notes libres et pages annotées en mode lecture", "\uE70B",
             () => NotesMenu_Click(this, new RoutedEventArgs())), 83);
-        Add(new("Modules Lumora", "Mode lecture", "Article epure - surligner et commenter la page active", "\uE736",
+        Add(new("Modules Lumora", "Mode lecture", "Article épuré - surligner et commenter la page active", "\uE736",
             () => ReaderModeMenu_Click(this, new RoutedEventArgs())), 83);
-        Add(new("Controle du site", "Sites connectes", "Gere les sessions et cookies conserves", "\uE8D4",
+        Add(new("Contrôle du site", "Sites connectés", "Gère les sessions et cookies conservés", "\uE8D4",
             () => SessionsMenu_Click(this, new RoutedEventArgs())), 82);
-        Add(new("Modules Lumora", "Applications", "Sites installes en fenetre dediee", "\uE71D",
+        Add(new("Modules Lumora", "Applications", "Sites installés en fenêtre dédiée", "\uE71D",
             () => WebAppsMenu_Click(this, new RoutedEventArgs())), 81);
-        Add(new("Modules Lumora", "Installer comme application", "Epingle la page active dans sa propre fenetre", "\uE710",
+        Add(new("Modules Lumora", "Installer comme application", "Épingle la page active dans sa propre fenêtre", "\uE710",
             () => InstallAppMenu_Click(this, new RoutedEventArgs())), 79);
-        Add(new("Modules Lumora", "Detacher la video", "Picture-in-Picture pour la video active de la page", "\uE8B9",
+        Add(new("Modules Lumora", "Détacher la vidéo", "Picture-in-Picture pour la vidéo active de la page", "\uE8B9",
             () => DetachVideoMenu_Click(this, new RoutedEventArgs())), 77);
-        Add(new("Coffre local", "Cles d'acces", "Ouvre les passkeys locales connues", "\uE8D7",
+        Add(new("Coffre local", "Clés d'accès", "Ouvre les passkeys locales connues", "\uE8D7",
             () => PasskeysMenu_Click(this, new RoutedEventArgs())), 80);
-        Add(new("Donnees locales", "Ajouter aux favoris", "Ajoute la page active a la barre des favoris", "\uE734",
+        Add(new("Données locales", "Ajouter aux favoris", "Ajoute la page active à la barre des favoris", "\uE734",
             () => AddBookmarkButton_Click(this, new RoutedEventArgs())), 78);
-        Add(new("Donnees locales", "Importer des favoris", "Importe des favoris depuis un navigateur ou un fichier HTML", "\uE8B5",
+        Add(new("Données locales", "Importer des favoris", "Importe des favoris depuis un navigateur ou un fichier HTML", "\uE8B5",
             () => ImportMenu_Click(this, new RoutedEventArgs())), 76);
-        Add(new("Lumora", "A propos", "Informations sur Lumora", "\uE946",
+        Add(new("Lumora", "À propos", "Informations sur Lumora", "\uE946",
             () => AboutMenu_Click(this, new RoutedEventArgs())), 60);
 
         foreach (var tab in _tabs)
@@ -223,7 +223,7 @@ public sealed partial class MainWindow
 
         foreach (var closed in _closedTabs.Items)
         {
-            Add(new("Onglet ferme", closed.Title, closed.Address, "\uE7A7",
+            Add(new("Onglet fermé", closed.Title, closed.Address, "\uE7A7",
                 () => ReopenClosedTab(closed)), 74);
         }
 

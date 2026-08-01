@@ -381,7 +381,7 @@ public sealed partial class LumoraAppWindow : Window
         var recent = _downloads?.AllEntries().Take(5).ToList() ?? new List<DownloadHistoryEntry>();
         if (recent.Count == 0)
         {
-            DownloadsQuickPanel.Children.Add(new TextBlock { Text = "Aucun telechargement recent.", Opacity = 0.65, FontSize = 12 });
+            DownloadsQuickPanel.Children.Add(new TextBlock { Text = "Aucun téléchargement récent.", Opacity = 0.65, FontSize = 12 });
             return;
         }
 

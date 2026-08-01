@@ -47,7 +47,7 @@ public sealed partial class MainWindow
         var others = _tabs.Where(t => t.Id != active.Id).ToList();
         if (others.Count == 0)
         {
-            StatusText.Text = "Ouvre un autre onglet pour diviser l'ecran.";
+            StatusText.Text = "Ouvre un autre onglet pour diviser l'écran.";
             return;
         }
 
@@ -73,7 +73,7 @@ public sealed partial class MainWindow
     private void UpdateSplitViewButtonState()
     {
         var label = _splitView is not null
-            ? "Retablir la vue simple"
+            ? "Rétablir la vue simple"
             : "Diviser l'écran entre deux onglets";
         ToolTipService.SetToolTip(SplitViewButton, label);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(SplitViewButton, label);
@@ -111,7 +111,7 @@ public sealed partial class MainWindow
         var rightView = await EnsureTabViewReadyAsync(right);
         if (leftView is null || rightView is null)
         {
-            StatusText.Text = "Impossible de diviser l'ecran : moteur web indisponible.";
+            StatusText.Text = "Impossible de diviser l'écran : moteur web indisponible.";
             return;
         }
 
@@ -140,7 +140,7 @@ public sealed partial class MainWindow
         RenderVerticalTabs();
         RefreshHorizontalTabHeaders();
         UpdateSplitViewButtonState();
-        StatusText.Text = "Ecran divise entre deux onglets.";
+        StatusText.Text = "Écran divisé entre deux onglets.";
     }
 
     // Quitte le split sans decider quel onglet redevient l'onglet unique affiche :

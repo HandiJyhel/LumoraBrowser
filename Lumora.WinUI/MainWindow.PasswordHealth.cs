@@ -15,14 +15,14 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode || _vault.IsLocked)
         {
-            StatusText.Text = "Bilan indisponible : coffre verrouille ou mode invite.";
+            StatusText.Text = "Bilan indisponible : coffre verrouillé ou mode invité.";
             return;
         }
 
         var credentials = _passwordManager.List();
         if (credentials.Count == 0)
         {
-            StatusText.Text = "Aucun identifiant dans le coffre : rien a analyser.";
+            StatusText.Text = "Aucun identifiant dans le coffre : rien à analyser.";
             return;
         }
 
@@ -34,10 +34,10 @@ public sealed partial class MainWindow
         // k-anonymat (seuls 5 caracteres d'un hash SHA-1 partent, jamais le
         // mot de passe ni son hash complet).
         var breachSection = new StackPanel { Spacing = 4 };
-        var breachButton = new Button { Content = "Verifier aussi les fuites connues (en ligne)", Margin = new Thickness(0, 4, 0, 0) };
+        var breachButton = new Button { Content = "Vérifier aussi les fuites connues (en ligne)", Margin = new Thickness(0, 4, 0, 0) };
         var breachHint = new TextBlock
         {
-            Text = "Envoie uniquement les 5 premiers caracteres du hash SHA-1 de chaque mot de passe unique (k-anonymat, service Have I Been Pwned) - jamais le mot de passe ni son hash complet.",
+            Text = "Envoie uniquement les 5 premiers caractères du hash SHA-1 de chaque mot de passe unique (k-anonymat, service Have I Been Pwned) - jamais le mot de passe ni son hash complet.",
             Opacity = 0.6,
             FontSize = 11,
             TextWrapping = TextWrapping.Wrap
@@ -46,7 +46,7 @@ public sealed partial class MainWindow
         breachButton.Click += async (_, _) =>
         {
             breachButton.IsEnabled = false;
-            breachButton.Content = "Verification en cours...";
+            breachButton.Content = "Vérification en cours...";
             breachSection.Children.Clear();
 
             var uniquePasswords = credentials
@@ -77,7 +77,7 @@ public sealed partial class MainWindow
             {
                 breachSection.Children.Add(new TextBlock
                 {
-                    Text = "Verification impossible (reseau indisponible ou service injoignable).",
+                    Text = "Vérification impossible (réseau indisponible ou service injoignable).",
                     Opacity = 0.7,
                     TextWrapping = TextWrapping.Wrap
                 });
@@ -89,7 +89,7 @@ public sealed partial class MainWindow
             {
                 breachSection.Children.Add(new TextBlock
                 {
-                    Text = "Aucun mot de passe trouve dans les fuites connues.",
+                    Text = "Aucun mot de passe trouvé dans les fuites connues.",
                     TextWrapping = TextWrapping.Wrap
                 });
                 return;
@@ -97,7 +97,7 @@ public sealed partial class MainWindow
 
             breachSection.Children.Add(HealthSectionHeader(
                 $"Trouves dans une fuite connue ({breachedCredentials.Count})",
-                "Changez ces mots de passe des que possible : ils sont deja connus des attaquants."));
+                "Changez ces mots de passe dès que possible : ils sont déjà connus des attaquants."));
             foreach (var cred in breachedCredentials)
             {
                 breachSection.Children.Add(HealthItem(PasswordManagerService.DisplayName(cred)));
@@ -106,7 +106,7 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            Title = "Bilan de sante des mots de passe",
+            Title = "Bilan de santé des mots de passe",
             Content = BuildHealthReportView(report, breachButton, breachHint, breachSection),
             CloseButtonText = "Fermer",
             DefaultButton = ContentDialogButton.Close,
@@ -121,7 +121,7 @@ public sealed partial class MainWindow
 
         panel.Children.Add(new TextBlock
         {
-            Text = $"{report.TotalCount} identifiant(s) analyse(s), en local uniquement.",
+            Text = $"{report.TotalCount} identifiant(s) analysé(s), en local uniquement.",
             Opacity = 0.7,
             TextWrapping = TextWrapping.Wrap
         });
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "Aucun probleme local detecte : pas de mot de passe reutilise entre sites, faible ou non change depuis plus de 2 ans.",
+                Text = "Aucun problème local détecté : pas de mot de passe réutilisé entre sites, faible ou non changé depuis plus de 2 ans.",
                 TextWrapping = TextWrapping.Wrap
             });
             return new ScrollViewer { Content = panel, MaxHeight = 440, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -143,13 +143,13 @@ public sealed partial class MainWindow
         if (report.ReusedGroups.Count > 0)
         {
             panel.Children.Add(HealthSectionHeader(
-                $"Reutilises sur plusieurs sites ({report.ReusedCount} compte(s))",
-                "Un mot de passe vole sur un site ouvre tous les autres. Donnez un mot de passe unique a chaque site."));
+                $"Réutilisés sur plusieurs sites ({report.ReusedCount} compte(s))",
+                "Un mot de passe volé sur un site ouvre tous les autres. Donnez un mot de passe unique à chaque site."));
             foreach (var group in report.ReusedGroups)
             {
                 var names = group.Select(PasswordManagerService.DisplayName)
                                  .Distinct(StringComparer.CurrentCultureIgnoreCase);
-                panel.Children.Add(HealthItem($"Meme mot de passe : {string.Join(", ", names)}"));
+                panel.Children.Add(HealthItem($"Même mot de passe : {string.Join(", ", names)}"));
             }
         }
 
@@ -157,7 +157,7 @@ public sealed partial class MainWindow
         {
             panel.Children.Add(HealthSectionHeader(
                 $"Faibles ({report.WeakCredentials.Count})",
-                "Trop court, trop simple ou trop courant. Le generateur de Lumora peut en proposer un solide."));
+                "Trop court, trop simple ou trop courant. Le générateur de Lumora peut en proposer un solide."));
             foreach (var cred in report.WeakCredentials)
             {
                 panel.Children.Add(HealthItem(PasswordManagerService.DisplayName(cred)));
@@ -167,8 +167,8 @@ public sealed partial class MainWindow
         if (report.StaleCredentials.Count > 0)
         {
             panel.Children.Add(HealthSectionHeader(
-                $"Non changes depuis plus de 2 ans ({report.StaleCredentials.Count})",
-                "Pas forcement dangereux, mais un changement de temps en temps limite les degats d'une fuite passee."));
+                $"Non changés depuis plus de 2 ans ({report.StaleCredentials.Count})",
+                "Pas forcément dangereux, mais un changement de temps en temps limite les dégâts d'une fuite passée."));
             foreach (var cred in report.StaleCredentials)
             {
                 var updated = cred.UpdatedAt > 0 ? cred.UpdatedAt : cred.CreatedAt;

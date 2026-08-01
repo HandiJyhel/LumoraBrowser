@@ -20,8 +20,8 @@ public sealed partial class MainWindow
         _importSources.AddRange(BrowserImportSource.Discover());
         ImportSourcesList.ItemsSource = _importSources.Select(source => source.Label).ToList();
         ImportSourcesStatusText.Text = _importSources.Count == 0
-            ? "Aucun profil Chrome, Edge, Brave, Chromium ou Vivaldi compatible detecte sur cette session."
-            : $"{_importSources.Count} source(s) detectee(s). Selectionne une source puis fusionne ou remplace les favoris Lumora.";
+            ? "Aucun profil Chrome, Edge, Brave, Chromium ou Vivaldi compatible détecté sur cette session."
+            : $"{_importSources.Count} source(s) détectée(s). Sélectionne une source puis fusionne ou remplace les favoris Lumora.";
         if (_importSources.Count > 0)
         {
             ImportSourcesList.SelectedIndex = 0;
@@ -100,7 +100,7 @@ public sealed partial class MainWindow
             var missing = sourceUrls.Count(url => !novaUrls.Contains(url));
             var already = sourceUrls.Count - missing;
             ImportComparisonText.Text =
-                $"{source.Browser} {source.Profile}: {sourceUrls.Count} favori(s), {already} deja dans Lumora, {missing} absent(s).";
+                $"{source.Browser} {source.Profile}: {sourceUrls.Count} favori(s), {already} déjà dans Lumora, {missing} absent(s).";
         }
         catch
         {
@@ -138,15 +138,15 @@ public sealed partial class MainWindow
         var file = await picker.PickSingleFileAsync();
         if (file is null)
         {
-            StatusText.Text = "Import annule.";
+            StatusText.Text = "Import annulé.";
             return;
         }
 
         var content = await FileIO.ReadTextAsync(file);
         var imported = _bookmarks.MergeImport(BookmarkImportTree.FromHtml(content, Path.GetFileNameWithoutExtension(file.Name)));
         ReloadBookmarks();
-        StatusText.Text = $"Import HTML: {imported} favoris ajoutes.";
-        ShowPanel(BookmarksPanel, "Favoris importes");
+        StatusText.Text = $"Import HTML: {imported} favoris ajoutés.";
+        ShowPanel(BookmarksPanel, "Favoris importés");
     }
 
     private async Task ExportBookmarksHtmlAsync()
@@ -159,13 +159,13 @@ public sealed partial class MainWindow
         var file = await picker.PickSaveFileAsync();
         if (file is null)
         {
-            StatusText.Text = "Export annule.";
+            StatusText.Text = "Export annulé.";
             return;
         }
 
         var content = BookmarkHtmlExporter.Export(_bookmarks.AllNodes());
         await FileIO.WriteTextAsync(file, content);
-        StatusText.Text = $"Favoris exportes: {file.Path}";
+        StatusText.Text = $"Favoris exportés : {file.Path}";
     }
 
 }
