@@ -140,6 +140,7 @@ public sealed partial class LumoraIncognitoWindow : Window
     private static extern int DwmSetWindowAttribute(nint hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 
     private const int DwmwaBorderColor = 34;
+    private const int DwmwaCaptionColor = 35;
 
     // Windows 11 peint par defaut le lisere de fenetre avec la couleur
     // d'accentuation SYSTEME (reglage utilisateur hors de Lumora), pas avec
@@ -151,11 +152,22 @@ public sealed partial class LumoraIncognitoWindow : Window
     {
         try
         {
-            var color = RootGrid.Resources["LumoraWindowAccentBrush"] is SolidColorBrush brush
-                ? brush.Color
+            var accent = RootGrid.Resources["LumoraWindowAccentBrush"] is SolidColorBrush accentBrush
+                ? accentBrush.Color
                 : LumoraTheme.UiColor(180, 138, 255);
-            var colorRef = (color.B << 16) | (color.G << 8) | color.R;
-            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref colorRef, sizeof(int));
+            var accentRef = (accent.B << 16) | (accent.G << 8) | accent.R;
+            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref accentRef, sizeof(int));
+
+            // Diagnostic (2026-08-01) : liseré exterieur corrige, mais une ligne
+            // orange (couleur d'accent SYSTEME, PAS l'ambre Nova) restait visible
+            // a la jonction barre de titre/contenu - hypothese testee ici : DWM
+            // peint cette jonction via DWMWA_CAPTION_COLOR independamment de
+            // AppWindow.TitleBar.BackgroundColor, jamais force explicitement.
+            var chrome = RootGrid.Resources["LumoraWindowChromeBrush"] is SolidColorBrush chromeBrush
+                ? chromeBrush.Color
+                : LumoraTheme.UiColor(32, 26, 48);
+            var chromeRef = (chrome.B << 16) | (chrome.G << 8) | chrome.R;
+            DwmSetWindowAttribute(hwnd, DwmwaCaptionColor, ref chromeRef, sizeof(int));
         }
         catch (Exception ex)
         {
@@ -238,11 +250,13 @@ public sealed partial class LumoraIncognitoWindow : Window
         }
 
         ConfigureProcessWebView(_initialTorEnabled);
+        // Sur la page d'accueil (pas d'URL de depart), le champ "autofocus" de
+        // IncognitoWelcomeHtml recoit deja le focus clavier cote page - focus
+        // programmatique de IncognitoAddressBox retire ici (2026-08-01) car il
+        // volait ce focus a la barre de recherche integree juste ajoutee,
+        // rendant son autofocus inoperant. La barre d'adresse reste bien sur
+        // utilisable au clic/Tab comme avant, juste plus focus par defaut.
         await CreateTabAsync(_pendingStartUrl, select: true);
-        if (string.IsNullOrWhiteSpace(_pendingStartUrl))
-        {
-            IncognitoAddressBox.Focus(FocusState.Programmatic);
-        }
     }
 
     private void SetTorSwitchSilently(bool isOn)

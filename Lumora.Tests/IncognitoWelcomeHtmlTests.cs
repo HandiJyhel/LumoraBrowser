@@ -81,4 +81,29 @@ public class IncognitoWelcomeHtmlTests
 
         Assert.Contains("faisant transiter votre trafic par le réseau Tor", html, StringComparison.Ordinal);
     }
+
+    // Demande explicite utilisateur (2026-08-01) : une barre de recherche sur
+    // cette page, qui doit passer par le moteur Incognito (DuckDuckGo), jamais
+    // par Google - meme raisonnement que IncognitoSearchEngine pour la barre
+    // d'adresse.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void La_page_expose_un_champ_de_recherche(bool torEnabled)
+    {
+        var html = IncognitoWelcomeHtml.Build(torEnabled);
+
+        Assert.Contains("<form class=\"search\" onsubmit=\"go(event)\">", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"q\"", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void La_recherche_passe_par_duckduckgo_jamais_par_google()
+    {
+        var html = IncognitoWelcomeHtml.Build(torEnabled: false);
+
+        Assert.Contains("https://duckduckgo.com/?q=", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("google.com", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("bing.com", html, StringComparison.OrdinalIgnoreCase);
+    }
 }
