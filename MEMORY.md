@@ -16315,3 +16315,266 @@ UsageModeVisualIdentityTests.cs`, renomme au passage pour rester lisible) :
 `MainWindow.xaml.cs`, `AGENTS.md`, `build-clean-test-artifact.ps1`,
 `build-installer.ps1`. Build (MSBuild VS 2026) + `dotnet test` :
 695/696 (meme echec preexistant sans rapport).
+
+## 2026-08-01 (suite) - Vrai bug reseau signale par l'utilisateur : perte d'internet dans les 3 modes, trouve et corrige
+
+**Signalement de l'utilisateur** : plus d'acces internet dans Lumora,
+en mode normal, en Incognito et en Incognito+Tor. Deux captures d'ecran
+fournies plus tard dans la conversation (le symptome s'etait resorbe
+entre-temps) ont ete le vrai point de bascule du diagnostic :
+- Incognito : `duckduckgo.com` en `ERR_TIMED_OUT` juste apres avoir
+  clique sur le bouton Tor.
+- **Fenetre normale** (pas Incognito) : `google.com` en
+  `ERR_PROXY_CONNECTION_FAILED` ("un probleme est survenu avec le
+  serveur proxy"), barre de statut confirmant Mode Neutre/Lumie.
+
+**Fausse piste explorée puis ecartee** : proxy systeme Windows.
+Verification (lecture seule) du registre `Internet Settings` :
+`ProxyEnable = 0`, rien configure. L'utilisateur a confirme n'avoir
+touche a aucun reglage Windows, juste clique sur le bouton d'activation
+de Tor dans Incognito - le doute exprime a ce moment (« comme si
+j'avais invente le probleme ») etait injustifie, la 2e capture le
+prouvait deja.
+
+**Cause reelle, trouvee par lecture de code (pas de repro live
+necessaire)** :
+1. `LumoraIncognitoWindow.ConfigureProcessWebView` (ligne ~359) pose
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` avec
+   `--proxy-server=socks5://127.0.0.1:9050` sur le process Windows de
+   la fenetre Incognito+Tor.
+2. Basculer Tor / fermer Incognito relance un **nouveau process**
+   Lumora via `IncognitoProcessLauncher.Launch()` /
+   `LaunchMainWindow()` (`Process.Start`) - qui **heritait par defaut
+   de tout l'environnement du process parent**, proxy Tor compris.
+3. `WebView2Bootstrap.ConfigureOnce` (utilise par la fenetre normale)
+   ne remplace pas cette variable heritee, il l'**ajoute a la suite**
+   de ses propres flags (pour ne pas ecraser des arguments legitimes
+   poses par ailleurs) - le flag `--proxy-server` heritee survivait
+   donc dans la fenetre normale.
+4. Le `tor.exe` de la fenetre precedente ne tournant plus dans ce
+   nouveau process, le port 9050 ne repondait a rien :
+   `ERR_PROXY_CONNECTION_FAILED` sur toute navigation, meme en mode
+   normal. Explique aussi la propagation aux 3 modes (la pollution se
+   transmet de process en process tant que la chaine de relance
+   continue) et la resorption spontanee (relancer Lumora depuis un
+   raccourci repart d'un environnement propre).
+
+**Precedent deja existant pour cette classe de bug** :
+`MainWindow.RestartApp` (`MainWindow.Profile.cs` ligne ~1129) faisait
+deja ce nettoyage pour `LUMORA_PROFILE_DIR` - jamais etendu aux
+variables WebView2. Pas touche cette session (hors scope demande par
+l'utilisateur) : `RestartApp` et la reinitialisation profil (ligne
+~1580) restent des pistes similaires si un jour un symptome les relie
+a ce meme mecanisme.
+
+**Correctif** : `IncognitoProcessLauncher.Launch()` et
+`LaunchMainWindow()` retirent desormais explicitement
+`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` et `WEBVIEW2_USER_DATA_FOLDER`
+de `ProcessStartInfo.EnvironmentVariables` avant `Process.Start` - tout
+nouveau process Lumora recalcule toujours ses propres flags WebView2
+depuis zero, sans jamais heriter d'une fenetre Incognito/Tor
+precedente.
+
+**Verification** : build (MSBuild VS 2026) + `dotnet test` : 695/696
+(meme echec preexistant sans rapport, `AccessibilityComfortNamingTests`
+- sans rapport avec ce correctif). Pas de repro live UIA cette fois,
+le mecanisme est confirme par lecture de code (chemin `Process.Start`
++ heritage d'environnement, comportement documente de .NET/Windows).
+
+**Version :** `0.93.9.0-dev` -> `0.93.9.1-dev`, **quatrieme chiffre** -
+suite logique du correctif lui-meme (micro-correction d'une version
+deja livree), conforme a la regle 4e chiffre = micro-correctif de
+`CLAUDE.md` du 2026-07-27 ; l'utilisateur l'a rappele au moment du
+"go", mais ce n'etait pas une exigence a part, juste la consequence
+normale de corriger un bug reel sur une version deja sortie. Les
+4 emplacements verifies par `Version_projet_est_alignee_sur_0_93_9_1`
+(test renomme) mis a jour : `MainWindow.xaml.cs`, `AGENTS.md`,
+`build-clean-test-artifact.ps1`, `build-installer.ps1`.
+
+## 2026-08-01 (suite) - 2e bug reseau signale (capture d'ecran) : interrupteur Tor incapable de desactiver Tor, trouve en direct via /verify
+
+**Signalement de l'utilisateur** : nouvelle capture d'ecran (fenetre
+Incognito, `duckduckgo.com/?q=tintin`, page blanche) - "je crois que tu
+te fous litteralement de ma gueule" - et un 2e symptome decrit sans
+capture : impossible de desactiver Tor en cliquant sur l'interrupteur.
+Point important souleve par l'utilisateur au passage (voir aussi
+[[ne-pas-douter-dun-bug-documente]] dans la memoire personnelle) : le
+correctif de la session precedente (heritage d'environnement vers un
+nouveau process) ne pouvait pas expliquer ces deux nouveaux symptomes -
+explique clairement pourquoi avant d'investiguer, plutot que de laisser
+planer un doute.
+
+**Diagnostic fait en conditions reelles (skill `verify`), pas en
+lecture de code seule** - nouvelle regle 3 de `CLAUDE.md` (verifier le
+fonctionnement reel apres toute modification) appliquee ici a un
+diagnostic, pas seulement a un correctif :
+- Build x64 via MSBuild VS 2026, lancement isole (`LUMORA_PROFILE_DIR`
+  sur un dossier jetable, `LUMORA_TRACE_STARTUP=1`).
+- Pilotage UIA : bouton "Continuer sans profil" (lien hypertexte,
+  `InvokePattern`), flyout "Mode d'usage" -> bouton
+  `UsageModeIncognitoButton` (plus fiable que le sous-menu
+  `MenuFlyoutSubItem` "Navigation", qui ne supporte pas
+  `ExpandCollapsePattern` via UIA et n'expose ses enfants qu'apres un
+  vrai survol souris - a retenir pour de futures automatisations de ce
+  menu).
+- **Trouvaille pour le pilotage futur** : la barre d'adresse Incognito
+  (`IncognitoAddressBox`) n'a pas de bouton "Go", seulement un
+  `KeyDown` sur Entree - `SendKeys`/`keybd_event` refuses par
+  l'environnement (deja documente), mais `PostMessage` (WM_KEYDOWN/
+  WM_KEYUP, VK_RETURN) envoye au HWND **`Microsoft.UI.Content.
+  DesktopChildSiteBridge`** (trouve via `EnumChildWindows`, PAS le HWND
+  racine de la fenetre) fonctionne pour soumettre une navigation - a
+  reutiliser si un futur besoin de piloter une TextBox WinUI sans
+  bouton associe se represente.
+- Moteur Tor absent du profil jetable ET du profil reel `handijyhel` de
+  l'utilisateur (seuls les profils `default`/`test` l'ont - copie en
+  lecture seule de `default/tor/tor.exe`, deja verifie sur cette
+  machine, aucun telechargement reseau necessaire pour le test).
+
+**Bug 1 (page blanche) : NON reproduit.** Meme sequence exacte
+(Incognito + Tor connecte + navigation vers
+`duckduckgo.com/?q=tintin&kl=fr-fr`) : page entierement rendue,
+capture d'ecran a l'appui (resultats, encart Wikipedia, bandeau promo
+DuckDuckGo). Hypothese la plus probable : hoquet ponctuel d'un circuit
+Tor/noeud de sortie (deja documente ailleurs dans le code - voir le
+bouton "Nouveau circuit"), pas un bug Lumora deterministe.
+
+**Bug 2 (interrupteur Tor) : CONFIRME et corrige.**
+`LumoraIncognitoWindow.InitializeWindow()` (ligne ~196) : quand Tor est
+actif des l'ouverture (`_initialTorEnabled`), le code mettait a jour le
+texte de statut ("IP masquee : oui"), la pastille verte et
+`IncognitoNewCircuitButton.Visibility`, mais **jamais**
+`IncognitoTorSwitch.IsOn` - qui restait a sa valeur XAML par defaut
+(`false`). Verifie en direct : apres connexion Tor reussie,
+`TogglePattern.Current.ToggleState` lisait `Off` malgre "IP masquee :
+oui" et la pastille verte - **exactement** la desynchronisation visible
+sur la capture de l'utilisateur. Consequence : cliquer sur
+l'interrupteur pour "desactiver" Tor le faisait en realite passer de
+`false` a `true` (l'interrupteur n'ayant jamais ete marque `true`),
+donc `IncognitoTorSwitch_Toggled` relancait une NOUVELLE fenetre avec
+Tor **encore actif** au lieu de le couper - d'ou "je ne peux pas
+desactiver Tor".
+
+**Correctif** : ajout de `SetTorSwitchSilently(true)` juste apres la
+confirmation de connexion Tor reussie, avant de reactiver
+`IncognitoTorSwitch.IsEnabled`. Verifie en direct par rejeu complet :
+nouvelle fenetre Incognito+Tor, connexion, `ToggleState` lit desormais
+`On` une fois connecte, puis basculer l'interrupteur ferme bien cette
+fenetre et en rouvre une nouvelle avec "IP masquee : non" - Tor
+reellement desactive.
+
+**Incident annexe pendant le test (pas un bug Lumora)** : un premier
+`Stop-Process -Force` sur `Lumora.WinUI.exe` pour nettoyer entre deux
+essais a laisse un `tor.exe` orphelin (le `Closed` de la fenetre, qui
+appelle `_tor.Dispose()`, ne s'execute jamais sur un kill externe) -
+exactement le mecanisme deja documente le 31 juillet
+(`TorProcessManager.Stop()`). A tue explicitement le process `tor`
+orphelin en plus de `Lumora.WinUI.exe` pour le rejeu propre suivant.
+
+**Verification** : build (MSBuild VS 2026, x64 + solution) + `dotnet
+test` : 695/696 (meme echec preexistant sans rapport,
+`AccessibilityComfortNamingTests`).
+
+**Version :** `0.93.9.1-dev` -> `0.93.9.2-dev`, quatrieme chiffre -
+meme raisonnement que la version precedente (micro-correctif d'un bug
+reel, consequence logique de la regle de versionnement, pas une
+demande a part). Les 4 emplacements mis a jour, test renomme en
+`Version_projet_est_alignee_sur_0_93_9_2`.
+
+## 2026-08-01 (suite) - Fenetre Incognito : orthographe, identite visuelle, interrupteur Tor honnete (0.93.9.3-dev)
+
+**Signalement de l'utilisateur** (captures d'ecran a l'appui) : trois
+griefs sur la fenetre Incognito - texte d'accueil truffe de fautes
+(en realite des accents manquants), look qui "ne fait plus du tout
+echo au design du navigateur de base", et bouton Tor qui ne se
+comporte pas comme un vrai interrupteur (activer/desactiver sans
+quitter Incognito). Avis demande avant toute action (regle 1).
+
+**Avis donne, options tranchees avec l'utilisateur avant de coder** :
+1. Accents manquants dans `IncognitoWelcomeHtml.cs` : confirme comme
+   une regression face a une convention deja etablie dans le depot
+   (chaines UI visibles = accents corrects, commentaires/logs exclus -
+   voir l'entree du 25 juillet "Orthographe" plus haut dans ce
+   fichier).
+2. Identite violette d'Incognito (`LumoraTheme.ResolvePalette`,
+   branche `Incognito`) : confirmee deliberement independante du Mode
+   d'usage (jamais documentee comme telle avant). Question posee a
+   l'utilisateur : garder le violet en modernisant juste les boutons,
+   ou faire suivre le Mode d'usage comme partout ailleurs. Reponse :
+   garder le violet, moderniser les boutons.
+3. Interrupteur Tor "instantane sans quitter Incognito" : explique
+   comme techniquement impossible avec WebView2 actuel (proxy fige a
+   la creation de l'environnement, aucune API de changement a chaud,
+   deja tente et abandonne par le passe - voir commentaire de classe
+   de `LumoraIncognitoWindow`). Deux options presentees : (A) relais
+   proxy local gere par Lumora (gros chantier, seule vraie solution),
+   (B) garder fermeture+reouverture mais la rendre honnete au lieu de
+   feindre l'instantane. L'utilisateur a choisi (B).
+
+**Plan detaille redige en mode Plan (EnterPlanMode/ExitPlanMode)**,
+approuve avant implementation :
+- **Volet 1 (orthographe)** : `IncognitoWelcomeHtml.cs`,
+  `LumoraIncognitoWindow.xaml`, `LumoraIncognitoWindow.xaml.cs` -
+  chaines visibles (accueil, tooltips, statuts Tor) reecrites avec les
+  accents corrects. Encodage UTF-8 (sans BOM, comme le reste du depot)
+  verifie au niveau octet (`é` = `0xC3 0xA9`) pour eviter tout doute.
+  Tests `IncognitoWelcomeHtmlTests.cs` mis a jour en parallele (memes
+  chaines, avec accents).
+- **Volet 2 (identite visuelle)** : `NovaRaisedIconButtonTemplate`
+  (ombre/reflet/etats Pointer-Pressed-Disabled) de `MainWindow.xaml`
+  est defini localement a cette fenetre, pas partage via `App.xaml` -
+  copie locale `IncognitoRaisedButtonTemplate` dans
+  `LumoraIncognitoWindow.xaml` plutot que refactorer le partage entre
+  fenetres (coherent avec le jeu `LumoraWindow*Brush` deja local a
+  cette fenetre). Deux nouvelles brushes `LumoraWindowButtonShadowBrush`/
+  `HighlightBrush` calculees dans `LumoraTheme.ApplySecondaryWindowTheme`
+  a partir de la palette resolue (pas de couleurs de marque figees).
+  `IncognitoToolbarButtonStyle` : coins 8 -> 10. Piege corrige en
+  route : le template copie du bouton icone carre de MainWindow ne
+  liait pas `Padding` au `ContentPresenter` - corrige en reprenant le
+  binding `Margin="{TemplateBinding Padding}"` du template bouton texte
+  de MainWindow (`NovaRaisedBookmarkBarButtonTemplate`), sinon les
+  boutons texte ("Nouveau circuit", "Installer le moteur Tor")
+  auraient perdu leur respiration interne.
+- **Volet 3 (interrupteur honnete)** : `IncognitoTorSwitch_Toggled`
+  gagne une `ContentDialog` de confirmation (meme pattern que
+  `MainWindow.WebApps.cs` : Title=question, Content=consequence,
+  PrimaryButtonText=verbe, CloseButtonText="Annuler",
+  DefaultButton=Close) avant fermeture+reouverture. Annuler restaure
+  le switch et le texte de statut via `SetTorSwitchSilently` sans rien
+  fermer. Tooltip ajoute sur le switch lui-meme (absent avant).
+  `IncognitoReturnToMainTests.cs` fait du string-matching exact sur
+  les lignes `_relaunchingIncognito = true;` / `Launch(torEnabled:
+  ...)` - preservees litteralement, test reste vert sans modification.
+
+**Verification reelle complete (skill `verify`, pas seulement lecture
+de code)** : build MSBuild VS 2026 propre, `dotnet test` 695/696 (meme
+echec preexistant sans rapport, confirme independant par
+stash/pop). Scenario rejoue en direct via script UIA (`TogglePattern`/
+`InvokePattern`, profil `default` deja equipe d'un `tor.exe` verifie -
+aucun telechargement necessaire) : accents affiches correctement
+(capture d'ecran), boutons relookes sans plantage XAML, clic sur le
+switch declenche bien la ContentDialog "Activer Tor ?", Annuler
+restaure le switch a `Off` et le texte a "IP masquee : non" SANS
+fermer la fenetre, confirmer ferme la fenetre et en rouvre une
+nouvelle qui s'est reellement connectee au reseau Tor (bootstrap
+0% -> 50%+ dans les logs, aucune exception).
+
+**4e grief trouve en cours de route, pas dans le signalement initial**
+: l'utilisateur a pointe un "encadre tout moche" autour de la fenetre
+sur une capture. Cause : Windows 11 peint par defaut le lisere de
+fenetre avec la couleur d'accentuation SYSTEME - deja documente et
+corrige pour `MainWindow` (`MainWindow.WindowChrome.cs.
+ApplyWindowBorderColor`, `DwmSetWindowAttribute`/`DWMWA_BORDER_COLOR`)
+mais **jamais branche sur `LumoraIncognitoWindow`**, qui heritait donc
+du lisere systeme (orange sur cette machine) au lieu du violet
+Incognito. Meme mecanisme reproduit dans
+`LumoraIncognitoWindow.xaml.cs` avec `LumoraWindowAccentBrush`.
+Verifie par lecture de pixel exacte sur capture d'ecran : lisere
+`#B48AFF`, exactement l'accent Incognito attendu.
+
+**Version :** `0.93.9.2-dev` -> `0.93.9.3-dev`, quatrieme chiffre -
+question posee explicitement a l'utilisateur (ajout vs micro-
+correction, chantier mixte), reponse : quatrieme chiffre. Les 4
+emplacements mis a jour, test renomme en
+`Version_projet_est_alignee_sur_0_93_9_3`.

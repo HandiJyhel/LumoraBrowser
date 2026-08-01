@@ -59,6 +59,17 @@ internal static class LumoraTheme
         SetBrush(root.Resources, "LumoraWindowMutedTextBrush", palette.MutedText);
         SetIdentityBrush(root.Resources, palette.Accent, palette.CoolAccent);
 
+        // Ombre/reflet du template bouton "relief" local a la fenetre secondaire
+        // (voir IncognitoRaisedButtonTemplate dans LumoraIncognitoWindow.xaml) :
+        // meme ordre de grandeur que NovaChromeButtonShadowBrush/HighlightBrush
+        // de MainWindow (SettingsTheme.cs), mais derive de la palette de CETTE
+        // fenetre plutot que de couleurs de marque fixes, pour rester coherent
+        // quel que soit le role/theme.
+        SetBrush(root.Resources, "LumoraWindowButtonShadowBrush",
+            isDark ? UiColor(0, 0, 0, 90) : WithAlpha(palette.Stroke, 40));
+        SetBrush(root.Resources, "LumoraWindowButtonHighlightBrush",
+            isDark ? UiColor(255, 255, 255, 26) : UiColor(255, 255, 255, 110));
+
         ApplySharedAppBrushes(
             palette.Accent,
             ResolveTextOnColor(palette.Accent),

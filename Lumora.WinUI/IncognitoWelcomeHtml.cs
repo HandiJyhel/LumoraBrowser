@@ -20,17 +20,17 @@ internal static class IncognitoWelcomeHtml
         </style></head><body><div class="card">
         <div class="badge">&#128373;&#65039;</div>
         <h1>Incognito</h1>
-        <p class="claim">Cette session ne sera jamais sauvegardee : a la fermeture de cette
-        fenetre, rien n'est ecrit dans l'historique, le coffre, les favoris ou le disque
-        - cookies, cache et stockage restent dans un dossier temporaire supprime a la
+        <p class="claim">Cette session ne sera jamais sauvegardée : à la fermeture de cette
+        fenêtre, rien n'est écrit dans l'historique, le coffre, les favoris ou le disque
+        - cookies, cache et stockage restent dans un dossier temporaire supprimé à la
         fermeture.</p>
-        <p>Ca protege votre historique local, pas votre trafic reseau : sans Tor,
-        votre fournisseur d'acces et les sites visites voient toujours votre adresse
-        IP reelle, comme en navigation normale.</p>
+        <p>Ça protège votre historique local, pas votre trafic réseau : sans Tor,
+        votre fournisseur d'accès et les sites visités voient toujours votre adresse
+        IP réelle, comme en navigation normale.</p>
         <p class="claim">{{(torEnabled
-            ? "Tor est actif : votre adresse IP reelle est masquee, elle n'est visible ni du site visite ni d'un relais Tor unique. En echange, la navigation est plus lente."
-            : "Votre adresse IP reelle N'est PAS masquee : le site visite et votre reseau la voient normalement. Le bouton Tor (en haut a droite) la masque en faisant transiter votre trafic par le reseau Tor, au prix d'une navigation plus lente - desactive par defaut car tout le monde n'a pas besoin de cette protection reseau en plus de la confidentialite locale.")}}</p>
-        <p>Les fichiers que vous telechargez volontairement sont, eux, conserves sur le disque.</p>
+            ? "Tor est actif : votre adresse IP réelle est masquée, elle n'est visible ni du site visité ni d'un relais Tor unique. En échange, la navigation est plus lente."
+            : "Votre adresse IP réelle N'est PAS masquée : le site visité et votre réseau la voient normalement. Le bouton Tor (en haut à droite) la masque en faisant transiter votre trafic par le réseau Tor, au prix d'une navigation plus lente - désactivé par défaut car tout le monde n'a pas besoin de cette protection réseau en plus de la confidentialité locale.")}}</p>
+        <p>Les fichiers que vous téléchargez volontairement sont, eux, conservés sur le disque.</p>
         </div></body></html>
         """;
 }

@@ -80,6 +80,7 @@ public sealed partial class LumoraIncognitoWindow : Window
         _appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(winId);
         LumoraTheme.ApplySecondaryWindowTheme(RootGrid, _appWindow, _uiSettings, LumoraWindowThemeRole.Incognito);
         ApplyIcon();
+        ApplyWindowBorderColor(hwnd);
 
         var newTabAccelerator = new KeyboardAccelerator
         {
@@ -135,6 +136,33 @@ public sealed partial class LumoraIncognitoWindow : Window
         }
     }
 
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(nint hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
+
+    private const int DwmwaBorderColor = 34;
+
+    // Windows 11 peint par defaut le lisere de fenetre avec la couleur
+    // d'accentuation SYSTEME (reglage utilisateur hors de Lumora), pas avec
+    // l'identite violette d'Incognito - meme constat et meme correctif que
+    // MainWindow.WindowChrome.cs.ApplyWindowBorderColor (jamais branche ici
+    // jusqu'a present), avec l'accent Incognito au lieu de l'ambre Nova pour
+    // rester coherent avec le violet garde comme signature du mode prive.
+    private void ApplyWindowBorderColor(nint hwnd)
+    {
+        try
+        {
+            var color = RootGrid.Resources["LumoraWindowAccentBrush"] is SolidColorBrush brush
+                ? brush.Color
+                : LumoraTheme.UiColor(180, 138, 255);
+            var colorRef = (color.B << 16) | (color.G << 8) | color.R;
+            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref colorRef, sizeof(int));
+        }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"Incognito window border color skipped: {ex.GetType().Name}");
+        }
+    }
+
     private void InitPrivacyEngine()
     {
         var telemetry = new TelemetryBlockerModule { IsEnabled = _uiSettings.TelemetryBlockerEnabled };
@@ -179,12 +207,12 @@ public sealed partial class LumoraIncognitoWindow : Window
             if (!TorProcessManager.IsEngineInstalled(_profile))
             {
                 SetTorSwitchSilently(false);
-                ShowStartupError("Moteur Tor non installe.", offerInstall: true);
+                ShowStartupError("Moteur Tor non installé.", offerInstall: true);
                 return;
             }
 
             IncognitoTorSwitch.IsEnabled = false;
-            IncognitoTorStatusText.Text = "Connexion au reseau Tor...";
+            IncognitoTorStatusText.Text = "Connexion au réseau Tor...";
 
             var connected = await ConnectTorAsync();
             if (!connected)
@@ -193,8 +221,18 @@ public sealed partial class LumoraIncognitoWindow : Window
                 return;
             }
 
-            IncognitoTorStatusText.Text = "IP masquee : oui";
+            IncognitoTorStatusText.Text = "IP masquée : oui";
             SetTorIndicatorActive(true);
+            // Le ToggleSwitch demarre a IsOn=false (valeur par defaut XAML) meme
+            // quand Tor est actif des l'ouverture (_initialTorEnabled) : sans ce
+            // rattrapage, l'interrupteur restait visuellement/reellement "eteint"
+            // pendant toute la session Tor active, et cliquer dessus pour
+            // desactiver Tor le faisait au contraire passer a On (rouvrait une
+            // NOUVELLE fenetre... avec Tor actif), rendant Tor impossible a
+            // desactiver depuis l'interrupteur. SetTorSwitchSilently pour ne pas
+            // redeclencher IncognitoTorSwitch_Toggled (deja en cours d'execution
+            // de ce meme scenario Tor).
+            SetTorSwitchSilently(true);
             IncognitoTorSwitch.IsEnabled = true;
             IncognitoNewCircuitButton.Visibility = Visibility.Visible;
         }
@@ -232,7 +270,12 @@ public sealed partial class LumoraIncognitoWindow : Window
     // plutot qu'une migration impossible entre deux profils differents. Les
     // autres onglets ouverts sont perdus (comportement deja present avant les
     // onglets : la bascule Tor ne conservait deja pas la page courante).
-    private void IncognitoTorSwitch_Toggled(object sender, RoutedEventArgs e)
+    // Demande explicite utilisateur (2026-08-01) : plutot que de faire semblant
+    // d'etre un interrupteur instantane, une ContentDialog explique la
+    // consequence reelle (fermeture/reouverture, onglets perdus) avant de
+    // continuer - meme pattern de confirmation que MainWindow.WebApps.cs. Un
+    // Annuler restaure le switch et le texte de statut a leur etat d'avant.
+    private async void IncognitoTorSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressToggleHandler) return;
 
@@ -240,8 +283,27 @@ public sealed partial class LumoraIncognitoWindow : Window
         if (wantsTor && !TorProcessManager.IsEngineInstalled(_profile))
         {
             SetTorSwitchSilently(false);
-            IncognitoTorStatusText.Text = "Moteur Tor non installe.";
+            IncognitoTorStatusText.Text = "Moteur Tor non installé.";
             IncognitoTorInstallButton.Visibility = Visibility.Visible;
+            return;
+        }
+
+        var previousStatus = IncognitoTorStatusText.Text;
+        var confirm = new ContentDialog
+        {
+            Title = wantsTor ? "Activer Tor ?" : "Désactiver Tor ?",
+            Content = "Cette fenêtre Incognito va se fermer et une nouvelle va s'ouvrir avec Tor "
+                + (wantsTor ? "activé" : "désactivé")
+                + ". Les onglets ouverts seront perdus. Vous resterez en Incognito.",
+            PrimaryButtonText = wantsTor ? "Activer Tor" : "Désactiver Tor",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = Content.XamlRoot
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+        {
+            SetTorSwitchSilently(!wantsTor);
+            IncognitoTorStatusText.Text = previousStatus;
             return;
         }
 
@@ -330,7 +392,7 @@ public sealed partial class LumoraIncognitoWindow : Window
         IncognitoNewCircuitButton.IsEnabled = true;
         if (success)
         {
-            IncognitoTorStatusText.Text = "IP masquee : oui";
+            IncognitoTorStatusText.Text = "IP masquée : oui";
         }
         else if (IncognitoTorStatusText.Text == message)
         {
@@ -458,7 +520,7 @@ public sealed partial class LumoraIncognitoWindow : Window
 
         if (core is null)
         {
-            FailTab(item, tab, "Moteur web indisponible : la session n'a pas pu demarrer. Fermez et rouvrez la fenetre Incognito.");
+            FailTab(item, tab, "Moteur web indisponible : la session n'a pas pu démarrer. Fermez et rouvrez la fenêtre Incognito.");
             return null;
         }
 
@@ -570,7 +632,7 @@ public sealed partial class LumoraIncognitoWindow : Window
         {
             await TorEngineProvider.DownloadEngineAsync(
                 TorProcessManager.ExpectedExecutablePath(_profile), new Progress<string>(report));
-            report("Moteur Tor installe. Reouverture avec Tor active...");
+            report("Moteur Tor installé. Réouverture avec Tor activé...");
             _relaunchingIncognito = true;
             IncognitoProcessLauncher.Launch(torEnabled: true, returnToMain: _returnToMain);
             Close();

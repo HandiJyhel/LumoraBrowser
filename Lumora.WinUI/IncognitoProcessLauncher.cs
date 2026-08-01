@@ -9,6 +9,22 @@ namespace Lumora.WinUI;
 // moins une installation.
 internal static class IncognitoProcessLauncher
 {
+    // Variables WebView2 que chaque process Lumora doit toujours recalculer
+    // lui-meme (voir WebView2Bootstrap.ConfigureOnce / LumoraIncognitoWindow.
+    // ConfigureProcessWebView) - jamais les heriter d'un process parent. Un
+    // nouveau process Windows herite par defaut de TOUT l'environnement de
+    // son parent : sans ce nettoyage, une fenetre Incognito+Tor qui relance
+    // MainWindow (ou une autre fenetre Incognito) lui transmettait son propre
+    // WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS (dont le --proxy-server Tor) et
+    // son WEBVIEW2_USER_DATA_FOLDER - le nouveau process demarrait alors avec
+    // le proxy Tor d'un tor.exe qui ne tournait plus dans CE process,
+    // ERR_PROXY_CONNECTION_FAILED sur toute navigation, meme en mode normal.
+    private static readonly string[] InheritedWebView2Vars =
+    {
+        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+        "WEBVIEW2_USER_DATA_FOLDER",
+    };
+
     public static void Launch(string? url = null, bool torEnabled = false, bool returnToMain = false)
     {
         try
@@ -24,6 +40,10 @@ internal static class IncognitoProcessLauncher
             foreach (var arg in BuildArguments(url, torEnabled, returnToMain))
             {
                 startInfo.ArgumentList.Add(arg);
+            }
+            foreach (var name in InheritedWebView2Vars)
+            {
+                startInfo.EnvironmentVariables.Remove(name);
             }
 
             Process.Start(startInfo);
@@ -47,11 +67,17 @@ internal static class IncognitoProcessLauncher
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(exePath)) return;
 
-            Process.Start(new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 FileName = exePath,
                 UseShellExecute = false,
-            });
+            };
+            foreach (var name in InheritedWebView2Vars)
+            {
+                startInfo.EnvironmentVariables.Remove(name);
+            }
+
+            Process.Start(startInfo);
         }
         catch (Exception ex)
         {

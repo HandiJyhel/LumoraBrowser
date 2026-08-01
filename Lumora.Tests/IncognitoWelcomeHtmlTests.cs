@@ -5,9 +5,9 @@ namespace Lumora.Tests;
 
 public class IncognitoWelcomeHtmlTests
 {
-    private const string SessionEphemereClaim = "Cette session ne sera jamais sauvegardee";
-    private const string IpMasqueeClaim = "votre adresse IP reelle est masquee";
-    private const string IpNonMasqueeClaim = "Votre adresse IP reelle N'est PAS masquee";
+    private const string SessionEphemereClaim = "Cette session ne sera jamais sauvegardée";
+    private const string IpMasqueeClaim = "votre adresse IP réelle est masquée";
+    private const string IpNonMasqueeClaim = "Votre adresse IP réelle N'est PAS masquée";
 
     [Theory]
     [InlineData(true)]
@@ -71,7 +71,7 @@ public class IncognitoWelcomeHtmlTests
     {
         var html = IncognitoWelcomeHtml.Build(torEnabled);
 
-        Assert.Contains("Ca protege votre historique local, pas votre trafic reseau", html, StringComparison.Ordinal);
+        Assert.Contains("Ça protège votre historique local, pas votre trafic réseau", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -79,6 +79,6 @@ public class IncognitoWelcomeHtmlTests
     {
         var html = IncognitoWelcomeHtml.Build(torEnabled: false);
 
-        Assert.Contains("faisant transiter votre trafic par le reseau Tor", html, StringComparison.Ordinal);
+        Assert.Contains("faisant transiter votre trafic par le réseau Tor", html, StringComparison.Ordinal);
     }
 }

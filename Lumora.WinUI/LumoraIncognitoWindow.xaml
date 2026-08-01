@@ -40,19 +40,88 @@
             <SolidColorBrush x:Key="LumoraWindowTabStripBrush" Color="#FF1A1626" />
             <SolidColorBrush x:Key="LumoraWindowTextBrush" Color="#FFF6EFFF" />
             <SolidColorBrush x:Key="LumoraWindowMutedTextBrush" Color="#FFC1B6D9" />
+            <SolidColorBrush x:Key="LumoraWindowButtonShadowBrush" Color="#5A000000" />
+            <SolidColorBrush x:Key="LumoraWindowButtonHighlightBrush" Color="#1AFFFFFF" />
             <LinearGradientBrush x:Key="LumoraWindowIdentityBrush" StartPoint="0,0" EndPoint="1,1">
                 <GradientStop Color="#FFB9A7E8" Offset="0" />
                 <GradientStop Color="#FF7BE4DB" Offset="1" />
             </LinearGradientBrush>
+
+            <!--
+                Copie locale de NovaRaisedIconButtonTemplate (MainWindow.xaml) :
+                MainWindow definit son template "relief" dans ses propres
+                Grid.Resources, non partages via App.xaml, donc inaccessible
+                depuis cette fenetre. Duplique ici plutot que de refactorer le
+                partage de ressources entre fenetres (deja le principe adopte
+                pour tout le jeu LumoraWindow*Brush ci-dessus) - meme structure
+                ShadowLayer/SurfaceBorder/TopGloss et memes VisualStates, pour
+                que les boutons Incognito partagent le meme langage visuel que
+                le reste de Lumora tout en gardant l'identite violette.
+            -->
+            <ControlTemplate x:Key="IncognitoRaisedButtonTemplate" TargetType="Button">
+                <Grid>
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroup x:Name="CommonStates">
+                            <VisualState x:Name="Normal" />
+                            <VisualState x:Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Target="ShadowLayer.Opacity" Value="0.92" />
+                                    <Setter Target="TopGloss.Opacity" Value="1" />
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState x:Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Target="ShadowLayer.Opacity" Value="0.16" />
+                                    <Setter Target="SurfaceBorder.Margin" Value="0,1,0,-1" />
+                                    <Setter Target="TopGloss.Opacity" Value="0.28" />
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState x:Name="Disabled">
+                                <VisualState.Setters>
+                                    <Setter Target="SurfaceBorder.Opacity" Value="0.44" />
+                                    <Setter Target="ShadowLayer.Opacity" Value="0.10" />
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateManager.VisualStateGroups>
+                    <Border x:Name="ShadowLayer"
+                            Margin="0,3,0,0"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Background="{StaticResource LumoraWindowButtonShadowBrush}"
+                            Opacity="0.85" />
+                    <Border x:Name="SurfaceBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid>
+                            <Border x:Name="TopGloss"
+                                    Height="10"
+                                    Margin="1,1,1,0"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    VerticalAlignment="Top"
+                                    Background="{StaticResource LumoraWindowButtonHighlightBrush}"
+                                    Opacity="0.92" />
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Margin="{TemplateBinding Padding}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </ControlTemplate>
+
             <Style x:Key="IncognitoToolbarButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{StaticResource NovaControlSurfaceBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaControlStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Foreground" Value="{StaticResource NovaControlForegroundBrush}" />
-                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="CornerRadius" Value="10" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
                 <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusVisualPrimaryBrush}" />
                 <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusVisualSecondaryBrush}" />
+                <Setter Property="Template" Value="{StaticResource IncognitoRaisedButtonTemplate}" />
             </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
@@ -78,8 +147,8 @@
             <Button x:Name="IncognitoBackButton" Grid.Column="1" Padding="8,5"
                     Style="{StaticResource IncognitoToolbarButtonStyle}"
                     Click="IncognitoBackButton_Click" IsEnabled="False"
-                    AutomationProperties.Name="Page precedente"
-                    ToolTipService.ToolTip="Page precedente">
+                    AutomationProperties.Name="Page précédente"
+                    ToolTipService.ToolTip="Page précédente">
                 <FontIcon Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
             </Button>
             <Button x:Name="IncognitoForwardButton" Grid.Column="2" Padding="8,5"
@@ -115,16 +184,17 @@
                 <Ellipse x:Name="IncognitoTorIndicatorDot" Width="10" Height="10" Fill="{StaticResource LumoraWindowDangerBrush}"
                          VerticalAlignment="Center"
                          AutomationProperties.AccessibilityView="Raw" />
-                <TextBlock x:Name="IncognitoTorStatusText" Text="IP masquee : non" Foreground="{StaticResource LumoraWindowAccentBrush}"
+                <TextBlock x:Name="IncognitoTorStatusText" Text="IP masquée : non" Foreground="{StaticResource LumoraWindowAccentBrush}"
                            FontSize="12" VerticalAlignment="Center" />
                 <ToggleSwitch x:Name="IncognitoTorSwitch" OnContent="Tor" OffContent="Tor"
                               Toggled="IncognitoTorSwitch_Toggled"
-                              AutomationProperties.Name="Masquer l'adresse IP via Tor" />
+                              AutomationProperties.Name="Masquer l'adresse IP via Tor"
+                              ToolTipService.ToolTip="Change l'état de Tor : ferme cette fenêtre Incognito et en rouvre une nouvelle dans le nouvel état (les onglets ouverts sont perdus, vous restez en Incognito)" />
                 <Button x:Name="IncognitoNewCircuitButton" Padding="8,5" Visibility="Collapsed"
                         Style="{StaticResource IncognitoToolbarButtonStyle}"
                         Content="Nouveau circuit" Click="IncognitoNewCircuitButton_Click"
                         AutomationProperties.Name="Demander un nouveau circuit Tor"
-                        ToolTipService.ToolTip="Change de noeud de sortie Tor pour cette fenetre (utile si un captcha boucle sans jamais accepter la reponse)" />
+                        ToolTipService.ToolTip="Change de nœud de sortie Tor pour cette fenêtre (utile si un captcha boucle sans jamais accepter la réponse)" />
                 <Button x:Name="IncognitoTorInstallButton" Padding="8,5" Visibility="Collapsed"
                         Style="{StaticResource IncognitoToolbarButtonStyle}"
                         Content="Installer le moteur Tor" Click="IncognitoTorInstallButton_Click"
