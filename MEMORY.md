@@ -17291,3 +17291,55 @@ palier). 5 fichiers mis a jour (`LumoraIncognitoWindow.xaml.cs`,
 `MainWindow.xaml.cs`, `AGENTS.md`, `build-installer.ps1`,
 `build-clean-test-artifact.ps1`), test renomme
 `Version_projet_est_alignee_sur_0_93_11_3`.
+
+## 2026-08-03 (suite) - Incognito : refonte visuelle de la page d'accueil ("sortir du lot")
+
+Bug 2 (raccourcis en Tor) mis de côté par l'utilisateur ("laisse tomber a
+priori"), toujours non reproduit, non traité aujourd'hui. Nouvelle demande à
+la place : améliorer l'identité visuelle de la page d'accueil Incognito
+(`IncognitoWelcomeHtml.cs`), jugée "pas mal mais pas assez marquante".
+Clarifié avec l'utilisateur : cible confirmée = cette page précisément,
+priorité donnée à l'identité visuelle (mise en page/typo/animation) plutôt
+qu'au contenu - **le texte des 4 phrases reste identique au mot près**,
+seule la présentation change.
+
+**Refonte** : fond "aurore" anime (3 halos radiaux qui dérivent lentement,
+mêmes teintes que `LumoraWindowIdentityBrush` dans
+`LumoraIncognitoWindow.xaml` - violet `#b9a7e8` -> turquoise `#7be4db`,
+cohérent avec la fenêtre native plutôt qu'une palette inventée) ; logo SVG
+maison (silhouette de masque à deux yeux, dégradé violet/turquoise) à la
+place de l'emoji 🕵️ ; pastille d'état Tor qui reprend mot pour mot le texte
+déjà affiché dans la barre d'outils (`IncognitoTorStatusText`, "IP masquée :
+oui/non") avec la même sémantique de couleur (vert/rouge) ; les 4 phrases
+d'origine réparties en lignes avec icône (bouclier, globe, œil/œil-barré
+selon l'état Tor, téléchargement) au lieu de paragraphes centrés en bloc ;
+entrée en fondu légère à l'ouverture ; `prefers-reduced-motion: reduce`
+coupe toutes les animations (aurore + entrée).
+
+**Piège rencontré** : `$$"""..."""` (raw string interpolé C# 11/12) refuse
+toute séquence de 2+ accolades fermantes (ou ouvrantes) consécutives dans le
+contenu littéral, même hors interpolation - `CS9007`. Les `@keyframes` CSS
+compacts en une ligne (`{from{...}to{...}}`) en contiennent naturellement à
+la fin. Corrigé en insérant un espace avant la dernière accolade plutôt
+qu'en reformatant tout le CSS ou en passant à `$$$`/accolades triples.
+
+**Vérification** : les 12 tests `IncognitoWelcomeHtmlTests` passent
+inchangés (toutes les phrases-clés et la construction de l'URL DuckDuckGo
+sont vérifiées mot pour mot, donc verrouillées même après la refonte
+visuelle). Build MSBuild propre. `dotnet test` 703/704 (même échec
+préexistant sans rapport). Lancé en conditions réelles (profil invité
+isolé) : rendu capturé par capture d'écran, fond aurore visible, logo/
+pastille/recherche/4 cartes tous lisibles et alignés, aucun débordement.
+Variante Tor actif non re-testée visuellement (nouvelle installation du
+moteur Tor aurait pris plusieurs minutes de plus pour un changement qui ne
+touche qu'un `class`/texte déjà couvert par les tests unitaires côté
+`torEnabled: true`) - risque jugé faible, uniquement un swap CSS/texte sur
+un gabarit déjà vérifié fonctionnel côté `torEnabled: false`.
+
+**Version** : `0.93.11.3-dev` -> `0.93.11.4-dev` (micro-correction, même
+palier - demandé explicitement à l'utilisateur car le cas "amélioration
+visuelle d'une page existante" était ambigu entre ajout et micro-correction,
+conforme à la règle de versionnement). 5 fichiers mis à jour
+(`IncognitoWelcomeHtml.cs`, `MainWindow.xaml.cs`, `AGENTS.md`,
+`build-installer.ps1`, `build-clean-test-artifact.ps1`), test renommé
+`Version_projet_est_alignee_sur_0_93_11_4`.
