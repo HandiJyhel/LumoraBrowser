@@ -386,6 +386,68 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+            <Style x:Key="NovaSubTabRadioButtonStyle" TargetType="RadioButton">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Padding" Value="14,8,14,10" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Grid x:Name="RootGrid" Background="{TemplateBinding Background}" CornerRadius="8,8,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="3" />
+                                </Grid.RowDefinitions>
+                                <ContentPresenter x:Name="SubTabContentPresenter" Grid.Row="0"
+                                                  Content="{TemplateBinding Content}"
+                                                  Foreground="{TemplateBinding Foreground}"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                <Rectangle x:Name="AccentBar" Grid.Row="1" Height="3"
+                                           RadiusX="1.5" RadiusY="1.5"
+                                           Fill="{StaticResource NovaAccentBrush}" Opacity="0" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="{StaticResource NovaChromeSurfaceRaisedBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="{StaticResource NovaChromeSurfaceRaisedBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="SubTabContentPresenter.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="CheckStates">
+                                        <VisualState x:Name="Checked">
+                                            <VisualState.Setters>
+                                                <Setter Target="AccentBar.Opacity" Value="1" />
+                                                <Setter Target="SubTabContentPresenter.Opacity" Value="1" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Unchecked">
+                                            <VisualState.Setters>
+                                                <Setter Target="SubTabContentPresenter.Opacity" Value="0.68" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Indeterminate" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
             <Style x:Key="NovaBookmarkBarButtonStyle" TargetType="Button">
                 <Setter Property="Height" Value="36" />
                 <Setter Property="MinHeight" Value="36" />
@@ -2873,8 +2935,34 @@
                             <TextBlock Text="Mon Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" />
                             <TextBlock Text="Choisissez l'ambiance, le rythme et les repères visuels qui rendent Lumora confortable pour vous."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <TextBlock x:Name="AppearancePendingText"
+                                       Text="Les positions des onglets/favoris s'appliquent tout de suite. Les autres changements visuels de cette section restent regroupés sous le bouton global en bas."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
 
-                            <TextBlock Text="Identité" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <ScrollViewer HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled"
+                                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <RadioButton x:Name="AppearanceSubNavIdentity" Content="Identité" Tag="identity"
+                                             GroupName="AppearanceSubNav" IsChecked="True"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AppearanceSubNav_Click" />
+                                <RadioButton x:Name="AppearanceSubNavTheme" Content="Thème et couleurs" Tag="theme"
+                                             GroupName="AppearanceSubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AppearanceSubNav_Click" />
+                                <RadioButton x:Name="AppearanceSubNavLayout" Content="Disposition" Tag="layout"
+                                             GroupName="AppearanceSubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AppearanceSubNav_Click" />
+                                <RadioButton x:Name="AppearanceSubNavNewTab" Content="Nouvel onglet" Tag="newtab"
+                                             GroupName="AppearanceSubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AppearanceSubNav_Click" />
+                                <RadioButton x:Name="AppearanceSubNavDiscovery" Content="Découverte" Tag="discovery"
+                                             GroupName="AppearanceSubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AppearanceSubNav_Click" />
+                            </StackPanel>
+                            </ScrollViewer>
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,0,0,4" />
+
+                            <StackPanel x:Name="AppearanceGroupIdentity" Spacing="12">
+                            <TextBlock Text="Identité" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <Grid ColumnSpacing="14">
                                     <Grid.ColumnDefinitions>
@@ -2937,9 +3025,10 @@
                                     </StackPanel>
                                 </Grid>
                             </Border>
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Thème et couleurs" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AppearanceGroupTheme" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Thème et couleurs" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <ComboBox x:Name="ThemeModeCombo" Header="Thème" Width="220"
                                       SelectionChanged="ThemeModeCombo_SelectionChanged">
                                 <ComboBoxItem Content="Sombre" Tag="dark" />
@@ -3091,9 +3180,10 @@
                                     <TextBlock Text="Nuit" FontSize="11" Opacity="0.72" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </StackPanel>
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Disposition" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AppearanceGroupLayout" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Disposition" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="Disposition Lumora"
@@ -3171,9 +3261,10 @@
                             </ComboBox>
                             <TextBlock Text="Ce réglage module l'accueil, les effets lumineux et les réactions visuelles. L'option d'accessibilité Réduire les animations reste prioritaire."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Nouvel onglet" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AppearanceGroupNewTab" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Nouvel onglet" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <TextBox x:Name="NewTabTitleBox"
                                      Header="Titre affiché"
                                      MaxLength="32"
@@ -3203,12 +3294,10 @@
                                      TextChanged="NewTabShortcutsBox_TextChanged" />
                             <TextBlock Text="Un raccourci par ligne : Nom | URL."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <TextBlock x:Name="AppearancePendingText"
-                                       Text="Les positions des onglets/favoris s'appliquent tout de suite. Les autres changements visuels de cette section restent regroupés sous le bouton global en bas."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Découverte" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AppearanceGroupDiscovery" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Découverte" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="8">
                                     <TextBlock Text="Écran de bienvenue" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -3220,17 +3309,39 @@
                                             HorizontalAlignment="Left" />
                                 </StackPanel>
                             </Border>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Section : Accessibilite -->
                         <StackPanel x:Name="SettingsSectionAccessibility" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Accessibilité" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Deux familles de réglages indépendantes : le confort de lecture juste en dessous (affichage, contenu des pages et aides à la lecture), puis la navigation clavier et lecteur d'écran plus bas. Tout reste local à ce profil."
+                            <TextBlock Text="Deux familles de réglages indépendantes : le confort de lecture (affichage, contenu des pages et aides à la lecture), et la navigation clavier et lecteur d'écran. Tout reste local à ce profil."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
 
-                            <TextBlock Text="Confort de lecture" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" Margin="0,4,0,0" />
+                            <ScrollViewer HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled"
+                                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <RadioButton x:Name="AccessibilitySubNavProfiles" Content="Profils" Tag="profiles"
+                                             GroupName="AccessibilitySubNav" IsChecked="True"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccessibilitySubNav_Click" />
+                                <RadioButton x:Name="AccessibilitySubNavDisplay" Content="Affichage" Tag="display"
+                                             GroupName="AccessibilitySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccessibilitySubNav_Click" />
+                                <RadioButton x:Name="AccessibilitySubNavWebContent" Content="Contenu des pages web" Tag="webcontent"
+                                             GroupName="AccessibilitySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccessibilitySubNav_Click" />
+                                <RadioButton x:Name="AccessibilitySubNavReading" Content="Aides à la lecture" Tag="reading"
+                                             GroupName="AccessibilitySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccessibilitySubNav_Click" />
+                                <RadioButton x:Name="AccessibilitySubNavKeyboard" Content="Navigation clavier" Tag="keyboard"
+                                             GroupName="AccessibilitySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccessibilitySubNav_Click" />
+                            </StackPanel>
+                            </ScrollViewer>
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,0,0,4" />
 
-                            <TextBlock Text="Profils prêts à l'emploi" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AccessibilityGroupProfiles" Spacing="12">
+                            <TextBlock Text="Profils prêts à l'emploi" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="8">
                                     <TextBlock Text="Base rapide" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -3288,9 +3399,10 @@
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Affichage de Lumora" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AccessibilityGroupDisplay" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Affichage de Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <TextBlock Text="Ces réglages ajustent la chrome Lumora (fenêtre, panneaux, boutons) - pas le contenu des pages web visitées."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="AccessibilityHighContrastSwitch"
@@ -3318,9 +3430,10 @@
                                           Toggled="AccessibilitySwitch_Toggled" />
                             <TextBlock Text="Agrandit les boutons de la barre de navigation (retour, avancer, recharger...) pour des cibles plus faciles à viser. Désactivé par défaut : la taille compacte reste la norme, cette aide est à votre choix."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Contenu des pages web" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AccessibilityGroupWebContent" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Contenu des pages web" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <TextBlock Text="Contrairement au reste de cette page (qui ajuste la chrome Lumora), ces réglages agissent directement sur le contenu des pages web visitées."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="AccessibilityReduceBlueLightSwitch"
@@ -3342,9 +3455,10 @@
                                           Toggled="AccessibilityColorBoostSwitch_Toggled" />
                             <TextBlock Text="Augmente la saturation et le contraste des pages visitées, utile à certains daltoniens quand des couleurs proches se confondent. Ce n'est pas une correction médicale ni une simulation exacte : pour un filtre de vision des couleurs complet, Windows propose ses propres Filtres de couleurs (Paramètres Windows > Accessibilité), qui s'appliquent à tout l'écran."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Aides à la lecture" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="AccessibilityGroupReading" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Aides à la lecture" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <ToggleSwitch x:Name="ReadAloudEnabledSwitch" Header="Lire les pages à voix haute" Toggled="ReadAloudEnabledSwitch_Toggled" />
                             <TextBlock Text="Ajoute un bouton dans la barre d'outils pour faire lire le texte de la page à voix haute (utile en cas de difficulté de lecture). Synthèse vocale 100% locale (Windows), aucun texte de page envoyé à un serveur externe."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
@@ -3362,12 +3476,12 @@
                             </ComboBox>
                             <TextBlock Text="La bande suit le pointeur, les changements de focus et les grands déplacements clavier pour rester au bon niveau sans demander une nouvelle action."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Navigation clavier" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" Margin="0,4,0,0" />
-                            <TextBlock Text="Indépendant du confort de lecture ci-dessus : repérage et déplacement au clavier dans toute la fenêtre Lumora, utile avec ou sans lecteur d'écran."
+                            <StackPanel x:Name="AccessibilityGroupKeyboard" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Navigation clavier" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
+                            <TextBlock Text="Indépendant du confort de lecture des autres onglets : repérage et déplacement au clavier dans toute la fenêtre Lumora, utile avec ou sans lecteur d'écran."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <TextBlock Text="Clavier et lecteurs d'écran" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="6">
                                     <TextBlock Text="Navigation clavier" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -3409,6 +3523,7 @@
                             </Border>
                             <TextBlock Text="Les boutons, onglets, favoris et menus principaux exposent des noms lisibles aux lecteurs d'écran."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Section : Ouverture -->
@@ -3615,8 +3730,30 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Publicités, popups et traceurs" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <ScrollViewer HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled"
+                                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <RadioButton x:Name="PrivacySubNavAds" Content="Publicités et traceurs" Tag="ads"
+                                             GroupName="PrivacySubNav" IsChecked="True"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="PrivacySubNav_Click" />
+                                <RadioButton x:Name="PrivacySubNavTracking" Content="Anti-pistage technique" Tag="tracking"
+                                             GroupName="PrivacySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="PrivacySubNav_Click" />
+                                <RadioButton x:Name="PrivacySubNavConnection" Content="Sécurité de connexion" Tag="connection"
+                                             GroupName="PrivacySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="PrivacySubNav_Click" />
+                                <RadioButton x:Name="PrivacySubNavHygiene" Content="Hygiène de session" Tag="hygiene"
+                                             GroupName="PrivacySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="PrivacySubNav_Click" />
+                                <RadioButton x:Name="PrivacySubNavExceptions" Content="Exceptions" Tag="exceptions"
+                                             GroupName="PrivacySubNav"
+                                             Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="PrivacySubNav_Click" />
+                            </StackPanel>
+                            </ScrollViewer>
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,0,0,4" />
+
+                            <StackPanel x:Name="PrivacyGroupAds" Spacing="14">
+                            <TextBlock Text="Publicités, popups et traceurs" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
 
                             <!-- Bloqueur pub / trackers -->
                             <TextBlock Text="Pubs et trackers" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -3660,9 +3797,10 @@
                             <ToggleSwitch x:Name="StrictAdBlockSwitch"
                                          Header="Bloquer les redirections vers des domaines publicitaires"
                                          Toggled="StrictAdBlockSwitch_Toggled" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Anti-pistage technique" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="PrivacyGroupTracking" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Anti-pistage technique" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
 
                             <!-- CNAME uncloaker -->
                             <TextBlock Text="CNAME cloaking" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -3713,9 +3851,10 @@
                             <ToggleSwitch x:Name="ConsentManagerSwitch"
                                          Header="Refuser automatiquement les cookies"
                                          Toggled="ConsentManagerSwitch_Toggled" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Sécurité de connexion" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="PrivacyGroupConnection" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Sécurité de connexion" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
 
                             <!-- HTTPS enforcer -->
                             <TextBlock Text="HTTPS" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -3732,9 +3871,10 @@
                             <ToggleSwitch x:Name="SmartScreenSwitch"
                                          Header="Activer SmartScreen (envoie les URL à Microsoft)"
                                          Toggled="SmartScreenSwitch_Toggled" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-                            <TextBlock Text="Hygiène de session" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="PrivacyGroupHygiene" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Hygiène de session" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
 
                             <!-- Anti-télémétrie -->
                             <TextBlock Text="Anti-télémétrie" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -3763,13 +3903,12 @@
                                              Click="SessionsManageLink_Click"
                                              HorizontalAlignment="Left"
                                              Padding="0" />
+                            </StackPanel>
 
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
-
-                            <!-- Whitelist utilisateur : s'applique au bloqueur pub/trackers du premier groupe ci-dessus -->
-                            <TextBlock Text="Exceptions" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
+                            <StackPanel x:Name="PrivacyGroupExceptions" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Exceptions" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Domaines ignorés par le bloqueur de publicités et de traceurs ci-dessus." />
+                                       Text="Domaines ignorés par le bloqueur de publicités et de traceurs (onglet « Publicités et traceurs »)." />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBox x:Name="PrivacyWhitelistBox"
                                          PlaceholderText="exemple.com"
@@ -3779,6 +3918,7 @@
                                         VerticalAlignment="Bottom" />
                             </StackPanel>
                             <StackPanel x:Name="PrivacyWhitelistPanel" Spacing="6" />
+                            </StackPanel>
 
                         </StackPanel>
 

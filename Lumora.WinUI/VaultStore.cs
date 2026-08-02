@@ -198,6 +198,26 @@ internal sealed class VaultStore
         SetLabelAt(idx, label);
     }
 
+    // Modifie l'identifiant enregistré d'un compte (filet de sécurité si la
+    // capture automatique s'est trompée, ex. un code de vérification pris pour
+    // un identifiant) — mot de passe et reste des métadonnées inchangés.
+    public void SetUsernameById(string id, string username)
+    {
+        if (IsLocked) return;
+        var idx = _credentials.FindIndex(c => c.Id == id);
+        if (idx < 0) return;
+
+        var old = _credentials[idx];
+        _credentials[idx] = new VaultCredential
+        {
+            Id = old.Id, Origin = old.Origin, Username = username?.Trim() ?? string.Empty, Password = old.Password,
+            Label = old.Label, LoginUrl = old.LoginUrl,
+            CreatedAt = old.CreatedAt, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            TotpSecret = old.TotpSecret, TotpDigits = old.TotpDigits, TotpPeriod = old.TotpPeriod
+        };
+        Save();
+    }
+
     private void SetLabelAt(int idx, string label)
     {
         var old = _credentials[idx];

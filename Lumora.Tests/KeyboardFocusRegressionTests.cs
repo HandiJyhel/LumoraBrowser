@@ -30,24 +30,36 @@ public sealed class KeyboardFocusRegressionTests
         Assert.Contains("x:Name=\"ChooseProfileLocationButton\"", xaml, StringComparison.Ordinal);
     }
 
+    // FocusState.Pointer et non Programmatic depuis le 2026-08-02 : Programmatic
+    // reste au niveau de l'enveloppe XAML sans se propager jusqu'a Chromium, la
+    // molette restait donc muette juste apres le deverrouillage malgre ce
+    // rattrapage.
     [Fact]
     public void Connexion_reussie_rend_le_focus_a_l_onglet_actif()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
         var dismiss = ExtractMethod(code, "private void DismissLoginOverlay()");
 
-        Assert.Contains("CurrentTab()?.View?.Focus(FocusState.Programmatic);", dismiss, StringComparison.Ordinal);
+        Assert.Contains("CurrentTab()?.View?.Focus(FocusState.Pointer);", dismiss, StringComparison.Ordinal);
     }
 
+    // Re-ecrit le 2026-08-02 : l'ancien module rattachait un handler d'application
+    // par ScrollViewer/descendant (source de bugs "molette cassee par
+    // intermittence" - controle intermediaire qui marque l'evenement traite,
+    // descendant regenere jamais rattache...). Remplace par UN SEUL module qui
+    // fait un hit-test geometrique frais a chaque evenement molette : rien a
+    // rater, rien a rattacher a l'avance.
     [Fact]
-    public void Module_molette_raccorde_directement_les_scrollviewers_reels()
+    public void Module_molette_centralise_le_defilement_par_hit_test()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
 
-        Assert.Contains("private readonly HashSet<ScrollViewer> _manualWheelHookedScrollViewers", code, StringComparison.Ordinal);
-        Assert.Contains("new PointerEventHandler(ScrollViewer_PointerWheelChanged)", code, StringComparison.Ordinal);
-        Assert.Contains("handledEventsToo: true);", code, StringComparison.Ordinal);
-        Assert.Contains("private void ScrollViewer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)", code, StringComparison.Ordinal);
+        Assert.Contains("private readonly HashSet<UIElement> _wheelFallbackHookedRoots", code, StringComparison.Ordinal);
+        Assert.Contains("private void HookWheelFallbackRoot(UIElement root)", code, StringComparison.Ordinal);
+        Assert.Contains("private void ApplyWheelFallback(UIElement hitTestRoot, PointerRoutedEventArgs e)", code, StringComparison.Ordinal);
+        Assert.Contains("VisualTreeHelper.FindElementsInHostCoordinates(point, hitTestRoot)", code, StringComparison.Ordinal);
+        Assert.Contains("if (candidate is ScrollViewer { VerticalScrollBarVisibility: not ScrollBarVisibility.Disabled } scrollViewer)", code, StringComparison.Ordinal);
+        Assert.Contains("TryApplyScrollViewerWheel(scrollViewer, e, \"hit-test-root\");", code, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -67,15 +79,13 @@ public sealed class KeyboardFocusRegressionTests
     }
 
     [Fact]
-    public void Module_molette_rebranche_les_scrollviewers_quand_un_panneau_devient_visible()
+    public void Module_molette_rebranche_le_focus_survol_quand_un_panneau_devient_visible()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
 
         Assert.Contains("AttachScrollViewerPointerSupport(root);", code, StringComparison.Ordinal);
         Assert.Contains("AttachScrollViewerPointerSupport(visiblePanel);", code, StringComparison.Ordinal);
-        Assert.Contains("private void AttachScrollViewerPointerSupport(DependencyObject root, ScrollViewer? activeWheelOwner = null)", code, StringComparison.Ordinal);
-        Assert.Contains("_manualWheelSourceOwners", code, StringComparison.Ordinal);
-        Assert.Contains("ScrollViewerDescendant_PointerWheelChanged", code, StringComparison.Ordinal);
+        Assert.Contains("private void AttachScrollViewerPointerSupport(DependencyObject root)", code, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -102,9 +112,7 @@ public sealed class KeyboardFocusRegressionTests
         Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AttachScrollViewerPointerSupport(visiblePanel);", code, StringComparison.Ordinal);
         Assert.Contains("viewer.PointerEntered += ScrollViewer_PointerEntered;", code, StringComparison.Ordinal);
-        Assert.Contains("if (_manualWheelHookedScrollViewers.Add(hookedViewer))", code, StringComparison.Ordinal);
-        Assert.Contains("HookScrollViewerWheelSource(wheelSource, activeWheelOwner);", code, StringComparison.Ordinal);
-        Assert.Contains("TryApplyScrollViewerWheel(viewer, e, wheelSource.GetType().Name);", code, StringComparison.Ordinal);
+        Assert.Contains("HookWheelFallbackRoot(ContentHost);", code, StringComparison.Ordinal);
         Assert.Contains("ResetSettingsScrollPosition();", code, StringComparison.Ordinal);
         Assert.Contains("private void ResetSettingsScrollPosition()", code, StringComparison.Ordinal);
         Assert.Contains("SettingsContentScrollViewer.ChangeView(null, 0, null, true);", code, StringComparison.Ordinal);
@@ -158,13 +166,18 @@ public sealed class KeyboardFocusRegressionTests
         Assert.Contains("private void TraceWin32FocusState(string reason)", chrome, StringComparison.Ordinal);
     }
 
+    // Le 2026-08-02, l'application du defilement a ete retiree de ce diagnostic
+    // (elle vit desormais UNIQUEMENT dans ApplyWheelFallback, module unique
+    // pose sur ContentHost et sur chaque popup/flyout) - la garder ici EN PLUS
+    // aurait double le defilement (les deux handlers auraient applique un pas
+    // chacun sur le meme ScrollViewer a chaque tick de molette).
     [Fact]
-    public void Molette_parametres_applique_directement_au_scrollviewer_quand_non_traitee()
+    public void Diagnostic_racine_parametres_ne_double_plus_le_defilement()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+        var diagnostic = ExtractMethod(code, "private void SettingsPanel_RootWheelDiagnostics(object sender, PointerRoutedEventArgs e)");
 
-        Assert.Contains("if (!e.Handled)", code, StringComparison.Ordinal);
-        Assert.Contains("TryApplyScrollViewerWheel(SettingsContentScrollViewer, e, \"root-fallback-viewer-direct\");", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryApplyScrollViewerWheel", diagnostic, StringComparison.Ordinal);
     }
 
     private static string ExtractMethod(string source, string signature)

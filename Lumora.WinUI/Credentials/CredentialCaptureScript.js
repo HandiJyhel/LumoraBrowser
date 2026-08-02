@@ -495,7 +495,7 @@
             publishState("password-input");
             return;
         }
-        if (isUsernameCandidate(target) && target.value) {
+        if (isUsernameCandidate(target) && target.value && scoreUsername(target) > -20) {
             rememberUsername(target.value);
             publishState("username-input");
         }
@@ -503,7 +503,9 @@
 
     document.addEventListener("change", function (event) {
         var target = event.target;
-        if (target && isUsernameCandidate(target) && target.value) {
+        // Meme seuil que usernameFields() : un champ code/OTP (ex. verification
+        // Google par email) ne doit jamais ecraser l'identifiant deja memorise.
+        if (target && isUsernameCandidate(target) && target.value && scoreUsername(target) > -20) {
             rememberUsername(target.value);
             publishState("username-change");
         }

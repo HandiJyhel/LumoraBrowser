@@ -367,8 +367,10 @@ public sealed partial class MainWindow
         // sans focus explicite sur le WebView2, la molette reste muette tant qu'on n'a
         // pas clique dans la page. Ecran de connexion desormais focusable (champ mot de
         // passe, pave PIN...), donc le focus y reste bel et bien apres la connexion s'il
-        // n'est pas explicitement rendu a l'onglet actif ici.
-        CurrentTab()?.View?.Focus(FocusState.Programmatic);
+        // n'est pas explicitement rendu a l'onglet actif ici. FocusState.Pointer et non
+        // Programmatic (2026-08-02, meme correctif) : Programmatic ne se propage pas
+        // jusqu'a Chromium, la molette restait donc muette juste apres deverrouillage.
+        CurrentTab()?.View?.Focus(FocusState.Pointer);
         _ = ClearHomeSearchFieldAfterDelayAsync(blur: true);
         // À la connexion : rapatrier ce que Chromium avait encore, puis vider son coffre
         // (stockage 100% maison → vault.lumora est le seul magasin).

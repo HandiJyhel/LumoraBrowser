@@ -58,7 +58,14 @@ internal sealed class WheelScrollSupport
                     handledEventsToo: true);
             }
 
-            activeWheelOwner = hookedViewer;
+            // Meme correctif que MainWindow.xaml.cs (2026-08-01) : un ScrollViewer
+            // purement horizontal ne doit pas devenir le proprietaire de la molette
+            // verticale de ses descendants, sinon WinUI l'avale en la convertissant
+            // en defilement horizontal.
+            if (hookedViewer.VerticalScrollBarVisibility != ScrollBarVisibility.Disabled)
+            {
+                activeWheelOwner = hookedViewer;
+            }
         }
         else if (activeWheelOwner is not null && root is UIElement wheelSource)
         {

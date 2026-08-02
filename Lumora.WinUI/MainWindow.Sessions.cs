@@ -249,6 +249,16 @@ public sealed partial class MainWindow
             // L'utilisateur change d'avis : un refus antérieur au login n'a plus lieu d'être.
             _uiSettings.SessionKeepDeclinedSites.RemoveAll(
                 d => string.Equals(d, rootDomain, StringComparison.OrdinalIgnoreCase));
+
+            // Domaines liés partageant la même session (ex. google.com <-> youtube.com) :
+            // sans ça, faire confiance à l'un ne suffit pas à garder l'autre connecté.
+            foreach (var sibling in SessionDomainFamilies.SiblingsOf(rootDomain))
+            {
+                if (!IsTrustedSessionSite(sibling))
+                    _uiSettings.TrustedSessionSites.Add(sibling);
+                _uiSettings.SessionKeepDeclinedSites.RemoveAll(
+                    d => string.Equals(d, sibling, StringComparison.OrdinalIgnoreCase));
+            }
         }
         else
         {

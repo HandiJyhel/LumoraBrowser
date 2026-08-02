@@ -73,6 +73,21 @@ public sealed class VaultStoreTests : IDisposable
     }
 
     [Fact]
+    public void SetUsernameById_corrige_l_identifiant_sans_toucher_au_mot_de_passe()
+    {
+        var vault = new VaultStore(_file);
+        vault.SetMasterPassword("pw");
+        vault.Upsert("https://accounts.google.com", "544873", "s3cret");
+        var id = vault.ListCredentials().Single().Id;
+
+        vault.SetUsernameById(id, "vraie.adresse@gmail.com");
+
+        var cred = vault.ListCredentials().Single();
+        Assert.Equal("vraie.adresse@gmail.com", cred.Username);
+        Assert.Equal("s3cret", cred.Password);
+    }
+
+    [Fact]
     public void Deverrouillage_par_PIN()
     {
         var vault = new VaultStore(_file);

@@ -85,8 +85,12 @@ public sealed partial class MainWindow
             // Sans focus explicite, la molette ne route vers aucune fenêtre tant que
             // l'utilisateur n'a pas cliqué dans la page (le focus OS suit le focus
             // clavier, pas le curseur) : le WebView2 doit recevoir le focus dès qu'il
-            // devient l'onglet actif, pas seulement au premier clic.
-            tab.View.Focus(FocusState.Programmatic);
+            // devient l'onglet actif, pas seulement au premier clic. FocusState.Pointer
+            // et non Programmatic (2026-08-02) : Programmatic reste au niveau de
+            // l'enveloppe XAML sans se propager jusqu'à Chromium (meme lecon que
+            // BrowserView_NavigationCompleted/RefocusActiveWebViewIfVisible) - source
+            // reelle d'une partie de l'intermittence signalee sur la molette.
+            tab.View.Focus(FocusState.Pointer);
             _ = ApplyReadingGuideAsync(tab.View);
         }
 
@@ -150,10 +154,12 @@ public sealed partial class MainWindow
             // Le focus doit être (re)posé après l'attente async : l'onglet actif a pu
             // changer entre-temps, et un WebView2 fraîchement créé n'a jamais le focus
             // OS par défaut (cf. ActivateTab : sans ça, la molette reste muette tant
-            // qu'on n'a pas cliqué dans la page).
+            // qu'on n'a pas cliqué dans la page). FocusState.Pointer (2026-08-02, meme
+            // correctif qu'ActivateTab) : Programmatic ne se propage pas jusqu'a
+            // Chromium.
             if (CurrentTab()?.Id == tab.Id)
             {
-                view.Focus(FocusState.Programmatic);
+                view.Focus(FocusState.Pointer);
             }
 
             return view;

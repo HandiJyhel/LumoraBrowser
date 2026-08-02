@@ -256,7 +256,11 @@ public sealed partial class MainWindow
         AddressBox.Text = DisplayAddressForBar(tab.Address);
         UpdateBookmarkStar(tab.Address);
         ShowPanel(BrowserPanel, tab.Title);
-        tab.View.Focus(FocusState.Programmatic);
+        // FocusState.Pointer et non Programmatic (2026-08-02, meme correctif
+        // qu'ActivateTab/EnsureTabViewReadyAsync/DismissLoginOverlay) : Programmatic ne
+        // se propage pas jusqu'a Chromium, la molette restait muette sur le volet
+        // scinde tant qu'on n'avait pas clique dedans.
+        tab.View.Focus(FocusState.Pointer);
     }
 
     private void BrowserView_GotFocus(object sender, RoutedEventArgs e)

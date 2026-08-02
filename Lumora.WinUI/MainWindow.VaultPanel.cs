@@ -255,6 +255,31 @@ public sealed partial class MainWindow
         };
         manageActions.Children.Add(renameBtn);
 
+        var editUsernameBtn = new Button { Content = "Modifier l'identifiant" };
+        editUsernameBtn.Click += async (_, _) =>
+        {
+            var box = new TextBox
+            {
+                Text = cred.Username,
+                PlaceholderText = "Identifiant (ex. adresse email)",
+                MinWidth = 320
+            };
+            var dlg = new ContentDialog
+            {
+                Title = "Modifier l'identifiant",
+                Content = box,
+                PrimaryButtonText = "Enregistrer",
+                CloseButtonText = "Annuler",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot
+            };
+            if (await dlg.ShowAsync() != ContentDialogResult.Primary) return;
+            _passwordManager.SetUsernameById(cred.Id, box.Text);
+            RefreshVaultPanel();
+            StatusText.Text = "Identifiant mis à jour.";
+        };
+        manageActions.Children.Add(editUsernameBtn);
+
         var deleteBtn = new Button { Content = "Supprimer" };
         deleteBtn.Click += async (_, _) =>
         {
