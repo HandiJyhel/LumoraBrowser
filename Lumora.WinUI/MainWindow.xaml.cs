@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.11.4-dev";
+    internal const string Version = "0.93.11.5-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement

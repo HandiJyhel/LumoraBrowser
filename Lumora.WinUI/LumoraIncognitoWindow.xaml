@@ -48,6 +48,20 @@
             </LinearGradientBrush>
 
             <!--
+                Ajoutes le 2026-08-03 ("garder le cote minimaliste/agence secrete,
+                mais plus soigne") : profondeur discrete de la barre d'outils
+                (dégradé au lieu d'un aplat) et teinte de selection d'onglet -
+                aucune animation, ce chrome reste visible en continu pendant des
+                heures d'usage reel, contrairement a la page d'accueil.
+            -->
+            <LinearGradientBrush x:Key="LumoraToolbarGradientBrush" StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#FF2A2140" Offset="0" />
+                <GradientStop Color="#FF241C33" Offset="1" />
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="LumoraTabSelectedBrush" Color="#33B9A7E8" />
+            <SolidColorBrush x:Key="LumoraTabPointerOverBrush" Color="#1AB9A7E8" />
+
+            <!--
                 Copie locale de NovaRaisedIconButtonTemplate (MainWindow.xaml) :
                 MainWindow definit son template "relief" dans ses propres
                 Grid.Resources, non partages via App.xaml, donc inaccessible
@@ -129,7 +143,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Padding="10,8" ColumnSpacing="8" Background="{StaticResource LumoraWindowChromeBrush}">
+        <Grid Grid.Row="0" Padding="10,8" ColumnSpacing="8" Background="{StaticResource LumoraToolbarGradientBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -140,9 +154,20 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <FontIcon Grid.Column="0" Glyph="&#xE727;" FontFamily="Segoe MDL2 Assets"
-                      FontSize="16" Foreground="{StaticResource LumoraWindowAccentBrush}" VerticalAlignment="Center"
-                      Margin="2,0,4,0" />
+            <!-- Marque maison (silhouette de masque a deux yeux) plutot que
+                 l'icone Segoe MDL2 generique - meme dessin que le logo SVG de
+                 IncognitoWelcomeHtml, pour relier visuellement le chrome et la
+                 page d'accueil (2026-08-03). -->
+            <Viewbox Grid.Column="0" Width="26" Height="15" VerticalAlignment="Center" Margin="2,0,4,0">
+                <Grid Width="48" Height="28">
+                    <Path Data="M24 1c-10 0-18.3 5.7-22 13 3.7 7.3 12 13 22 13s18.3-5.7 22-13c-3.7-7.3-12-13-22-13Z"
+                          Stroke="{StaticResource LumoraWindowIdentityBrush}" StrokeThickness="2.6" />
+                    <Ellipse Canvas.Left="12" Width="6.4" Height="6.4" Fill="{StaticResource LumoraWindowIdentityBrush}"
+                              HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12.3,0,0,0" />
+                    <Ellipse Width="6.4" Height="6.4" Fill="{StaticResource LumoraWindowIdentityBrush}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12.3,0" />
+                </Grid>
+            </Viewbox>
 
             <Button x:Name="IncognitoBackButton" Grid.Column="1" Padding="8,5"
                     Style="{StaticResource IncognitoToolbarButtonStyle}"
@@ -171,21 +196,33 @@
                      KeyDown="IncognitoAddressBox_KeyDown"
                      AutomationProperties.Name="Barre d'adresse Incognito"
                      VerticalAlignment="Center"
-                     Background="{StaticResource NovaControlSurfaceBrush}"
-                     BorderBrush="{StaticResource NovaControlStrokeBrush}"
-                     Foreground="{StaticResource NovaControlForegroundBrush}"
-                     PlaceholderForeground="{StaticResource NovaControlMutedForegroundBrush}"
-                     SelectionHighlightColor="{StaticResource AccentFillColorSecondaryBrush}" />
+                     CornerRadius="10"
+                     Background="{StaticResource LumoraWindowCalloutBrush}"
+                     BorderBrush="{StaticResource LumoraWindowCalloutStrokeBrush}"
+                     Foreground="{StaticResource LumoraWindowTextBrush}"
+                     PlaceholderForeground="{StaticResource LumoraWindowMutedTextBrush}"
+                     FocusVisualPrimaryBrush="{StaticResource LumoraWindowAccentBrush}"
+                     FocusVisualSecondaryBrush="{StaticResource LumoraWindowAccentBrush}"
+                     SelectionHighlightColor="{StaticResource LumoraWindowAccentBrush}" />
 
-            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <!-- Pastille rouge/vert : indicateur purement visuel, decoratif pour le lecteur
-                     d'ecran (AccessibilityView=Raw) car IncognitoTorStatusText juste a cote
-                     annonce deja le meme etat en texte - jamais la couleur seule comme signal. -->
-                <Ellipse x:Name="IncognitoTorIndicatorDot" Width="10" Height="10" Fill="{StaticResource LumoraWindowDangerBrush}"
-                         VerticalAlignment="Center"
-                         AutomationProperties.AccessibilityView="Raw" />
-                <TextBlock x:Name="IncognitoTorStatusText" Text="IP masquée : non" Foreground="{StaticResource LumoraWindowAccentBrush}"
-                           FontSize="12" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <!-- Puce arrondie (2026-08-03) : reprend le composant status-pill
+                     de IncognitoWelcomeHtml pour que la barre d'outils et la page
+                     d'accueil parlent le meme langage visuel. -->
+                <Border Background="{StaticResource LumoraWindowCalloutBrush}"
+                        BorderBrush="{StaticResource LumoraWindowCalloutStrokeBrush}" BorderThickness="1"
+                        CornerRadius="999" Padding="10,5">
+                    <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                        <!-- Pastille rouge/vert : indicateur purement visuel, decoratif pour le lecteur
+                             d'ecran (AccessibilityView=Raw) car IncognitoTorStatusText juste a cote
+                             annonce deja le meme etat en texte - jamais la couleur seule comme signal. -->
+                        <Ellipse x:Name="IncognitoTorIndicatorDot" Width="8" Height="8" Fill="{StaticResource LumoraWindowDangerBrush}"
+                                 VerticalAlignment="Center"
+                                 AutomationProperties.AccessibilityView="Raw" />
+                        <TextBlock x:Name="IncognitoTorStatusText" Text="IP masquée : non" Foreground="{StaticResource LumoraWindowTextBrush}"
+                                   FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
                 <ToggleSwitch x:Name="IncognitoTorSwitch" OnContent="Tor" OffContent="Tor"
                               Toggled="IncognitoTorSwitch_Toggled"
                               AutomationProperties.Name="Masquer l'adresse IP via Tor"
@@ -202,8 +239,14 @@
             </StackPanel>
 
             <TextBlock Grid.Column="6" Text="Incognito" Foreground="{StaticResource LumoraWindowAccentBrush}"
-                       FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                       FontSize="12" FontWeight="SemiBold" CharacterSpacing="30" VerticalAlignment="Center"
                        Margin="4,0,2,0" />
+
+            <!-- Liseré de séparation discret entre la barre d'outils et les
+                 onglets (2026-08-03) - remplace l'aplat sans profondeur d'avant. -->
+            <Rectangle Grid.Column="0" Grid.ColumnSpan="7" Height="1" VerticalAlignment="Bottom"
+                       Margin="-10,0,-10,-8" Fill="{StaticResource LumoraWindowCalloutStrokeBrush}"
+                       Opacity="0.6" />
         </Grid>
 
         <Grid Grid.Row="1">
@@ -230,7 +273,18 @@
                      AddTabButtonClick="IncognitoTabs_AddTabButtonClick"
                      SelectionChanged="IncognitoTabs_SelectionChanged"
                      TabCloseRequested="IncognitoTabs_TabCloseRequested"
-                     AutomationProperties.Name="Onglets Incognito" />
+                     AutomationProperties.Name="Onglets Incognito">
+                <!-- Teinte violette de selection au lieu de l'accent systeme par
+                     defaut (2026-08-03) - "un vrai signal" sur l'onglet actif,
+                     coherent avec l'identite de la fenetre plutot qu'une couleur
+                     Windows generique. Cles de ressource Fluent documentees pour
+                     TabViewItem. -->
+                <TabView.Resources>
+                    <StaticResource x:Key="TabViewItemHeaderBackgroundSelected" ResourceKey="LumoraTabSelectedBrush" />
+                    <StaticResource x:Key="TabViewItemHeaderBackgroundPointerOver" ResourceKey="LumoraTabPointerOverBrush" />
+                    <StaticResource x:Key="TabViewItemHeaderForegroundSelected" ResourceKey="LumoraWindowTextBrush" />
+                </TabView.Resources>
+            </TabView>
 
             <Grid x:Name="IncognitoWebViewHost" Grid.Row="1" />
             <Grid x:Name="IncognitoErrorHost" Grid.Row="1" Visibility="Collapsed" />

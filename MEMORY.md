@@ -17343,3 +17343,50 @@ conforme à la règle de versionnement). 5 fichiers mis à jour
 (`IncognitoWelcomeHtml.cs`, `MainWindow.xaml.cs`, `AGENTS.md`,
 `build-installer.ps1`, `build-clean-test-artifact.ps1`), test renommé
 `Version_projet_est_alignee_sur_0_93_11_4`.
+
+## 2026-08-03 (suite 2) - Incognito : chrome (barre d'outils/onglets) aligné sur la nouvelle page d'accueil
+
+Retour utilisateur après la refonte de la page d'accueil : "reconnaître que
+l'interface du mode incognito est quand même beaucoup plus minimaliste et
+beaucoup moins joli que l'interface du navigateur de base" - contraste
+devenu visible une fois la page d'accueil retravaillée à côté d'un chrome
+resté plat. Cadrage explicite obtenu avant toute action (l'utilisateur a
+insisté pour avoir une réponse d'abord, pas d'action) : **garder le côté
+minimaliste "agence secrète"**, ne pas densifier ni ajouter de fonctions -
+juste rendre ce minimalisme plus soigné/intentionnel plutôt que plat.
+Périmètre volontairement limité à la fenêtre Incognito elle-même (XAML
+autonome, `LumoraIncognitoWindow.xaml`) - la fenêtre principale suit un
+thème dynamique piloté par le Mode d'usage (accent variable selon
+Lumie/Rapide/Neutre/etc.) et reste hors périmètre, chantier distinct et
+plus risqué évoqué mais explicitement écarté par l'utilisateur pour
+l'instant.
+
+**Changements, tous statiques (aucune animation en continu - ce chrome
+reste affiché des heures durant, contrairement à la page d'accueil)** :
+- Marque maison en XAML (`Path`+`Ellipse`, même dessin que le logo SVG de
+  `IncognitoWelcomeHtml`) à la place de l'icône Segoe MDL2 générique -
+  relie visuellement chrome et contenu.
+- Barre d'outils : dégradé discret (`LumoraToolbarGradientBrush`) au lieu
+  d'un aplat, + liseré de séparation sous la barre.
+- Barre d'adresse : coins arrondis, couleurs `LumoraWindow*Brush` (violet)
+  au lieu des brushes `NovaControl*` neutres/génériques héritées par
+  défaut - elle ne portait jusque-là aucune couleur d'identité propre à
+  Incognito.
+- Pastille Tor : le point + texte existants encapsulés dans un `Border`
+  arrondi, même composant visuel que le `status-pill` de la page d'accueil.
+- Onglets : teinte de sélection violette (`TabViewItemHeaderBackgroundSelected`
+  et `-PointerOver`, clés Fluent documentées) au lieu de l'accent système
+  par défaut.
+
+**Vérification** : build MSBuild propre. `dotnet test` 703/704 (même échec
+préexistant sans rapport). Lancé en conditions réelles (profil invité
+isolé), capture d'écran : marque visible et cohérente avec la page
+d'accueil, barre d'adresse arrondie bien rendue, pastille Tor bien en
+forme de puce, aucune exception ni régression visuelle repérée.
+
+**Version** : `0.93.11.4-dev` -> `0.93.11.5-dev` (micro-correction, même
+palier - même classification que le changement précédent, cas identique
+"amélioration visuelle d'un écran existant"). 5 fichiers mis à jour
+(`LumoraIncognitoWindow.xaml`, `MainWindow.xaml.cs`, `AGENTS.md`,
+`build-installer.ps1`, `build-clean-test-artifact.ps1`), test renommé
+`Version_projet_est_alignee_sur_0_93_11_5`.
