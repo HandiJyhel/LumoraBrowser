@@ -461,7 +461,11 @@ public sealed partial class LumoraIncognitoWindow : Window
 
         UpdateTabFromCore(tab);
         Title = WindowTitleFor(tab.Title);
-        tab.View.Focus(FocusState.Programmatic);
+        // FocusState.Pointer et non Programmatic (2026-08-02, meme correctif que
+        // MainWindow.ActivateTab) : Programmatic reste au niveau de l'enveloppe
+        // XAML sans se propager jusqu'a Chromium, la molette restait muette
+        // apres un changement d'onglet tant qu'on n'avait pas clique dans la page.
+        tab.View.Focus(FocusState.Pointer);
     }
 
     // "Nouvel onglet" (onglet tout juste cree) et "Incognito" (titre de la
@@ -504,7 +508,10 @@ public sealed partial class LumoraIncognitoWindow : Window
             VerticalAlignment = VerticalAlignment.Stretch,
             Visibility = select ? Visibility.Visible : Visibility.Collapsed
         };
-        view.PointerEntered += (_, _) => view.Focus(FocusState.Programmatic);
+        // FocusState.Pointer et non Programmatic (2026-08-02, meme correctif que
+        // MainWindow) : Programmatic ne se propage pas jusqu'a Chromium, ce
+        // survol est justement le mecanisme principal de recuperation du focus.
+        view.PointerEntered += (_, _) => view.Focus(FocusState.Pointer);
         var item = new TabViewItem
         {
             Header = "Nouvel onglet",
@@ -721,7 +728,9 @@ public sealed partial class LumoraIncognitoWindow : Window
 
         var url = AddressNormalizer.Normalize(raw, IncognitoSearchEngine);
         try { _currentTab?.View.CoreWebView2?.Navigate(url); } catch { }
-        _currentTab?.View.Focus(FocusState.Programmatic);
+        // FocusState.Pointer et non Programmatic (2026-08-02, meme correctif que
+        // MainWindow) : Programmatic ne se propage pas jusqu'a Chromium.
+        _currentTab?.View.Focus(FocusState.Pointer);
     }
 
     private void IncognitoBackButton_Click(object sender, RoutedEventArgs e)

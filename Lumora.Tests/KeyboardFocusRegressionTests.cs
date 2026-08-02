@@ -43,6 +43,21 @@ public sealed class KeyboardFocusRegressionTests
         Assert.Contains("CurrentTab()?.View?.Focus(FocusState.Pointer);", dismiss, StringComparison.Ordinal);
     }
 
+    // Le correctif MainWindow du 2026-08-02 signalait explicitement 3 occurrences
+    // identiques dans LumoraIncognitoWindow.xaml.cs, laissees de cote ce jour-la
+    // ("hors perimetre"). Traitees ici, meme raison : Programmatic ne se propage
+    // pas jusqu'a Chromium, la molette restait muette en Incognito.
+    [Fact]
+    public void Incognito_rend_le_focus_au_webview_avec_pointer_pas_programmatic()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "LumoraIncognitoWindow.xaml.cs");
+
+        Assert.Contains("tab.View.Focus(FocusState.Pointer);", code, StringComparison.Ordinal);
+        Assert.Contains("view.PointerEntered += (_, _) => view.Focus(FocusState.Pointer);", code, StringComparison.Ordinal);
+        Assert.Contains("_currentTab?.View.Focus(FocusState.Pointer);", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("FocusState.Programmatic", code, StringComparison.Ordinal);
+    }
+
     // Re-ecrit le 2026-08-02 : l'ancien module rattachait un handler d'application
     // par ScrollViewer/descendant (source de bugs "molette cassee par
     // intermittence" - controle intermediaire qui marque l'evenement traite,

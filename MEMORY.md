@@ -17192,3 +17192,102 @@ palier). 5 fichiers mis a jour (`MainWindow.xaml.cs`, `AGENTS.md`,
 `build-installer.ps1`, `build-clean-test-artifact.ps1`,
 `UsageModeVisualIdentityTests.cs`), test renomme
 `Version_projet_est_alignee_sur_0_93_11_2`.
+
+## 2026-08-02 (suite 5) - Incognito : molette confirmee comme le meme bug FocusState laisse de cote, "raccourcis" non reproduits
+
+Utilisateur signale deux bugs en fenetre Incognito : (1) molette cassee, a
+verifier en Incognito normal ET en Incognito+Tor ; (2) en Incognito+Tor
+uniquement, des "raccourcis" apparaitraient en plein milieu de la page
+("façon Ctrl+T", precise ensuite par l'utilisateur).
+
+**Verification reelle menee** (profil invite isole, pilotage UIA + capture
+d'ecran, voir [[verifier-lapp-winui]] pour les pieges rencontres et corriges
+en cours de route - notamment fenetre Incognito = process separe, pas juste
+un nouvel onglet du process invite). Session verrouillee deux fois pendant
+les tests (mise en veille ecran) : capture polluee supprimee sans etre
+decrite, conforme au protocole deja documente.
+
+**Bug 1 (molette) - cause trouvee, PAS encore corrigee** : la session du
+jour meme ([[#2026-08-02 (suite 4)]] ci-dessus) a corrige exactement ce bug
+dans `MainWindow.xaml.cs` (4 endroits `FocusState.Programmatic` ->
+`FocusState.Pointer`, seule la seconde valeur propage le focus jusqu'a
+Chromium) et notait explicitement 3 occurrences identiques dans
+`LumoraIncognitoWindow.xaml.cs`, volontairement laissees de cote ce jour-la
+("hors perimetre de cette session"). Confirme par relecture : les 3
+occurrences existent toujours, aux memes lignes -
+`IncognitoTabs_SelectionChanged` (changement d'onglet), le
+`PointerEntered` de `CreateTabAsync` (survol - c'est normalement LE
+mecanisme principal de recuperation du focus) et `IncognitoAddressBox_KeyDown`
+(navigation par la barre d'adresse). C'est tres probablement la cause
+directe du bug signale, independante de Tor (le mecanisme de focus ne change
+pas selon l'etat Tor, coherent avec le fait que l'utilisateur a demande de
+verifier les deux cas). Correctif propose = meme substitution
+`Programmatic` -> `Pointer` aux 3 endroits. Applique le lendemain, voir
+entree du 2026-08-03 plus bas.
+
+**Bug 2 (raccourcis en plein milieu de la page en Tor)** : NON reproduit.
+Capture d'ecran de la page d'accueil Incognito (`IncognitoWelcomeHtml`) prise
+sans Tor puis avec Tor reellement actif (moteur Tor installe dans le profil
+de test isole avec Go explicite de l'utilisateur pour ce telechargement) :
+les deux sont visuellement propres, aucun texte/tuile "Ctrl+T" ni ailleurs.
+Hypothese non confirmee : peut-etre specifique a une action non testee
+(navigation vers un vrai site, creation d'un nouvel onglet, redimensionnement
+de fenetre) plutot qu'a l'ecran d'accueil statique. A reprendre avec des
+precisions de l'utilisateur sur le moment exact d'apparition.
+
+**Trouvaille annexe, hors perimetre des 2 bugs signales, non corrigee** :
+`ConfigureProcessWebView` dans `LumoraIncognitoWindow.xaml.cs` fait un
+`Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", flags)`
+qui ECRASE la variable au lieu de fusionner avec l'existant, contrairement a
+`WebView2Bootstrap.Configure` (MainWindow) qui la fusionne explicitement
+depuis 0.78.3.2 pour la meme raison. Consequence concrete : les indicateurs
+anti-Privacy Sandbox (`--disable-features=BrowsingTopics,InterestGroupStorage,
+AdInterestGroupAPI,Fledge,PrivacySandboxSettings4,PrivacySandboxAdsAPIsOverride`)
+poses par `WebView2Bootstrap` ne survivent pas a l'ouverture d'une fenetre
+Incognito - les API de ciblage publicitaire Chromium restent actives dans le
+mode cense etre le plus protecteur. Trouve en essayant de brancher le port de
+debogage CDP (`--remote-debugging-port`) pour tester le defilement sans
+dependre du reseau Tor : le port etait injoignable car ce meme ecrasement
+supprimait aussi l'argument ajoute pour le test. Signale pour une prochaine
+session, pas corrige ni discute avec l'utilisateur.
+
+## 2026-08-03 - Incognito : correctif molette applique (FocusState.Pointer)
+
+Go donne par l'utilisateur pour le correctif propose la veille (entree du
+2026-08-02 (suite 5) ci-dessus). Les 3 `FocusState.Programmatic` de
+`LumoraIncognitoWindow.xaml.cs` passes en `FocusState.Pointer`, meme
+raisonnement et meme commentaire que le correctif deja applique dans
+`MainWindow.xaml.cs` la veille :
+
+- `IncognitoTabs_SelectionChanged` (changement d'onglet) ;
+- le `PointerEntered` de `CreateTabAsync` (survol - mecanisme principal de
+  recuperation du focus) ;
+- `IncognitoAddressBox_KeyDown` (navigation par la barre d'adresse).
+
+**Test ajoute** : `KeyboardFocusRegressionTests.
+Incognito_rend_le_focus_au_webview_avec_pointer_pas_programmatic` (meme
+principe que le test deja existant pour `MainWindow` - verrouille les 3
+occurrences en `Pointer` et l'absence de `Programmatic` dans le fichier).
+
+**Verification** : build MSBuild propre (0 erreur). `dotnet test` 703/704
+(meme unique echec preexistant et sans rapport,
+`AccessibilityComfortNamingTests`, deja documente ailleurs). Lance en
+conditions reelles (profil invite isole, pilotage UIA) : ouverture d'une
+fenetre Incognito, creation d'un 2e onglet (exerce le chemin `PointerEntered`
+corrige), bascule entre les 2 onglets (exerce `IncognitoTabs_
+SelectionChanged`) - aucune exception dans `winui-runtime-trace.log`,
+process stable, capture d'ecran propre. **Confirmation par un vrai geste
+physique de molette encore due par l'utilisateur** (limite d'environnement
+documentee depuis le debut - aucune injection souris/clavier synthetique
+possible ici), mais le correctif reprend a l'identique un pattern deja
+verifie la veille sur `MainWindow`, pas une hypothese nouvelle.
+
+**Bug 2 (raccourcis en Tor) toujours non reproduit et toujours non
+corrige** - en attente de precisions de l'utilisateur sur le contexte exact
+d'apparition (voir entree de la veille).
+
+**Version** : `0.93.11.2-dev` -> `0.93.11.3-dev` (micro-correction, meme
+palier). 5 fichiers mis a jour (`LumoraIncognitoWindow.xaml.cs`,
+`MainWindow.xaml.cs`, `AGENTS.md`, `build-installer.ps1`,
+`build-clean-test-artifact.ps1`), test renomme
+`Version_projet_est_alignee_sur_0_93_11_3`.
