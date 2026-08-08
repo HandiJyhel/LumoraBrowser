@@ -17,6 +17,13 @@ public sealed partial class MainWindow
 {
     // ── Settings ─────────────────────────────────────────────────────────────
 
+    // Style Classique + onglets verticaux (2026-08-08) : TopTabsRow n'a plus
+    // besoin d'accueillir une vraie barre d'onglets, seulement la bande de
+    // fond des boutons systeme (min/max/fermer). 36 = hauteur standard des
+    // boutons de legende WinUI (~32px a 100%) + marge de securite, a
+    // confirmer visuellement - voir ApplyVerticalTabsLayout().
+    private const double ReducedTitleBarHeightForVerticalTabs = 36;
+
     private static string NormalizeTabStripPosition(string? value) =>
         value?.Trim().ToLowerInvariant() switch
         {
@@ -699,12 +706,24 @@ public sealed partial class MainWindow
                 return;
             }
 
-            // TopTabsRow garde TOUJOURS sa hauteur (52) : c'est la bande de titre
-            // reservee au drag de fenetre + aux boutons systeme (min/max/fermer),
-            // comme Edge/Arc. La mettre a 0 en mode onglets verticaux faisait
-            // remonter NavigationToolbar dans cette zone reservee par Windows,
-            // ce qui rendait ses boutons (bouclier, favoris...) inutilisables —
-            // les clics y etaient interceptes par le chrome systeme de la fenetre.
+            // TopTabsRow ne descend JAMAIS a 0 : c'est la bande de titre reservee
+            // au drag de fenetre + aux boutons systeme (min/max/fermer), comme
+            // Edge/Arc. La mettre a 0 en mode onglets verticaux faisait remonter
+            // NavigationToolbar dans cette zone reservee par Windows, ce qui
+            // rendait ses boutons (bouclier, favoris...) inutilisables - les
+            // clics y etaient interceptes par le chrome systeme de la fenetre.
+            //
+            // Repris le 2026-08-08 (retour utilisateur, comparaison avec Chrome
+            // onglets verticaux qui recupere cet espace) : contrairement aux 2
+            // tentatives precedentes qui visaient 0px et regressaient, ceci
+            // REDUIT la hauteur (52 -> ReducedTitleBarHeightForVerticalTabs) sans
+            // la supprimer - la bande de fond des boutons systeme reste presente,
+            // juste plus fine. Seulement quand BrowserTabs n'affiche rien dedans
+            // (onglets verticaux) ; en onglets horizontaux, 52 reste necessaire
+            // pour la vraie barre d'onglets.
+            TopTabsRow.Height = horizontalTabsVisible
+                ? new GridLength(52)
+                : new GridLength(ReducedTitleBarHeightForVerticalTabs);
             Grid.SetRow(BrowserTabs, tabsAtBottom ? 5 : 1);
             Grid.SetRow(ModeChromeAccentStrip, tabsAtBottom ? 5 : 1);
             BottomTabsRow.Height = horizontalTabsVisible && tabsAtBottom

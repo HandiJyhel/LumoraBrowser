@@ -200,6 +200,7 @@ public sealed partial class MainWindow
 
     private static string SectionHeaderGlyph(string section) => section switch
     {
+        "Modules" => "\uE8A9",
         "Lecture et contenu" => "\uE736",
         "Confidentialité" => "\uE72E",
         "Navigation" => "\uE71D",

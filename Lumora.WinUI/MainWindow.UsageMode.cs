@@ -567,6 +567,19 @@ public sealed partial class MainWindow : Window
         UpdatePinToggle(PanelTranslatePinToggleButton, "translate");
         UpdatePinToggle(PanelWebAppsPinToggleButton, "webApps");
         UpdatePinToggle(PanelDictationPinToggleButton, "dictation");
+
+        // Meme etat, meme fonction de mise a jour, juste un 2e endroit qui
+        // l'affiche (bouton rapide "puzzle", MainWindow.xaml) - aucune 2e
+        // source de verite creee.
+        UpdatePinToggle(QuickReaderPinToggleButton, "reader");
+        UpdatePinToggle(QuickNotesPinToggleButton, "notes");
+        UpdatePinToggle(QuickReadAloudPinToggleButton, "readAloud");
+        UpdatePinToggle(QuickVideoDownloadPinToggleButton, "videoDownload");
+        UpdatePinToggle(QuickSearchAssistPinToggleButton, "searchAssist");
+        UpdatePinToggle(QuickDetachVideoPinToggleButton, "detachVideo");
+        UpdatePinToggle(QuickTranslatePinToggleButton, "translate");
+        UpdatePinToggle(QuickWebAppsPinToggleButton, "webApps");
+        UpdatePinToggle(QuickDictationPinToggleButton, "dictation");
     }
 
     private static string UsageModeLabel(string usageMode) =>

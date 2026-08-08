@@ -28,6 +28,15 @@ public static class StartMenuTileRegistry
     // Navigation - ce sont des actions de navigation/historique.
     public static readonly IReadOnlyList<StartMenuTileDefinition> All =
     [
+        // Sortie de "Lumora et profil" vers sa propre categorie de premier
+        // niveau (2026-08-08, suite du plan "identifier et lister les
+        // problemes de code" - retour utilisateur d'origine : "je n'ai pas
+        // trouve le bouton pour activer ou desactiver des modules"). Placee
+        // en tete de liste pour apparaitre juste apres "Epingles" dans le
+        // rail du Menu Demarrer, plutot que noyee au milieu de 5 autres
+        // tuiles sous "Lumora et profil".
+        new(StartMenuTileIds.AllModules, "Modules", "Tous les modules", "Activer ou désactiver", "\uE8A9"),
+
         new(StartMenuTileIds.ReaderMode, "Lecture et contenu", "Mode lecture", "Sans distraction", "\uE736"),
         new(StartMenuTileIds.Notes, "Lecture et contenu", "Notes", "Locales", "\uE70B"),
         new(StartMenuTileIds.Translate, "Lecture et contenu", "Traduction", "Hors-ligne", "\uF2B7"),
@@ -57,7 +66,6 @@ public static class StartMenuTileRegistry
 
         new(StartMenuTileIds.Settings, "Lumora et profil", "Paramètres", "Centre Lumora", "\uE713"),
         new(StartMenuTileIds.Profiles, "Lumora et profil", "Profils locaux", "PIN, verrouillage", "\uE77B"),
-        new(StartMenuTileIds.AllModules, "Lumora et profil", "Tous les modules", "Réglages avancés", "\uE8A9"),
         new(StartMenuTileIds.About, "Lumora et profil", "À propos", "Version, licences", "\uE946"),
         new(StartMenuTileIds.Studio, "Lumora et profil", "Studio", "Position des onglets/favoris", "\uE82D"),
         // Decouvrabilite du Style Lumora (2026-08-07) : distinct de "Studio"

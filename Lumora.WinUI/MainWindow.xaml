@@ -1447,14 +1447,23 @@
                     BorderThickness="1"
                     IsHitTestVisible="False" />
 
+            <!-- SymbolIcon -> FontIcon (2026-08-08, retour utilisateur "boutons pixelises"
+                 en Taille de l'interface reduite) : ApplyIconButtonSizing (MainWindow.SettingsTheme.cs)
+                 redimensionne le Button (Width/Height) selon la densite, mais SymbolIcon n'a pas
+                 de propriete de taille propre - contrairement a FontIcon (FontSize), il ne se
+                 redessine pas net a une taille reduite. Glyphs verifies contre l'usage deja
+                 existant de LumoraIncognitoWindow.xaml (IncognitoBackButton/ForwardButton/
+                 ReloadButton, memes glyphs E72B/E72A/E72C) plutot que devines - seul Cancel
+                 (E711) n'a pas d'equivalent deja present dans ce depot, mais correspond au
+                 mappage documente et stable de Symbol.Cancel dans Segoe MDL2 Assets. -->
             <Button Grid.Column="0" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Retour" AutomationProperties.Name="Retour" Click="BackButton_Click">
-                <SymbolIcon Style="{StaticResource NovaChromeSymbolIconStyle}" Symbol="Back" />
+                <FontIcon Style="{StaticResource NovaChromeFontIconStyle}" Glyph="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
             </Button>
             <Button Grid.Column="1" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Avancer" AutomationProperties.Name="Avancer" Click="ForwardButton_Click">
-                <SymbolIcon Style="{StaticResource NovaChromeSymbolIconStyle}" Symbol="Forward" />
+                <FontIcon Style="{StaticResource NovaChromeFontIconStyle}" Glyph="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
             </Button>
             <Button Grid.Column="2" Style="{StaticResource NovaChromeIconButtonStyle}" ToolTipService.ToolTip="Recharger" AutomationProperties.Name="Recharger" Click="ReloadButton_Click">
-                <SymbolIcon Style="{StaticResource NovaChromeSymbolIconStyle}" Symbol="Refresh" />
+                <FontIcon Style="{StaticResource NovaChromeFontIconStyle}" Glyph="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
             </Button>
             <Button Grid.Column="3"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
@@ -1462,7 +1471,7 @@
                     AutomationProperties.Name="Stop"
                     Visibility="Collapsed"
                     Click="StopButton_Click">
-                <SymbolIcon Style="{StaticResource NovaChromeSymbolIconStyle}" Symbol="Cancel" />
+                <FontIcon Style="{StaticResource NovaChromeFontIconStyle}" Glyph="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
             </Button>
             <Grid Grid.Column="4" Margin="6,0">
                 <!-- Retour utilisateur (2026-08-08) : "trait au centre" sur la
@@ -1776,6 +1785,150 @@
                     Background="Transparent"
                     VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="5">
+                    <!-- Bouton rapide "puzzle" (2026-08-08, retour utilisateur avec
+                         comparaison Chrome) : épingler/dépingler les modules sans
+                         ouvrir le panneau complet "Tous les modules". Toujours
+                         visible (contrairement aux icônes de modules épinglés à
+                         côté, qui n'apparaissent qu'une fois épinglées) - même
+                         principe que le bouton puzzle de Chrome, déjà annoncé par
+                         le texte du panneau complet ("les modules non épinglés
+                         restent disponibles dans le bouton puzzle") mais qui
+                         n'existait pas encore. Réutilise ModulePinToggle_Click et
+                         UpdateModulesPinUi (MainWindow.UsageMode.cs) - même source
+                         de vérité que le panneau complet, pas une 2e logique de pin.
+                         Bloqueur de pub / Coffre / Favoris volontairement absents :
+                         ce ne sont pas des modules désactivables, ils vivent
+                         ailleurs (voir MEMORY.md). -->
+                    <Button x:Name="ModulesQuickAccessButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Modules épinglés"
+                            ToolTipService.ToolTip="Modules épinglés">
+                        <FontIcon Style="{StaticResource NovaModuleFontIconStyle}" Glyph="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                        <Button.Flyout>
+                            <Flyout x:Name="ModulesQuickAccessFlyout" Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="320" Spacing="10">
+                                    <TextBlock Text="Modules" FontWeight="SemiBold" FontSize="14" />
+                                    <TextBlock Text="Choisissez ce qui reste visible dans la barre d'outils."
+                                               Opacity="0.68" FontSize="12" TextWrapping="Wrap" />
+                                    <StackPanel Spacing="4">
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Mode lecture" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickReaderPinToggleButton" Grid.Column="2" Tag="reader" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Notes et annotations" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickNotesPinToggleButton" Grid.Column="2" Tag="notes" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Lecture à voix haute" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickReadAloudPinToggleButton" Grid.Column="2" Tag="readAloud" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Détacher la vidéo" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickDetachVideoPinToggleButton" Grid.Column="2" Tag="detachVideo" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Télécharger la vidéo" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickVideoDownloadPinToggleButton" Grid.Column="2" Tag="videoDownload" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Recherche assistée" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickSearchAssistPinToggleButton" Grid.Column="2" Tag="searchAssist" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Traduction locale" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickTranslatePinToggleButton" Grid.Column="2" Tag="translate" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Applications web" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickWebAppsPinToggleButton" Grid.Column="2" Tag="webApps" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Grid.Column="0" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Dictée vocale" VerticalAlignment="Center" />
+                                            <ToggleButton x:Name="QuickDictationPinToggleButton" Grid.Column="2" Tag="dictation" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
+                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                            </ToggleButton>
+                                        </Grid>
+                                    </StackPanel>
+                                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                    <Button Content="Gérer les modules"
+                                            Click="ModulesMenu_Click"
+                                            Style="{StaticResource NovaCompactButtonStyle}"
+                                            HorizontalAlignment="Stretch" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <!-- Refus automatique des cookies (0.84.0.10) : masqué tant qu'aucun
                          signal n'est arrivé pour la page active, visible dès que
                          ConsentManagerModule a agi (bouton direct ou panneau détaillé). -->
@@ -3322,9 +3475,13 @@
                                       SelectionChanged="UiDensityCombo_SelectionChanged">
                                 <ComboBoxItem Content="Confortable" Tag="comfortable" />
                                 <ComboBoxItem Content="Standard" Tag="standard" />
-                                <ComboBoxItem Content="Dense" Tag="dense" />
+                                <!-- "Dense" -> "Petit" (2026-08-08, retour utilisateur) : "dense" decrit un
+                                     agencement resserre, pas des elements plus petits en taille - c'est
+                                     bien la taille qui change ici, pas la densite. Tag interne "dense"
+                                     inchange (valeur stockee dans UiSettings, pas affichee). -->
+                                <ComboBoxItem Content="Petit" Tag="dense" />
                             </ComboBox>
-                            <TextBlock Text="Ajuste la taille des boutons de la barre d'outils, de la barre d'adresse et de la barre de favoris. Standard est la taille par défaut, proche des navigateurs courants ; Confortable garde les tailles historiques de Lumora ; Dense réduit au maximum l'espace pris par ces zones."
+                            <TextBlock Text="Ajuste la taille des boutons de la barre d'outils, de la barre d'adresse et de la barre de favoris. Standard est la taille par défaut, proche des navigateurs courants ; Confortable garde les tailles historiques de Lumora ; Petit réduit au maximum l'espace pris par ces zones."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="FullScreenAutoHideChromeSwitch"
                                           Header="Masquer les barres en plein écran et les révéler au survol"

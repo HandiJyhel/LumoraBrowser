@@ -70,7 +70,7 @@ La version de depart du projet est:
 
 La version courante du projet est:
 
-`0.93.16.0-dev`
+`0.93.17.2-dev`
 
 La numerotation suit ce schema:
 

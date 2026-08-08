@@ -19303,3 +19303,229 @@ SymbolIcon -> FontIcon, pour les boutons pixelises signales par
 l'utilisateur) ; vraies animations (ouverture/fermeture d'onglets, selection
 de menus) ; boutons systeme (reduire/agrandir/fermer) redessines en Lumora ;
 peaufinage continu du Contraste renforce au fil des retours cibles.
+
+## 2026-08-08 (suite) - "Tous les modules" promu en categorie a part entiere du Menu Demarrer
+
+Premier point du reste du plan traite. Diagnostic avant code : la tuile
+"Tous les modules" existe deja et le peaufinage Freebox du jour la rend deja
+plus reperable par ricochet (categorie "Lumora et profil" toujours visible +
+recherche qui la trouve), mais rien de tout ca n'aide quelqu'un qui ne sait
+pas que la fonction existe. Trois pistes proposees (rien, renommer/repositionner
+dans sa categorie, ou double point d'entree dans Reglages) - la 3e ecartee
+par l'assistant (redondance avec le Menu Demarrer, deja rejetee par
+l'utilisateur plus tot dans la journee pour la page Disposition), une
+version renforcee de la 2e retenue : sortir la tuile de "Lumora et profil"
+pour en faire sa **propre categorie de premier niveau**.
+
+**Correctif** (`StartMenuTileRegistry.cs`, `MainWindow.StartMenu.cs`) :
+tuile `AllModules` deplacee en tete de `All` avec `Section` changee de
+"Lumora et profil" a "Modules" (le rail de categories se construit par
+premiere occurrence de `Section` dans la liste - la placer en tete la fait
+apparaitre juste apres "Epingles"). Sous-titre reprecise "Activer ou
+desactiver" (au lieu de "Reglages avances", plus proche du besoin d'origine
+"activer ou desactiver un module"). Icone de categorie ajoutee dans
+`SectionHeaderGlyph`. Aucun nouveau handler : `ExecuteFor` route deja
+`AllModules` vers `ModulesMenu_Click`, inchange.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Verification reelle** : profil jetable, mode invite - capture du Menu
+Demarrer sur "Epingles" (categorie "Modules" bien visible en 2e position,
+juste apres "Epingles") puis apres clic dessus (contenu "Tous les modules /
+Activer ou desactiver" affiche, mise en avant accent suit la selection).
+Reussi du premier coup apres deverrouillage de la session (un verrouillage
+avait bloque une premiere tentative - le garde-fou anti-capture-verrouillage
+ajoute plus tot dans la journee a bien annule les captures au lieu
+d'enregistrer l'ecran de verrouillage).
+
+**Version** : `0.93.16.0-dev` -> `0.93.16.1-dev` (micro-correction, **4e
+chiffre** - ampleur tranchee par l'utilisateur : corrige un probleme de
+reperabilite deja signale sur une fonction existante, rien de nouveau cree).
+4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_16_1`.
+
+**Reste du plan** (mis a jour) : renommer les paliers de "Taille de
+l'interface" (Dense -> Petit) ; icones nettes a toute taille (SymbolIcon ->
+FontIcon) ; vraies animations (onglets, selection de menus) ; boutons
+systeme redessines en Lumora ; peaufinage continu du Contraste renforce.
+
+## 2026-08-08 (suite) - Plan de 6 valide (session suivante) : bande de titre reduite en Style Classique + onglets verticaux
+
+Nouvelle session de retours, comparaison avec Chrome (captures a l'appui :
+Chrome onglets verticaux recupere la bande du haut, Lumora Classique + onglets
+verticaux non). Utilisateur explicite : "je ne cherche pas a imiter les
+concurrents, mais quand une idee est logique, autant l'utiliser". Diagnostic
+avant code : plan complet de 6 points valide (bande de titre, bouton rapide
+modules, paliers de taille, icones nettes, boutons systeme, animations),
+seul le 1er traite ici.
+
+**Cause confirmee** : `TopTabsRow` (hauteur fixe 52px dans le XAML) heberge
+`BrowserTabs`, mis en `Collapsed` par `ApplyVerticalTabsLayout()` quand les
+onglets sont verticaux - mais une ligne de Grid a hauteur fixe ne retrecit
+pas quand son contenu est cache, d'ou la bande vide.
+
+**Historique important trouve avant de coder** : 2 tentatives precedentes
+(commentaires dates du 2026-08-07 et avant) avaient deja essaye de mettre
+cette ligne a **0px** en mode onglets verticaux - regression reelle a chaque
+fois (boutons systeme flottant sans fond, zone de drag de fenetre empietant
+sur les boutons de la barre d'outils qui devenaient inutilisables). Les deux
+fois, le correctif avait ete de revenir a 52 fixe partout.
+
+**Correctif, angle jamais tente** : reduire au lieu de supprimer.
+`ApplyVerticalTabsLayout()` (`MainWindow.Settings.cs`) fixe maintenant
+`TopTabsRow.Height` a 52 en onglets horizontaux (barre d'onglets reelle,
+inchange) mais a `ReducedTitleBarHeightForVerticalTabs` (36, nouvelle
+constante) en onglets verticaux + Style Classique uniquement - Style Lumora
+garde sa propre gestion a 52 dans `IdentitySpine.cs`, non touchee (l'utilisateur
+a lui-meme dit "on s'en fiche" pour ce style, qui masque deja tout
+automatiquement). `ApplyFullScreenLayout()` remet 52 puis rappelle
+`ApplyVerticalTabsLayout()` juste apres - pas de conflit, la valeur finale
+reste la bonne.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Verification reelle : partielle, limite honnetement signalee**. Comparaison
+capture avant/apres (bande visiblement plus fine, boutons systeme intacts,
+barre d'outils non ecrasee) - confirmee par superposition des deux captures.
+**Mais** : le pilotage reste base sur `InvokePattern` (UI Automation), qui
+n'emprunte jamais le vrai chemin de hit-test non-client de Windows -
+exactement le mecanisme qui avait cause les 2 regressions precedentes (clics
+souris reels interceptes par la zone de drag). Cette methode de verification
+ne peut donc PAS prouver que le vrai clic souris sur les boutons systeme ou
+sur un bouton de la barre d'outils (bouclier, etc.) fonctionne toujours dans
+cette configuration - seul un test manuel reel peut le confirmer. Signale
+explicitement plutot que suppose regle.
+
+**Version** : `0.93.16.1-dev` -> `0.93.16.2-dev` (micro-correction, 4e
+chiffre). 4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_16_2`.
+
+**A confirmer par l'utilisateur en conditions reelles** : cliquer les 3
+boutons systeme et un bouton de la barre d'outils (ex. bouclier) en Style
+Classique + onglets verticaux, verifier que le double-clic pour agrandir la
+fenetre fonctionne toujours dans cette bande reduite.
+
+## 2026-08-08 (suite) - Point 2 du plan de 6 : bouton rapide "puzzle" pour epingler/depingler les modules
+
+Retour utilisateur avec 3 captures d'ecran Chrome (barre d'outils, panneau
+extensions, liste avec bascules d'epinglage) : demande un equivalent du
+bouton puzzle de Chrome, PAS pour imiter la concurrence mais parce que
+"quand une idee est logique, autant l'utiliser". Precision explicite de
+l'utilisateur : Bloqueur de pub / Coffre / Favoris ne doivent jamais pouvoir
+etre depingles - ce ne sont pas des modules.
+
+**Decouverte utile avant de coder** : le texte du panneau "Tous les
+modules" annoncait deja "les modules non epingles restent disponibles dans
+le bouton puzzle" - un bouton qui n'existait pas encore. La demande comble
+un ecart deja identifie par une passe de design anterieure, pas une idee
+nouvelle de toutes pieces.
+
+**Verifie avant tout code** : la distinction Bloqueur de pub/Coffre/Favoris
+existe deja - le systeme de modules epinglables (`_uiSettings.PinnedModuleIds`,
+`ModulePinToggle_Click`/`UpdateModulesPinUi` dans `MainWindow.UsageMode.cs`)
+ne couvre que 9 vrais modules optionnels (Mode lecture, Notes, Lecture a voix
+haute, Detacher video, Telecharger video, Recherche assistee, Traduction,
+Applications web, Dictee) - Bloqueur de pub/Coffre/Favoris n'y figurent pas
+du tout, aucun verrou special a coder.
+
+**Correctif** : nouveau `ModulesQuickAccessButton` dans `ModulesQuickBar`
+(`MainWindow.xaml`), toujours visible (contrairement aux icones de modules
+qui n'apparaissent qu'une fois epinglees), avec un flyout compact listant
+les 9 modules (icone + titre + bascule d'epinglage) et un bouton "Gerer les
+modules" vers le panneau complet. Les 9 nouvelles bascules (`Quick*PinToggleButton`)
+reutilisent **exactement** `ModulePinToggle_Click` et sont ajoutees a
+`UpdateModulesPinUi()` a cote des bascules du panneau complet (`Panel*PinToggleButton`)
+- meme source de verite (`_uiSettings.PinnedModuleIds`), aucune 2e logique de
+pin creee. Duplication XAML assumee (meme pattern que les 9 boutons du
+panneau complet, deja duplique la), signalee en commentaire plutot que
+cachee.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Verification reelle** : profil invite (pas besoin du profil reel cette
+fois, bouton dans la barre d'outils principale) - capture du flyout ouvert
+(9 modules listes, aucune trace de Bloqueur de pub/Coffre/Favoris, bouton
+"Gerer les modules" present), puis apres clic sur la bascule "Mode lecture" :
+bascule visuellement active (ambre) ET nouvelle icone (livre) apparue dans
+la barre d'outils juste a cote du bouton puzzle - confirme le lien complet
+flyout -> etat -> barre d'outils, comme demande.
+
+**Version** : `0.93.16.2-dev` -> `0.93.17.0-dev` (ajout, 3e chiffre). 4
+fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_17_0`.
+
+## 2026-08-08 (suite) - Point 3 du plan de 6 : "Dense" renomme en "Petit"
+
+Renommage trivial demande par l'utilisateur au fil d'un retour plus large
+sur "Taille de l'interface" : "dense" decrit un agencement resserre, pas des
+elements plus petits en taille - confusion deja notee par l'assistant
+lui-meme en repondant a l'epoque.
+
+**Correctif** : `ComboBoxItem Content="Dense"` -> `"Petit"` dans
+`MainWindow.xaml` (`UiDensityCombo`). Tag interne `"dense"` inchange (valeur
+stockee dans `UiSettings`, jamais affichee) - aucune migration de donnees
+necessaire. Piege trouve en verifiant plutot qu'en supposant fini : le texte
+de description juste en dessous du menu deroulant disait aussi "Dense reduit
+au maximum l'espace..." - corrige au meme endroit, sinon l'ancien mot
+serait reapparu a la ligne suivante.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Verification reelle** : profil de test reel (reglage dans "Mon Lumora",
+masque en mode invite) - confirmation directe par lecture des proprietes UIA
+(pas juste une capture d'ecran) : l'item "Petit" existe bien dans la liste
+deroulante et se selectionne normalement ; recherche du mot "Dense" dans
+toute la fenetre refaite APRES le correctif du texte de description
+(a l'origine positive a tort, a cause de cette 2e occurrence oubliee).
+
+**Version** : `0.93.17.0-dev` -> `0.93.17.1-dev` (micro-correction, 4e
+chiffre). 4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_17_1`.
+
+## 2026-08-08 (suite) - Point 4 du plan de 6 : icones nettes a toute taille (SymbolIcon -> FontIcon)
+
+Correctif des boutons "pixelises" signales en "Taille de l'interface" reduite.
+Risque annonce a l'avance (chaque icone doit etre reappariee au bon symbole,
+verification visuelle indispensable) : traite avec soin, perimetre reduit
+d'abord plutot que suppose large.
+
+**Perimetre reel, trouve avant de coder** : `ApplyIconButtonSizing`
+(`MainWindow.SettingsTheme.cs`) ne redimensionne QUE les boutons stylés
+`NovaChromeIconButtonStyle` dans `NavigationToolbar`/`FullScreenTopBar`. Sur
+toute la fenetre, seuls 4 boutons cumulent ce style ET un `SymbolIcon` (pas
+deja un `FontIcon`) : Retour, Avancer, Recharger, Stop - les boutons Bouclier/
+Coffre rapide/Modules rapide (nouveau) sont deja en `FontIcon`, aucune
+migration a leur faire. Pas un chantier "toute l'app", 4 boutons precis.
+
+**Glyphs verifies plutot que devines** : `LumoraIncognitoWindow.xaml`
+(fenetre separee, deja livree) utilise deja des `FontIcon` pour ses propres
+boutons Retour/Avancer/Recharger, avec exactement les memes glyphs
+(E72B/E72A/E72C) que ceux choisis ici - confirmation par precedent reel dans
+ce meme depot, pas une supposition. Seul Cancel/Stop (E711) n'avait pas
+d'equivalent deja present, mais correspond au mappage documente et stable de
+`Symbol.Cancel` dans Segoe MDL2 Assets (le meme systeme de police que
+`SymbolIcon` utilise en interne).
+
+**Correctif** : les 4 `SymbolIcon` remplaces par des `FontIcon`
+(`NovaChromeFontIconStyle`, FontSize 16 - meme taille que Bouclier/Coffre
+rapide juste a cote, pour rester coherent visuellement). Verifie qu'aucun
+code-behind ne manipulait ces icones par leur propriete `Symbol` (le bascule
+Recharger/Stop se fait par visibilite de 2 boutons distincts, pas par
+mutation d'un glyphe partage) - rien d'autre a adapter.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Verification reelle** : profil de test reel, capture zoomee x3 de la barre
+d'outils en densite Standard puis Petit, comparees cote a cote - les 3
+symboles (fleche gauche, fleche droite, fleche circulaire) s'affichent
+correctement (bon glyph, pas de carre vide ni de mauvais symbole) et restent
+nets aux deux tailles, sans flou ni pixelisation visible a l'oeil.
+
+**Version** : `0.93.17.1-dev` -> `0.93.17.2-dev` (micro-correction, 4e
+chiffre - corrige un bug signale, ne cree rien de nouveau). 4 fichiers de
+version mis a jour, test renomme `Version_projet_est_alignee_sur_0_93_17_2`.
