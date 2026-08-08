@@ -236,4 +236,43 @@ public class UiSettingsMigrationTests
 
         Assert.True(loaded.IdentitySpineAutoHide);
     }
+
+    // Taille de l'interface (UiDensity) : le nouveau defaut "standard" est
+    // un choix produit deliberement change pour TOUS les profils, y compris
+    // les profils existants (contrairement au reste des reglages
+    // "Disposition" qui restent silencieusement sur leur ancienne valeur) -
+    // verrouille explicitement ce defaut plutot que de se fier au defaut
+    // implicite de Default().
+    [Fact]
+    public void UiSettings_Default_a_pour_UiDensity_standard()
+    {
+        Assert.Equal("standard", UiSettings.Default().UiDensity);
+    }
+
+    [Fact]
+    public void UiDensity_absent_du_json_bascule_sur_standard_par_defaut()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var legacyPath = Path.Combine(dir, "ui-settings.json");
+        File.WriteAllText(legacyPath, """{ "SearchEngine": "duckduckgo" }""");
+
+        var loaded = UiSettings.Load(path, legacyPath);
+
+        Assert.Equal("standard", loaded.UiDensity);
+    }
+
+    [Fact]
+    public void UiDensity_survit_a_un_aller_retour_SaveLoad()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var original = UiSettings.Default();
+        original.UiDensity = "dense";
+
+        original.Save(path);
+        var loaded = UiSettings.Load(path);
+
+        Assert.Equal("dense", loaded.UiDensity);
+    }
 }

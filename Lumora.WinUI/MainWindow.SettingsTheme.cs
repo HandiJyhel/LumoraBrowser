@@ -33,6 +33,14 @@ public sealed partial class MainWindow
         var surfaceRaised = highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(26, 33, 46, translucent ? (byte)238 : (byte)255) : UiColor(255, 255, 255, translucent ? (byte)238 : (byte)255));
         var overlay = highContrast ? UiColor(0, 0, 0, 210) : (isDark ? UiColor(2, 5, 12, 176) : UiColor(20, 24, 33, 92));
         var textOnAccent = highContrast ? UiColor(0, 0, 0) : LumoraTheme.ResolveTextOnColor(palette.Accent);
+        // Palette C du Contraste renforce (retour utilisateur 2026-08-08,
+        // "c'est moche" sur le blanc pur en bordure de CHAQUE controle au
+        // repos) : le blanc/jaune redevient un signal rare (focus, etat
+        // actif/selectionne), les bordures et le texte "attenue" au repos
+        // passent a ce gris - deja la valeur de NovaChromeStrokeSoftBrush
+        // plus bas, reprise ici comme etalon plutot que d'inventer un 2e
+        // gris legerement different.
+        var hcRestBorder = UiColor(190, 190, 190);
 
         RootShell.RequestedTheme = isDark ? ElementTheme.Dark : ElementTheme.Light;
         ApplyPreferredColorSchemeToOpenTabs();
@@ -44,11 +52,24 @@ public sealed partial class MainWindow
         SetBrush("NovaChromeSurfaceBrush", surface);
         SetBrush("NovaChromeSurfaceAltBrush", surfaceAlt);
         SetBrush("NovaChromeSurfaceRaisedBrush", surfaceRaised);
-        SetBrush("NovaChromeStrokeBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(64, 73, 91) : UiColor(214, 209, 200)));
+        SetBrush("NovaChromeStrokeBrush", highContrast ? hcRestBorder : (isDark ? UiColor(64, 73, 91) : UiColor(214, 209, 200)));
         SetBrush("NovaChromeStrokeSoftBrush", highContrast ? UiColor(190, 190, 190) : (isDark ? UiColor(36, 44, 60) : UiColor(228, 224, 217)));
         SetBrush("NovaAddressBackgroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(23, 33, 52, translucent ? (byte)236 : (byte)255) : UiColor(255, 255, 255, translucent ? (byte)236 : (byte)255)));
-        SetBrush("NovaAddressBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(70, 83, 106) : UiColor(198, 192, 182)));
+        SetBrush("NovaAddressBorderBrush", highContrast ? hcRestBorder : (isDark ? UiColor(70, 83, 106) : UiColor(198, 192, 182)));
         SetBrush("NovaAddressForegroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(255, 248, 234) : UiColor(31, 29, 26)));
+        // Retour utilisateur (2026-08-08) : titres de panneaux invisibles en
+        // Contraste renforce - NovaAddressForegroundBrush est pense pour le
+        // texte SUR la barre d'adresse (fond blanc en contraste eleve, donc
+        // texte noir), mais etait aussi reutilise comme couleur de texte
+        // generale un peu partout (titres de panneaux, badges, menus) sur des
+        // surfaces qui restent NOIRES en contraste eleve - noir sur noir.
+        // Meme valeur que NovaAddressForegroundBrush en dehors du contraste
+        // eleve (theme clair/sombre, puis teinte de mode ci-dessous), mais
+        // blanc plutot que noir en contraste eleve. Ne PAS repointer
+        // NovaAddressForegroundBrush lui-meme vers du blanc : il reste
+        // correct pour l'usage qui lui a donne son nom (AddressBox,
+        // NovaCommandPaletteSearchBoxStyle - texte sur fond blanc).
+        SetBrush("NovaPrimaryTextBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(255, 248, 234) : UiColor(31, 29, 26)));
         SetBrush("NovaChromeButtonBackgroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(20, 27, 40, translucent ? (byte)228 : (byte)255) : UiColor(255, 252, 247, translucent ? (byte)242 : (byte)255)));
         SetBrush("NovaChromeButtonBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(56, 67, 85) : UiColor(214, 207, 195)));
         SetBrush("NovaChromeButtonForegroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(242, 245, 250) : UiColor(61, 55, 48)));
@@ -64,17 +85,20 @@ public sealed partial class MainWindow
         SetBrush("NovaBookmarkButtonActiveBackgroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(74, 57, 24, translucent ? (byte)232 : (byte)255) : UiColor(255, 243, 205, translucent ? (byte)248 : (byte)255)));
         SetBrush("NovaBookmarkButtonActiveBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(230, 170, 72) : UiColor(196, 128, 12)));
         SetBrush("NovaBookmarkButtonActiveForegroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(255, 233, 170) : UiColor(138, 84, 0)));
-        SetBrush("NovaTextMutedBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(195, 185, 165) : UiColor(120, 113, 102)));
+        // Blanc pur ici videait le mot "attenue" de son sens (texte secondaire
+        // aussi voyant que le texte principal) - passe au meme gris que les
+        // bordures au repos, cf. hcRestBorder plus haut.
+        SetBrush("NovaTextMutedBrush", highContrast ? hcRestBorder : (isDark ? UiColor(195, 185, 165) : UiColor(120, 113, 102)));
         SetBrush("NovaAccentBrush", palette.Accent);
         SetBrush("NovaAccentSoftBrush", palette.AccentSoft);
         SetBrush("NovaCoolAccentBrush", palette.CoolAccent);
         SetBrush("NovaCoolAccentSoftBrush", palette.CoolAccentSoft);
         SetBrush("NovaCompanionGlassBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(25, 33, 49, 214) : UiColor(255, 255, 255, 228)));
-        SetBrush("NovaCompanionStrokeBrush", highContrast ? UiColor(255, 255, 255) : palette.CoolAccentSoft);
+        SetBrush("NovaCompanionStrokeBrush", highContrast ? hcRestBorder : palette.CoolAccentSoft);
         SetBrush("NovaModeSelectorGlassBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(22, 30, 45, 208) : UiColor(255, 255, 255, 224)));
-        SetBrush("NovaModeSelectorStrokeBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(52, 60, 76, 160) : UiColor(214, 209, 200, 180)));
+        SetBrush("NovaModeSelectorStrokeBrush", highContrast ? hcRestBorder : (isDark ? UiColor(52, 60, 76, 160) : UiColor(214, 209, 200, 180)));
         SetBrush("NovaModuleHubGlassBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(22, 30, 45, 214) : UiColor(255, 255, 255, 226)));
-        SetBrush("NovaModuleHubStrokeBrush", highContrast ? UiColor(255, 255, 255) : palette.CoolAccentSoft);
+        SetBrush("NovaModuleHubStrokeBrush", highContrast ? hcRestBorder : palette.CoolAccentSoft);
         SetBrush("NovaModuleHubNodeBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(195, 185, 165) : UiColor(69, 63, 56)));
         SetBrush("NovaModuleHubAccentBrush", highContrast ? UiColor(255, 213, 0) : palette.CoolAccent);
         SetBrush("NovaFocusBrush", palette.Focus);
@@ -83,9 +107,17 @@ public sealed partial class MainWindow
         SetBrush("NovaPanelBackgroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(16, 24, 38) : UiColor(250, 248, 245)));
         SetBrush("NovaTextOnAccentBrush", textOnAccent);
         SetBrush("NovaOverlayBrush", overlay);
-        SetBrush("NovaChromeHaloWarmBrush", highContrast ? UiColor(255, 255, 255, 36) : (isDark ? UiColor(palette.Accent.R, palette.Accent.G, palette.Accent.B, 42) : UiColor(palette.Accent.R, palette.Accent.G, palette.Accent.B, 24)));
-        SetBrush("NovaChromeHaloCoolBrush", highContrast ? UiColor(255, 255, 255, 28) : (isDark ? UiColor(palette.CoolAccent.R, palette.CoolAccent.G, palette.CoolAccent.B, 36) : UiColor(palette.CoolAccent.R, palette.CoolAccent.G, palette.CoolAccent.B, 22)));
-        SetBrush("NovaChromeMistBrush", highContrast ? UiColor(255, 255, 255, 28) : (isDark ? UiColor(255, 255, 255, 18) : UiColor(255, 255, 255, 58)));
+        // Alpha alignes sur ceux d'ApplyUsageModeChrome (28/20/22 - valeurs
+        // reellement visibles avant consolidation, cf. commentaire plus bas :
+        // cette fonction s'executait en premier et etait donc silencieusement
+        // ecrasee par ApplyUsageModeChrome pour ces 3 cles, avec des alpha
+        // legerement differents des siens (36/28/28) - jamais un vrai
+        // probleme visible (ecart mineur sur un halo translucide), mais deux
+        // valeurs differentes pour la meme cle est exactement le genre de
+        // piege qu'une seule ecriture evite.
+        SetBrush("NovaChromeHaloWarmBrush", highContrast ? UiColor(255, 255, 255, 28) : (isDark ? UiColor(palette.Accent.R, palette.Accent.G, palette.Accent.B, 42) : UiColor(palette.Accent.R, palette.Accent.G, palette.Accent.B, 24)));
+        SetBrush("NovaChromeHaloCoolBrush", highContrast ? UiColor(255, 255, 255, 20) : (isDark ? UiColor(palette.CoolAccent.R, palette.CoolAccent.G, palette.CoolAccent.B, 36) : UiColor(palette.CoolAccent.R, palette.CoolAccent.G, palette.CoolAccent.B, 22)));
+        SetBrush("NovaChromeMistBrush", highContrast ? UiColor(255, 255, 255, 22) : (isDark ? UiColor(255, 255, 255, 18) : UiColor(255, 255, 255, 58)));
         // Halos "nebuleuse" en degrade radial (Ellipse rondes uniquement, voir
         // commentaire XAML) : cousins directs de NovaChromeHaloWarm/CoolBrush
         // ci-dessus mais types RadialGradientBrush, donc invisibles pour
@@ -106,8 +138,10 @@ public sealed partial class MainWindow
         SetBrush("NovaBrandChipBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(palette.CoolAccent.R, palette.CoolAccent.G, palette.CoolAccent.B, 168) : UiColor(palette.Accent.R, palette.Accent.G, palette.Accent.B, 118)));
         SetBrush("NovaBrandChipForegroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(242, 245, 250) : UiColor(49, 44, 38)));
         SetBrush("NovaBrandChipMutedBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(171, 178, 191) : UiColor(118, 112, 102)));
-        SetBrush("NovaChromeButtonShadowBrush", highContrast ? UiColor(255, 255, 255, 26) : (isDark ? UiColor(0, 0, 0, 82) : UiColor(123, 103, 73, 34)));
-        SetBrush("NovaChromeButtonHighlightBrush", highContrast ? UiColor(255, 255, 255, 30) : (isDark ? UiColor(255, 255, 255, 28) : UiColor(255, 255, 255, 108)));
+        // Alpha alignes sur ApplyUsageModeChrome (20/24), meme remarque que
+        // NovaChromeHalo*/NovaChromeMistBrush plus haut.
+        SetBrush("NovaChromeButtonShadowBrush", highContrast ? UiColor(255, 255, 255, 20) : (isDark ? UiColor(0, 0, 0, 82) : UiColor(123, 103, 73, 34)));
+        SetBrush("NovaChromeButtonHighlightBrush", highContrast ? UiColor(255, 255, 255, 24) : (isDark ? UiColor(255, 255, 255, 28) : UiColor(255, 255, 255, 108)));
         SetBrush("NovaBookmarkBarButtonBackgroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(21, 29, 42, translucent ? (byte)228 : (byte)244) : UiColor(255, 251, 245, translucent ? (byte)244 : (byte)255)));
         SetBrush("NovaBookmarkBarButtonBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(90, 101, 126) : UiColor(225, 212, 190)));
         SetBrush("NovaBookmarkBarButtonForegroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(242, 245, 250) : UiColor(74, 64, 54)));
@@ -135,7 +169,7 @@ public sealed partial class MainWindow
         SetBrush("NovaTabBadgeActiveBorderBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(255, 230, 104, 92) : UiColor(196, 148, 0, 90)));
         SetBrush("NovaTabBadgeActiveForegroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(255, 236, 170) : UiColor(120, 86, 0)));
         SetBrush("NovaTabBadgeInactiveBackgroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(255, 255, 255, 18) : UiColor(20, 18, 14, 16)));
-        SetBrush("NovaTabBadgeInactiveBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(255, 255, 255, 28) : UiColor(20, 18, 14, 26)));
+        SetBrush("NovaTabBadgeInactiveBorderBrush", highContrast ? hcRestBorder : (isDark ? UiColor(255, 255, 255, 28) : UiColor(20, 18, 14, 26)));
         SetBrush("NovaTabBadgeInactiveForegroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(214, 221, 229) : UiColor(96, 88, 76)));
         SetBrush("NovaTabIconWrapActiveBackgroundBrush", highContrast ? UiColor(0, 0, 0, 60) : (isDark ? UiColor(255, 255, 255, 34) : UiColor(20, 18, 14, 26)));
         SetBrush("NovaTabIconWrapInactiveBackgroundBrush", highContrast ? UiColor(255, 255, 255, 40) : (isDark ? UiColor(255, 255, 255, 16) : UiColor(20, 18, 14, 14)));
@@ -210,17 +244,19 @@ public sealed partial class MainWindow
     }
 
     // Taille des boutons NovaChromeIconButtonStyle (barre de navigation +
-    // barre plein ecran) : 32px par defaut, 44px (cible confort AAA) si
-    // AccessibilityLargeTargets est active. Passe par une valeur locale sur
-    // chaque bouton plutot que par un second Style/DynamicResource - WinUI ne
-    // reevalue pas un {StaticResource} deja resolu dans un Setter existant,
-    // alors qu'une valeur locale prend toujours le dessus sur le Style et se
-    // change librement a l'execution.
+    // barre plein ecran) : suit la Taille de l'interface (UiDensity, voir
+    // MainWindow.UiDensity.cs) sauf si AccessibilityLargeTargets est active,
+    // auquel cas 44px (cible confort AAA) prime toujours sur la densite
+    // choisie. Passe par une valeur locale sur chaque bouton plutot que par
+    // un second Style/DynamicResource - WinUI ne reevalue pas un
+    // {StaticResource} deja resolu dans un Setter existant, alors qu'une
+    // valeur locale prend toujours le dessus sur le Style et se change
+    // librement a l'execution.
     private void ApplyIconButtonSizing()
     {
         if (RootShell.Resources["NovaChromeIconButtonStyle"] is not Style chromeIconButtonStyle) return;
 
-        var size = _uiSettings.AccessibilityLargeTargets ? 44d : 32d;
+        var size = _uiSettings.AccessibilityLargeTargets ? 44d : ResolveUiDensityMetrics(_uiDensity).IconButtonSize;
         ApplyIconButtonSizeRecursive(NavigationToolbar, chromeIconButtonStyle, size);
         ApplyIconButtonSizeRecursive(FullScreenTopBar, chromeIconButtonStyle, size);
     }
@@ -326,58 +362,56 @@ public sealed partial class MainWindow
     {
         if (highContrast)
         {
+            // Consolidation (2026-08-08, retour utilisateur "on remet des
+            // couches sur des couches, refais ca au propre") : cette branche
+            // ecrivait ~30 cles de brush deja ecrites a l'identique par
+            // ApplyAccessibilitySettings (qui s'execute juste avant et
+            // appelle cette fonction) - deux sources de verite pour la meme
+            // couleur, exactement le risque qui a cause l'oubli du point 1
+            // (ModulesButton non reinitialise). Ne reste ici que ce qui n'a
+            // PAS d'equivalent generique : l'accent visuel du Mode d'usage
+            // (bande de couleur, degrade de la colonne identitaire) et les
+            // boutons dont la couleur depend du mode courant
+            // (UsageModeButton/ModeCompanionButton - Focus/Lecture/etc. ont
+            // chacun leur teinte, impossible a exprimer par un
+            // {StaticResource} statique). ModulesButton en a ete retire :
+            // il n'a jamais ete teinte par mode (toujours la meme "chrome"
+            // generique), sa couleur venait deja entierement de
+            // NovaChromeButtonBackgroundBrush/BorderBrush/ForegroundBrush
+            // via le Style de son bouton - cette reecriture directe etait
+            // superflue et c'est elle qui restait collee au bouton une fois
+            // le contraste eleve desactive (bug du point 1, desormais
+            // impossible puisque plus rien ne l'ecrit ici).
+            var hcRestBorder = UiColor(190, 190, 190);
             ModeChromeAccentStrip.Height = 3;
             ModeChromeAccentStrip.Opacity = 1;
-            SetBrush("NovaAppBackgroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaChromeSurfaceRaisedBrush", UiColor(0, 0, 0));
-            SetBrush("NovaTextOnAccentBrush", UiColor(0, 0, 0));
-            SetBrush("NovaOverlayBrush", UiColor(0, 0, 0, 210));
-            SetBrush("NovaChromeButtonBackgroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaChromeButtonBorderBrush", UiColor(255, 255, 255));
-            SetBrush("NovaChromeButtonForegroundBrush", UiColor(255, 255, 255));
-            SetBrush("NovaChromeButtonAccentBackgroundBrush", UiColor(255, 255, 255));
-            SetBrush("NovaChromeButtonAccentBorderBrush", UiColor(255, 255, 255));
-            SetBrush("NovaChromeButtonAccentForegroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaModuleButtonBackgroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaModuleButtonBorderBrush", UiColor(255, 255, 255));
-            SetBrush("NovaModuleButtonForegroundBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBookmarkButtonBackgroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaBookmarkButtonBorderBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBookmarkButtonForegroundBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBookmarkButtonActiveBackgroundBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBookmarkButtonActiveBorderBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBookmarkButtonActiveForegroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaChromeHaloWarmBrush", UiColor(255, 255, 255, 28));
-            SetBrush("NovaChromeHaloCoolBrush", UiColor(255, 255, 255, 20));
-            SetBrush("NovaChromeMistBrush", UiColor(255, 255, 255, 22));
-            SetBrush("NovaBrandChipBackgroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaBrandChipBorderBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBrandChipForegroundBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBrandChipMutedBrush", UiColor(255, 255, 255));
-            SetBrush("NovaChromeButtonShadowBrush", UiColor(255, 255, 255, 20));
-            SetBrush("NovaChromeButtonHighlightBrush", UiColor(255, 255, 255, 24));
-            SetBrush("NovaBookmarkBarButtonBackgroundBrush", UiColor(0, 0, 0));
-            SetBrush("NovaBookmarkBarButtonBorderBrush", UiColor(255, 255, 255));
-            SetBrush("NovaBookmarkBarButtonForegroundBrush", UiColor(255, 255, 255));
             SetChromeGradient(UiColor(0, 0, 0), UiColor(0, 0, 0), UiColor(0, 0, 0));
             UsageModeButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
-            UsageModeButton.BorderBrush = new SolidColorBrush(UiColor(255, 255, 255));
+            UsageModeButton.BorderBrush = new SolidColorBrush(hcRestBorder);
             UsageModeButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
             ModeCompanionButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
-            ModeCompanionButton.BorderBrush = new SolidColorBrush(UiColor(255, 255, 255));
+            ModeCompanionButton.BorderBrush = new SolidColorBrush(hcRestBorder);
             ModeCompanionButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
             UsageModeAccentBar.Background = new SolidColorBrush(UiColor(255, 213, 0));
             ModeCompanionAccentDot.Background = new SolidColorBrush(UiColor(0, 255, 226));
             ModeCompanionGlow.Background = new SolidColorBrush(UiColor(0, 0, 0));
-            ModulesButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
-            ModulesButton.BorderBrush = new SolidColorBrush(UiColor(255, 255, 255));
-            ModulesButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
-            ModulesButtonMark.Fill = new SolidColorBrush(UiColor(255, 255, 255));
             SetIdentityGradient(UiColor(255, 213, 0), UiColor(255, 255, 255), UiColor(0, 255, 226));
             NavigationToolbar.Opacity = 1;
             VerticalTabsRail.Opacity = 1;
             return;
         }
+
+        // Filet defensif (bug d'origine corrige a la racine le 2026-08-08 -
+        // consolidation d'ApplyUsageModeChrome plus haut, qui n'ecrit plus
+        // jamais de valeur locale sur ModulesButton). Garde par prudence :
+        // si un futur appel venait a reintroduire une ecriture directe sur
+        // ModulesButton.Background/BorderBrush/Foreground ailleurs, ce
+        // ClearValue empeche qu'elle reste collee apres desactivation du
+        // contraste eleve, comme au 1er signalement de l'utilisateur.
+        ModulesButton.ClearValue(Control.BackgroundProperty);
+        ModulesButton.ClearValue(Control.BorderBrushProperty);
+        ModulesButton.ClearValue(Control.ForegroundProperty);
+        ModulesButtonMark.ClearValue(Microsoft.UI.Xaml.Shapes.Shape.FillProperty);
 
         var alpha = translucent ? (byte)232 : (byte)255;
         var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
@@ -403,6 +437,12 @@ public sealed partial class MainWindow
         SetBrush("NovaAddressBackgroundBrush", chrome.AddressBackground);
         SetBrush("NovaAddressBorderBrush", chrome.AddressBorder);
         SetBrush("NovaAddressForegroundBrush", chrome.Text);
+        // Meme teinte de mode que NovaAddressForegroundBrush ci-dessus pour
+        // les usages generaux (voir ApplyAccessibilitySettings) - la branche
+        // contraste eleve, elle, retourne plus haut sans repasser ici : sa
+        // valeur blanche posee par ApplyAccessibilitySettings n'est jamais
+        // ecrasee, comme les autres brushes consolidees ce jour-la.
+        SetBrush("NovaPrimaryTextBrush", chrome.Text);
         SetBrush("NovaTextMutedBrush", chrome.MutedText);
         SetBrush("NovaAccentBrush", chrome.Accent);
         SetBrush("NovaAccentSoftBrush", chrome.AccentSoft);

@@ -43,14 +43,44 @@ public sealed partial class MainWindow : Window
     {
         if (_appWindow is null) return;
 
+        var highContrast = _uiSettings.AccessibilityHighContrast;
         var translucent = IsTranslucentChromeEnabled();
         var titleBarBackgroundAlpha = translucent ? (byte)226 : (byte)255;
         var background = BrushColor("NovaChromeSurfaceBrush", UiColor(20, 32, 42, titleBarBackgroundAlpha));
         var inactiveBackground = BrushColor("NovaChromeSurfaceAltBrush", background);
-        var foreground = BrushColor("NovaAddressForegroundBrush", UiColor(255, 248, 234));
+        // NovaChromeButtonForegroundBrush (pas NovaAddressForegroundBrush) :
+        // c'est deja le jeton utilise par les AUTRES boutons-icones de la
+        // chrome (styles NovaChromeIconButtonStyle, MainWindow.xaml:259-280),
+        // et surtout le seul des deux a rester clair en contraste eleve.
+        // NovaAddressForegroundBrush y est NOIR (pense pour texte sur fond
+        // blanc de la barre d'adresse) - utilise ici, il rendait les icones
+        // minimiser/agrandir/fermer entierement invisibles au repos (texte
+        // noir sur fond NovaChromeSurfaceBrush lui-meme noir en contraste
+        // eleve), pas seulement au survol. Trouve par capture d'ecran reelle
+        // en verifiant le correctif de survol ci-dessous.
+        var foreground = BrushColor("NovaChromeButtonForegroundBrush", UiColor(255, 248, 234));
         var inactiveForeground = BrushColor("NovaTextMutedBrush", UiColor(195, 185, 165));
         var hoverBackground = BrushColor("NovaChromeSurfaceRaisedBrush", UiColor(34, 49, 58, translucent ? (byte)238 : (byte)255));
         var pressedBackground = BrushColor("NovaChromeStrokeBrush", UiColor(50, 69, 76, translucent ? (byte)244 : (byte)255));
+        var hoverForeground = foreground;
+        var pressedForeground = foreground;
+
+        // Contraste eleve : le fond (NovaChromeSurfaceRaisedBrush) et le fond
+        // "survol" sont tous les deux noirs (UiColor(0,0,0) dans
+        // ApplyAccessibilitySettings) - le survol des boutons systeme etait
+        // donc invisible en plus du probleme de premier plan ci-dessus. On
+        // reprend les deux couleurs deja utilisees ailleurs comme langage
+        // contraste-eleve de l'app (accent jaune ambre de
+        // NovaModuleHubAccentBrush, jaune pur de NovaFocusBrush/Focus) pour
+        // donner 3 etats vraiment distincts : fond noir/texte blanc, survol
+        // jaune ambre/texte noir, appui jaune pur/texte noir.
+        if (highContrast)
+        {
+            hoverBackground = UiColor(255, 213, 0);
+            hoverForeground = UiColor(0, 0, 0);
+            pressedBackground = UiColor(255, 255, 0);
+            pressedForeground = UiColor(0, 0, 0);
+        }
 
         var titleBar = _appWindow.TitleBar;
         titleBar.BackgroundColor = WithAlpha(background, titleBarBackgroundAlpha);
@@ -62,11 +92,15 @@ public sealed partial class MainWindow : Window
         titleBar.ButtonForegroundColor = foreground;
         titleBar.ButtonInactiveForegroundColor = inactiveForeground;
         titleBar.ButtonHoverBackgroundColor = hoverBackground;
-        titleBar.ButtonHoverForegroundColor = foreground;
+        titleBar.ButtonHoverForegroundColor = hoverForeground;
         titleBar.ButtonPressedBackgroundColor = pressedBackground;
-        titleBar.ButtonPressedForegroundColor = foreground;
+        titleBar.ButtonPressedForegroundColor = pressedForeground;
 
-        ApplyWindowBorderColor(pressedBackground);
+        // Palette C du Contraste renforce (2026-08-08) : meme gris de repos
+        // que MainWindow.SettingsTheme.cs (hcRestBorder, 190/190/190) - le
+        // lisere exterieur de la fenetre suit la meme regle que toutes les
+        // autres bordures au repos, plus de blanc pur ici non plus.
+        ApplyWindowBorderColor(highContrast ? UiColor(190, 190, 190) : pressedBackground);
     }
 
     [System.Runtime.InteropServices.DllImport("dwmapi.dll", PreserveSig = true)]
@@ -260,6 +294,93 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    // ── Molette : routage natif vers le vrai HWND enfant sous le curseur ─────
+    // Le diagnostic du 2026-07-25 (ci-dessus) confirme que WM_MOUSEWHEEL/
+    // WM_POINTERWHEEL atteignent bien la fenetre Lumora, mais Windows les
+    // route vers le HWND qui a le focus CLAVIER natif - pas vers celui
+    // survole par la souris. Tous les correctifs tentes jusqu'ici
+    // (FocusState.Pointer, hit-test XAML sur ScrollViewer...) essayaient de
+    // faire suivre ce focus natif jusqu'au HWND enfant reel de WebView2
+    // (controle "windowed" - vrai HWND enfant, contrairement au reste de
+    // l'UI XAML qui vit dans un seul HWND via DirectComposition) sans jamais
+    // le controler directement : XAML expose Focus(), pas
+    // CoreWebView2Controller.MoveFocus (verifie absent de ce SDK, voir
+    // BrowserHost_PointerEntered dans MainWindow.xaml.cs). Plutot que de
+    // continuer a esperer que le focus natif suive, on route explicitement
+    // le message recu par la fenetre principale vers le HWND enfant
+    // reellement sous le curseur au moment du geste (ChildWindowFromPointEx,
+    // hit-test frais a chaque evenement) - independant du focus, meme
+    // principe que le "scroll sous la souris" des navigateurs et de
+    // l'Explorateur de fichiers. Go utilisateur du 2026-08-07 : "prendre tout
+    // ce qui a deja ete fait et s'arranger... meme si tu dois creer quelque
+    // chose de specifique" apres un historique de correctifs XAML jamais
+    // rectifie - ce module s'attaque a une couche jamais touchee jusqu'ici
+    // (le HWND natif cible), independamment de tout ce qui a ete tente cote
+    // XAML (conserve intact, aucune regression attendue sur les panneaux
+    // natifs qui, eux, n'ont pas de HWND propre et ne sont donc jamais
+    // redirige par ce module).
+    private const uint CwpSkipinvisible = 0x0001;
+    private const uint CwpSkipdisabled = 0x0002;
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct Win32Point
+    {
+        public int X;
+        public int Y;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint ChildWindowFromPointEx(nint hWndParent, Win32Point point, uint uFlags);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool ScreenToClient(nint hWnd, ref Win32Point lpPoint);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint SendMessage(nint hWnd, uint msg, nint wParam, nint lParam);
+
+    // Garde-fou anti-reentrance - CRASH REEL rencontre en verification (2026-08-07,
+    // STATUS_STACK_OVERFLOW 0xc00000fd, confirme par l'Observateur d'evenements) :
+    // quand WebView2/Chromium ne traite pas le message qu'on lui envoie (ex. page
+    // sans contenu scrollable a cet endroit precis), il applique la convention
+    // Win32 documentee par Microsoft pour WM_MOUSEWHEEL - le renvoyer via
+    // SendMessage a SA fenetre PARENTE (nous) si lui-meme ne le traite pas. Sans
+    // garde, ce retour reentrait dans ce meme WndProc, qui refaisait le meme
+    // hit-test (meme point ecran, meme resultat) et renvoyait de nouveau au meme
+    // enfant - boucle synchrone (SendMessage bloque) qui a fait deborder la pile
+    // en ~600 allers-retours. Le drapeau coupe le hit-test/forward des la
+    // reentrance : le message "rebondi" repart alors simplement vers
+    // CallWindowProc (comportement par defaut), sans nouveau forward.
+    private bool _forwardingWheelMessage;
+
+    // ChildWindowFromPointEx ne regarde qu'un seul niveau d'enfants DIRECTS :
+    // WebView2 peut imbriquer plusieurs HWND (widget host, puis la fenetre de
+    // rendu Chromium elle-meme), donc on redescend tant qu'un enfant plus
+    // profond existe sous le meme point ecran. Limite de profondeur en filet
+    // de securite (jamais cense boucler, mais un HWND qui se retournerait
+    // lui-meme ne doit pas figer la fenetre).
+    private static nint FindDeepestChildAtScreenPoint(nint root, int screenX, int screenY)
+    {
+        var current = root;
+        for (var depth = 0; depth < 8; depth++)
+        {
+            var clientPoint = new Win32Point { X = screenX, Y = screenY };
+            if (!ScreenToClient(current, ref clientPoint))
+            {
+                break;
+            }
+
+            var child = ChildWindowFromPointEx(current, clientPoint, CwpSkipinvisible | CwpSkipdisabled);
+            if (child == nint.Zero || child == current)
+            {
+                break;
+            }
+
+            current = child;
+        }
+
+        return current;
+    }
+
     private nint RawWheelDiagnosticsWndProc(nint hWnd, uint msg, nint wParam, nint lParam)
     {
         if (msg is WmMousewheel or WmPointerwheel)
@@ -267,6 +388,33 @@ public sealed partial class MainWindow : Window
             var messageName = msg == WmMousewheel ? "WM_MOUSEWHEEL" : "WM_POINTERWHEEL";
             var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
             WinUiRuntimeTrace.Write($"Diagnostic bas niveau molette : {messageName} brut recu par la fenetre (delta={delta}).");
+
+            if (_forwardingWheelMessage)
+            {
+                WinUiRuntimeTrace.Write($"Molette : {messageName} rebondi depuis un enfant natif (non traite) - pas de nouveau forward.");
+            }
+            else
+            {
+                // lParam porte les coordonnees ECRAN pour WM_MOUSEWHEEL comme pour
+                // WM_POINTERWHEEL (documentation Win32) : aucune conversion a
+                // faire avant de descendre l'arbre des HWND enfants.
+                var screenX = (short)(lParam.ToInt64() & 0xFFFF);
+                var screenY = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+                var target = FindDeepestChildAtScreenPoint(hWnd, screenX, screenY);
+                if (target != nint.Zero && target != hWnd)
+                {
+                    WinUiRuntimeTrace.Write($"Molette : {messageName} redirige vers le HWND enfant natif sous le curseur ({target}).");
+                    _forwardingWheelMessage = true;
+                    try
+                    {
+                        SendMessage(target, msg, wParam, lParam);
+                    }
+                    finally
+                    {
+                        _forwardingWheelMessage = false;
+                    }
+                }
+            }
         }
 
         return CallWindowProc(_originalWndProc, hWnd, msg, wParam, lParam);

@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -61,6 +62,9 @@ public sealed partial class LumoraIncognitoWindow : Window
     // Closed ci-dessous ne doit surtout pas relancer MainWindow, seulement le
     // vrai dernier Close() (l'utilisateur quitte Incognito) le doit.
     private bool _relaunchingIncognito;
+    // Onglets verticaux (2026-08-07) : bascule de session, pas de reglage
+    // persiste - coherent avec l'esprit "ephemere" de cette fenetre.
+    private bool _verticalTabsEnabled;
 
     internal LumoraIncognitoWindow(
         LumoraProfilePaths profile, string? startUrl = null, bool initialTorEnabled = false, bool returnToMain = false)
@@ -466,6 +470,104 @@ public sealed partial class LumoraIncognitoWindow : Window
         // XAML sans se propager jusqu'a Chromium, la molette restait muette
         // apres un changement d'onglet tant qu'on n'avait pas clique dans la page.
         tab.View.Focus(FocusState.Pointer);
+        RenderVerticalTabs();
+    }
+
+    // ── Onglets verticaux ────────────────────────────────────────────────────
+    // Meme principe que VerticalTabsSwitch/VerticalTabsRail de MainWindow
+    // (demande utilisateur 2026-08-07, "fais exactement ce que t'as fait avec
+    // le mode normal") : IncognitoTabs (TabView) reste la source de verite
+    // (TabItems/SelectedItem, evenements de fermeture/ajout deja cables),
+    // seule sa bande horizontale est masquee au profit d'un rail rendu a la
+    // main qui pilote la meme collection en dessous. Version simplifiee sans
+    // groupes/epingles/glisser-deposer/redimensionnement - IncognitoTab n'a
+    // aucune de ces notions (voir IncognitoTab.cs), contrairement a
+    // BrowserTabState cote fenetre normale.
+    private void IncognitoVerticalTabsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        _verticalTabsEnabled = !_verticalTabsEnabled;
+        ApplyVerticalTabsLayout();
+        RenderVerticalTabs();
+    }
+
+    private void IncognitoVerticalTabsAddButton_Click(object sender, RoutedEventArgs e) =>
+        _ = CreateTabAsync(null, select: true);
+
+    private void ApplyVerticalTabsLayout()
+    {
+        IncognitoTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
+        IncognitoVerticalTabsRail.Visibility = _verticalTabsEnabled ? Visibility.Visible : Visibility.Collapsed;
+        IncognitoVerticalTabsColumn.Width = _verticalTabsEnabled ? new GridLength(200) : new GridLength(0);
+        IncognitoVerticalTabsToggleIcon.Glyph = _verticalTabsEnabled ? "" : "";
+    }
+
+    // Reconstruit le rail a chaque changement (ajout/fermeture/selection/titre) :
+    // meme approche que RenderVerticalTabs() de MainWindow - liste courte
+    // (session ephemere, peu d'onglets en pratique), pas besoin d'un diff
+    // incremental.
+    private void RenderVerticalTabs()
+    {
+        if (!_verticalTabsEnabled)
+        {
+            return;
+        }
+
+        IncognitoVerticalTabsPanelItems.Children.Clear();
+        foreach (var item in IncognitoTabs.TabItems.OfType<TabViewItem>())
+        {
+            if (item.Tag is not IncognitoTab tab)
+            {
+                continue;
+            }
+
+            var isActive = ReferenceEquals(tab, _currentTab);
+            var grid = new Grid { ColumnSpacing = 6 };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var selectButton = new Button
+            {
+                Content = new TextBlock
+                {
+                    Text = tab.Title,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    VerticalAlignment = VerticalAlignment.Center
+                },
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Padding = new Thickness(10, 6, 6, 6),
+                Background = isActive
+                    ? (Brush)RootGrid.Resources["LumoraTabSelectedBrush"]
+                    : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(8),
+                Foreground = (Brush)RootGrid.Resources["LumoraWindowTextBrush"],
+                Tag = tab
+            };
+            selectButton.Click += (_, _) => IncognitoTabs.SelectedItem = tab.Item;
+            Grid.SetColumn(selectButton, 0);
+            grid.Children.Add(selectButton);
+
+            var closeButton = new Button
+            {
+                Content = new FontIcon { Glyph = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 11 },
+                Width = 28,
+                Height = 28,
+                Padding = new Thickness(0),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(8),
+                Foreground = (Brush)RootGrid.Resources["LumoraWindowTextBrush"]
+            };
+            AutomationProperties.SetName(closeButton, $"Fermer l'onglet {tab.Title}");
+            closeButton.Click += (_, _) => CloseIncognitoTab(item, tab);
+            Grid.SetColumn(closeButton, 1);
+            grid.Children.Add(closeButton);
+
+            IncognitoVerticalTabsPanelItems.Children.Add(grid);
+        }
     }
 
     // "Nouvel onglet" (onglet tout juste cree) et "Incognito" (titre de la
@@ -481,15 +583,26 @@ public sealed partial class LumoraIncognitoWindow : Window
     private void IncognitoTabs_TabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
         if (args.Tab.Tag is not IncognitoTab tab) return;
+        CloseIncognitoTab(args.Tab, tab);
+    }
 
-        IncognitoTabs.TabItems.Remove(args.Tab);
+    // Extrait de IncognitoTabs_TabCloseRequested (2026-08-07) pour etre
+    // reutilisable depuis le bouton de fermeture du rail vertical, qui n'a
+    // pas de TabViewTabCloseRequestedEventArgs a fabriquer (evenement natif
+    // du TabView, pas construit a la main).
+    private void CloseIncognitoTab(TabViewItem item, IncognitoTab tab)
+    {
+        IncognitoTabs.TabItems.Remove(item);
         IncognitoWebViewHost.Children.Remove(tab.View);
         try { tab.View.Close(); } catch { }
 
         if (IncognitoTabs.TabItems.Count == 0)
         {
             Close();
+            return;
         }
+
+        RenderVerticalTabs();
     }
 
     // Cree un nouvel onglet dans CETTE fenetre/process (voir commentaire de
@@ -526,6 +639,7 @@ public sealed partial class LumoraIncognitoWindow : Window
         {
             IncognitoTabs.SelectedItem = item;
         }
+        RenderVerticalTabs();
 
         CoreWebView2? core;
         try
@@ -562,6 +676,7 @@ public sealed partial class LumoraIncognitoWindow : Window
             {
                 Title = WindowTitleFor(tab.Title);
             }
+            RenderVerticalTabs();
         });
         // Une page cible (target=_blank, window.open) ouvre un nouvel onglet
         // dans cette meme fenetre plutot qu'une fenetre Incognito separee :
@@ -598,6 +713,7 @@ public sealed partial class LumoraIncognitoWindow : Window
         IncognitoTabs.TabItems.Remove(item);
         IncognitoWebViewHost.Children.Remove(tab.View);
         try { tab.View.Close(); } catch { }
+        RenderVerticalTabs();
 
         if (wasOnlyTab)
         {

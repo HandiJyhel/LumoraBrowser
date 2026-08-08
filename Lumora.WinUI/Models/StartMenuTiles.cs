@@ -27,6 +27,14 @@ public static class StartMenuTileIds
     public const string AllModules = "allModules";
     public const string About = "about";
     public const string Studio = "studio";
+    // Decouvrabilite du Style Lumora (2026-08-07, retour utilisateur) :
+    // avant cette tuile, le reglage etait enterre a 4 clics de profondeur
+    // (Parametres > Mon Lumora > Disposition), rien ne le mettait en avant.
+    public const string ChromeStyle = "chromeStyle";
+    // Decouvrabilite du bloqueur de pub (2026-08-08, retour utilisateur) :
+    // seule protection de fond promue en tuile epinglable par defaut, avec
+    // Coffre - voir UiSettings.DefaultPinnedStartMenuTileIds.
+    public const string AdBlocker = "adBlocker";
 }
 
 // Une entree = l'etat d'usage d'une tuile donnee. Univers fixe (~21 ids

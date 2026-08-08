@@ -84,25 +84,7 @@ public sealed partial class MainWindow
     private void OpenStartMenuTile(string tileId)
     {
         ModulesFlyout.Hide();
-        RecordTileOpened(tileId);
         ExecuteFor(tileId)();
-    }
-
-    private void RecordTileOpened(string tileId)
-    {
-        var usage = _uiSettings.StartMenuTileUsage;
-        var now = DateTimeOffset.UtcNow;
-        var index = usage.FindIndex(u => string.Equals(u.TileId, tileId, StringComparison.Ordinal));
-        if (index >= 0)
-        {
-            usage[index] = usage[index].RecordOpen(now);
-        }
-        else
-        {
-            usage.Add(new StartMenuTileUsage(tileId, 1, now));
-        }
-
-        _uiSettings.Save(_profile.UiSettingsFile);
     }
 
     private void TogglePinnedStartMenuTile(string tileId)
@@ -177,15 +159,12 @@ public sealed partial class MainWindow
     private void RebuildStartMenuDetail()
     {
         StartMenuPinnedRow.ItemsSource = _startMenuPinnedTiles;
-        StartMenuRecentList.ItemsSource = _startMenuRecentTiles;
         StartMenuDetailList.ItemsSource = _startMenuDetailTiles;
 
         var pinnedIds = _uiSettings.PinnedStartMenuTileIds;
-        var now = DateTimeOffset.UtcNow;
         var isPinnedCategory = _startMenuSelectedCategoryKey == PinnedCategoryKey;
 
         _startMenuPinnedTiles.Clear();
-        _startMenuRecentTiles.Clear();
         _startMenuDetailTiles.Clear();
 
         var category = _startMenuCategories.FirstOrDefault(c => c.Key == _startMenuSelectedCategoryKey);
@@ -194,20 +173,12 @@ public sealed partial class MainWindow
 
         if (isPinnedCategory)
         {
-            var topIds = StartMenuTileRegistry.TopTiles(_uiSettings.StartMenuTileUsage, now, 4);
-            foreach (var id in topIds)
-            {
-                var def = StartMenuTileRegistry.Find(id);
-                if (def is not null) _startMenuRecentTiles.Add(ToStartMenuTileViewModel(def, pinnedIds));
-            }
-
             foreach (var id in pinnedIds)
             {
                 var def = StartMenuTileRegistry.Find(id);
                 if (def is not null) _startMenuPinnedTiles.Add(ToStartMenuTileViewModel(def, pinnedIds));
             }
 
-            StartMenuRecentCard.Visibility = _startMenuRecentTiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             StartMenuPinnedEmptyText.Visibility = _startMenuPinnedTiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             StartMenuPinnedSection.Visibility = Visibility.Visible;
             StartMenuDetailList.Visibility = Visibility.Collapsed;
@@ -240,6 +211,7 @@ public sealed partial class MainWindow
     {
         StartMenuTileIds.Favoris => () => BookmarksMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.Vault => () => VaultMenu_Click(this, new RoutedEventArgs()),
+        StartMenuTileIds.AdBlocker => OpenAdBlockerSettings,
         StartMenuTileIds.ReaderMode => () => ReaderModeMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.Notes => () => NotesMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.Translate => () => ModulesTranslate_Click(this, new RoutedEventArgs()),
@@ -259,6 +231,7 @@ public sealed partial class MainWindow
         StartMenuTileIds.AllModules => () => ModulesMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.About => () => AboutMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.Studio => OpenWorkspaceSettings,
+        StartMenuTileIds.ChromeStyle => OpenChromeStyleSettings,
         _ => () => { }
     };
 }

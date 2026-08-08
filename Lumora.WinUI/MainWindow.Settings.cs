@@ -525,6 +525,7 @@ public sealed partial class MainWindow
             _bookmarksBarPosition = NormalizeBookmarksBarPosition(_uiSettings.BookmarksBarPosition);
             _verticalTabsEnabled = UsesVerticalTabRail(_tabStripPosition);
             _chromeLayoutStyle = NormalizeChromeLayoutStyle(_uiSettings.ChromeLayoutStyle);
+            _uiDensity = NormalizeUiDensity(_uiSettings.UiDensity);
             _verticalTabsCompact = _uiSettings.VerticalTabsCompact;
             _compactModeEnabled = _uiSettings.CompactModeEnabled;
             _verticalTabsExpandedWidth = Math.Clamp(_uiSettings.VerticalTabsWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
@@ -546,6 +547,7 @@ public sealed partial class MainWindow
             SelectComboByTag(TabStripPositionCombo, _tabStripPosition, "top");
             SelectComboByTag(BookmarksBarPositionCombo, _bookmarksBarPosition, "top");
             SelectComboByTag(ChromeLayoutStyleCombo, _chromeLayoutStyle, "classic");
+            SelectComboByTag(UiDensityCombo, _uiDensity, "standard");
             IdentitySpineAutoHideSwitch.IsOn = _uiSettings.IdentitySpineAutoHide;
             InitializeModeAccentColorPickers();
             NewTabFocusSearchSwitch.IsOn = _uiSettings.NewTabFocusSearchOnOpen;
@@ -578,6 +580,7 @@ public sealed partial class MainWindow
             ApplyChromeLayoutStyle();
             ApplyWindowBackdrop();
             ApplyAccessibilitySettings();
+            ApplyUiDensity();
 
             // Démarrage
             var startupMode = _uiSettings.StartupMode;
@@ -640,6 +643,11 @@ public sealed partial class MainWindow
             UpdateModulesPinUi();
             UpdateUsageModeButtonUi();
             UpdateModeCompanionUi();
+            // Le Compagnon Style Lumora se masque en mode Neutre (voir
+            // UpdateIdentitySpineHomeHeroVisibility) - sans cet appel, changer
+            // de mode en restant sur l'onglet d'accueil ne rafraichissait la
+            // visibilite qu'au prochain changement d'onglet.
+            UpdateIdentitySpineHomeHeroVisibility(CurrentTab());
             UpdateAccessibilityQuickButtonUi();
         }
         finally
@@ -884,13 +892,13 @@ public sealed partial class MainWindow
             return;
         }
 
-        NavigationRow.Height = new GridLength(_compactModeEnabled ? 58 : 72);
+        NavigationRow.Height = new GridLength(ResolveNavigationRowHeight());
         TopTabsRow.Height = new GridLength(52);
         RootShell.RowDefinitions[0].Height = new GridLength(0);
         FullScreenTopBar.Visibility = Visibility.Collapsed;
         NavigationToolbar.Visibility = Visibility.Visible;
         BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
-        NavigationToolbar.Padding = _compactModeEnabled ? new Thickness(10, 3, 10, 4) : new Thickness(12, 6, 12, 7);
+        NavigationToolbar.Padding = ResolveNavigationToolbarPadding();
         UpdateFullScreenButton();
         ApplyBookmarksBarVisibility();
         ApplyVerticalTabsLayout();
@@ -927,9 +935,10 @@ public sealed partial class MainWindow
         var sideVisible = visible && UsesSideBookmarksRail(_bookmarksBarPosition);
         var bookmarksOnRight = _bookmarksBarPosition == "right";
 
-        BookmarksRow.Height = topVisible ? new GridLength(60) : new GridLength(0);
+        var densityMetrics = ResolveUiDensityMetrics(_uiDensity);
+        BookmarksRow.Height = topVisible ? new GridLength(densityMetrics.BookmarksRowHeight) : new GridLength(0);
         BookmarksBarRow.Visibility = topVisible ? Visibility.Visible : Visibility.Collapsed;
-        WorkspaceBottomBookmarksRow.Height = bottomVisible ? new GridLength(42) : new GridLength(0);
+        WorkspaceBottomBookmarksRow.Height = bottomVisible ? new GridLength(densityMetrics.BookmarksBottomRowHeight) : new GridLength(0);
         BookmarksBottomRow.Visibility = bottomVisible ? Visibility.Visible : Visibility.Collapsed;
         WorkspaceLeftBookmarksColumn.Width = sideVisible && !bookmarksOnRight ? GridLength.Auto : new GridLength(0);
         WorkspaceRightBookmarksColumn.Width = sideVisible && bookmarksOnRight ? GridLength.Auto : new GridLength(0);
@@ -982,6 +991,7 @@ public sealed partial class MainWindow
                 IdentitySpineHost.Visibility = Visibility.Collapsed;
                 IdentitySpineAddressHost.Visibility = Visibility.Collapsed;
                 IdentitySpineHomeHero.Visibility = Visibility.Collapsed;
+                UpdateIdentitySpineContentInset();
             }
         }
         else
@@ -998,22 +1008,38 @@ public sealed partial class MainWindow
             {
                 // Symetrique de la branche immersive : on restaure la
                 // colonne identitaire plutot que le chrome classique.
-                TopTabsRow.Height = new GridLength(0);
+                // TopTabsRow = 52 (pas 0) : meme correctif que
+                // EnterIdentitySpineLayout (MainWindow.IdentitySpine.cs,
+                // 2026-08-07) - cette ligne reserve aussi la bande de fond
+                // derriere les boutons systeme, pas seulement les onglets.
+                TopTabsRow.Height = new GridLength(52);
                 NavigationRow.Height = new GridLength(0);
                 IdentitySpineHost.Visibility = Visibility.Visible;
                 IdentitySpineAddressHost.Visibility = Visibility.Visible;
+                // BUG REEL trouve en verification (2026-08-07, capture utilisateur) :
+                // seule la barre de favoris revenait apres la sortie du plein ecran,
+                // adresse et navigation portees disparues. Cause - NavigationToolbar
+                // (la capsule adresse/back/forward/reload, reparentee ici dans
+                // IdentitySpineCapsuleSlot par EnterIdentitySpineLayout) est mise en
+                // Collapsed sans condition de style en entrant en plein ecran (ligne
+                // ci-dessus, branche commune), mais seule la branche Classique la
+                // remettait en Visible ci-dessous - IdentitySpineAddressHost (son
+                // conteneur) redevenait bien visible, mais NavigationToolbar restait
+                // Collapsed a l'interieur, invisible malgre un ancetre visible.
+                NavigationToolbar.Visibility = Visibility.Visible;
                 UpdateIdentitySpineHomeHeroVisibility(CurrentTab());
+                UpdateIdentitySpineContentInset();
             }
             else
             {
                 TopTabsRow.Height = new GridLength(52);
-                NavigationRow.Height = new GridLength(_compactModeEnabled ? 58 : 72);
+                NavigationRow.Height = new GridLength(ResolveNavigationRowHeight());
                 Grid.SetColumn(VerticalTabsRail, _tabStripPosition == "right" ? 5 : 1);
                 Grid.SetColumnSpan(VerticalTabsRail, 1);
                 VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Stretch;
                 NavigationToolbar.Visibility = Visibility.Visible;
                 BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
-                NavigationToolbar.Padding = _compactModeEnabled ? new Thickness(10, 3, 10, 4) : new Thickness(12, 6, 12, 7);
+                NavigationToolbar.Padding = ResolveNavigationToolbarPadding();
             }
 
             ApplyBookmarksBarVisibility();

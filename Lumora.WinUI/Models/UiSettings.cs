@@ -40,6 +40,14 @@ internal sealed class UiSettings
     public bool CompactModeEnabled { get; set; }
     public bool CompactModeHidesBookmarks { get; set; }
     public bool FullScreenAutoHideChrome { get; set; } = true;
+    // Taille des elements de chrome (boutons de la barre d'outils, ligne
+    // d'outils, barre d'adresse, barre de favoris) : "comfortable" (tailles
+    // historiques de Lumora), "standard" (nouveau defaut, plus proche des
+    // navigateurs du marche) ou "dense" (le plus petit). Reglage independant
+    // du Mode d'usage et de CompactModeEnabled (qui designe le mode plein
+    // ecran/immersif "Interface compacte", pas une densite de boutons/texte)
+    // - ne pas confondre les deux.
+    public string UiDensity { get; set; } = "standard";
     public string WindowBackdrop { get; set; } = "solid";
     // "dark" (identite historique Lumora), "light" ou "system" (suit le reglage
     // clair/sombre de Windows au demarrage et a chaque changement de reglage).
@@ -201,13 +209,18 @@ internal sealed class UiSettings
     // Menu Demarrer (ModulesFlyout) : rangee epinglee + historique d'usage
     // pour "Recent et frequent". Vocabulaire d'ids distinct de
     // PinnedModuleIds ci-dessus (surface differente, voir StartMenuTiles.cs).
+    // Retour utilisateur du 2026-08-08 : "par defaut, ce que l'utilisateur
+    // voit quoi qu'il arrive, c'est le bloqueur de pub et le coffre [...]
+    // apres, tout le reste est desepingle" - remplace l'ancienne liste
+    // (Favoris/Coffre/Mode lecture/Portefeuille/Parametres) qui epinglait 5
+    // tuiles sans que l'utilisateur en ait fait le choix. Ne s'applique
+    // qu'aux NOUVEAUX profils (valeur par defaut du champ) - un profil deja
+    // existant garde l'epinglage qu'il a sur disque, jamais ecrase au
+    // chargement.
     public static readonly string[] DefaultPinnedStartMenuTileIds =
     [
-        StartMenuTileIds.Favoris,
-        StartMenuTileIds.Vault,
-        StartMenuTileIds.ReaderMode,
-        StartMenuTileIds.Wallet,
-        StartMenuTileIds.Settings
+        StartMenuTileIds.AdBlocker,
+        StartMenuTileIds.Vault
     ];
     public List<string> PinnedStartMenuTileIds { get; set; } = [.. DefaultPinnedStartMenuTileIds];
     public List<StartMenuTileUsage> StartMenuTileUsage { get; set; } = [];

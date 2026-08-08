@@ -85,7 +85,70 @@ public sealed partial class MainWindow
 
             if (_verticalTabsCompact || tab.Pinned)
             {
-                content = TabIconElement(tab, 22);
+                // Bug reel signale par l'utilisateur (2026-08-07) : en rail
+                // compact (icone seule), aucun moyen visible de fermer un
+                // onglet - le bouton de fermeture n'existait que dans la
+                // ligne "etendue" ci-dessous. Fermer restait possible par
+                // clic droit > "Fermer l'onglet" (CreateTabContextFlyout,
+                // pas retire) ou Ctrl+W, mais sans affordance visible c'est
+                // comme si ca n'existait pas pour la plupart des gens.
+                // Premiere version (reveleee au survol) jugee insuffisante -
+                // aucun indice visible au repos. Deuxieme version (pastille
+                // 16x16 dans le coin) jugee trop serree/petite par
+                // l'utilisateur (2026-08-08), avec Google Chrome cite comme
+                // reference (croix qui prend toute la tuile plutot qu'un
+                // badge d'angle) - accepte pour la TAILLE de cible, mais
+                // sans reprendre le "hover uniquement" de Chrome (deja
+                // rejete une fois pour manque de decouvrabilite). Compromis
+                // valide via maquette HTML avant implementation : croix
+                // large et centree, TOUJOURS visible a opacite reduite,
+                // pleine opacite au survol - meme reglage 0.6/1 que la
+                // version precedente (deja prouve suffisant), juste une
+                // cible bien plus grande. Une fine marge subsiste autour du
+                // bouton de fermeture (tuile 44x38, bouton 24x24 centre) :
+                // le bouton englobant reste cliquable pour selectionner
+                // l'onglet, seul le glyphe de fermeture capture le clic sur
+                // sa propre zone (meme pattern bouton-dans-bouton que la
+                // ligne etendue ci-dessous). Redescendu de 30x30 a 24x24
+                // (2026-08-08, meme jour) : jugee trop imposante en usage
+                // reel une fois testee, comparee a la taille des boutons
+                // Chrome/Edge - toujours nettement plus grande que les 20x20
+                // d'origine juges trop serres, mais moins "pavee".
+                var icon = TabIconElement(tab, 18);
+
+                var compactClose = new Button
+                {
+                    Width = 24,
+                    Height = 24,
+                    Padding = new Thickness(0),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalContentAlignment = HorizontalAlignment.Center,
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    Tag = tab.Id,
+                    CornerRadius = new CornerRadius(12),
+                    BorderThickness = new Thickness(0),
+                    Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                    // Viewbox plutot que SymbolIcon.FontSize (n'existe pas sur ce
+                    // controle) : force le glyphe a une taille lisible (11x11)
+                    // dans le bouton de fermeture.
+                    Content = new Viewbox
+                    {
+                        Width = 11,
+                        Height = 11,
+                        Child = new SymbolIcon(Symbol.Cancel)
+                    },
+                    Opacity = 0.6
+                };
+                ToolTipService.SetToolTip(compactClose, "Fermer l'onglet");
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(compactClose, $"Fermer {tab.Title}");
+                compactClose.Click += VerticalTabCloseButton_Click;
+
+                var compactContent = new Grid();
+                compactContent.Children.Add(icon);
+                compactContent.Children.Add(compactClose);
+                content = compactContent;
+
                 button = new Button
                 {
                     Width = 44,
@@ -101,6 +164,8 @@ public sealed partial class MainWindow
                     Background = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBackgroundBrush" : "NovaTabPillInactiveBackgroundBrush"],
                     BorderBrush = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBorderBrush" : "NovaTabPillInactiveBorderBrush"]
                 };
+                button.PointerEntered += (_, _) => { compactClose.Opacity = 1; icon.Opacity = 0.3; };
+                button.PointerExited += (_, _) => { compactClose.Opacity = 0.6; icon.Opacity = 1; };
             }
             else
             {

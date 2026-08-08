@@ -135,7 +135,7 @@ public sealed class KeyboardFocusRegressionTests
     }
 
     [Fact]
-    public void Diagnostic_bas_niveau_molette_sous_classe_le_wndproc_sans_changer_le_comportement()
+    public void Diagnostic_bas_niveau_molette_sous_classe_toujours_le_wndproc_et_relaie_vers_loriginal()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var chrome = ReadRepoFile("Lumora.WinUI", "MainWindow.WindowChrome.cs");
@@ -146,6 +146,66 @@ public sealed class KeyboardFocusRegressionTests
         Assert.Contains("private void HookRawMouseWheelDiagnostics(nint hwnd)", chrome, StringComparison.Ordinal);
         Assert.Contains("_originalWndProc = SetWindowLongPtr(hwnd, GwlpWndproc, newProc);", chrome, StringComparison.Ordinal);
         Assert.Contains("return CallWindowProc(_originalWndProc, hWnd, msg, wParam, lParam);", chrome, StringComparison.Ordinal);
+    }
+
+    // Correctif du 2026-08-07 : le sous-classement WndProc ci-dessus n'est
+    // plus un pur diagnostic (contrairement au test precedent, dont le nom
+    // documentait explicitement "sans changer le comportement" jusqu'a ce
+    // jour). Root cause reelle de l'intermittence molette identifiee ce
+    // jour-la : Windows route WM_MOUSEWHEEL/WM_POINTERWHEEL vers le HWND qui
+    // a le focus CLAVIER natif, pas vers celui survole par la souris - tous
+    // les correctifs precedents (FocusState.Pointer, hit-test XAML) tentaient
+    // de faire suivre ce focus jusqu'au HWND enfant reel de WebView2 sans
+    // jamais le controler directement. Ce module fait un hit-test Win32 natif
+    // (ChildWindowFromPointEx, independant du focus) et redirige
+    // explicitement le message vers le HWND enfant reellement sous le
+    // curseur - la meme logique que le "scroll sous la souris" des
+    // navigateurs. N'affecte que les vrais HWND enfants (WebView2) : les
+    // panneaux XAML natifs (Parametres, Modules...) n'ont pas de HWND propre
+    // et restent geres par ApplyWheelFallback (hit-test XAML, inchange).
+    [Fact]
+    public void Molette_native_redirige_le_message_vers_le_hwnd_enfant_sous_le_curseur()
+    {
+        var chrome = ReadRepoFile("Lumora.WinUI", "MainWindow.WindowChrome.cs");
+        var wndProc = ExtractMethod(chrome, "private nint RawWheelDiagnosticsWndProc(nint hWnd, uint msg, nint wParam, nint lParam)");
+
+        Assert.Contains("private static extern nint ChildWindowFromPointEx(nint hWndParent, Win32Point point, uint uFlags);", chrome, StringComparison.Ordinal);
+        Assert.Contains("private static extern bool ScreenToClient(nint hWnd, ref Win32Point lpPoint);", chrome, StringComparison.Ordinal);
+        Assert.Contains("private static extern nint SendMessage(nint hWnd, uint msg, nint wParam, nint lParam);", chrome, StringComparison.Ordinal);
+        Assert.Contains("private static nint FindDeepestChildAtScreenPoint(nint root, int screenX, int screenY)", chrome, StringComparison.Ordinal);
+
+        Assert.Contains("var target = FindDeepestChildAtScreenPoint(hWnd, screenX, screenY);", wndProc, StringComparison.Ordinal);
+        Assert.Contains("if (target != nint.Zero && target != hWnd)", wndProc, StringComparison.Ordinal);
+        Assert.Contains("SendMessage(target, msg, wParam, lParam);", wndProc, StringComparison.Ordinal);
+    }
+
+    // Verrouille un crash REEL rencontre en verification le 2026-08-07
+    // (STATUS_STACK_OVERFLOW 0xc00000fd, confirme par l'Observateur
+    // d'evenements Windows) : WebView2 applique la convention Win32
+    // documentee et renvoie WM_MOUSEWHEEL a son parent (nous) quand il ne le
+    // traite pas, ce qui reentrait dans le meme WndProc et redeclenchait le
+    // meme forward - boucle synchrone (SendMessage bloque) jusqu'a deborder
+    // la pile en ~600 allers-retours. Sans ce garde-fou, toute reintroduction
+    // du forward (meme correctement ecrit par ailleurs) recree ce crash.
+    [Fact]
+    public void Molette_native_ne_boucle_pas_quand_lenfant_renvoie_le_message_a_son_parent()
+    {
+        var chrome = ReadRepoFile("Lumora.WinUI", "MainWindow.WindowChrome.cs");
+        var wndProc = ExtractMethod(chrome, "private nint RawWheelDiagnosticsWndProc(nint hWnd, uint msg, nint wParam, nint lParam)");
+
+        Assert.Contains("private bool _forwardingWheelMessage;", chrome, StringComparison.Ordinal);
+        Assert.Contains("if (_forwardingWheelMessage)", wndProc, StringComparison.Ordinal);
+        Assert.Contains("_forwardingWheelMessage = true;", wndProc, StringComparison.Ordinal);
+        Assert.Contains("_forwardingWheelMessage = false;", wndProc, StringComparison.Ordinal);
+
+        // Le SendMessage vers l'enfant doit se trouver DANS le bloc protege par
+        // le drapeau (try/finally), pas avant qu'il ne soit leve - sinon la
+        // reentrance survient avant que le garde ne soit actif.
+        var flagIndex = wndProc.IndexOf("_forwardingWheelMessage = true;", StringComparison.Ordinal);
+        var sendIndex = wndProc.IndexOf("SendMessage(target, msg, wParam, lParam);", StringComparison.Ordinal);
+        var resetIndex = wndProc.IndexOf("_forwardingWheelMessage = false;", StringComparison.Ordinal);
+        Assert.True(flagIndex >= 0 && sendIndex > flagIndex && resetIndex > sendIndex,
+            "Le SendMessage doit se trouver entre la levee et la retombee du drapeau anti-reentrance.");
     }
 
     [Fact]

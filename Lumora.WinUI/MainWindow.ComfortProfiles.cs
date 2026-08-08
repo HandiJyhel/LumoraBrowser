@@ -60,18 +60,32 @@ public sealed partial class MainWindow
             ReadAloud: false,
             ReadingLens: false,
             ReadingGuide: true),
+        // Retour utilisateur (2026-08-08) : la version precedente cumulait 5
+        // aides en meme temps, y compris le guide de lecture (bande de 220px
+        // avec assombrissement de tout le reste de la page,
+        // MainWindow.ReadingGuide.cs) et la loupe de lecture - combinaison
+        // jamais retestee une fois assemblee, jugee "ignoble... on peut rien
+        // voir" a l'usage. Meme categorie d'erreur que les presets "calm"/
+        // "reading" retires le 2026-07-20 pour la meme raison ("une
+        // combinaison artificielle n'aide personne", voir plus haut). Le
+        // guide de lecture assombrit volontairement tout l'ecran sauf une
+        // bande : utile en activation deliberee, contraire au but d'un
+        // reset d'urgence qui doit rendre la page plus lisible, pas moins.
+        // Ne garde que les aides de la description elle-meme (texte agrandi,
+        // contraste renforce, reperes nets) - loupe et guide restent
+        // disponibles a part, activables au choix depuis Reglages > Confort.
         new(
             "rescue",
             "Mode secours",
-            "Reprend la main très vite quand une page ou l'interface devient pénible : texte agrandi, contraste renforcé, repères nets et aide de lecture prête.",
+            "Reprend la main très vite quand une page ou l'interface devient pénible : texte agrandi, contraste renforcé et repères nets.",
             HighContrast: true,
             LargeText: true,
             ReduceMotion: true,
             VisibleFocus: true,
             ReduceBlueLight: false,
             ReadAloud: false,
-            ReadingLens: true,
-            ReadingGuide: true)
+            ReadingLens: false,
+            ReadingGuide: false)
     ];
 
     private static string NormalizeAccessibilityComfortProfile(string? profileKey) =>
@@ -137,10 +151,6 @@ public sealed partial class MainWindow
             ReadAloudEnabledSwitch.IsOn = preset.ReadAloud;
             ReadingLensEnabledSwitch.IsOn = preset.ReadingLens;
             ReadingGuideEnabledSwitch.IsOn = preset.ReadingGuide;
-            if (string.Equals(preset.Key, "rescue", StringComparison.OrdinalIgnoreCase))
-            {
-                SelectComboByTag(ReadingGuideBandHeightCombo, "220", "220");
-            }
         }
         finally
         {

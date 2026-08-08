@@ -7,4 +7,17 @@
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
     </application>
   </compatibility>
+  <!-- Sans ceci, Windows peut traiter l'app en DPI non conscient et etirer
+       la fenetre entiere en bitmap pour matcher l'echelle d'affichage reelle
+       (125%, 150%...) - c'est ce qui rendait boutons/icones/bordures flous
+       ou "pixellises", pas un defaut de tel ou tel controle. PerMonitorV2
+       (2016) + le fallback legacy (2005, pour les OS plus anciens) couvrent
+       toute fenetre lancee par cet executable, y compris LumoraIncognitoWindow
+       (process separe mais meme exe/manifeste). Retour utilisateur, 2026-08-08. -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </windowsSettings>
+  </application>
 </assembly>

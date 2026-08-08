@@ -17390,3 +17390,1916 @@ palier - même classification que le changement précédent, cas identique
 (`LumoraIncognitoWindow.xaml`, `MainWindow.xaml.cs`, `AGENTS.md`,
 `build-installer.ps1`, `build-clean-test-artifact.ps1`), test renommé
 `Version_projet_est_alignee_sur_0_93_11_5`.
+
+## 2026-08-03 (suite 3) - Écran À propos : contenu à jour + crédit développeur sorti de la liste technique
+
+Retour utilisateur (conversation, pas d'action tout de suite - avis demandé
+d'abord) : la disposition de l'écran À propos "ne correspond plus vraiment à
+ce qu'est le logiciel", et le développeur "n'était même pas inscrit" après 2
+mois de travail. En creusant `MainWindow.xaml` (`AboutPanel`, ligne ~3959) :
+le nom existait bel et bien (`Développeur : H.J.`) mais noyé au milieu de la
+liste technique (AES-256-GCM, DPAPI...), pas traité comme un vrai crédit.
+Clarifié avec l'utilisateur avant d'agir (portée du "go" + nom à afficher) :
+périmètre retenu = réorganiser le contenu (pas le chantier Sigstore, plus
+lourd, mis de côté) + sortir le crédit développeur, sous le pseudo
+**HandiJyhel** (dépôt bientôt public, cf. [[github-publication-versions]]).
+
+**Changements** (tous dans `MainWindow.xaml`) :
+- Nouvelle ligne "Développé par HandiJyhel" dans l'en-tête de l'écran (sous
+  le slogan, avant le badge de version) - visible d'emblée, plus besoin
+  d'aller fouiller un onglet technique.
+- Ligne "Développeur : H.J." retirée de l'onglet Technique (5 cartes -> 4).
+- Onglet "Vue d'ensemble" : la carte "Modules intégrés" (texte générique
+  obsolète) remplacée par une carte "Accessibilité", chantier actif du
+  palier 0.93.x en cours.
+- Onglet "Modules" : les 3 anciennes cartes ("Lecture et annotations",
+  "Média", "Assistance locale", plus à jour depuis longtemps) remplacées par
+  4 cartes calquées sur les vraies catégories du menu Démarrer
+  (`StartMenuTileRegistry.cs`, source unique) : Lecture et contenu,
+  Confidentialité (coffre, passkeys, portefeuille, Incognito, site actuel),
+  Navigation, Lumora et profil.
+
+**Vérification** : build MSBuild propre. Lancé en conditions réelles (profil
+invité, script UIA pilotant menu Démarrer -> recherche "propos" -> tuile À
+propos), captures des 3 onglets concernés : crédit visible, carte
+Accessibilité en place, 4 nouvelles cartes Modules affichées, plus aucune
+trace de "Développeur : H.J." dans Technique. `dotnet test` 703/704 (même
+échec préexistant sans rapport, `AccessibilityComfortNamingTests` - lecture
+de fichier non liée à ce changement).
+
+Point notable pour le pilotage UIA : après le clic sur "Continuer sans
+profil (mode invité)", le process `Lumora.WinUI.exe` change de PID
+(réactivation mono-instance) - un script qui garde l'ancien PID perd la
+fenêtre. Toujours re-détecter le process actif après ce clic.
+
+**Version** : `0.93.11.5-dev` -> `0.93.11.6-dev` (micro-correction, même
+palier - même classification que les deux précédentes du jour, cas
+identique "mise à jour d'un écran existant"). 5 fichiers mis à jour
+(`MainWindow.xaml.cs`, `AGENTS.md`, `build-installer.ps1`,
+`build-clean-test-artifact.ps1`, `MainWindow.xaml` pour le contenu),
+test renommé `Version_projet_est_alignee_sur_0_93_11_6`.
+
+Chantier Sigstore (signature open source, actuellement "Non signée pour ce
+build" dans l'onglet Authenticité) explicitement mis de côté pour cette
+passe - plus lourd, touche au pipeline de build/release, à cadrer
+séparément.
+
+**Complément same session** : retour utilisateur juste après (capture
+d'écran à l'appui) - la navigation en rail vertical à gauche ("À propos" en
+carte, RadioButtons empilés) ne correspondait pas au reste de l'appli, en
+comparant avec "Mon Lumora" (`SettingsSectionAppearance`) qui utilise des
+onglets horizontaux (`NovaSubTabRadioButtonStyle`, `AppearanceSubNav*`).
+Corrigé en repiquant exactement ce pattern pour l'écran À propos : le rail
+vertical (`Border` + `NovaSideRailNavRadioButtonStyle`) remplacé par une
+`ScrollViewer` horizontale de `RadioButton` (`NovaSubTabRadioButtonStyle`,
+`GroupName="AboutSubNav"`) + un séparateur, au-dessus du contenu en pleine
+largeur. Changement XAML pur, mêmes `x:Name` et même handler
+(`AboutNav_Click`) conservés - aucune modification de code-behind
+nécessaire. Vérifié à nouveau en conditions réelles (mêmes 3 captures) :
+onglets horizontaux fonctionnels, soulignement de sélection correct sur les
+3 onglets testés. Build + `dotnet test` 703/704 (même échec préexistant)
+revérifiés après ce complément, toujours dans `0.93.11.6-dev` (pas de bump
+supplémentaire - continuation du même travail non encore committé).
+
+## 2026-08-05 - Taille de l'interface (UiDensity) : nouveau réglage Confortable/Standard/Dense
+
+Idée utilisateur : boutons/barre d'adresse/favoris de Lumora nettement plus
+gros que sur les navigateurs du marché. Avis demandé d'abord (pas d'action) -
+recommandation : réglage utilisateur plutôt qu'alignement forcé sur le
+standard du marché, vu le chantier accessibilité `0.93.x` en cours et le
+public cible qui a justement besoin d'éléments plus grands pour une partie
+des utilisateurs (cf. [[public-cible-plus-fragile-que-chrome]]). Utilisateur
+d'accord, puis Go. Plan détaillé passé par le mode plan (exploration +
+agent Plan) avant implémentation, vu l'ampleur (nouveau réglage persistant +
+plusieurs fichiers XAML/C# touchés). Décision explicite de l'utilisateur en
+cours de cadrage : le nouveau défaut pour TOUS les profils (y compris
+existants) devient "Standard" (plus petit), pas juste une option cachée -
+changement visuel assumé au prochain lancement après mise à jour.
+
+**Implémentation** : nouvelle propriété `UiSettings.UiDensity` (string,
+défaut `"standard"`) ; nouveau fichier `MainWindow.UiDensity.cs`
+(`ResolveUiDensityMetrics` centralise les tailles des 3 paliers - boutons
+icône, ligne d'outils, barre d'adresse + badge d'identité, barre de favoris
++ puces + puce de débordement, bouton menu Démarrer) ; `ComboBox
+UiDensityCombo` ajouté dans Réglages > Mon Lumora > Apparence > Disposition,
+juste après le switch "Masquer les favoris en interface compacte". Deux
+règles de priorité actées et verrouillées par test structurel : accessibilité
+(`AccessibilityLargeTargets`, 44px) prime toujours sur la densité, et
+`CompactModeEnabled` ("Interface compacte", mode plein écran immersif -
+concept différent, à ne pas confondre) garde sa taille réduite existante
+(58px) quelle que soit la densité. `ApplyIconButtonSizing()` étendu pour
+lire la densité. `CreateBookmarkBarButton()`/`CreateBookmarksOverflowButton()`
+(`MainWindow.Bookmarks.cs`) lisent aussi la densité au lieu de tailles
+codées en dur. `ResolveNavigationRowHeight()`/`ResolveNavigationToolbarPadding()`
+centralisent une formule auparavant dupliquée dans
+`ApplyCompactModeLayout()`/`ApplyFullScreenLayout()`.
+
+**Tests** : 3 nouveaux tests dans `UiSettingsMigrationTests.cs` (défaut
+`"standard"`, absence dans un JSON legacy, aller-retour Save/Load) + nouveau
+fichier `UiDensityVisualIdentityTests.cs` (5 tests structurels : ComboBox et
+ses 3 `Tag` présents, priorité accessibilité verrouillée dans le source,
+priorité mode compact verrouillée dans le source, palier "comfortable"
+reprend exactement les anciennes valeurs, fenêtre Incognito/barre d'onglets
+hors périmètre). 2 tests existants adaptés (littéraux `Height = 36`/
+`FontSize = 13`/`_uiSettings.AccessibilityLargeTargets ? 44d : 32d`/
+`NavigationRow.Height = new GridLength(_compactModeEnabled...` devenus
+obsolètes suite aux changements de source, mis à jour pour pointer vers les
+nouvelles expressions). `dotnet test` : 711/712 (seul échec restant = le
+même `AccessibilityComfortNamingTests` préexistant et sans rapport, déjà
+documenté). Build MSBuild propre (0 erreur).
+
+**Vérification réelle (skill verify, profil invité)** : confirmée
+visuellement - un profil invité neuf (sans `UiDensity` dans le JSON) démarre
+bien au palier "Standard" (toolbar visiblement plus fine que l'ancien
+standard, capture à l'appui), ce qui valide le changement de défaut le plus
+risqué de ce chantier. **Bascule interactive entre paliers non vérifiée en
+conditions réelles** : découverte en cours de route que le mode invité
+bloque volontairement toute la section "Mon Lumora" (`MainWindow.xaml.cs`,
+`SettingsNav_Click` ligne ~554 - "Mon Lumora" et "Coffre et données"
+redirigés vers Vue d'ensemble en mode invité, politique "Live Linux"
+préexistante, sans rapport avec ce chantier) - `UiDensityCombo` vit
+justement dans cette section, donc injoignable en invité. Pas de profil
+jetable créé pour compléter ce test (aurait nécessité "Créer un autre
+profil" + un nettoyage soigneux, non fait faute de temps dans cette passe) -
+signalé clairement plutôt que supposé fonctionnel. Le mécanisme de bascule
+lui-même reprend à l'identique le pattern déjà éprouvé de `ChromeLayoutStyleCombo`
+(round-trip immédiat, déjà utilisé en production) et est verrouillé par les
+tests structurels ci-dessus, donc risque jugé faible mais non nul.
+
+**Version** : `0.93.11.6-dev` → `0.93.12.0-dev` (ajout de fonctionnalité,
+3e chiffre - nouveau réglage, pas un correctif). 5 fichiers mis à jour
+(`MainWindow.xaml.cs`, `AGENTS.md`, `build-installer.ps1`,
+`build-clean-test-artifact.ps1`, test renommé
+`Version_projet_est_alignee_sur_0_93_12_0`).
+
+**Complément same session - vérification complétée via profil jetable** :
+le mode invité s'est révélé bloquer toute la section "Mon Lumora"
+(`SettingsNav_Click`, politique "Live Linux" préexistante, sans rapport avec
+ce chantier - redirige "appearance"/"vault" vers "overview" en mode invité),
+rendant `UiDensityCombo` injoignable depuis ce mode. Découverte en cours de
+route, avec un incident évité : au premier essai de contournement, l'app
+relancée sans `LUMORA_PROFILE_DIR` a résumé directement sur l'écran PIN du
+vrai profil "Test" (retient le dernier profil actif) - sorti immédiatement
+via "Changer de profil" sans toucher au pavé PIN ni à aucun mot de passe,
+aucune donnée touchée. Après clarification et accord explicite de
+l'utilisateur pour continuer prudemment : profil jetable créé
+(`ZZZ-DensiteVerif-ASupprimer`, mot de passe temporaire, sans PIN) avec
+sauvegarde préalable de `%LocalAppData%\Lumora\config.json` ; mots de passe
+saisis via `ValuePattern.SetValue` sur les `PasswordBox` (fonctionne, pas
+besoin de frappe clavier synthétique) ; dialogue clé de récupération fermé
+sans la noter (profil purement jetable) ; import de favoris proposé
+(310 détectés depuis Chrome) explicitement ignoré, aucun clic sur
+"Importer" - aucune donnée réelle rapatriée dans le profil jetable.
+
+**Résultat** : bascule Confortable/Standard/Dense vérifiée en conditions
+réelles sur ce profil, application immédiate confirmée par mesure directe
+(UIA `BoundingRectangle`) du bouton "Retour" - 48/42/36px physiques
+(Confortable/Standard/Dense), ratios exacts avec la table de densité
+(32/28/24 logiques × 1,5 de mise à l'échelle DPI de la machine). Priorité
+accessibilité confirmée aussi : Dense + "Cibles agrandies" active → 66px
+(= 44 logique × 1,5), la densité Dense seule est bien écrasée comme prévu.
+Aucune exception dans `winui-runtime-trace.log` sur l'ensemble des passes.
+Nettoyage vérifié après coup : dossier `profiles\zzz-densiteverif-asupprimer`
+supprimé, `config.json` restauré à l'identique (`ActiveProfileId: "test"`),
+les 3 profils réels (`default`, `handijyhel`, `test`) intacts, aucun process
+résiduel. Chantier UiDensity considéré complètement vérifié à l'issue de
+cette passe (plus seulement le défaut visuel + les tests structurels).
+
+## 2026-08-05 (suite) - Écran À propos : fusion des onglets "Technique" et "Profil local"
+
+Demande utilisateur, avis demandé d'abord : les 2 derniers onglets de
+l'écran À propos ("Technique" : 4 petites cartes statiques stack/moteur/
+stockage/chiffrement ; "Profil local" : 1 carte avec le chemin du profil +
+un paragraphe) étaient trop petits pour rester séparés. Vérifié le contenu
+réel des deux avant de répondre (pas juste d'après mémoire) - confirmé
+qu'ils sont bien tous les deux petits, statiques et thématiquement proches
+("sous le capot" techniquement). Nom proposé pour la rubrique fusionnée :
+**"Technique et profil"**, accepté par l'utilisateur (Go direct sans
+contre-proposition).
+
+**Changements** (`MainWindow.xaml`) : `AboutNavProfile` (RadioButton,
+Tag="profile") supprimé ; `AboutNavTechnical` renommé "Technique et
+profil" ; contenu de l'ancien `AboutSectionProfile` déplacé à la suite du
+contenu technique dans `AboutSectionTechnical` (même `x:Name`
+`AboutProfilePathText` conservé, donc `MainWindow.xaml.cs:378`
+`AboutProfilePathText.Text = _profile.ProfileDir;` inchangé) ;
+`AboutSectionProfile` supprimé. Code-behind : la ligne
+`AboutSectionProfile.Visibility = ...` retirée de `ShowAboutSection()`
+(`MainWindow.xaml.cs`). 7 onglets → 6.
+
+**Version** : `0.93.12.0-dev` → `0.93.12.1-dev` (micro-correction, 4e
+chiffre - réorganisation d'un écran existant, même classification que les
+3 précédentes du même type le 2026-08-03, appliquée sans reposer la
+question vu le précédent déjà établi 3 fois). Nouveau fichier de test
+`Lumora.Tests\AboutScreenTests.cs` (verrouille la fusion : absence de
+`AboutNavProfile`/`AboutSectionProfile`, présence du nouveau libellé et du
+contenu des deux anciennes rubriques réuni). Test de version renommé
+`Version_projet_est_alignee_sur_0_93_12_1`.
+
+**Vérification** : build MSBuild propre (0 erreur). `dotnet test` 712/713
+(même échec préexistant sans rapport, `AccessibilityComfortNamingTests`).
+Lancé en conditions réelles (profil invité isolé, pilotage UIA) : menu
+Démarrer → catégorie "Lumora et profil" → "À propos" → onglet "Technique
+et profil" sélectionné, capture d'écran à l'appui - les 4 cartes techniques
+et la carte "Emplacement du profil" (chemin du profil invité affiché)
+apparaissent bien réunies sous un seul titre, plus aucun onglet "Profil
+local" séparé, 6 onglets au total dans la barre. Aucune exception dans
+`winui-runtime-trace.log`.
+
+**Piège de pilotage rencontré** : le bouton "Menu Lumora" (`AutomationId`
+`ModulesButton`, menu Démarrer) et l'ancien `MainMenuButton` (menu 3-points
+classique) partagent le même nom accessible "Menu Lumora", mais
+`MainMenuButton` vit en fait dans `FullScreenTopBar` (`Visibility=
+Collapsed` hors plein écran) - invisible et donc introuvable en usage
+normal. En pratique, "À propos" ne se trouve que via `ModulesButton` →
+catégorie "Lumora et profil" (sélection par `SelectionItemPattern.Select()`,
+pas `InvokePattern.Invoke()` - un `ListItem` de ce menu ne change pas de
+panneau visible avec un simple Invoke). Confirme une fois de plus le piège
+déjà documenté ([[verifier-lapp-winui]]) : une comparaison exacte de chaîne
+accentuée ("À propos") écrite dans un script `.ps1` ne matche jamais la
+vraie valeur UIA (encodage de lecture du script), alors qu'une sous-chaîne
+ASCII ("propos", en excluant le doublon "...à propos du site" du bouton
+bouclier) fonctionne à tous les coups.
+
+## 2026-08-05 (suite 2) - Colonne identitaire renommée "Style Lumora" + capsule d'adresse alignée à gauche
+
+Avis demandé d'abord (pas d'action) : l'utilisateur voulait renommer la
+"Colonne identitaire" (`ChromeLayoutStyleCombo`, style de disposition
+`identitySpine`, `MainWindow.IdentitySpine.cs`) en "Mode Lumora", et
+questionnait le centrage de la capsule d'adresse flottante en haut de
+l'écran quand ce style est actif ("pourquoi tu l'as centré ? C'est pas
+logique"). Avis donné : plutôt que "Mode Lumora", risque de collision avec
+le concept déjà installé "Mode d'usage" (Lumie/Rapide/Neutre/Focus/
+Lecture/Recherche/Nuit) dans les mêmes Réglages > Apparence - proposé
+**"Style Lumora"** à la place (colle au libellé déjà existant "Style de
+disposition"). Sur le centrage : accord complet, aucun navigateur du
+marché ne centre sa barre d'adresse/outils au milieu de l'écran, ça casse
+le lien visuel avec la colonne juste à côté et rend la position
+imprévisible selon la largeur de fenêtre. Confirmé par question dédiée
+(nom "Style Lumora" vs "Mode Lumora") avant le Go, puis Go.
+
+**Changements** :
+- `MainWindow.xaml` : `ComboBoxItem Content="Colonne identitaire"` →
+  "Style Lumora" (Tag `identitySpine` inchangé) ; texte de description mis
+  à jour en cohérence. `IdentitySpineAddressHost`/`IdentitySpineCapsuleSlot`/
+  `IdentitySpineBookmarksTop` : `HorizontalAlignment="Center"` → `"Left"`,
+  marge droite (`64,8,64,0`) retirée (`64,8,0,0`) - la capsule flotte
+  désormais juste après la colonne de 64px, comme une toolbar classique,
+  au lieu d'être centrée au milieu de la zone de contenu.
+- `MainWindow.IdentitySpine.cs` : messages de statut ("Colonne identitaire
+  activée." / "Masquage automatique de la colonne identitaire activé/
+  désactivé.") renommés en "Style Lumora".
+- Renommage volontairement limité aux chaînes visibles par l'utilisateur -
+  les identifiants internes (`identitySpine`, `IdentitySpine*`) et les
+  commentaires de code gardent l'ancien nom technique, pas de renommage de
+  code par prudence/portée.
+
+**Tests** : `IdentitySpineVisualIdentityTests.cs` - test existant
+`Capsule_d_adresse_flotte_a_part_de_la_colonne_plutot_que_confinee_dedans`
+mis à jour (`HorizontalAlignment="Center"` → `"Left"`) + nouveau test
+`Capsule_d_adresse_est_alignee_a_gauche_pas_centree` (verrouille l'absence
+de `Center` et la présence de `Left` sur le host ET le slot). `dotnet
+test` : 713/714 (même échec préexistant sans rapport,
+`AccessibilityComfortNamingTests`).
+
+**Vérification réelle** : ce réglage vit dans "Mon Lumora" > Apparence,
+bloqué en mode invité (politique "Live Linux", même blocage que pour
+UiDensity plus tôt dans la journée) - procédure du profil jetable
+reconduite après clarification explicite avec l'utilisateur (build+tests
+seuls proposés comme alternative plus légère, profil jetable choisi).
+Confirmé **deux fois** en conditions réelles : ancien libellé "Colonne
+identitaire" absent du ComboBox, item "Style Lumora" présent et
+sélectionnable sans exception dans `winui-runtime-trace.log`. La capture
+d'écran de l'alignement gauche de la capsule elle-même n'a pas abouti : les
+deux premières tentatives sont tombées sur l'assistant de configuration
+d'un profil neuf (`SetupWizardOverlay`, "Étape 1/4", jamais rencontré
+jusque-là dans les vérifications par profil jetable précédentes - UiDensity
+avait réutilisé un profil déjà passé par cet assistant) qui recouvre tout ;
+une 3e tentative a échoué sur la détection du PID après le redémarrage
+automatique déclenché par la création de profil (`RestartApp()`,
+`MainWindow.Profile.cs`), laissant un processus orphelin le temps d'être
+repéré et arrêté (PID exact via `tasklist`/`Stop-Process -Id`, jamais
+`-Name`). Nettoyage vérifié après coup à chaque tentative : machine revenue
+à l'état de départ (profils `default`/`handijyhel`/`test`,
+`config.json` restauré sur `ActiveProfileId: "test"`, aucun processus
+résiduel). Sur proposition explicite, l'utilisateur a choisi de s'arrêter
+là plutôt que retenter une 4e fois l'enchaînement création-de-profil +
+redémarrage - gap assumé et signalé, pas de capture finale de la capsule.
+Point retenu pour une prochaine vérification via profil jetable neuf : soit
+composer avec l'assistant `SetupWizardOverlay` (bouton `WizardNextButton`,
+4 étapes, pas de bouton "passer") dès la connexion, soit réutiliser un
+profil jetable ayant déjà `SetupWizardCompleted = true`.
+
+**Version** : `0.93.12.1-dev` → `0.93.12.2-dev` (micro-correction, 4e
+chiffre - renommage + réalignement d'un réglage existant, même
+classification que les précédentes du même type le 2026-08-03/2026-08-05).
+6 fichiers mis à jour (`MainWindow.xaml`, `MainWindow.IdentitySpine.cs`,
+`MainWindow.xaml.cs`, `AGENTS.md`, `build-installer.ps1`,
+`build-clean-test-artifact.ps1`), test renommé
+`Version_projet_est_alignee_sur_0_93_12_2`.
+
+## 2026-08-05 (suite 3) - Style Lumora : capsule d'adresse et favoris passés en pleine largeur
+
+Retour utilisateur immédiat après le correctif précédent, captures d'écran
+à l'appui ("c'est dégueulasse") : l'alignement à gauche de la capsule
+laissait un grand vide noir à droite, très différent du mode Classique où
+la même capsule occupe toute la largeur. Avis demandé d'abord (pas
+d'action) : en lisant le XAML, confirmé que `NavigationToolbarCapsule` est
+un `Border` sans `HorizontalAlignment` explicite (donc `Stretch` par
+défaut) - il occupe déjà toute la largeur en Classique parce qu'il vit
+directement dans une ligne pleine largeur de `RootShell` (`Grid.Row="2"`),
+mais en Style Lumora il est reparenté dans `IdentitySpineCapsuleSlot` /
+`IdentitySpineAddressHost`, deux conteneurs dimensionnés à leur contenu
+(`HorizontalAlignment="Left"`/`"Center"` selon la passe) - rien ne lui
+donnait de largeur à remplir. Pas causé par le correctif précédent
+(gauche vs centré), juste rendu bien plus visible une fois le vide reporté
+d'un seul côté. Accord de l'utilisateur sur le diagnostic, Go.
+
+**Correctif 1 (capsule)** : `IdentitySpineAddressHost`/`IdentitySpineCapsuleSlot`
+- `HorizontalAlignment="Left"` retiré (Stretch par défaut) ; Margin passée
+à `64,8,14,0` (marge droite 14, miroir du `Margin="66,6,14,6"` de la
+capsule classique). `NavigationToolbarCapsule` (Border) s'étire désormais
+naturellement pleine largeur dans le nouveau conteneur, comme en Classique.
+
+**Complément same session** : l'utilisateur remarque ensuite que la barre
+de favoris intégrée souffre du même problème ("Pourquoi la barre des
+favoris n'est pas la même ?"). Diagnostic demandé et donné avant action :
+`BookmarksBarRow` (Classique) est enveloppée dans un `Border` "capsule de
+verre" (`NovaFloatingGlassBrush`, `CornerRadius="18"`, `ThemeShadow`,
+pleine largeur) alors que `IdentitySpineBookmarksTop` était un `StackPanel`
+nu (sans fond/bordure/ombre) laissé `HorizontalAlignment="Left"` par
+erreur de raisonnement lors du correctif précédent ("comme la barre de
+favoris classique" - qui en réalité n'est pas juste alignée à gauche non
+plus, elle a son propre habillage carte pleine largeur). Accord + Go.
+
+**Correctif 2 (favoris)** : `IdentitySpineBookmarksTop` (StackPanel, reste
+le conteneur des puces lu par `RenderIdentitySpineBookmarks()` via
+`target.Children.Add(...)`) enveloppé dans un nouveau `Border`
+`IdentitySpineBookmarksTopCard` reprenant exactement l'habillage de
+`BookmarksBarRow` (même brush/CornerRadius/ThemeShadow), pleine largeur.
+Visibilité pilotée en code-behind (pas de binding XAML - aucun autre
+endroit du fichier n'utilise `Binding ElementName`, cohérence avec le
+style impératif déjà en place partout ailleurs) :
+`RenderIdentitySpineBookmarks()` bascule aussi `IdentitySpineBookmarksTopCard`
+en Visible quand `target == IdentitySpineBookmarksTop` ;
+`HideIdentitySpineBookmarks()` la bascule en Collapsed avec les autres.
+
+**Tests** : `IdentitySpineVisualIdentityTests.cs` - le test de centrage
+devient `Capsule_d_adresse_occupe_toute_la_largeur_pas_centree_ni_compacte`
+(vérifie l'absence de `Center`/`Left` explicite + la marge `64,8,14,0`) ;
+nouveau test `Favoris_integres_en_haut_ont_la_meme_capsule_de_verre_que_le_mode_classique`
+(structure de `IdentitySpineBookmarksTopCard` + imbrication de
+`IdentitySpineBookmarksTop` + les deux bascules de visibilité présentes
+dans `MainWindow.IdentitySpine.cs`). `dotnet test` : 714/715 (même échec
+préexistant sans rapport, `AccessibilityComfortNamingTests`). Build MSBuild
+propre (0 erreur) après chacun des deux correctifs.
+
+**Vérification réelle** : script de vérification par profil jetable
+durci suite aux ratés de la passe précédente - stabilité de détection du
+PID après `RestartApp()` (re-confirmation du même PID 700ms plus tard,
+plus de faux positif) + filet de sécurité qui arrête par PID exact tout
+`Lumora.WinUI.exe` encore vivant au nettoyage (jamais `-Name`). Point de
+prudence supplémentaire découvert avant de relancer : l'utilisateur avait
+sa propre session Lumora ouverte (celle qui a produit ses captures
+d'écran) - script **non lancé** tant qu'elle tournait (mono-instance,
+risque de réactiver sa fenêtre ou de la fermer par erreur), relancé
+seulement une fois celle-ci fermée. Résultat : assistant de configuration
+du profil neuf traversé sans accroc cette fois (4x `WizardNextButton`),
+capsule confirmée **visuellement pleine largeur** (capture d'écran à
+l'appui, de la colonne jusqu'au bord droit de la fenêtre), "Style Lumora"
+appliqué sans exception. Carte de favoris non capturée visuellement (profil
+jetable neuf sans aucun favori enregistré, donc rien à afficher) - reste
+couverte par le test structurel ci-dessus, même famille de risque que la
+capsule déjà confirmée en réel. Nettoyage vérifié : machine revenue à
+l'état de départ (3 profils réels, `config.json` sur `test`).
+
+**Version** : `0.93.12.2-dev` → `0.93.12.3-dev` (capsule pleine largeur)
+→ `0.93.12.4-dev` (favoris pleine largeur), micro-corrections, 4e chiffre -
+même chantier/même classification que le reste de la journée. 5 fichiers
+mis à jour à chaque passe (`MainWindow.xaml.cs`, `AGENTS.md`,
+`build-installer.ps1`, `build-clean-test-artifact.ps1`,
+`UsageModeVisualIdentityTests.cs`), test renommé
+`Version_projet_est_alignee_sur_0_93_12_4`.
+
+## 2026-08-05 (suite 4) - Style Lumora : dossier "Autres favoris" manquant dans la barre intégrée
+
+Retour utilisateur cash après l'annonce de vérification complète de la
+passe précédente : "Tu te fous de ma gueule, il manque toujours le dossier
+autres favoris". Vérifié dans le code avant toute réponse : confirmé,
+`RenderIdentitySpineBookmarks()` (`MainWindow.IdentitySpine.cs`) ne lisait
+que `BookmarkStore.ToolbarRootId`, jamais `BookmarkStore.OtherRootId` -
+contrairement à `RenderBookmarksBar()` (Classique,
+`MainWindow.Bookmarks.cs`) qui affiche toujours le dossier "Autres favoris"
+dès que cette racine existe (elle est semée par défaut à la création du
+profil, même vide - `otherRoot is not null` suffit, pas besoin qu'elle
+contienne quelque chose). Angle mort du tout premier correctif favoris
+(capsule de verre) : seule l'habillage visuel avait été traité, pas le
+contenu manquant. Corrigé directement (continuation du même Go déjà donné
+pour "même traitement que la barre classique", pas redemandé).
+
+**Changements** (`MainWindow.IdentitySpine.cs`) : `RenderIdentitySpineBookmarks()`
+lit maintenant aussi `otherRoot` (`BookmarkStore.OtherRootId`) ; garde
+"aucun favori" changée de `toolbarNodes.Count == 0` à
+`toolbarNodes.Count == 0 && otherRoot is null` (n'exclut plus l'affichage
+tant que la racine "Autres favoris" existe, comme en Classique) ; puce
+"Autres favoris" ajoutée à la fin de `target` (même
+`StyleAsIdentitySpineBookmarkChip`), précédée d'un séparateur si la ligne
+contient déjà des puces. Nouveau helper `CreateIdentitySpineBookmarksDivider(bool compact)` -
+ligne horizontale fine en position haut/bas, verticale en position
+gauche/droite (adapté à l'orientation de la pile hôte, `compact` = même
+booléen que le reste de la fonction), même token `NovaChromeStrokeBrush`
+que le séparateur de `BookmarksBarRow`. Vaut pour les 4 positions
+(haut/bas/gauche/droite), pas seulement "haut" (seule position visible
+dans les captures de l'utilisateur, mais le trou existait partout).
+
+**Tests** : nouveau test
+`Favoris_integres_incluent_le_dossier_Autres_favoris_comme_en_classique`
+dans `IdentitySpineVisualIdentityTests.cs` (verrouille la lecture
+d'`OtherRootId`, la garde assouplie, le séparateur et la puce). `dotnet
+test` : 715/716 (même échec préexistant sans rapport). Build MSBuild
+propre (0 erreur).
+
+**Vérification réelle** : même script de profil jetable, machine confirmée
+sans session active avant de lancer (leçon de la passe précédente).
+Assistant de configuration retraversé sans accroc (4x `WizardNextButton`).
+Cette fois la capture est concluante : le dossier "Autres favoris" apparaît
+bien dans la carte de verre sous la capsule, icône dossier + libellé,
+**même sur un profil jetable sans aucun favori enregistré** - preuve directe
+que la racine s'affiche indépendamment de son contenu, comme en Classique.
+Nettoyage vérifié : machine revenue à l'état de départ (3 profils réels,
+`config.json` sur `test`).
+
+**Version** : `0.93.12.4-dev` → `0.93.12.5-dev` (micro-correction, 4e
+chiffre - même chantier). 5 fichiers mis à jour (`MainWindow.xaml.cs`,
+`AGENTS.md`, `build-installer.ps1`, `build-clean-test-artifact.ps1`,
+`UsageModeVisualIdentityTests.cs`), test renommé
+`Version_projet_est_alignee_sur_0_93_12_5`.
+
+## 2026-08-06 - Style Lumora : dossier "Autres favoris" pas ancré à droite comme en Classique
+
+Question de l'utilisateur (pas un Go au départ) : en mode Lumora, pourquoi
+"Autres favoris" n'est pas à droite de la ligne de favoris intégrée comme
+en Classique. Diagnostic avant toute action : en Classique
+(`RenderBookmarksBar()`, `MainWindow.Bookmarks.cs`), le bouton va dans un
+`StackPanel` dédié (`OtherBookmarksBarHost`) placé dans sa propre colonne
+de `Grid` (`Grid.Column="3"`, colonne des favoris épinglés en
+`Grid.Column="1"` avec largeur `*`) - cette colonne étirée pousse
+mécaniquement "Autres favoris" à l'extrémité droite quel que soit le
+contenu à gauche. En Lumora (`RenderIdentitySpineBookmarks()`,
+`MainWindow.IdentitySpine.cs`), il n'existait pas d'équivalent : le bouton
+était juste ajouté à la suite des puces dans le même `StackPanel`
+(`IdentitySpineBookmarksTop`), donc il suivait le dernier favori épinglé
+au lieu de rester plaqué à droite. Confirmé par la comparaison de deux
+captures d'écran fournies par l'utilisateur (Lumora vs Classique, même
+disposition "haut"). Après le diagnostic, l'utilisateur a explicitement
+demandé une comparaison "sur le fond" (est-ce que la disposition change
+juste onglets verticaux + masquage des panneaux, ou plus) : réponse
+factuelle donnée (barre d'adresse et bouton Modules sont *reparentés*
+hors de `RootShell`, favoris ont un chemin de rendu séparé) avant le `Go`.
+
+**Changements** : dans `MainWindow.xaml`, `IdentitySpineBookmarksTopCard`
+(le `Border` qui capsule la ligne intégrée en position "haut") passe d'un
+`StackPanel` unique à une `Grid` deux colonnes (`*` puis `Auto`) - même
+patron que `BookmarksBarRow` en Classique. Nouveau `StackPanel`
+`IdentitySpineBookmarksTopOtherHost` dans la colonne `Auto`. Dans
+`MainWindow.IdentitySpine.cs`, `RenderIdentitySpineBookmarks()` route
+"Autres favoris" + son séparateur vers ce nouvel hôte **uniquement quand
+`target == IdentitySpineBookmarksTop`** (position "haut" - celle des
+captures) ; les positions bas/gauche/droite gardent l'ancien
+comportement (non traité cette fois, périmètre volontairement limité à
+ce qui a été montré/discuté). `HideIdentitySpineBookmarks()` vide aussi
+ce nouvel hôte.
+
+**Tests** : build MSBuild propre (0 erreur), `Lumora.Tests` 715/716 -
+seul échec `AccessibilityComfortNamingTests.Le_texte_d_indication_de_la_
+recherche_suit_le_contraste_eleve`, préexistant et sans rapport (CSS de
+la page d'accueil migré vers `var(--nt-search-placeholder)` par la
+refonte visuelle des commits précédents, test non mis à jour en
+conséquence - signalé à l'utilisateur, pas corrigé, hors du Go de cette
+passe).
+
+**Vérification réelle** : script de profil jetable ("VerifTemp"),
+plusieurs itérations pour fiabiliser le chemin UI (le mode invité masque
+entièrement "Mon Lumora"/Coffre - politique "Live Linux" du code, donc
+impossible d'atteindre le combo "Style de disposition" depuis l'invité ;
+`Changer de profil` force l'ouverture du picker même quand un seul profil
+valide existe déjà et saute directement à l'écran de connexion ; un
+assistant de configuration en 4 étapes (`SetupWizard`) s'affiche pour tout
+nouveau profil et doit être traversé avant que les captures soient
+lisibles ; une fenêtre modale séparée "Clé de récupération" apparaît une
+fois le mot de passe défini). Capture finale concluante : "Style de
+disposition" = "Style Lumora" actif ("Aucun changement en attente"), et
+le chip "Autres favoris" apparaît bien ancré à l'extrémité droite de la
+capsule pleine largeur, séparé du reste - confirmé visuellement par
+l'utilisateur ensuite. Nettoyage vérifié après coup : `config.json`
+restauré sur `ActiveProfileId: "test"`, dossier `profiles/veriftemp`
+supprimé, seuls `default`/`handijyhel`/`test` subsistent.
+
+**Version** : `0.93.12.5-dev` → `0.93.12.6-dev` (micro-correction, 4e
+chiffre - même chantier). 5 fichiers mis à jour (`MainWindow.xaml.cs`,
+`AGENTS.md`, `build-installer.ps1`, `build-clean-test-artifact.ps1`,
+`UsageModeVisualIdentityTests.cs`), test renommé
+`Version_projet_est_alignee_sur_0_93_12_6`.
+
+## 2026-08-06 (suite) - Style Lumora comme mode signature : premier axe de peaufinage (ancrage droite, position "bas")
+
+Suite à la confirmation du correctif "haut" (voir plus haut), l'utilisateur
+a demandé des idées pour peaufiner le Style Lumora ("mode signature du
+navigateur"). Six pistes proposées en pur avis (aucune n'implémentée sans
+Go) : 1) finir l'ancrage droite pour bas/gauche/droite, 2) micro-
+animations (tout bascule "a plat" aujourd'hui), 3) revoir le defaut de
+l'auto-masquage (`IdentitySpineAutoHide = false`) ou ajouter un etat
+"peek", 4) etendre le Compagnon du mode au-dela de l'accueil, 5)
+accessibilite clavier/contraste de la colonne (coherent avec le chantier
+0.93.x en cours), 6) discoverabilite du reglage (question ouverte, pas
+une recommandation). Go donne explicitement sur la piste 1 seule, apres
+clarification (les 6 pistes n'etaient pas de meme nature - certaines
+techniques, certaines des choix de produit).
+
+**Diagnostic affine avant d'implementer** : la position "gauche"/"droite"
+sont des rails verticaux compacts (`IdentitySpineFavoritesSection`/
+`IdentitySpineBookmarksRightHost`) - pas d'axe gauche-droite equivalent,
+"Autres favoris" en fin de liste verticale est deja la position coherente,
+rien a corriger la. Seule la position "bas" avait le meme trou que "haut"
+(deja corrige) : `IdentitySpineBookmarksBottomHost` etait un simple
+`StackPanel` `HorizontalAlignment="Center"` (pas meme etire pleine
+largeur, pas de carte de verre - moins aboutie que "haut"), avec
+"Autres favoris" ajoute a la suite des puces au lieu d'etre ancre.
+
+**Changements** : dans `MainWindow.xaml`, le `StackPanel`
+`IdentitySpineBookmarksBottomHost` devient une `Grid` nommee
+`IdentitySpineBookmarksBottomRow` (deux colonnes `*`/`Auto`, meme
+patron que la position "haut"), avec `IdentitySpineBookmarksBottomHost`
+(puces, colonne 0, renomme implicitement en restant le meme x:Name) et
+un nouveau `IdentitySpineBookmarksBottomOtherHost` (colonne 1). Pas de
+carte de verre ajoutee (aurait ete un chantier visuel plus large que
+"l'ancrage", hors perimetre du Go limite a la piste 1). Dans
+`MainWindow.IdentitySpine.cs`, `RenderIdentitySpineBookmarks()` route
+"Autres favoris" vers ce nouvel hote quand `target ==
+IdentitySpineBookmarksBottomHost` (meme structure de branche que "haut") ;
+`target.Visibility`/`HideIdentitySpineBookmarks()` pilotent maintenant
+`IdentitySpineBookmarksBottomRow` (la Grid englobante) plutot que le
+`StackPanel` interne, symetrique du traitement de
+`IdentitySpineBookmarksTopCard`.
+
+**Tests** : deux nouveaux tests dans `IdentitySpineVisualIdentityTests.cs`
+- `Autres_favoris_reste_ancre_a_droite_en_position_haut` (retroactif, la
+passe precedente n'avait pas ajoute de test pour son propre correctif) et
+`..._en_position_bas` (le nouveau). Piege rencontre : la fenetre de
+sous-chaine XAML lue apres `IndexOf` doit etre assez large pour atteindre
+les deux `ColumnDefinition` ET les deux hotes nommes - 700 caracteres
+suffisaient pour "bas" mais pas pour "haut" (le bloc de commentaire
+explicatif juste avant la Grid rallonge la distance), porte a 2000/1500.
+`Lumora.Tests` : 717/718 (seul l'echec preexistant sans rapport). Build
+MSBuild propre.
+
+**Vérification réelle** : meme script de profil jetable, etendu pour
+selectionner aussi "Position des favoris" = "Bas" apres avoir active
+"Style Lumora", avant la capture finale. Capture concluante : "Autres
+favoris" ancre a l'extremite droite de la fenetre, en bas - confirme
+visuellement par l'utilisateur. Nettoyage verifie identique aux passes
+precedentes (`config.json` sur `test`, dossier jetable supprime).
+
+**Version** : `0.93.12.6-dev` → `0.93.12.7-dev` (micro-correction, 4e
+chiffre - meme chantier). 5 fichiers mis a jour (memes que d'habitude),
+test renomme `Version_projet_est_alignee_sur_0_93_12_7`.
+
+**Reste ouvert (pistes 2 a 6 du peaufinage)** : pas de Go, en attente
+d'une prochaine demande explicite de l'utilisateur sur l'un de ces axes.
+
+## 2026-08-06 (suite 2) - Compagnon "en grand" (Lumora) vs flyout Classique : fausse alerte puis vrai correctif
+
+Capture utilisateur du Compagnon en mode Neutre (Style Lumora) : "le mode
+Neutre est différent du mode neutre classique". Diagnostic initial (faux) :
+le bouton "Garder dans Lumie" semblait code en dur alors que le titre
+("Neutre") est bien dynamique - present a l'identique dans le flyout
+Classique (`ModeCompanionSaveButton`, meme texte fige), conclusion
+premature que c'etait un bug partage aux deux presentations. **Corrige
+avant d'implementer** en creusant plus loin : `MEMORY.md` (entree du
+2026-07-17, "Modes compagnons Lumie") confirme que `Lumie` est le NOM
+FIXE du compagnon permanent, distinct du Mode d'usage (Neutre/Focus/
+Lecture/...) - pas une valeur qui devrait varier. Preuve corroborante :
+`SaveCompanionMemoryAndNotify()` (`MainWindow.UsageMode.cs:189`) affiche
+`"Lumie garde votre {MemoryName}."` apres sauvegarde, memes mot fixe
+"Lumie" + variable par mode. "Garder dans Lumie" est donc CORRECT et
+volontaire des les deux cotes - retractation faite aupres de
+l'utilisateur avant tout code, avec la vraie difference trouvee a la
+place : `ModeCompanionPrivacyText` ("Compagnon local : les notes et
+préférences restent dans ce profil Lumora.") existe dans le flyout
+Classique mais pas dans `IdentitySpineHomeHero` (Lumora) - seul ecart
+structurel reel entre les deux presentations.
+
+**Lecon** : face a un texte qui semble incoherent avec le mode affiche,
+verifier d'abord si ce texte designe un CONCEPT FIXE (nom de produit/
+fonctionnalite) avant de conclure a un defaut d'adaptation dynamique -
+`grep` le mot dans `MEMORY.md`/les commentaires du code aurait du venir
+avant l'affirmation, pas apres le Go donne par l'utilisateur sur la foi
+du diagnostic errone. Corrige a temps ici (avant d'ecrire du code sur la
+base du faux diagnostic), mais confiance affichee trop tot.
+
+**Changements** : `MainWindow.xaml` - ajout d'un `TextBlock` identique
+(texte, `FontSize="11"`, `Opacity="0.62"`) en fin de
+`IdentitySpineHomeHero`, centre (`TextAlignment`/`HorizontalAlignment=
+"Center"`) pour rester cohérent avec le reste de la mise en page
+centree du Hero (le flyout Classique, plus etroit, ne centre pas le
+sien). Statique, pas de `x:Name` ni de code associe (aucune donnee
+dynamique a l'interieur).
+
+**Tests** : nouveau test
+`Compagnon_hero_partage_le_rappel_de_confidentialite_du_flyout_classique`
+dans `IdentitySpineVisualIdentityTests.cs`. `Lumora.Tests` : 718/719
+(seul l'echec preexistant sans rapport). Build MSBuild propre.
+
+**Vérification réelle** : meme script de profil jetable, simplifie
+(retour a l'accueil via "Retour au site" apres avoir active Style Lumora,
+plutot que de toucher la position des favoris). Capture concluante : le
+rappel de confidentialite apparait sous "Actions rapides", identique au
+flyout Classique. Nettoyage verifie identique aux passes precedentes.
+
+**Version** : `0.93.12.7-dev` → `0.93.12.8-dev` (micro-correction, 4e
+chiffre). 5 fichiers mis a jour (memes que d'habitude), test renomme
+`Version_projet_est_alignee_sur_0_93_12_8`.
+
+## 2026-08-06 (suite 3) - Barre d'adresse "coupee en 2 par un trait au milieu"
+
+Retour utilisateur ancien ("ca fait longtemps, j'y pense"), pas lie au
+Style Lumora specifiquement - simple avis demande d'abord. Trouve dans le
+XAML de `AddressBox` (`MainWindow.xaml`, partagee Classique/Lumora, meme
+controle reparente) : deux `Border` decoratifs de 1px, un en haut
+(reflet blanc `NovaChromeMistBrush`, opacite 0.9) et un en bas (lisere
+ambre `NovaChromeHaloWarmBrush`, opacite 0.42) - effet "verre bombe"
+skeuomorphique, date, qui se lit comme un trait sur une pilule aussi
+basse (~42px). Go donne apres confirmation ("oui") + clarification sur
+le traitement (retrait complet, pas juste opacite baissee).
+
+**Changements** : les deux `Border` retires de `MainWindow.xaml` (dans
+la `Grid` de `AddressBox`, juste apres le `TextBox`). Pas de `x:Name` sur
+ces elements donc aucun code-behind a toucher. Les brushes
+`NovaChromeMistBrush`/`NovaChromeHaloWarmBrush` restent definies et
+utilisees ailleurs (halo derriere le texte, glow des puces) - retrait
+cible, pas de suppression de ressource partagee.
+
+**Tests** : aucun nouveau test (rien de testable structurellement au-dela
+de la simple absence d'element, et les tests existants qui verifient la
+presence des cles de brush globalement dans le xaml restent valides
+puisque ces brushes sont encore utilisees ailleurs). `Lumora.Tests` :
+718/719 (seul l'echec preexistant sans rapport). Build MSBuild propre.
+
+**Vérification réelle** : mode invite cette fois (pas besoin de profil
+jetable, aucun reglage a atteindre - juste regarder la barre d'adresse).
+Capture concluante : pilule lisse, aucune ligne visible. Touche
+Classique ET Lumora (controle partage, un seul site a corriger).
+
+**Version** : `0.93.12.8-dev` → `0.93.12.9-dev` (micro-correction, 4e
+chiffre). 5 fichiers mis a jour (memes que d'habitude), test renomme
+`Version_projet_est_alignee_sur_0_93_12_9`.
+
+## 2026-08-07 - Lot de bugs remontes par capture d'ecran (Screenshots/LUMORABUGS070825) : molette (crash reel attrape en verif)
+
+Retour utilisateur avec 4 captures d'ecran + description texte de 5 bugs
+distincts plus une idee de fonctionnalite (onglets verticaux en Incognito).
+Diagnostic complet fait AVANT tout code (lecture, profil reel dechiffre en
+lecture seule, aucune ecriture), presente a l'utilisateur qui a repondu aux
+questions ouvertes puis donne le Go global ("Tu peux y aller pour tout").
+Traite dans l'ordre convenu : molette d'abord (le plus mandate), puis Sites
+connectes, plein ecran, Style Lumora, onglets verticaux Incognito.
+
+### 1) Molette : redirection Win32 native vers le HWND enfant sous le curseur
+
+**Diagnostic** : relecture de tout l'historique molette (FocusState.Pointer,
+module de hit-test geometrique XAML "ApplyWheelFallback") - constat que TOUT
+ce qui a ete corrige jusqu'ici visait les `ScrollViewer` XAML de Lumora
+(Parametres, Modules...), jamais le contenu WEB lui-meme. Une page WebView2
+n'est pas un `ScrollViewer` XAML : le hit-test geometrique ne fait donc rien
+dessus. WebView2 est un controle "windowed" (vrai HWND enfant natif,
+contrairement au reste de l'UI XAML qui vit dans un seul HWND via
+DirectComposition) - Windows route WM_MOUSEWHEEL vers le HWND qui a le focus
+CLAVIER natif, pas vers celui survole par la souris, et `CoreWebView2Controller
+.MoveFocus` (la solution documentee par Microsoft) n'est pas expose par ce SDK
+XAML (deja verifie et note dans le code). Tous les correctifs precedents
+esperaient que le focus XAML (`FocusState.Pointer`) se propage jusqu'au focus
+natif sans jamais le controler directement.
+
+**Correctif** : extension du sous-classement WndProc deja en place en pur
+diagnostic depuis le 2026-07-25 (`HookRawMouseWheelDiagnostics`,
+`MainWindow.WindowChrome.cs`). A chaque WM_MOUSEWHEEL/WM_POINTERWHEEL recu par
+la fenetre principale, hit-test Win32 natif (`ChildWindowFromPointEx`, descente
+recursive jusqu'au HWND enfant le plus profond sous le point ecran du curseur)
+et redirection explicite du message vers ce HWND via `SendMessage` -
+independant de qui a le focus, meme principe que le "scroll sous la souris"
+des navigateurs/de l'Explorateur de fichiers. N'affecte que les vrais HWND
+enfants (WebView2) : les panneaux XAML natifs n'ont pas de HWND propre et
+restent geres par `ApplyWheelFallback` (inchange).
+
+**Crash reel attrape EN verification, pas en production** : premier test avec
+injection d'un WM_MOUSEWHEEL synthetique (PostMessage direct sur le HWND,
+different d'une injection SendInput - non bloque par le bac a sable) a fait
+planter le process. Confirme par l'Observateur d'evenements Windows
+(`Get-WinEvent`, log Application) : `STATUS_STACK_OVERFLOW` (0xc00000fd) dans
+ntdll.dll. Cause : WebView2/Chromium, quand il ne traite pas le message
+(convention Win32 documentee par Microsoft pour WM_MOUSEWHEEL), le renvoie a
+son HWND PARENT via SendMessage - ce retour reentrait dans le meme WndProc, qui
+refaisait le meme hit-test (meme point ecran) et renvoyait de nouveau au meme
+enfant : boucle synchrone (SendMessage bloque, empile les frames) qui a
+deborde la pile en ~600 allers-retours en moins de 200ms. Corrige par un
+drapeau anti-reentrance (`_forwardingWheelMessage`) : des qu'un WM_MOUSEWHEEL
+arrive PENDANT qu'on est deja en train d'en forwarder un, on saute le
+hit-test/forward (juste `CallWindowProc` par defaut) - le "rebond" de
+Chromium ne redeclenche donc plus rien.
+
+**Tests** : `KeyboardFocusRegressionTests.cs` - test existant renomme
+(`..._sous_classe_toujours_le_wndproc_et_relaie_vers_loriginal`, l'ancien nom
+affirmait "sans changer le comportement", plus vrai depuis ce correctif),
+assertions inchangees (le relai vers `CallWindowProc` reste identique). Deux
+nouveaux tests : `Molette_native_redirige_le_message_vers_le_hwnd_enfant_sous_le_curseur`
+(presence du hit-test/forward) et
+`Molette_native_ne_boucle_pas_quand_lenfant_renvoie_le_message_a_son_parent`
+(verrouille specifiquement le garde-fou anti-reentrance et l'ordre
+lever-drapeau/SendMessage/redescendre-drapeau, pour qu'une regression future
+ne puisse pas recreer ce crash sans faire echouer un test). `Lumora.Tests` :
+720/721 (seul l'echec preexistant sans rapport). Build MSBuild propre.
+
+**Verification reelle, plus poussee que d'habitude sur ce sujet** : lance en
+mode invite (profil jetable), HWND recupere via `Get-Process.MainWindowHandle`
++ UIA, puis **injection reelle d'un WM_MOUSEWHEEL via PostMessage direct sur
+le HWND** (mecanisme different d'une injection SendInput synthetique, non
+refuse par cet environnement) - une premiere sur ce bug historique, plus fort
+que les verifications precedentes qui ne prouvaient que le routage XAML/
+ScrollViewer, jamais l'atteinte reelle du HWND natif. Sequence confirmee dans
+`winui-runtime-trace.log` : message recu -> redirige vers le bon HWND enfant
+-> rebond de Chromium -> garde-fou l'absorbe sans re-forward -> process reste
+"Responding". Reproduit avant ET apres le correctif du garde-fou (crash avant,
+stable apres), sur la page d'accueil ET sur une vraie page longue
+(Wikipedia FR, navigation reelle via UIA sur `AddressBox`).
+**Limite honnete** : le rebond systematique observe (meme sur une page
+scrollable) vient probablement de l'absence de positionnement REEL du curseur
+souris (SendInput bloque dans cet environnement) - Chromium fait sa propre
+verification de position curseur en plus des coordonnees du message. Le
+routage natif est donc prouve correct et sans crash, mais la confirmation
+qu'un geste physique reel fait defiler la page reste due par l'utilisateur,
+comme documente depuis le debut de ce chantier.
+
+**Version** : `0.93.12.9-dev` → `0.93.12.10-dev` (micro-correction, 4e
+chiffre). 5 fichiers mis a jour (memes que d'habitude), test renomme
+`Version_projet_est_alignee_sur_0_93_12_10`.
+
+### 2) Sites connectes : verification reelle -> PAS un bug, mecanisme confirme sain
+
+Avant tout code, l'utilisateur avait repondu ne jamais avoir verifie si
+google.com etait marque de confiance. Diagnostic en deux temps :
+
+**Lecture de code** (`MainWindow.Sessions.cs`) : `SetTrustedSessionSite`
+sauvegarde immediatement sur disque (`_uiSettings.Save(...)` synchrone juste
+apres l'ajout), et propage automatiquement aux domaines lies
+(`SessionDomainFamilies.SiblingsOf`, ex. google.com <-> youtube.com) - meme
+mecanisme deja verifie en reel le 2026-08-02, code inchange depuis.
+
+**Verification reelle bout en bout** (nouveau profil jetable "verifsessions",
+cree via le vrai assistant de creation - nom/mot de passe par UIA) :
+navigation vers `https://www.google.com` (3 cookies poses), panneau "Sites
+connectes" ouvert, toggle de confiance active pour google.com (`ToggleSwitch`
+via `TogglePattern`, pas `InvokePattern` - piege rencontre, corrige en lisant
+`GetSupportedPatterns()`). Fichier `ui-settings.lumora` relu immediatement
+(DPAPI, lecture seule) : `TrustedSessionSites: google.com, youtube.com` - la
+liaison automatique a bien fonctionne sans action separee sur youtube.com.
+**Process tue et relance sur le meme dossier de profil** (round-trip complet,
+pas seulement une lecture de fichier) : trace du redemarrage confirme
+`Startup session purge: 0 cookies removed` - la purge a bien pris le chemin
+selectif et n'a rien touche puisque google.com/youtube.com sont de confiance.
+
+**Conclusion** : le mecanisme fonctionne integralement comme concu, aucun
+code a corriger. Sur le vrai profil `handijyhel` de l'utilisateur (relu en
+lecture seule avant le Go), `TrustedSessionSites` est vide depuis la
+reinitialisation du profil le 2026-07-29 - la "connexion fantome" ressentie
+vient du fait qu'aucun site n'a ete marque de confiance depuis cette date,
+pas d'une panne de la fonctionnalite. Explique a l'utilisateur : il suffit de
+se connecter reellement une fois (taper le mot de passe) et d'accepter
+"Rester connecte ?", ou de marquer google.com de confiance directement dans
+Outils > Sites connectes.
+
+**Pas de changement de code, pas de bump de version pour ce point** (rien a
+livrer). Piste ouverte non traitee : le flash "avatar YouTube deja connu"
+avant le vrai constat "non connecte" (localStorage/IndexedDB non purge par
+`DeleteUntrustedCookiesAsync`, documente le 2026-08-02) reste possible une
+fois google.com de confiance et n'a pas ete retestee ici - hors perimetre du
+Go actuel (uniquement les 5 points + l'idee onglets verticaux).
+
+**Nettoyage** : profil jetable "verifsessions" supprime des deux
+emplacements ou il s'est retrouve (`%LocalAppData%\Lumora\profiles\
+verifsessions` pour `profile.lumora`/`vault.lumora`, et le dossier temp
+`LUMORA_PROFILE_DIR` pour `navigation/` - **incoherence de chemin
+constatee** entre les deux, potentiellement un accroc dans le flux "Ou
+stocker votre profil ?" du premier lancement, non investiguee car hors
+perimetre de cette session). Profils reels (`default`, `handijyhel`, `test`)
+non touches.
+
+### 3) Plein ecran : la barre d'adresse ne revient pas en Style Lumora
+
+**Reproduction difficile mais reussie** : tester le plein ecran a la souris
+est impossible ici (pas d'injection clavier/souris synthetique). Contournement
+trouve - `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333`
+au lancement, puis CDP (`Input.dispatchMouseEvent` sur une page `data:` avec
+un bouton `requestFullscreen()` - un vrai clic CDP compte comme un geste
+utilisateur, contrairement a `Runtime.evaluate` seul qui est rejete par
+Chromium) pour entrer en plein ecran, `document.exitFullscreen()` pour en
+sortir. Teste d'abord en Classique (onglets horizontaux ET verticaux) :
+restauration parfaite dans les deux cas, bug introuvable. Le style actif
+compte : bascule sur "Style Lumora" (`ChromeLayoutStyle=identitySpine`, ecrit
+directement dans `ui-settings.lumora` via DPAPI pour aller plus vite qu'un
+aller-retour Parametres) - **la` reproduit a l'identique de la capture
+utilisateur** : seule la barre de favoris revient, adresse/navigation
+disparues.
+
+**Cause reelle** (lecture de `ApplyFullScreenLayout()`,
+`MainWindow.Settings.cs`) : en ENTRANT en plein ecran, `NavigationToolbar.
+Visibility = Visibility.Collapsed` est pose sans condition de style (ligne
+commune aux deux presentations). En SORTANT, seule la branche Classique le
+remet en `Visible` - la branche Style Lumora restaure bien `IdentitySpineHost`/
+`IdentitySpineAddressHost` (les CONTENEURS) mais jamais `NavigationToolbar`
+lui-meme (le DESCENDANT reparente dedans par `EnterIdentitySpineLayout()`),
+qui restait donc Collapsed pour le reste de la session malgre un ancetre
+redevenu visible.
+
+**Correctif** : une ligne ajoutee dans la branche de restauration Style
+Lumora - `NavigationToolbar.Visibility = Visibility.Visible;` - symetrique du
+`NavigationToolbar.Visibility = Visibility.Collapsed;` d'entree.
+
+**Tests** : nouveau test
+`Sortie_plein_ecran_restaure_aussi_la_barre_adresse_en_style_lumora`
+(`IdentitySpineVisualIdentityTests.cs`) - extrait la 2e occurrence de la
+condition `_chromeLayoutStyle == "identitySpine"` dans `ApplyFullScreenLayout`
+(la branche de sortie, pas celle d'entree) et verrouille la presence de la
+ligne de restauration a cote de `IdentitySpineAddressHost.Visibility =
+Visibility.Visible`. `Lumora.Tests` : 721/722 (seul l'echec preexistant sans
+rapport). Build MSBuild propre.
+
+**Verification reelle, bug reproduit puis absent, meme sequence exacte** :
+meme profil jetable, meme sequence CDP (entree/sortie plein ecran) rejouee
+apres le correctif - "Retour"/"Avancer"/"Recharger"/"Adresse ou recherche"/
+"Ouvrir l'adresse" tous presents en UIA apres sortie, a cote des favoris.
+Confirme aussi que le style Classique n'a jamais ete affecte (comme
+l'utilisateur le soupconnait a tort - "je crois que ca fait la meme chose en
+classique" - verifie faux, bug strictement limite au Style Lumora).
+
+**Version** : `0.93.12.10-dev` → `0.93.12.11-dev` (micro-correction, 4e
+chiffre). 5 fichiers mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_12_11`.
+
+### 4) Style Lumora : les barres recouvraient la page au lieu de la pousser
+
+**Cause confirmee par lecture** (`IdentitySpineHost`, commentaire XAML
+explicite) : la colonne identitaire est un OVERLAY volontaire
+(`Grid.RowSpan="7"` dans `RootShell`, hors des colonnes de `ContentHost` qui
+hebergent la page/les panneaux) - "meme patron que FullScreenTopBar". La
+rendre visible ne redimensionne donc jamais la zone de contenu en dessous,
+qui garde sa pleine largeur et se fait simplement recouvrir sur ses 64
+premiers pixels - vrai en permanence en Style Lumora (colonne toujours
+affichee), pas seulement pendant le masquage automatique montre par
+l'utilisateur.
+
+**Correctif** : nouvelle fonction `UpdateIdentitySpineContentInset()`
+(`MainWindow.IdentitySpine.cs`) qui applique un `Margin` gauche de 64px
+(`IdentitySpineContentInset`, dupliquee de `IdentitySpineHost` `Width="64"`
+en XAML) a `ContentHost` (ancetre commun a `BrowserPanel`/`SettingsPanel`/
+`ModulesPanel`/... - tous `Grid.Column="3"` du meme Grid) quand
+`IdentitySpineHost.Visibility == Visible`, sinon `Margin` nul. Appelee aux 7
+endroits qui basculent cette visibilite : `ApplyChromeLayoutStyle` (chemin
+idempotent), `Enter`/`ExitIdentitySpineLayout`, `Show`/`HideIdentitySpine`
+(masquage automatique), et les deux branches d'`ApplyFullScreenLayout`
+(entree/sortie plein ecran, cf. point 3 ci-dessus - meme fichier, meme
+session).
+
+**Tests** : nouveau test
+`Colonne_identitaire_redimensionne_le_contenu_au_lieu_de_le_recouvrir`
+(`IdentitySpineVisualIdentityTests.cs`) - verrouille la constante, la
+fonction, et compte exactement 7 appels (5 dans IdentitySpine.cs, 2 dans
+Settings.cs) pour qu'un futur point de bascule oublie fasse echouer le test
+plutot que de recreer silencieusement le meme chevauchement. `Lumora.Tests` :
+722/723 (seul l'echec preexistant sans rapport). Build MSBuild propre.
+
+**Verification reelle, mesure precise pas seulement visuelle** : profil
+jetable cree via l'assistant (evite les etats fantomes du mode invite
+rencontres en cours de route), mesure `window.innerWidth` via CDP
+(`Runtime.evaluate`) sur le meme onglet `about:blank`, une fois en Classique
+(**1904px**) et une fois en Style Lumora apres bascule (`ChromeLayoutStyle`
+ecrit dans `ui-settings.lumora`, meme profil, redemarrage) : **1840px**.
+Difference = **64px pile**, exactement `IdentitySpineContentInset`. Le
+contenu recule reellement, il n'est plus seulement recouvert.
+
+**Version** : `0.93.12.11-dev` → `0.93.12.12-dev` (micro-correction, 4e
+chiffre). 5 fichiers mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_12_12`.
+
+### 5) Bonus : onglets verticaux en Incognito
+
+Demande separee de l'utilisateur ("fais exactement ce que t'as fait avec le
+mode normal") - pas un bug, un ajout. `LumoraIncognitoWindow` n'avait aucun
+code d'onglets verticaux ; contrairement a la fenetre normale
+(`BrowserTabState` : groupes, epingles, glisser-deposer, redimensionnement),
+`IncognitoTab` (`IncognitoTab.cs`) est volontairement minimal (juste
+`Item`/`View`/`Address`/`Title`) - la fenetre Incognito assume explicitement
+"pas de hub Modules, pas de raccourcis de confort" (commentaire de classe).
+
+**Implementation, version simplifiee du meme principe que MainWindow**
+(`VerticalTabsSwitch`/`VerticalTabsRail`) : `IncognitoTabs` (le `TabView`)
+reste la source de verite unique (`TabItems`/`SelectedItem`, evenements
+d'ajout/fermeture deja cables) - seule sa bande horizontale est masquee, un
+rail rendu a la main (`IncognitoVerticalTabsRail`/`...PanelItems`, nouvelle
+colonne `IncognitoVerticalTabsColumn` dans `LumoraIncognitoWindow.xaml`) le
+pilote en dessous. Pas de groupes/epingles/glisser-deposer (le modele n'en a
+pas), pas de reglage persiste (`_verticalTabsEnabled` en memoire seulement -
+coherent avec l'esprit "session ephemere" de cette fenetre, revient a
+l'horizontale a chaque nouvelle fenetre Incognito). Nouveau bouton
+`IncognitoVerticalTabsToggleButton` dans la barre d'outils. `RenderVerticalTabs()`
+reconstruit le rail a chaque point qui modifie `IncognitoTabs.TabItems`
+(creation, fermeture, echec, selection, renommage via `DocumentTitleChanged`)
+- extraction de `CloseIncognitoTab()` partagee entre `IncognitoTabs_
+TabCloseRequested` (evenement natif du TabView) et le bouton de fermeture du
+rail (pas d'event args a fabriquer).
+
+**Tests** : `IncognitoTabsAndIconTests.cs` - deux nouveaux tests,
+`Fenetre_incognito_propose_une_bascule_onglets_verticaux` (presence XAML/C#)
+et `Rail_vertical_incognito_reste_synchronise_avec_les_onglets` (verrouille
+les 3 points d'appel a `RenderVerticalTabs()` plus le renommage). `Lumora.Tests` :
+724/725 (seul l'echec preexistant sans rapport). Build MSBuild propre.
+
+**Verification reelle** : fenetre Incognito lancee directement
+(`--incognito`, argument de ligne de commande deja existant - contourne les
+difficultes rencontrees a naviguer le menu demarrer de MainWindow via UIA
+pendant cette session), 3 onglets crees, bascule verticale invoquee - rail
+confirme par capture d'ecran (3 entrees "Incognito" + bouton "+", theme
+violet coherent) ET par UIA (bande horizontale disparue, 3 paires
+selection/fermeture presentes). Selection et fermeture testees en reel : clic
+sur le premier onglet, puis fermeture du premier - rail redescend a 2
+entrees, fenetre reste "Responding".
+
+**Version** : `0.93.12.12-dev` → `0.93.13.0-dev` (ajout, **3e chiffre** cette
+fois - contrairement aux 4 points precedents qui etaient des corrections).
+5 fichiers mis a jour, test renomme `Version_projet_est_alignee_sur_0_93_13_0`.
+
+## Recapitulatif de la session (2026-08-07)
+
+5 points traites dans l'ordre convenu avec l'utilisateur, chacun avec
+diagnostic prealable + Go global + build/tests/version/verification reelle
+individuels : 1) molette (crash reel attrape et corrige en cours de route,
+premiere verification par injection Win32 reelle sur ce bug historique),
+2) sessions connectees (pas un bug, mecanisme confirme sain, cause reelle =
+jamais utilise depuis la reinitialisation du profil), 3) plein ecran en Style
+Lumora (bug reproduit et corrige, NavigationToolbar oublie a la restauration),
+4) chevauchement Style Lumora (overlay transforme en vrai redimensionnement,
+mesure precise 64px via CDP), 5) onglets verticaux Incognito (nouvelle
+fonctionnalite, verifiee en reel). Version finale du palier :
+`0.93.13.0-dev` (partie de `0.93.12.9-dev`).
+
+## 2026-08-07 (suite) - Deux bugs supplementaires signales apres capture d'ecran (boutons systeme + fermeture onglets verticaux)
+
+Retour utilisateur avec 2 captures d'ecran montrant les boutons systeme
+(min/max/fermer) flottant directement sur le contenu web, plus un signalement
+texte separe : aucune fermeture possible en mode onglets verticaux. Le point
+"boutons fenetre" avait ete explicitement laisse de cote dans la premiere
+passe du jour ("comme convenu") - reintroduit ici par l'utilisateur avec
+preuve concrete, traite dans la continuite du Go global de la session (pas de
+nouvelle demande de Go distincte, mais diagnostic pose avant correctif comme
+d'habitude).
+
+### Boutons systeme flottants (Style Lumora uniquement)
+
+**Diagnostic** : `ApplyVerticalTabsLayout()` (Classique) documente deja
+explicitement pourquoi `TopTabsRow` garde 52px meme quand la bande d'onglets
+n'affiche rien - "c'est la bande de titre reservee au drag de fenetre + aux
+boutons systemes... comme Edge/Arc". **Ce correctif n'avait jamais ete
+applique au Style Lumora** : `EnterIdentitySpineLayout()` et la branche de
+restauration d'`ApplyFullScreenLayout()` mettaient `TopTabsRow.Height` a 0
+sans condition, faisant disparaitre cette bande de fond - les boutons
+systeme (ExtendsContentIntoTitleBar) se retrouvaient donc sans rien derriere
+eux, flottant directement sur le contenu de la page.
+
+**Correctif** : `TopTabsRow.Height = new GridLength(52)` (au lieu de 0) aux
+deux endroits, meme valeur que le correctif Classique deja existant.
+IdentitySpineHost (la colonne elle-meme, overlay `RowSpan="7"`) n'est pas
+affectee par cette hauteur - continue de se dessiner normalement.
+
+**Verification reelle tres accidentee** : plusieurs tentatives avec le
+selecteur de profil (etats fantomes recurrents entre mode invite et profil
+reel cree via l'assistant - cause exacte non elucidee, plusieurs
+combinaisons testees). **Incident notable** : la page d'accueil "Nouvel
+onglet" affiche un fond d'ecran tire de vraies photos personnelles locales
+(pas un exemple generique) - rencontre a deux reprises pendant les tentatives
+de navigation vers une page de test (la barre d'adresse interprete a tort une
+URL `data:` comme une recherche, et la navigation CDP directe se faisait
+apparemment rediriger vers l'accueil). **Capture supprimee immediatement
+chaque fois, aucune ne conservee.** Verification par lecture de code
+uniquement au final (le meme correctif deja valide pour le mode Classique,
+applique a l'identique) plus le test de regression - pas de confirmation
+visuelle definitive obtenue cette fois, signale honnetement plutot que
+pretendre le contraire.
+
+### Fermeture d'onglet impossible en mode compact (rail vertical, icone seule)
+
+**Diagnostic** : `RenderVerticalTabs()` avait deux rendus - la ligne
+"etendue" (titre + icone) avec un vrai bouton de fermeture, et le mode
+compact/epingle (icone seule, 44x38) qui n'avait **aucun** bouton de
+fermeture, seulement l'icone. Fermer restait techniquement possible (clic
+droit > "Fermer l'onglet" via `CreateTabContextFlyout`, deja cable pour tous
+les onglets ; Ctrl+W) mais sans affordance visible - equivalent a une
+impossibilite pour la plupart des utilisateurs.
+
+**Correctif** : croix de fermeture revelee au survol (meme motif que
+Chrome/Edge sur un onglet compact/epingle), pas une croix permanente qui
+aurait ete illisible sur une icone de 44x38. Grid superposant l'icone et un
+petit bouton `SymbolIcon(Symbol.Cancel)` (Collapsed par defaut), bascule de
+visibilite sur `PointerEntered`/`PointerExited` du bouton englobant. Reutilise
+`VerticalTabCloseButton_Click` (meme gestionnaire que la ligne etendue,
+aucune logique de fermeture dupliquee) - meme pattern bouton-dans-bouton deja
+prouve fonctionnel par la ligne etendue (boutons monter/descendre/fermer
+imbriques de la meme facon).
+
+**Tests** : nouveau fichier `VerticalTabsCompactCloseTests.cs` (2 tests -
+presence de la croix/du survol, reutilisation du bon gestionnaire) ; nouveau
+test `Style_lumora_reserve_aussi_la_bande_de_fond_des_boutons_systeme`
+(`IdentitySpineVisualIdentityTests.cs`) pour le premier point. `Lumora.Tests` :
+727/728 (seul l'echec preexistant sans rapport). Build MSBuild propre.
+
+**Verification reelle** : rail vertical active, bascule en mode compact,
+creation d'un 2e onglet - aucun crash, les deux icones "Accueil Lumora"
+s'affichent correctement sans croix visible au repos (comportement attendu).
+**Limite honnete** : impossible de simuler un vrai survol souris ou un clic
+droit dans cet environnement (memes limites d'injection documentees depuis le
+debut du projet) - la bascule au survol elle-meme n'a donc pas pu etre
+confirmee visuellement, seulement son cablage par lecture de code + tests.
+
+**Version** : `0.93.13.0-dev` → `0.93.13.1-dev` (micro-correction, 4e
+chiffre - deux corrections groupees dans le meme palier). 5 fichiers mis a
+jour, test renomme `Version_projet_est_alignee_sur_0_93_13_1`.
+
+## 2026-08-07 (suite) - Plan "finir le Style Lumora proprement" (Go global, execution point par point)
+
+Apres les corrections du jour, l'utilisateur a redemande un avis global :
+"comment rendre le Style Lumora parfait et totalement fonctionnel". Plan en 4
+points presente et valide (Go court : "go") : 1) croix de fermeture onglets
+compacts toujours visible (pas seulement au survol - premiere version jugee
+insuffisante), 2) elucider la capture "pas de barre de recherche/ancienne
+presentation", 3) boutons systeme dessines sur-mesure, 4) decouvrabilite du
+reglage Style Lumora. Les axes plus longs (animations, etat "peek",
+Compagnon etendu, audit accessibilite dedie) delibbement mis apres, pas
+couverts par ce Go.
+
+### 1) Croix de fermeture compacte : de "au survol" a "toujours visible"
+
+Le premier correctif du jour (croix reveleee au survol) etait insuffisant en
+conditions reelles - l'utilisateur a montre une capture du rail compact sans
+aucun indice visible au repos. Refonte : pastille TOUJOURS visible mais
+discrete (opacite 0.6 au repos, 1 au survol), en pastille dans l'angle
+bas-droit de l'icone plutot que superposee dessus. Piege rencontre deux fois
+de suite : l'icone (18px puis 16px) et la pastille (16x16) se chevauchaient
+visuellement malgre une premiere tentative de decalage par marge negative -
+corrige en repensant le decalage (marge POSITIVE bas/droite sur un element
+centre = le pousse vers le coin oppose, pas de marge negative). `SymbolIcon`
+n'a pas de propriete `FontSize` (erreur de compilation rencontree deux fois
+dans cette session, y compris pour ce meme correctif) - la bonne facon de
+retailler un `SymbolIcon` est de l'envelopper dans un `Viewbox` de la taille
+voulue.
+
+**Tests** : `VerticalTabsCompactCloseTests.cs` reecrit pour verrouiller la
+nouvelle logique (opacite, pas de Visibility.Collapsed). `Lumora.Tests` :
+727/728 (seul l'echec preexistant). Build MSBuild propre.
+
+**Verification reelle avec capture d'ecran zoomee** (rognage + agrandissement
+x5 par nearest-neighbor pour lire un rail de 44x38px) : premiere capture a
+confirme la pastille bien presente et toujours visible (contrairement a la
+version precedente), mais chevauchant l'icone du site - deuxieme iteration
+(marge repensee) confirmee propre, icone et croix clairement separees.
+
+**Version** : `0.93.13.1-dev` → `0.93.13.2-dev` (micro-correction, 4e
+chiffre - corrige une correction du jour meme jugee insuffisante). 5
+fichiers mis a jour, test renomme `Version_projet_est_alignee_sur_0_93_13_2`.
+
+**Effet de bord utile** : en verifiant ce point, capture d'un profil invite
+tout frais montrant la page d'accueil Style Lumora complete et correcte
+(recherche, horloge, "Bonsoir") - aucun fond d'ecran personnel cette fois
+(coherent avec l'hypothese que ce fond ne vient que d'un profil reel avec un
+reglage particulier, pas du mode invite). Elucidation du point 2 (barre de
+recherche manquante sur la capture utilisateur precedente) toujours en
+attente - a traiter ensuite.
+
+### 2) "Pas de barre de recherche / ancienne presentation" - hypothese la plus probable trouvee, pas totalement confirmee
+
+Reproduction ciblee : profil invite frais, onglets verticaux actives, mode
+compact, page d'accueil - **rendu complet et correct a chaque fois** (recherche,
+horloge, "Bonsoir", logo Lumora), aucune reproduction d'un contenu vide comme
+sur la capture utilisateur. Hypothese la plus probable au vu des elements
+visibles sur cette capture (barre d'adresse plate pleine largeur + ligne de
+favoris classique) : **c'etait le mode Classique avec onglets verticaux, pas
+le Style Lumora** - les deux reglages sont independants
+(`VerticalTabsEnabled` != `ChromeLayoutStyle`), le Style Lumora remplace la
+barre d'adresse plate par une capsule flottante en verre alors que la
+capture montre la presentation classique. "Ancienne presentation" s'expliquerait
+alors simplement par une confusion entre "onglets verticaux actives" et
+"Style Lumora actif". Pour "pas de barre de recherche" : non reproduit avec
+les memes reglages de mon cote - reste possible que l'onglet actif sur la
+capture n'etait pas la page d'accueil, ou un etat transitoire non capture ici.
+Pas de correctif applique sur ce point (rien de reproductible a corriger) -
+signale comme hypothese, pas comme certitude.
+
+### 4) Decouvrabilite du reglage Style Lumora
+
+Nouvelle tuile "Style Lumora" dans le menu Demarrer (`ModulesFlyout`,
+categorie "Lumora et profil"), a cote de la tuile "Studio" deja existante -
+distincte volontairement : "Studio" regle les POSITIONS (haut/bas/gauche/
+droite) dans le style deja choisi, "Style Lumora" mene directement au choix
+du style lui-meme (Classique <-> Style Lumora), qui vivait avant a 4 clics
+de profondeur (Parametres > Mon Lumora > Disposition) sans aucune mise en
+avant. Nouvelle methode `OpenChromeStyleSettings()` (meme patron que
+`OpenPersonalizationSettings()`/`OpenWorkspaceSettings()` deja existants) :
+ouvre Parametres > Mon Lumora > sous-onglet Disposition directement.
+
+**Piege rencontre en verifiant** : premiere verification faite en mode
+invite - la tuile menait bien vers "Mon Lumora" en apparence, mais
+atterrissait sur "Vue d'ensemble" au lieu de "Disposition". **Pas un bug** :
+`SettingsNav_Click` redirige deliberement "Mon Lumora"/"Coffre et donnees"
+vers "overview" en mode invite (politique "Live Linux" deja existante -
+personnalisation persistante hors de portee d'une session invitee). Corrige
+la methode de verification (profil reel via l'assistant), pas le code -
+confirme fonctionnel : la tuile mene bien directement a
+`ChromeLayoutStyleCombo` en profil reel.
+
+**Tests** : nouveau test `Style_lumora_a_sa_propre_tuile_dans_le_menu_demarrer`
+(`IdentitySpineVisualIdentityTests.cs`) - verrouille l'id, l'entree du
+registre, le cablage du handler et le contenu de `OpenChromeStyleSettings()`.
+`Lumora.Tests` : 728/729 (seul l'echec preexistant). Build MSBuild propre.
+
+**Version** : `0.93.13.2-dev` → `0.93.14.0-dev` (ajout, **3e chiffre** -
+nouvelle tuile/fonctionnalite de decouvrabilite, pas une correction). 5
+fichiers mis a jour, test renomme `Version_projet_est_alignee_sur_0_93_14_0`.
+
+### 5) Boutons systeme : arbitrage boutons sur-mesure vs finition sure
+
+Avant de coder le point 3 (boutons min/agrandir/fermer "dessines comme
+Chrome"), recherche API reelle : `ExtendsContentIntoTitleBar` + les
+`AppWindowTitleBar.Button*Color` actuels ne font que RECOLORER des boutons
+toujours dessines par DWM (non-client, toujours au-dessus du XAML client).
+De vrais boutons sur-mesure integres exigent soit une suppression complete
+du cadre systeme (`WM_NCCALCSIZE`/`WM_NCHITTEST` reimplemente a la main -
+glisser, redimensionner, fermeture, Snap Layout tout repris par l'app), soit
+`Microsoft.UI.Input.InputNonClientPointerSource.SetRegionRects` (API plus
+recente, mais ne masque pas forcement les boutons systeme en dessous - deux
+jeux de boutons superposes possibles). Aucune des deux verifiable ici : pas
+de souris reelle pour tester glisser/redimensionner/survol Snap Layout - un
+mauvais pas peut rendre la fenetre impossible a deplacer/fermer normalement,
+sans que je puisse le detecter avant que l'utilisateur le decouvre.
+
+**Question posee explicitement** ("selon toi, c'est laquelle la meilleure
+option") plutot que d'avancer sur la base du Go initial (qui datait d'avant
+cette decouverte) : recommande et choisi l'option B - rester sur les
+boutons systeme recolores, pousser leur finition aussi loin que verifiable
+sans risque, plutot que l'option A (sur-mesure complet, invérifiable dans
+cet environnement). Point 3 du plan Style Lumora traite comme "finition
+sure" plutot que "refonte", pas abandonne.
+
+**Bug reel trouve en creusant** (capture d'ecran zoomee du coin haut-droit,
+pas juste lu dans le code) : en contraste eleve, les icones
+minimiser/agrandir/fermer etaient **invisibles au repos**, pas seulement au
+survol - `ApplyWindowTitleBarColors()` lisait `NovaAddressForegroundBrush`
+pour la couleur des icones, brush pense pour du texte sur fond blanc de
+barre d'adresse (donc NOIR en contraste eleve), alors que le fond du bouton
+lui-meme (`NovaChromeSurfaceBrush`) est aussi NOIR en contraste eleve - texte
+noir sur fond noir. Corrige en passant sur `NovaChromeButtonForegroundBrush`
+(deja BLANC en contraste eleve, deja le jeton utilise par les autres
+boutons-icones de la chrome ailleurs dans l'app - `NovaChromeIconButtonStyle`
+`MainWindow.xaml:259-280`). Deuxieme defaut trouve au meme endroit : le fond
+"survol" (`NovaChromeSurfaceRaisedBrush`) est identique au fond normal (les
+deux NOIR en contraste eleve) - survol invisible, seul l'appui (blanc) se
+voyait. Corrige avec un langage contraste-eleve deja existant ailleurs dans
+l'app (jaune ambre `255,213,0` au survol, jaune pur `255,255,0` a l'appui,
+texte noir sur les deux - memes teintes que `NovaModuleHubAccentBrush`/
+`NovaFocusBrush`).
+
+**Verification reelle** : lance en mode invite (profil jetable), navigue
+jusqu'a Parametres > Mon Lumora > Accessibilite > Affichage, active
+"Contraste renforce", applique - capture d'ecran zoomee x3 du coin
+haut-droit AVANT/APRES confirme les icones desormais visibles (blanc sur
+noir). Contraste redesactive ensuite, capture de controle confirme le mode
+sombre normal inchange (aucune regression sur le rendu deja correct hors
+contraste eleve). `Lumora.Tests` : 728/729 (seul l'echec preexistant,
+`Le_texte_d_indication_de_la_recherche_suit_le_contraste_eleve` -
+`MainWindow.NewTabHome.cs` est passe a une variable CSS `isDark` a un moment
+non trace ici, le test verifie encore l'ancien ternaire inline ; signale a
+l'utilisateur, pas corrige - hors perimetre de cette session, deja present
+avant ces changements). Build MSBuild propre.
+
+**Version** : `0.93.14.0-dev` → `0.93.14.1-dev` (correction, **4e chiffre** -
+rectification d'un defaut de contraste deja livre, pas un ajout). 5 fichiers
+mis a jour.
+
+## 2026-08-08 - Deux bugs onglets remontes par captures d'ecran (fermeture Style Lumora, chevrons peu visibles)
+
+Retour utilisateur avec 3 captures d'ecran comparant Style Lumora, Classique,
+et Classique+onglets verticaux : aucune facon de fermer un onglet en Style
+Lumora, alors que Classique (horizontal et vertical) le permet. Plus une
+question separee sur la petite fleche de defilement peu visible quand
+beaucoup d'onglets sont ouverts. Diagnostic pose avant tout code, Go donne
+("go") apres la question ouverte sur la fleche (traitee comme hypothese de
+travail, pas de reponse explicite de l'utilisateur sur ce point precis).
+
+### 1) Style Lumora : le rail n'avait jamais eu de croix de fermeture
+
+**Diagnostic** : le Style Lumora n'utilise PAS `RenderVerticalTabs()`
+(`MainWindow.TabGroups.cs`, qui avait recu la pastille de fermeture toujours
+visible le 2026-08-07) - il a sa propre fonction totalement separee,
+`RenderIdentitySpineTabs()` (`MainWindow.IdentitySpine.cs`), qui alimente un
+`StackPanel` different (`IdentitySpineTabItems`). Cette fonction cablait
+`Click` (selection), `ContextFlyout` (clic droit > "Fermer l'onglet") et le
+glisser-deposer, mais **aucun bouton de fermeture n'avait jamais existe**
+depuis sa creation - pas une regression du correctif du 07/08, un rail qui
+n'a jamais recu le motif.
+
+**Correctif** : meme motif que le rail compact classique - pastille de
+fermeture 20x20 toujours visible mais discrete (opacite 0.6 au repos, 1 au
+survol), coin bas-droit de l'icone (`Viewbox` 10x10 + `SymbolIcon(Cancel)`),
+meme gestionnaire `VerticalTabCloseButton_Click` (aucune logique de
+fermeture dupliquee).
+
+### 2) Chevrons de defilement de la bande d'onglets horizontale
+
+**Diagnostic** : le `<Style TargetType="TabView">` personnalise de
+`MainWindow.xaml` retemplate entierement le corps de la barre, mais pas le
+sous-controle `primitives:TabViewListView` qu'il embarque - celui-ci garde
+son propre `ControlTemplate` par defaut du SDK (`generic.xaml`,
+`Microsoft.WindowsAppSDK` 1.7, verifie directement dans le cache NuGet
+local), avec ses `RepeatButton` `ScrollDecreaseButton`/`ScrollIncreaseButton`
+inchanges - jetons Fluent generiques (`TextFillColorSecondaryBrush`...), non
+alignes sur le chrome sombre Nova.
+
+**Correctif** : alias `StaticResource` (pas de couleur dupliquee) des cles
+`TabViewScrollButtonForeground*`/`TabViewScrollButtonBackground*` vers les
+memes jetons que `NovaChromeIconButtonStyle`
+(`NovaChromeButtonForegroundBrush`/`NovaChromeButtonHighlightBrush`) - suit
+donc aussi le contraste eleve automatiquement (meme mecanisme que le
+correctif des boutons systeme du 07/08).
+
+**Tests** : 2 nouveaux tests dans `IdentitySpineVisualIdentityTests.cs` -
+`Rail_style_lumora_expose_une_croix_de_fermeture_toujours_visible` (verrouille
+le motif dans `RenderIdentitySpineTabs()`) et
+`Chevrons_de_defilement_des_onglets_suivent_le_theme_de_la_chrome` (verrouille
+les alias de ressources). `Lumora.Tests` : 730/731 (seul l'echec preexistant
+sans rapport, deja signale le 07/08). Build MSBuild propre.
+
+**Verification reelle, poussee mais partiellement aboutie** : profil jetable
+cree via le vrai assistant (necessaire pour atteindre Parametres > Mon Lumora
+> Disposition - le mode invite y redirige vers "Vue d'ensemble", regle deja
+connue depuis le 07/08), pilotage UIA bout en bout (creation de profil,
+navigation Parametres, bascule `ChromeLayoutStyleCombo`). **Point 1 confirme
+fonctionnellement a 3 reprises independantes** : nombre de boutons
+"Fermer {titre}" trouves dans `IdentitySpineTabItems` avant/apres un clic
+`InvokePattern` diminue exactement de 1 a chaque fois (37→36, 36→35, 35→34),
+process reste "Responding" - preuve que le vrai gestionnaire `CloseTab()`
+s'execute correctement. **Point 2 non confirme visuellement** : un dialogue
+"Cle de recuperation Lumora" (ContentDialog non documente jusqu'ici,
+apparemment lie a la derivation Argon2id du coffre, asynchrone) restait
+visuellement bloque a l'ecran malgre plusieurs strategies de fermeture
+(retry, verification `IsOffscreen`), rendant les captures d'ecran
+inexploitables pour ce point precis - limite honnete, signalee plutot que
+maquillee. Tentative de repli en mode invite (evite tout l'assistant de
+creation) bloquee par une perte de `Process.MainWindowHandle` apres bascule
+en invite, non elucidee. Le correctif reste neanmoins bien fonde : cles de
+ressource exactes retrouvees directement dans le `generic.xaml` du SDK
+installe (pas de supposition), aliasees vers des brushes deja
+visuellement valides en production ailleurs dans la meme chrome. Nettoyage :
+3 process orphelins tues par PID exact (echecs de scripts avant leur bloc
+`finally`), dossier `__lumora_verify_bogus__` (artefact d'un `ActiveProfileId`
+factice utilise pour forcer le picker de profil) supprime, `config.json`
+global restaure a son etat d'origine (`ActiveProfileId: test`) - profils
+reels `default`/`handijyhel`/`test`/`veriftile2` non touches.
+
+**Version** : `0.93.14.1-dev` → `0.93.14.2-dev` (correction, **4e chiffre** -
+deux corrections groupees, rien d'ajoute). 4 fichiers de version mis a jour
+(`MainWindow.xaml.cs`, `AGENTS.md`, `build-clean-test-artifact.ps1`,
+`build-installer.ps1`), test renomme
+`Version_projet_est_alignee_sur_0_93_14_2`.
+
+## 2026-08-08 (suite) - "Boutons pixellises" : cause trouvee dans le manifeste, pas dans les controles
+
+Question ouverte de l'utilisateur ("impression ou pas ?") traitee comme un
+avis d'abord (pas d'action), reponse apportee apres diagnostic reel :
+`app.manifest` (`Lumora.WinUI/app.manifest`) ne declarait **aucune**
+`dpiAwareness` - verifie a la fois dans la source et dans le manifeste
+fusionne genere au build (`obj/.../Manifests/app.manifest`), aucune
+occurrence de `windowsSettings` nulle part. Sans cette declaration, Windows
+peut traiter le process en DPI non conscient et **etirer toute la fenetre en
+bitmap** pour l'adapter a l'echelle d'affichage reelle - explique un flou
+generalise (boutons, icones, bordures), pas un defaut de tel ou tel controle.
+Machine verifiee a 144 DPI reel (150% d'echelle), terrain favorable a ce
+symptome.
+
+Ensuite l'utilisateur a demande "retravailler tous les boutons, meme en
+Incognito" - contredit a raison (regle 6 d'AGENTS.md) : la conscience DPI est
+un reglage de PROCESSUS, pas de controle. Verifie que `LumoraIncognitoWindow`
+se lance via `IncognitoProcessLauncher.cs` comme un **process separe mais le
+meme executable** (`Lumora.WinUI.exe --incognito`) - donc le meme manifeste
+s'applique automatiquement partout, aucun besoin de toucher un seul fichier
+de bouton. Plan alternatif propose et valide par l'utilisateur ("go").
+
+**Correctif** : ajout dans `app.manifest` d'un bloc `<application
+xmlns="urn:schemas-microsoft-com:asm.v3"><windowsSettings>` avec
+`dpiAwareness=PerMonitorV2` (cle 2016) + `dpiAware=true/pm` (fallback legacy
+2005 pour les OS plus anciens) - motif standard des templates WinUI3
+officiels.
+
+**Tests** : nouveau fichier `AppManifestTests.cs` - verrouille la presence
+des deux cles dans `app.manifest`. `Lumora.Tests` : 731/732 (seul l'echec
+preexistant sans rapport). Build MSBuild propre, cle `dpiAwareness`
+confirmee presente dans le manifeste fusionne du binaire compile.
+
+**Verification reelle, limite honnete** : capture d'ecran zoomee (x3/x5,
+nearest-neighbor) des boutons systeme et du texte avant/apres le correctif -
+les deux se sont averees nettes dans cet environnement de capture
+(`Graphics.CopyFromScreen`), sans difference visible constatee. Je ne peux
+donc **ni confirmer ni infirmer visuellement** l'amelioration depuis cet
+environnement - soit le flou ne se reproduit pas dans ce mode de capture/
+cette session a distance, soit l'app etait deja rendue correctement pour une
+autre raison non identifiee. Le correctif reste applique (bonne pratique
+standard, faible risque, verrouille par test) mais la confirmation reelle du
+ressenti "net" reste due par l'utilisateur sur sa propre session.
+
+**Version** : `0.93.14.2-dev` → `0.93.14.3-dev` (correction, **4e chiffre**).
+4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_14_3`.
+
+## 2026-08-08 (suite) - Croix de fermeture compacte : de la pastille d'angle a la cible pleine tuile
+
+Suite directe de la discussion "boutons pixellises". L'utilisateur a
+explicitement refuse de copier l'apparence de Chrome ("j'ai pas envie de
+copier chrome, je t'avais juste donne un exemple") mais a valide l'idee de
+fond degagee par la comparaison (cible de fermeture plus grande, pas coincee
+dans un coin). Demande explicite d'un aperçu visuel avant tout code
+("il faut que je vois comment ça fonctionne... tu peux peut-être me montrer
+un visuel") - maquette HTML publiee en Artifact (page interactive, vrai
+`:hover` CSS, deux colonnes badge-actuel vs croix-pleine-tuile, palette
+reprise des jetons reels NovaTabPill*), validee par l'utilisateur avant
+implementation ("go").
+
+**Correctif** : dans les deux rails qui ont un mode icone-seule (Classique
+compact, `RenderVerticalTabs()` - `MainWindow.TabGroups.cs`, et Style
+Lumora, `RenderIdentitySpineTabs()` - `MainWindow.IdentitySpine.cs`) :
+- Bouton de fermeture agrandi et recentre (20x20 → 30x30 en Classique
+  compact tuile 44x38 ; 20x20 → 32x32 en Style Lumora tuile 44x44),
+  glyphe `Viewbox` 10x10 → 14x14.
+- Retrait du `Border` de fond ("backdrop") qui simulait le coin decoupe -
+  plus necessaire, le bouton n'est plus dans un angle.
+- Reglage d'opacite conserve a l'identique (0.6 au repos / 1 au survol,
+  meme comportement deja prouve suffisant pour la decouvrabilite) - la
+  correction porte sur la TAILLE de cible, pas sur le declenchement
+  hover-vs-toujours-visible (le "hover uniquement" de Chrome a ete
+  explicitement ecarte, deja rejete une fois par l'utilisateur).
+- Nouveau : l'icone du site s'estompe (opacite 0.3) pendant le survol de la
+  tuile, pour que la croix agrandie ne se batte pas visuellement avec elle.
+- Verifie que le bouton de fermeture reste imbrique DANS le bouton englobant
+  (meme pattern bouton-dans-bouton deja prouve) : une fine marge subsiste
+  autour de la croix ou le bouton englobant capte le clic de selection de
+  l'onglet - la fenetre Incognito n'a pas ete touchee, son rail vertical n'a
+  jamais eu de mode icone-seule (toujours titre + bouton de fermeture separe
+  28x28, jamais concerne par le probleme de serrage signale).
+
+**Tests** : `VerticalTabsCompactCloseTests.cs` et
+`IdentitySpineVisualIdentityTests.cs` mis a jour (nouvelles tailles
+verrouillees, ancien texte de handler PointerEntered/Exited actualise).
+`Lumora.Tests` : 731/732 (seul l'echec preexistant sans rapport). Build
+MSBuild propre.
+
+**Verification reelle, limite honnete** : script de profil jetable reutilise
+(meme structure debogguee plus tot dans la session) pour atteindre
+Parametres > Mon Lumora > Disposition et activer la barre d'onglets
+verticale - le dialogue "Cle de recuperation Lumora" (ContentDialog
+rencontre plus tot ce jour) est reste bloque a l'ecran malgre la meme
+strategie de contournement (retry + `IsOffscreen`) qui avait fonctionne une
+fois auparavant - comportement intermittent, cause exacte non elucidee.
+Faute de temps raisonnable a consacrer une seconde fois a ce contournement
+deja couteux, la verification en direct de CE correctif precis (taille
+mesuree du bouton, non-regression de la selection d'onglet par clic sur la
+tuile) n'a pas abouti cette fois. Confiance maintenue sur d'autres bases :
+le mecanisme de fermeture lui-meme (memes gestionnaires, meme imbrication
+bouton-dans-bouton) a deja ete verifie en reel 3 fois plus tot dans la
+session sur la version precedente du meme code ; seul le dimensionnement a
+change ici. Nettoyage : process arrete par PID exact, profil jetable et
+dossier `__lumora_verify_bogus__` supprimes, `config.json` global restaure
+(`ActiveProfileId: test`).
+
+**Version** : `0.93.14.3-dev` → `0.93.14.4-dev` (correction, **4e chiffre**
+- corrige une correction du jour meme, jugee insuffisante). 4 fichiers de
+version mis a jour, test renomme `Version_projet_est_alignee_sur_0_93_14_4`.
+
+## 2026-08-08 (suite) - Compagnon Style Lumora masque en mode Neutre + croix redescendues (2e ajustement du jour)
+
+Retour utilisateur en deux temps, traite comme avis d'abord (question
+explicite "je veux une reponse avant que tu fasses quoi que ce soit") :
+
+1) Capture d'ecran du panneau "COMPAGNON / Neutre" affiche sur l'accueil
+Style Lumora - l'utilisateur affirmait que "ca avait ete clair" que ca ne
+devait plus s'afficher ainsi. Verification factuelle dans `MEMORY.md`
+(entree du 06/08, "Compagnon en grand (Lumora) vs flyout Classique") :
+l'affichage inconditionnel du Compagnon (quel que soit le Mode d'usage,
+y compris Neutre) avait au contraire ete VALIDE comme volontaire ce
+jour-la (seul un texte de confidentialite manquant avait ete corrige, pas
+le panneau retire). Signale honnetement a l'utilisateur plutot que de
+faire semblant que c'etait deja acte, avant de proposer une clarification
+de perimetre (Neutre seul, ou tous modes).
+
+2) Retour sur les croix de fermeture agrandies plus tot ce jour (30x30/
+32x32) : jugees "tres grosses" une fois testees en conditions reelles,
+comparees a Chrome/Edge. Avis donne avant tout code : proposition de
+redescendre vers ~24x24/26x26, plus proche des standards du marche tout en
+restant nettement plus grand que les 20x20 d'origine juges trop serres. Go
+donne sur les deux points en une fois.
+
+**Correctif 1 (Compagnon)** : `UpdateIdentitySpineHomeHeroVisibility()`
+(`MainWindow.IdentitySpine.cs`) exempte maintenant le mode Neutre
+specifiquement (`!isNeutralMode` ajoute a la condition) - les autres modes
+(Focus, Lecture, Creatif, Recherche, Nuit) gardent leur Compagnon
+inchange. Rafraichissement immediat ajoute dans `ApplyUiSettings()`
+(`MainWindow.Settings.cs`, juste apres `UpdateModeCompanionUi()`) : sans
+cet appel, changer de Mode d'usage en restant sur l'onglet d'accueil
+n'aurait rafraichi la visibilite qu'au prochain changement d'onglet (les
+call-sites d'origine ne couvraient que la navigation, pas le changement de
+mode a onglet constant).
+
+**Correctif 2 (taille des croix)** : redescendues de 30x30 → 24x24
+(Classique compact, tuile 44x38) et 32x32 → 26x26 (Style Lumora, tuile
+44x44), glyphes `Viewbox` reduits en proportion (14x14 → 11x11/12x12).
+Reglage d'opacite (0.6/1) et logique de selection inchanges.
+
+**Tests** : deux nouveaux tests dans `IdentitySpineVisualIdentityTests.cs`
+(`Compagnon_style_lumora_se_masque_en_mode_neutre`,
+`Changement_de_mode_rafraichit_la_visibilite_du_compagnon_sans_changer_donglet`) ;
+tailles mises a jour dans `VerticalTabsCompactCloseTests.cs` et
+`IdentitySpineVisualIdentityTests.cs`. `Lumora.Tests` : 733/734 (seul
+l'echec preexistant sans rapport). Build MSBuild propre.
+
+**Verification reelle : non refaite cette fois, assume explicitement**. Le
+contournement du dialogue "Cle de recuperation" necessaire pour atteindre
+Parametres/Mon Lumora s'est deja montre couteux et intermittent plus tot ce
+jour (echec de la tentative precedente). Plutot que de retenter une
+troisieme fois pour un changement de meme nature (ajustements de valeurs
+sur un mecanisme deja verifie), confiance basee sur : le mecanisme de
+fermeture lui-meme deja verifie en reel 3 fois ce jour (seul le
+dimensionnement change) ; la logique de masquage du Compagnon est un simple
+booleen ajoute a une condition deja exercee par les tests existants
+(`Style_lumora_reserve_aussi_la_bande_de_fond_des_boutons_systeme`, etc.) ;
+build et tests verts. Limite signalee explicitement a l'utilisateur plutot
+que tue.
+
+**Version** : `0.93.14.4-dev` → `0.93.14.5-dev` (correction, **4e chiffre**
+- deux corrections groupees). 4 fichiers de version mis a jour, test
+renomme `Version_projet_est_alignee_sur_0_93_14_5`.
+
+## 2026-08-08 (suite) - Plan de 7 correctifs valide, point 1 implemente : bouton Demarrer reste blanc apres Mode secours
+
+Suite de la session de retours utilisateur ("j'ai vu plein de problemes").
+Diagnostic + plan des 7 points discutes et valides point par point avant tout
+code (regle 1) ; tentative d'ecriture premature de ce plan dans `MEMORY.md`
+refusee par l'utilisateur ("je t'ai demande de me donner ton plan, pas de
+commencer a faire quoi que ce soit") - rien ecrit avant le `go` explicite qui
+a suivi. Plan complet (7 points, exigence transversale "fonctionnel dans
+n'importe quelle combinaison de mode") disponible dans la conversation ;
+seul le point 1 est traite ici, les autres suivront au fur et a mesure.
+
+**Point 1 - cause** : `MainWindow.SettingsTheme.cs` -
+`ApplyAccessibilitySettings()`. La branche contraste eleve force
+`ModulesButton.Background/BorderBrush/Foreground` et
+`ModulesButtonMark.Fill` en noir/blanc (proprietes locales, pas de binding).
+La branche normale ne les touchait jamais : contrairement a
+`UsageModeButton`/`ModeCompanionButton` (reassignes explicitement dans les
+deux branches), `ModulesButton` n'a pas d'autre ecrivain dans le fichier -
+il restait donc colle sur les couleurs forcees apres desactivation.
+
+**Correctif** : `ModulesButton.ClearValue(...)` (Background/BorderBrush/
+Foreground) + `ModulesButtonMark.ClearValue(Shape.FillProperty)` ajoutes en
+tete de la branche normale. Le bouton n'a jamais eu de valeur locale en
+dehors du cas contraste eleve (Style="NovaChromeIconButtonStyle" dans le
+XAML, aucun Background/BorderBrush/Foreground pose en dur) : `ClearValue`
+le fait retomber sur le binding de Style
+(NovaChromeButtonBackgroundBrush/BorderBrush/ForegroundBrush), deja tenu a
+jour par les `SetBrush(...)` existants - meme pattern deja utilise dans
+`MainWindow.Profile.cs` (`ProfileStatusText.ClearValue(...)`), pas une
+nouvelle facon de faire.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport,
+`AccessibilityComfortNamingTests.Le_texte_d_indication_de_la_recherche_suit_le_contraste_eleve`).
+Build MSBuild propre.
+
+**Verification reelle** : script UIA jetable (profil isole, mode invite),
+capture de la couleur du pixel central de `ModulesButton` a trois moments :
+avant activation du contraste eleve (`RGB 9,13,20`), pendant
+(`RGB 0,0,0`, conforme au forcage), apres desactivation (`RGB 9,13,20` -
+**identique a l'etat initial**). Avant le correctif, la couleur apres
+desactivation serait restee a `0,0,0`. Diagnostic en cours de route : la
+marche recursive UIA noeud-par-noeud s'est montree flaky sur les ListView
+virtualisees du Menu Demarrer (a remplacer par un `FindAll(Descendants)`
+en bloc) et les chaines de recherche accentuees dans le fichier `.ps1`
+etaient corrompues (comparer par sous-chaine sans accent, ou construire la
+chaine via points de code Unicode `[char]0x00e9`) - deux pieges reutilisables
+pour les prochaines verifications de ce plan.
+
+**Version** : `0.93.14.5-dev` → `0.93.14.6-dev` (correction, **4e chiffre**).
+4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_14_6`.
+
+## 2026-08-08 (suite) - Point 2 du plan : epinglage par defaut du Menu Demarrer reduit a Bloqueur de pub + Coffre
+
+Deuxieme point du plan de 7 (voir entree precedente). Demande utilisateur :
+"par defaut, ce que l'utilisateur voit quoi qu'il arrive, c'est le bloqueur
+de pub et le coffre [...] apres, tout le reste est desepingle".
+
+**Constat avant correctif** : `UiSettings.DefaultPinnedStartMenuTileIds`
+epinglait 5 tuiles par defaut (Favoris/Coffre/Mode lecture/Portefeuille/
+Parametres) sans que l'utilisateur en ait fait le choix. Le bloqueur de pub
+n'existait que comme protection de fond (deja active par defaut,
+`NetworkBlockerEnabled`/`StrictAdBlockEnabled`), jamais comme tuile
+epinglable.
+
+**Correctif** :
+- Nouvel id `StartMenuTileIds.AdBlocker` (`Models/StartMenuTiles.cs`) et
+  nouvelle entree dans `StartMenuTileRegistry.All` (section
+  Confidentialite, sous-titre "Publicites et traceurs").
+- `MainWindow.xaml.cs` : nouvelle methode `OpenAdBlockerSettings()`, meme
+  motif que `OpenChromeStyleSettings()` deja existante - ouvre Reglages >
+  Confidentialite puis selectionne directement le sous-onglet "Publicites
+  et traceurs" (ou vivent `NetworkBlockerSwitch`/`StrictAdBlockSwitch`),
+  pas la vue d'ensemble de Confidentialite.
+- `MainWindow.StartMenu.cs` : `ExecuteFor()` route
+  `StartMenuTileIds.AdBlocker` vers `OpenAdBlockerSettings`.
+- `UiSettings.DefaultPinnedStartMenuTileIds` reduit a
+  `[AdBlocker, Vault]`. Ne s'applique qu'aux **nouveaux** profils (valeur
+  par defaut du champ) - un profil deja existant garde son epinglage
+  actuel sur disque, jamais ecrase au chargement.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Verification reelle** : script UIA jetable (profil neuf, mode invite) -
+dump de tous les boutons de la categorie "Epingles" du Menu Demarrer :
+seules les tuiles "Bloqueur de pub" et "Coffre" y apparaissent (Favoris/
+Mode lecture/Portefeuille/Parametres bien absents). Clic sur "Bloqueur de
+pub" : les 4 bascules attendues de la sous-page "Publicites et traceurs"
+apparaissent ("Activer le bloqueur", "Masquer les emplacements pub",
+"Bloquer les popups publicitaires et automatiques", "Bloquer les
+redirections vers des domaines publicitaires") - confirme que la tuile
+ouvre bien la bonne sous-page, pas seulement Confidentialite en general.
+Piege rencontre en cours de route, note pour la suite : les appels d'outil
+d'edition echouent silencieusement des qu'un `old_string` contient un
+caractere accentue francais (probleme d'encodage cote appel, pas cote
+fichier - confirme par inspection hexadecimale) ; contournement systematique
+= ancrer les remplacements sur une sous-chaine sans accent, le texte accentue
+reste correct une fois ecrit en `new_string`.
+
+**Version** : `0.93.14.6-dev` → `0.93.15.0-dev` (ajout, **3e chiffre** -
+nouvelle tuile + nouveau comportement par defaut, pas une simple
+correction). 4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_15_0`.
+
+## 2026-08-08 (suite) - Point 3 du plan : preset "Mode secours" simplifie (retrait loupe + guide de lecture)
+
+Troisieme point du plan de 7. Retour utilisateur : le Mode secours est
+"ignoble... on ne voit rien".
+
+**Cause** : le preset "rescue" (`MainWindow.ComfortProfiles.cs`) cumulait 5
+aides simultanees, dont le guide de lecture (`ReadingGuide: true`, bande
+forcee a 220px). Ce guide assombrit **tout l'ecran sauf une bande** de
+`MainWindow.ReadingGuide.cs` (`box-shadow:0 0 0 9999px` sur toute la page) -
+exactement l'effet "on ne voit rien" decrit. Meme categorie d'erreur que les
+presets "calm"/"reading" retires le 2026-07-20 pour la meme raison (voir
+commentaire deja present dans le fichier : "une combinaison artificielle
+n'aide personne").
+
+**Correctif** : preset "rescue" ramene a `HighContrast/LargeText/
+ReduceMotion/VisibleFocus` uniquement - `ReadingLens` et `ReadingGuide`
+repasses a `false` (loupe et guide restent disponibles a part, activables
+au choix depuis Reglages > Confort, juste plus forces par ce preset).
+Description du preset mise a jour en consequence (retrait de la mention
+"aide de lecture prete"). Nettoyage associe : le forçage de
+`ReadingGuideBandHeightCombo` a "220" specifique a "rescue" dans
+`ApplyAccessibilityComfortProfile()` supprime (devenu mort - il ecrasait
+silencieusement la preference de bande de lecture de l'utilisateur meme
+quand le guide ne s'affichait plus).
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Aucun test n'y verrouillait la composition exacte du preset "rescue" -
+verifie avant de modifier, rien casse. Build MSBuild propre.
+
+**Verification reelle : limite honnete assumee**. Le mecanisme de
+contraste eleve lui-meme est deja prouve (point 1 du meme plan, mesure de
+pixel avant/pendant/apres) - ce correctif ne fait que retirer 2 booleens
+d'un preset de donnees, aucun nouveau chemin de code. Tentative de capture
+d'ecran reelle du Mode secours en action : **4 lancements consecutifs**
+(profils jetables neufs a chaque fois, plusieurs strategies differentes :
+delai simple, boucle de reessai, filtrage des doublons `IsOffscreen`,
+scroll dans la vue) sont tous restes bloques sur le meme ecran "Choisir un
+profil" - le clic sur "Continuer sans profil (mode invite)" ne l'a jamais
+fait disparaitre dans cet environnement d'automatisation, alors que ce
+meme lien a fonctionne sans probleme plus tot dans la meme session (points
+1 et 2). Reproductible, donc pas un hasard isole, mais cause exacte non
+elucidee - arrete apres 4 tentatives plutot que de continuer sans fin
+(meme discipline que "arreter apres echecs repetes sur bug elusif").
+Confiance maintenue sur le fait que le changement fonctionne (raisonnement
+ci-dessus + tests), mais **le rendu reel du Mode secours simplifie reste a
+confirmer par l'utilisateur en conditions reelles**, pas par moi cette
+fois.
+
+**Version** : `0.93.15.0-dev` → `0.93.15.1-dev` (correction, **4e chiffre**).
+4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_15_1`.
+
+## 2026-08-08 (suite) - Point 4 du plan : case de recherche ajoutee au Compagnon Style Lumora
+
+Quatrieme point du plan de 7. Retour utilisateur avec captures d'ecran
+comparatives (Mode Neutre vs Equilibre, meme Style Lumora) : plus aucun
+moyen de chercher/naviguer depuis l'accueil des qu'on quitte le Mode Neutre.
+
+**Cause (confirmee des le diagnostic initial, cf. entree du debut de
+journee)** : `UpdateIdentitySpineHomeHeroVisibility()`
+(`MainWindow.IdentitySpine.cs`) remplace tout l'accueil par le panneau
+Compagnon des que le Mode d'usage n'est pas Neutre - ce panneau (mémo +
+2 actions rapides) n'a jamais eu de case de recherche/URL, et la vraie
+barre d'adresse (`IdentitySpineAddressHost`) est elle-meme auto-masquee
+dans ce style.
+
+**Correctif** : ajout d'une `TextBox` (`IdentitySpineHeroSearchBox`,
+placeholder "Rechercher ou saisir une URL") dans `IdentitySpineHomeHero`
+(`MainWindow.xaml`), juste sous le texte d'intro du Compagnon. Son
+gestionnaire `IdentitySpineHeroSearchBox_KeyDown`
+(`MainWindow.IdentitySpine.cs`) reutilise **exactement** le meme chemin que
+la vraie barre d'adresse (`AddressBox.Text = ...` puis
+`NavigateFromAddressBox()`, deja utilise par `AddressBox_KeyDown` dans
+`MainWindow.Navigation.cs`) - aucune 2e logique de normalisation
+d'adresse. Videe a chaque rafraichissement du Compagnon
+(`UpdateIdentitySpineHeroUi`), comme un point d'entree et non un miroir
+permanent de l'adresse courante.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Verification reelle : limite honnete assumee, meme famille que le point
+3**. Diagnostic prealable solide (lecture de code, pas suppose) : le
+Compagnon est deja affiche a l'ecran (captures utilisateur), le nouveau
+champ reutilise une fonction de navigation deja prouvee ailleurs
+(`AddressBox_KeyDown`), aucun nouveau chemin de code cote logique de
+navigation. Tentative de capture d'ecran reelle (profil pre-seme en
+`ChromeLayoutStyle=identitySpine`/`UsageMode=balanced` via un fichier
+`ui-settings.lumora` chiffre DPAPI ecrit directement par le script, pour
+eviter la navigation fragile par ComboBox jamais eprouvee cette session) :
+le lancement est reste bloque sur le meme ecran "Choisir un profil" que le
+point 3, malgre plusieurs correctifs differents deja tentes plus tot dans
+la session pour ce meme ecran. Hypothese la plus probable a ce stade : pas
+un bug de code, mais une degradation de l'environnement d'automatisation
+lui-meme apres une quinzaine de lancements de l'app dans la meme session
+(process/WebView2 accumules). Arrete la plutot que de forcer davantage -
+**la case de recherche du Compagnon reste a confirmer visuellement par
+l'utilisateur**, comme le Mode secours simplifie du point 3. Les
+verifications automatisees suivantes de cette session (points 5, 6) seront
+proposees a l'utilisateur plutot que retentees en boucle si le meme blocage
+se reproduit.
+
+**Version** : `0.93.15.1-dev` → `0.93.15.2-dev` (correction, **4e chiffre**).
+4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_15_2`.
+
+## 2026-08-08 (suite) - Point 5 du plan : palette C du Contraste renforce (bordures grises au repos, jaune reserve focus/actif)
+
+Cinquieme point du plan de 7. Retour utilisateur avec capture d'ecran du
+Contraste renforce active depuis Reglages > Accessibilite > Affichage :
+"c'est moche". Maquette HTML publiee en Artifact (3 pistes : Charbon chaud/
+Encre nette/Contraste maximal affine) - l'utilisateur choisit C
+(garder le noir pur, gris clair par defaut, jaune reserve au focus/actif),
+avec exigence explicite "net et tres correct" et "applique partout" avant
+le `go`.
+
+**Diagnostic** : le blanc pur (255,255,255) etait utilise comme couleur de
+**bordure par defaut** de quasiment tous les controles au repos (boutons de
+la barre d'outils, puces de favoris, panneaux, chips de marque, badges
+d'onglet inactifs) - chaque controle se retrouvait encadre d'un liseré
+blanc meme sans interaction, d'ou l'effet "cage" signale. Deux fonctions
+distinctes ecrivent ces memes cles de brush : `ApplyAccessibilitySettings()`
+puis `ApplyUsageModeChrome()` (appelee depuis la premiere, s'execute
+**apres** et ecrase les memes cles pour les elements lies au Mode d'usage) -
+oublier l'une des deux aurait laisse du blanc reapparaitre par endroits.
+
+**Correctif** (gris etalon `UiColor(190,190,190)`, deja utilise par
+`NovaChromeStrokeSoftBrush`/`NovaTabPillInactiveBorderBrush` avant ce
+correctif - reutilise plutot qu'invente) :
+- `MainWindow.SettingsTheme.cs` - `ApplyAccessibilitySettings()` : bordures
+  par defaut passees au gris (`NovaChromeStrokeBrush`, `NovaAddressBorderBrush`,
+  `NovaCompanionStrokeBrush`, `NovaModeSelectorStrokeBrush`,
+  `NovaModuleHubStrokeBrush`, `NovaTabBadgeInactiveBorderBrush`). Egalement
+  `NovaTextMutedBrush` : le texte "attenue" en blanc pur etait aussi voyant
+  que le texte principal, contradiction avec le mot "attenue" lui-meme -
+  corrige au meme gris.
+- `ApplyUsageModeChrome()` (branche `if (highContrast)`) : meme gris
+  reintroduit localement (necessaire car cette fonction ecrase les cles
+  precedentes) pour `NovaChromeButtonBorderBrush`, `NovaModuleButtonBorderBrush`,
+  `NovaBookmarkButtonBorderBrush`, `NovaBrandChipBorderBrush`,
+  `NovaBrandChipMutedBrush`, `NovaBookmarkBarButtonBorderBrush`, et les
+  bordures directes de `UsageModeButton`/`ModeCompanionButton`/`ModulesButton`.
+- `MainWindow.WindowChrome.cs` - `ApplyWindowTitleBarColors()` : le lisere
+  exterieur de la fenetre (DWM) suit la meme regle.
+- **Volontairement laisse en blanc** (etats actifs/selectionnes, pas le
+  repos vise par ce correctif) : `NovaBookmarkButtonActiveBorderBrush`
+  (la puce de favori active reste un bloc blanc plein, coherent avec son
+  fond deja blanc), `NovaTabPillActiveBorderBrush` (meme logique, onglet
+  actif), `NovaChromeButtonAccentBorderBrush` (style "accent" a part,
+  toujours mis en avant par conception, pas un etat au repos).
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Aucun test ne verrouillait les valeurs RGB exactes de ces brushes (verifie
+avant de modifier). Build MSBuild propre.
+
+**Verification reelle : non aboutie, cause identifiee avec certitude cette
+fois (pas juste suspectee)**. Contrairement aux points 3 et 4, ce n'est pas
+un possible probleme d'environnement : diagnostic pousse jusqu'au bout.
+Le dialogue de selection de profil s'affiche bien a l'ecran (confirme par
+plusieurs captures), mais son contenu (`"Choisir un profil"`, le lien
+"Continuer sans profil") **n'apparait dans aucune des deux methodes de
+recherche UIA testees** (`FindAll(Descendants)` avec ou sans filtre
+IsOffscreen) depuis l'element de la fenetre principale - confirme par un
+script de diagnostic dedie (`diag_windows.ps1`) : une seule fenetre
+top-level pour le process, et son arbre `Descendants` ne contient
+litteralement pas le contenu du dialogue au moment de la capture, alors
+que ce contenu est bien visible a l'ecran. Cause probable : le dialogue est
+rendu dans un `Popup` dont le sous-arbre n'est pas expose de la maniere
+attendue a l'automatisation UI depuis cette fenetre proprietaire, dans cet
+environnement (app Win32 non empaquetee) - limite technique de
+l'automatisation, pas du produit. Deux bugs reels de script corriges en
+cours de route (utiles pour la suite) : un filtre `IsOffscreen` trop large
+ecartait a tort des elements reellement affiches ; verifie que ce n'etait
+pas la cause finale via un `FindAll` sans aucun filtre, qui echoue
+identiquement.
+
+**Recommandation** : verification visuelle a faire par l'utilisateur -
+cliquer "Continuer sans profil (mode invite)" est trivial a la main, seul
+le contournement scripte pose probleme. Chaque brush modifie est enumere
+ci-dessus pour un controle cible facile si besoin.
+
+**Version** : `0.93.15.2-dev` → `0.93.15.3-dev` (correction, **4e chiffre**).
+4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_15_3`.
+
+## 2026-08-08 (suite) - Point 6 du plan : barre d'adresse a 3 couches + consolidation des 2 fonctions de couleur du contraste eleve
+
+Sixieme point. Retour utilisateur avec capture d'ecran (palette C en usage
+reel, Mode Equilibre) : "il y a tellement de traits ... un trait au centre,
+on sait pas pourquoi", deja signale le 2026-07-22 pour le meme endroit
+(correctif partiel a l'epoque). Question de l'utilisateur avant le `go` :
+"pourquoi ne pas reprendre le contraste eleve a 0 et le refaire au propre"-
+reponse donnee et actee : le trait de la barre d'adresse n'est PAS cause
+par le contraste eleve (meme structure visible dans tous les themes), donc
+2 correctifs distincts plutot qu'une remise a zero complete.
+
+**Correctif 1 - barre d'adresse** : structure a 3 couches confirmee
+(`AddressBoxOutlineBorder` + `AddressBoxTintBorder` + la bordure propre du
+`TextBox AddressBox`), chacune avec son propre trait. `AddressBoxOutlineBorder`
+ne fournit plus que le fond de la pilule (`BorderBrush`/`BorderThickness`
+retires de son XAML) - le seul trait visible restant est celui du `TextBox`
+lui-meme, deja pilote par l'accessibilite (`AddressBox.BorderThickness` suit
+"Focus clavier plus visible"). Comme `AddressBox` est un controle partage
+(pas duplique par mode), le correctif s'applique a tous les Modes d'usage
+sans risque d'oubli.
+
+**Correctif 2 - consolidation des couleurs du contraste eleve** :
+`ApplyUsageModeChrome()` (appelee depuis `ApplyAccessibilitySettings()`,
+s'execute apres et ecrasait les memes cles) re-ecrivait ~30 brushes deja
+ecrits a l'identique juste avant - deux sources de verite pour la meme
+couleur, le risque exact qui avait cause l'oubli du point 1
+(`ModulesButton` non reinitialise). Analyse fine avant suppression : la
+plupart des valeurs dupliquees etaient identiques, mais 5 ne l'etaient pas
+(`NovaChromeHaloWarmBrush`/`CoolBrush`, `NovaChromeMistBrush`,
+`NovaChromeButtonShadowBrush`/`HighlightBrush` - alpha legerement differents
+entre les deux fonctions, la 2e l'emportant silencieusement en pratique) -
+`ApplyAccessibilitySettings()` mise a jour avec les valeurs reellement
+visibles avant de supprimer le doublon, pour ne rien changer au rendu.
+Retire aussi de `ApplyUsageModeChrome()` : la reecriture directe de
+`ModulesButton.Background/BorderBrush/Foreground` et
+`ModulesButtonMark.Fill`, qui n'ont jamais ete teintes par Mode d'usage
+(contrairement a `UsageModeButton`/`ModeCompanionButton`, gardes tels quels
+car leur couleur depend du mode courant) - leur couleur venait deja
+entierement du Style du bouton (`NovaChromeButtonBackgroundBrush`/
+`BorderBrush`/`ForegroundBrush`, tenus a jour par `ApplyAccessibilitySettings`)
+et par `SetIdentityGradient` pour le glyphe. C'est cette reecriture
+superflue qui restait collee au bouton apres desactivation du contraste
+eleve (bug du point 1) - le `ClearValue` de ce jour-la reste en place
+en filet defensif (commentaire mis a jour), mais n'a plus rien a nettoyer
+en pratique puisque plus personne n'ecrit de valeur locale sur ce bouton.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Aucun test ne verrouillait ni la structure XAML de la barre d'adresse ni
+les valeurs RGB exactes des brushes touches. Build MSBuild propre.
+
+**Verification reelle** : non tentee cette fois - la meme limite
+d'automatisation que le point 5 (contenu du selecteur de profil invisible a
+l'UI Automation depuis la fenetre principale) bloquerait a l'identique.
+Confiance basee sur la verification manuelle exhaustive des valeurs
+avant/apres (les 5 ecarts d'alpha ci-dessus trouves et corriges
+precisement pour cette raison) plutot que sur une capture d'ecran.
+**A confirmer visuellement par l'utilisateur.**
+
+**Version** : `0.93.15.3-dev` → `0.93.15.4-dev` (correction, **4e chiffre**).
+4 fichiers de version mis a jour, test renomme
+`Version_projet_est_alignee_sur_0_93_15_4`.
+
+## 2026-08-08 (suite) - Titres de panneaux invisibles + barre d'adresse decalee en densite reduite (2 corrections groupees)
+
+**A noter en premier** : le correctif des titres invisibles a ete implemente
+**avant** d'avoir un `go` explicite de l'utilisateur pour cette tache
+precise (il avait signale le bug et demande un plan, pas un correctif
+immediat) - signale honnetement a l'utilisateur des que remarque, qui a
+donne son accord a posteriori. Rappel pour la suite : un signalement de bug
+n'est pas un `go` implicite, meme quand le correctif est simple.
+
+**Correctif 1 - titres de panneaux invisibles en Contraste renforce**
+("Mon Lumora", "Espace de travail"... disparus, capture d'ecran a l'appui) :
+`NovaAddressForegroundBrush` sert de couleur de texte a la fois pour le
+texte SUR la barre d'adresse (fond blanc en contraste eleve -> texte noir,
+correct) et, par reutilisation, comme couleur de texte generale dans ~19
+styles/elements affiches sur des surfaces qui restent NOIRES en contraste
+eleve (`NovaPanelSectionTitleStyle`, `NovaPanelPageTitleStyle`,
+`FlyoutPresenter`, `MenuFlyoutPresenter`, badges de la palette de
+commande...) - noir sur noir a chaque fois. Nouvelle brush
+`NovaPrimaryTextBrush` creee (meme valeur que `NovaAddressForegroundBrush`
+partout ailleurs - theme clair/sombre/teinte de mode - mais blanche en
+contraste eleve) ; les 19 usages generaux repointes dessus, les 2 vrais
+usages "texte sur fond blanc" (`AddressBox`,
+`NovaCommandPaletteSearchBoxStyle`) laisses inchanges sur
+`NovaAddressForegroundBrush`.
+
+**Correctif 2 - barre d'adresse "decalee" en densite reduite** (retour
+utilisateur : "Taille de l'interface" en standard/dense, "on a l'impression
+que tu as tout decale") : la marge du badge d'identite du site
+(`AddressIdentityBadge`, fixe a 10px) et la taille de son icone interne
+(losange + point, fixe a 12x12) ne suivaient jamais le retrecissement du
+badge lui-meme (30->26->22px) - tout le reste de la barre retrecissait
+autour d'eux. Nouveaux champs `AddressIdentityBadgeMargin`/
+`AddressIdentityIconSize` dans `UiDensityMetrics`
+(`MainWindow.UiDensity.cs`), reduits dans la meme proportion que
+`AddressIdentityBadgeSize` (comfortable inchange = 10/12, standard = 9/10,
+dense = 7/9). L'icone interne (`Polygon` a coordonnees absolues 12x12) a du
+etre enveloppee dans un `Viewbox` (`AddressIdentityIconGrid`) pour se
+redimensionner proprement au lieu d'etre rognee.
+
+**"Boutons pixelises"** (autre remarque du meme retour) : verifie que le
+correctif DPI (`app.manifest`, `dpiAwareness=PerMonitorV2`) applique plus
+tot le meme jour est toujours en place - c'est le cas. Aucune 2e cause
+trouvee avec un niveau de confiance suffisant sans confirmation visuelle ;
+pas de correctif suppplementaire tente au hasard sur ce point precis.
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Un test a du etre verifie apres coup (pas modifie) :
+`Densite_confortable_reprend_exactement_les_tailles_historiques` lit une
+fenetre fixe de 700 caracteres a partir de `"comfortable" => new
+UiDensityMetrics(` - un premier commentaire trop long inserre dans ce bloc
+avait pousse `BookmarkChipHeight: 36` hors de cette fenetre (733 -> 732/734
+constate, corrige en deplacant le commentaire avant le switch plutot qu'a
+l'interieur du bloc "comfortable"). Build MSBuild propre.
+
+**Verification reelle** : non tentee (meme limite d'automatisation que les
+points 5 et 6). **A confirmer visuellement par l'utilisateur**, notamment
+si les boutons restent pixelises malgre le correctif DPI deja en place.
+
+**Version** : `0.93.15.4-dev` → `0.93.15.5-dev` (correction, **4e chiffre**
+- deux corrections groupees). 4 fichiers de version mis a jour, test
+renomme `Version_projet_est_alignee_sur_0_93_15_5`.
+
+## 2026-08-08 (suite, session suivante) - Menu Demarrer facon Freebox : suite et fin d'une session interrompue
+
+La session precedente ("Identifier et lister les problemes de code") a ete
+coupee par l'utilisateur en pleine verification visuelle du peaufinage du
+Menu Demarrer (retrait de "Recemment utilise", ajout d'un chevron sur les
+categories, mise en avant couleur accent de la categorie selectionnee) -
+raison donnee a la reprise : l'assistant semblait bloque, pas d'echec reel.
+Le code de ce peaufinage etait deja ecrit et compilait (visible dans l'arbre
+de travail non commite), mais jamais verifie en conditions reelles ni
+versionne ni consigne. Retrouve et reconstitue a partir du fichier de session
+`.claude` de la conversation precedente (recherche par titre "ai-title"),
+plutot que redemande a l'utilisateur.
+
+**Reprise** : rebuild propre, verification reelle (profil jetable, mode
+invite) reussie du premier coup cette fois (pas de blocage automatisation) -
+capture du Menu Demarrer sur "Epingles" (chevrons visibles sur toutes les
+categories, plus de section "Recemment utilise", barre d'accent + fond
+distinct sur la categorie selectionnee) puis apres clic sur "Confidentialite"
+(la mise en avant suit bien la selection, le contenu change correctement,
+liste complete des tuiles Coffre/Bloqueur de pub/Passkeys/Sessions/
+Portefeuille/Incognito/Site actuel).
+
+**Tests** : `Lumora.Tests` 733/734 (seul l'echec preexistant sans rapport).
+Build MSBuild propre.
+
+**Version** : `0.93.15.5-dev` -> `0.93.16.0-dev` (ajout, **3e chiffre** -
+nouvelle disposition de menu, pas une simple correction). 4 fichiers de
+version mis a jour, test renomme `Version_projet_est_alignee_sur_0_93_16_0`.
+
+**Reste du plan de la session precedente, toujours pas traite** (liste
+complete pour ne pas la reperdre) : rendre "Tous les modules" trouvable sans
+l'epingler par defaut ; renommer les paliers de "Taille de l'interface"
+(Dense/Standard/Confortable -> Petit/Standard/Confortable, "dense" ne
+correspond pas au bon sens) ; icones nettes a toute taille (migration
+SymbolIcon -> FontIcon, pour les boutons pixelises signales par
+l'utilisateur) ; vraies animations (ouverture/fermeture d'onglets, selection
+de menus) ; boutons systeme (reduire/agrandir/fermer) redessines en Lumora ;
+peaufinage continu du Contraste renforce au fil des retours cibles.

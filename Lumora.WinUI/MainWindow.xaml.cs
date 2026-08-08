@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.11.5-dev";
+    internal const string Version = "0.93.16.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -114,6 +114,11 @@ public sealed partial class MainWindow : Window
     // - voir MainWindow.IdentitySpine.cs.
     private string _chromeLayoutStyle = "classic";
     private bool _identitySpineActive;
+    // Taille de l'interface (boutons de la barre d'outils, ligne d'outils,
+    // barre d'adresse, barre de favoris) : "comfortable" | "standard" |
+    // "dense", voir MainWindow.UiDensity.cs. Reglage independant du Mode
+    // d'usage et de _compactModeEnabled.
+    private string _uiDensity = "standard";
     private bool _navigationToolbarCapsuleMarginCaptured;
     private Thickness _navigationToolbarCapsuleClassicMargin;
     private bool _isFullScreenMode;
@@ -155,7 +160,6 @@ public sealed partial class MainWindow : Window
     // reconstruites ensemble par RebuildStartMenuViewModels() (MainWindow.StartMenu.cs).
     private readonly ObservableCollection<StartMenuCategoryViewModel> _startMenuCategories = new();
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuPinnedTiles = new();
-    private readonly ObservableCollection<StartMenuTileViewModel> _startMenuRecentTiles = new();
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuDetailTiles = new();
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuFilteredTiles = new();
     private bool _suppressTabSave = true;
@@ -495,7 +499,6 @@ public sealed partial class MainWindow : Window
         AboutSectionAuthenticity.Visibility = section == "authenticity" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionCredits.Visibility = section == "credits" ? Visibility.Visible : Visibility.Collapsed;
         AboutSectionTechnical.Visibility = section == "technical" ? Visibility.Visible : Visibility.Collapsed;
-        AboutSectionProfile.Visibility = section == "profile" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // Affiche soit "Version de developpement * X.Y.Z.W-dev" (ReleaseVersion
@@ -766,12 +769,43 @@ public sealed partial class MainWindow : Window
         SettingsNav_Click(SettingsNavNavigation, new RoutedEventArgs());
     }
 
+    // Decouvrabilite du Style Lumora (2026-08-07, retour utilisateur : le
+    // reglage etait a 4 clics de profondeur sans jamais etre mis en avant).
+    // Distinct de OpenWorkspaceSettings ("Studio", qui regle les POSITIONS -
+    // haut/bas/gauche/droite - dans le style deja choisi) : celle-ci ouvre
+    // directement le sous-onglet "Disposition" de "Mon Lumora", ou vit
+    // ChromeLayoutStyleCombo (Classique <-> Style Lumora).
+    private void OpenChromeStyleSettings()
+    {
+        StorageCurrentFolderText.Text = _profile.ProfileDir;
+        ShowPanel(SettingsPanel, "Mon Lumora");
+        SettingsNavAppearance.IsChecked = true;
+        SettingsNav_Click(SettingsNavAppearance, new RoutedEventArgs());
+        AppearanceSubNavLayout.IsChecked = true;
+        AppearanceSubNav_Click(AppearanceSubNavLayout, new RoutedEventArgs());
+    }
+
     private void OpenProfileSettings()
     {
         StorageCurrentFolderText.Text = _profile.ProfileDir;
         ShowPanel(SettingsPanel, "Profils locaux");
         SettingsNavProfile.IsChecked = true;
         SettingsNav_Click(SettingsNavProfile, new RoutedEventArgs());
+    }
+
+    // Tuile "Bloqueur de pub" du Menu Demarrer (StartMenuTileIds.AdBlocker) :
+    // meme motif que OpenChromeStyleSettings() - ouvre directement le
+    // sous-onglet "Publicités et traceurs" de Confidentialité, ou vivent
+    // NetworkBlockerSwitch/StrictAdBlockSwitch, plutot que la vue
+    // d'ensemble de Confidentialité.
+    private void OpenAdBlockerSettings()
+    {
+        StorageCurrentFolderText.Text = _profile.ProfileDir;
+        ShowPanel(SettingsPanel, "Confidentialité");
+        SettingsNavPrivacy.IsChecked = true;
+        SettingsNav_Click(SettingsNavPrivacy, new RoutedEventArgs());
+        PrivacySubNavAds.IsChecked = true;
+        PrivacySubNav_Click(PrivacySubNavAds, new RoutedEventArgs());
     }
 
     private void ProfileStatusButton_Click(object sender, RoutedEventArgs e)

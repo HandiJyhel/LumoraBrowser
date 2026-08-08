@@ -150,6 +150,7 @@ public sealed partial class MainWindow
         _uiSettings.VerticalTabsEnabled = _verticalTabsEnabled;
         _uiSettings.TabStripPosition = _tabStripPosition;
         _uiSettings.ChromeLayoutStyle = _chromeLayoutStyle;
+        _uiSettings.UiDensity = _uiDensity;
         _uiSettings.VerticalTabsCompact = _verticalTabsCompact;
         _uiSettings.VerticalTabsWidth = Math.Clamp(_verticalTabsExpandedWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
         _uiSettings.CompactModeEnabled = _compactModeEnabled;

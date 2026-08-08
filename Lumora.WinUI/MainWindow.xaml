@@ -24,6 +24,17 @@
             <SolidColorBrush x:Key="NovaAddressBackgroundBrush" Color="#FF121925" />
             <SolidColorBrush x:Key="NovaAddressBorderBrush" Color="#FF434F65" />
             <SolidColorBrush x:Key="NovaAddressForegroundBrush" Color="#FFF2F5FA" />
+            <!-- Retour utilisateur (2026-08-08) : titres de panneaux
+                 invisibles en Contraste renforce ("Mon Lumora", "Espace de
+                 travail"...) - NovaAddressForegroundBrush est force noir en
+                 contraste eleve (texte sur le fond BLANC de la barre
+                 d'adresse), mais etait aussi reutilise comme couleur de texte
+                 generale sur des surfaces qui restent NOIRES en contraste
+                 eleve (panneaux, cartes, menus) : noir sur noir. Meme valeur
+                 que NovaAddressForegroundBrush partout ailleurs (theme clair/
+                 sombre/teinte de mode), seul le contraste eleve differe
+                 (blanc au lieu de noir) - voir MainWindow.SettingsTheme.cs. -->
+            <SolidColorBrush x:Key="NovaPrimaryTextBrush" Color="#FFF2F5FA" />
             <SolidColorBrush x:Key="NovaChromeButtonBackgroundBrush" Color="#FF121925" />
             <SolidColorBrush x:Key="NovaChromeButtonBorderBrush" Color="#FF2F3848" />
             <SolidColorBrush x:Key="NovaChromeButtonForegroundBrush" Color="#FFF2F5FA" />
@@ -129,6 +140,25 @@
             <SolidColorBrush x:Key="TabViewItemBorderBrush" Color="Transparent" />
             <SolidColorBrush x:Key="TabViewBorderBrush" Color="Transparent" />
             <StaticResource x:Key="TabViewItemSeparator" ResourceKey="NovaChromeStrokeSoftBrush" />
+            <!-- Chevrons de defilement de la bande d'onglets (RepeatButton natif
+                 de primitives:TabViewListView, sous-controle non retemplate par
+                 notre <Style TargetType="TabView"> plus bas - celui-ci ne gere
+                 que le corps de la barre) : par defaut sur les jetons Fluent
+                 generiques (TextFillColorSecondaryBrush...), peu contrastes sur
+                 notre chrome sombre - retour utilisateur, 2026-08-08. Aliases
+                 (StaticResource, pas de couleur dupliquee) vers les memes jetons
+                 que NovaChromeIconButtonStyle pour rester coherent visuellement
+                 ET pour que le contraste eleve (ApplyAccessibilitySettings, qui
+                 modifie NovaChromeButtonForegroundBrush en place) s'applique
+                 aussi ici automatiquement. -->
+            <StaticResource x:Key="TabViewScrollButtonForeground" ResourceKey="NovaChromeButtonForegroundBrush" />
+            <StaticResource x:Key="TabViewScrollButtonForegroundPointerOver" ResourceKey="NovaChromeButtonForegroundBrush" />
+            <StaticResource x:Key="TabViewScrollButtonForegroundPressed" ResourceKey="NovaChromeButtonForegroundBrush" />
+            <StaticResource x:Key="TabViewScrollButtonForegroundDisabled" ResourceKey="NovaChromeButtonForegroundBrush" />
+            <SolidColorBrush x:Key="TabViewScrollButtonBackground" Color="Transparent" />
+            <StaticResource x:Key="TabViewScrollButtonBackgroundPointerOver" ResourceKey="NovaChromeButtonHighlightBrush" />
+            <StaticResource x:Key="TabViewScrollButtonBackgroundPressed" ResourceKey="NovaChromeButtonHighlightBrush" />
+            <SolidColorBrush x:Key="TabViewScrollButtonBackgroundDisabled" Color="Transparent" />
             <LinearGradientBrush x:Key="NovaChromeGradientBrush" StartPoint="0,0" EndPoint="1,0">
                 <GradientStop Color="#FF10151F" Offset="0" />
                 <GradientStop Color="#FF1A212E" Offset="0.55" />
@@ -470,7 +500,7 @@
                 <Setter Property="Background" Value="{StaticResource NovaModuleHubGlassBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaModuleHubStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1.5" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
             </Style>
             <Style x:Key="NovaModePillButtonStyle" TargetType="Button">
                 <Setter Property="Height" Value="34" />
@@ -481,7 +511,7 @@
                 <Setter Property="Background" Value="{StaticResource NovaModeSelectorGlassBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaModeSelectorStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
                 <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
@@ -539,7 +569,7 @@
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
             <Style x:Key="NovaModulePinButtonStyle" TargetType="ToggleButton">
@@ -586,7 +616,7 @@
             <Style x:Key="NovaPanelSectionTitleStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="14" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
             <Style x:Key="NovaPanelDescriptionStyle" TargetType="TextBlock">
@@ -599,7 +629,7 @@
             <Style x:Key="NovaPanelPageTitleStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="24" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
             <Style x:Key="NovaFlyoutHeroCardStyle" TargetType="Border">
@@ -655,7 +685,7 @@
                 <Setter Property="Background" Value="{StaticResource NovaChromeSurfaceRaisedBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaChromeStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
             </Style>
             <!-- Le menu Demarrer (ModulesFlyout) depasse la largeur par defaut
                  d'un FlyoutPresenter WinUI (~456px, FlyoutThemeMaxWidth) : au-dela,
@@ -665,14 +695,14 @@
                 <Setter Property="Background" Value="{StaticResource NovaChromeSurfaceRaisedBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaChromeStrokeBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="MaxWidth" Value="660" />
             </Style>
             <Style TargetType="MenuFlyoutPresenter">
                 <Setter Property="Background" Value="{StaticResource NovaBrandChipBackgroundBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaBrandChipBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource NovaAddressForegroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="CornerRadius" Value="18" />
                 <Setter Property="Padding" Value="8" />
             </Style>
@@ -838,11 +868,16 @@
                  reste du menu. Meme badge degrade que les tuiles pour rester
                  coherent (0.93.5.0-dev). -->
             <DataTemplate x:Key="StartMenuCategoryTemplate">
+                <!-- Chevron ajoute (2026-08-08, inspire du menu Freebox OS montre par
+                     l'utilisateur) : signale visuellement "ceci ouvre un sous-contenu",
+                     comme un menu en cascade classique - absent jusqu'ici, la ligne de
+                     categorie ne se distinguait pas d'un simple libelle. -->
                 <Grid ColumnSpacing="10" Padding="10,9" HorizontalAlignment="Stretch"
                       AutomationProperties.Name="{Binding Title}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Grid Grid.Column="0" Width="26" Height="26">
                         <Border CornerRadius="13" Background="{StaticResource NovaIdentityMarkBrush}" />
@@ -850,6 +885,8 @@
                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                     <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                              Opacity="0.5" VerticalAlignment="Center" />
                 </Grid>
             </DataTemplate>
         </Grid.Resources>
@@ -1253,7 +1290,19 @@
                                       SelectionMode="Single"
                                       ItemTemplate="{StaticResource StartMenuCategoryTemplate}"
                                       SelectionChanged="StartMenuCategoryList_SelectionChanged"
-                                      AutomationProperties.Name="Catégories du menu Démarrer" />
+                                      AutomationProperties.Name="Catégories du menu Démarrer">
+                                <!-- Categorie active mise en avant (2026-08-08, "vraiment tres beau") :
+                                     cles de ressource standard reprises par le ControlTemplate par
+                                     defaut de ListViewItem (Windows App SDK) - pas de retemplating
+                                     complet, juste les couleurs de l'etat selectionne, sur les memes
+                                     brushes "accent" deja correctes en tout theme et en Contraste
+                                     renforce (consolidation du meme jour, MainWindow.SettingsTheme.cs). -->
+                                <ListView.Resources>
+                                    <StaticResource x:Key="ListViewItemBackgroundSelected" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
+                                    <StaticResource x:Key="ListViewItemBackgroundSelectedPointerOver" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
+                                    <StaticResource x:Key="ListViewItemForegroundSelected" ResourceKey="NovaChromeButtonAccentForegroundBrush" />
+                                </ListView.Resources>
+                            </ListView>
 
                             <Border Grid.Column="1" Width="1" HorizontalAlignment="Left"
                                     Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
@@ -1270,25 +1319,6 @@
                                         <FontIcon x:Name="StartMenuDetailTitleIcon" FontFamily="Segoe MDL2 Assets" FontSize="12" Opacity="0.7" />
                                         <TextBlock x:Name="StartMenuDetailTitleText" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="13" />
                                     </StackPanel>
-
-                                    <!-- Recent et frequent : uniquement dans la categorie Epingles, appris
-                                         de l'usage reel (StartMenuTileUsage, upsert a chaque ouverture
-                                         d'une tuile). Masquee tant qu'aucune tuile n'a ete ouverte au
-                                         moins une fois (pas de deviner un defaut et l'appeler "appris"). -->
-                                    <Border x:Name="StartMenuRecentCard"
-                                            Style="{StaticResource NovaFlyoutHeroCardStyle}"
-                                            Background="{StaticResource NovaBookmarkButtonActiveBackgroundBrush}"
-                                            BorderBrush="{StaticResource NovaBookmarkButtonActiveBorderBrush}"
-                                            BorderThickness="1.5"
-                                            Visibility="Collapsed">
-                                        <StackPanel Spacing="10">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon Glyph="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NovaBookmarkButtonActiveForegroundBrush}" />
-                                                <TextBlock Text="Récent et fréquent" Foreground="{StaticResource NovaBookmarkButtonActiveForegroundBrush}" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="13" FontWeight="Bold" />
-                                            </StackPanel>
-                                            <ItemsRepeater x:Name="StartMenuRecentList" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}" />
-                                        </StackPanel>
-                                    </Border>
 
                                     <!-- Tuiles epinglees (clic droit / appui long sur n'importe quelle
                                          tuile -> Epingler/Desepingler, dans n'importe quelle categorie) :
@@ -1435,14 +1465,25 @@
                 <SymbolIcon Style="{StaticResource NovaChromeSymbolIconStyle}" Symbol="Cancel" />
             </Button>
             <Grid Grid.Column="4" Margin="6,0">
-                <Border Margin="0,1,0,1"
+                <!-- Retour utilisateur (2026-08-08) : "trait au centre" sur la
+                     barre d'adresse, meme signalement qu'au 2026-08-06 -
+                     structure a 3 couches (ce Border + AddressBoxTintBorder +
+                     la bordure propre du TextBox AddressBox juste en dessous),
+                     chacune avec son propre trait visible, jamais toutes les
+                     deux retirees a l'epoque. Ce Border ne fournit plus que le
+                     fond de la pilule (Background) : le seul trait visible
+                     restant est celui du TextBox lui-meme, deja pilote par
+                     l'accessibilite (AddressBox.BorderThickness suit
+                     "Focus clavier plus visible", MainWindow.SettingsTheme.cs)
+                     - garder ce chemin plutot que d'en dupliquer un 2e ici. -->
+                <Border x:Name="AddressBoxOutlineBorder"
+                        Margin="0,1,0,1"
                         VerticalAlignment="Center"
                         CornerRadius="22"
-                        BorderThickness="1"
-                        BorderBrush="{StaticResource NovaCompanionStrokeBrush}"
                         Background="{StaticResource NovaAddressBackgroundBrush}"
                         IsHitTestVisible="False" />
-                <Border Margin="1"
+                <Border x:Name="AddressBoxTintBorder"
+                        Margin="1"
                         VerticalAlignment="Center"
                         CornerRadius="21"
                         Background="{StaticResource NovaChromeHaloCoolBrush}"
@@ -1466,18 +1507,11 @@
                     TextChanged="AddressBox_TextChanged"
                     LostFocus="AddressBox_LostFocus"
                     PlaceholderText="Aller vers un site ou lancer une recherche" />
-                <Border Height="1"
-                        Margin="18,8,20,0"
-                        VerticalAlignment="Top"
-                        Background="{StaticResource NovaChromeMistBrush}"
-                        Opacity="0.9"
-                        IsHitTestVisible="False" />
-                <Border Height="1"
-                        Margin="26,0,26,8"
-                        VerticalAlignment="Bottom"
-                        Background="{StaticResource NovaChromeHaloWarmBrush}"
-                        Opacity="0.42"
-                        IsHitTestVisible="False" />
+                <!-- Les deux filets "reflet de verre" (haut blanc/bas ambre) ont
+                     ete retires ici (2026-08-06, retour utilisateur : "coupee en
+                     2 par un trait au milieu", trouve trop date sur une pilule
+                     aussi basse) - la barre reste en verre mat uni comme le
+                     reste du chrome, sans cet artifice skeuomorphique. -->
                 <Border x:Name="AddressIdentityBadge"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
@@ -1490,17 +1524,29 @@
                         BorderBrush="{StaticResource NovaBrandChipBorderBrush}"
                         BorderThickness="1"
                         IsHitTestVisible="False">
-                    <Grid Width="12" Height="12"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center">
-                        <Polygon Points="6,0 12,6 6,12 0,6" Fill="{StaticResource NovaIdentityMarkBrush}" />
-                        <Ellipse Width="4"
-                                 Height="4"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center"
-                                 Fill="{StaticResource NovaChromeSurfaceBrush}"
-                                 Opacity="0.38" />
-                    </Grid>
+                    <!-- Taille pilotee par densite (MainWindow.UiDensity.cs,
+                         AddressIdentityIconSize) - restait figee a 12x12 quelle
+                         que soit la taille du badge autour (30/26/22), d'ou un
+                         losange trop grand/petit par rapport a son cadre en
+                         "standard"/"dense" (retour utilisateur 2026-08-08).
+                         Viewbox necessaire : le Polygon a des coordonnees
+                         absolues (points bases sur un cadre 12x12) - redimensionner
+                         juste le conteneur l'aurait rogne au lieu de le reduire. -->
+                    <Viewbox x:Name="AddressIdentityIconGrid"
+                             Width="12" Height="12"
+                             Stretch="Uniform"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center">
+                        <Grid Width="12" Height="12">
+                            <Polygon Points="6,0 12,6 6,12 0,6" Fill="{StaticResource NovaIdentityMarkBrush}" />
+                            <Ellipse Width="4"
+                                     Height="4"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Fill="{StaticResource NovaChromeSurfaceBrush}"
+                                     Opacity="0.38" />
+                        </Grid>
+                    </Viewbox>
                 </Border>
             </Grid>
 
@@ -1530,7 +1576,7 @@
                             <StackPanel Grid.Column="0" Spacing="1">
                                 <TextBlock Text="Trajectoires Lumora"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                           Foreground="{StaticResource NovaPrimaryTextBrush}" />
                                 <TextBlock Text="Tout reste local : onglets, favoris et historique."
                                            FontSize="11"
                                            Opacity="0.68"
@@ -1546,7 +1592,7 @@
                                 <TextBlock Text="local"
                                            FontSize="10.5"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                           Foreground="{StaticResource NovaPrimaryTextBrush}" />
                             </Border>
                         </Grid>
                         <ListView x:Name="AddressSuggestionsList"
@@ -1576,7 +1622,7 @@
                                                       FontSize="13"
                                                       VerticalAlignment="Center"
                                                       HorizontalAlignment="Center"
-                                                      Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                                      Foreground="{StaticResource NovaPrimaryTextBrush}" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Title}"
@@ -1594,7 +1640,7 @@
                                                 Background="{StaticResource NovaChromeHaloWarmBrush}">
                                             <TextBlock Text="{Binding KindLabel}"
                                                        FontSize="10.5"
-                                                       Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                                       Foreground="{StaticResource NovaPrimaryTextBrush}" />
                                         </Border>
                                     </Grid>
                                 </DataTemplate>
@@ -2158,7 +2204,7 @@
                         <TextBlock Text="Favoris"
                                    FontSize="12"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                   Foreground="{StaticResource NovaPrimaryTextBrush}" />
                     </StackPanel>
                     <ScrollViewer Grid.Row="1"
                                   VerticalScrollBarVisibility="Auto"
@@ -2519,6 +2565,20 @@
                                    TextWrapping="Wrap" FontSize="14"
                                    Foreground="{StaticResource NovaBrandChipMutedBrush}" />
 
+                        <!-- Retour utilisateur (2026-08-08) : en Style Lumora, tout Mode
+                             d'usage autre que Neutre remplace l'accueil par ce Compagnon,
+                             qui n'avait aucune case de recherche/URL - la vraie barre
+                             d'adresse (IdentitySpineAddressHost) etant elle-meme
+                             auto-masquee, il ne restait alors aucun moyen de naviguer
+                             depuis l'accueil. Meme case que la recherche de la page
+                             d'accueil classique (NewTabHome.cs) : soumettre reutilise
+                             AddressBox/NavigateFromAddressBox, pas une 2e logique de
+                             navigation. -->
+                        <TextBox x:Name="IdentitySpineHeroSearchBox"
+                                 PlaceholderText="Rechercher ou saisir une URL"
+                                 AutomationProperties.Name="Rechercher ou saisir une URL"
+                                 KeyDown="IdentitySpineHeroSearchBox_KeyDown" />
+
                         <Border Style="{StaticResource NovaFlyoutSectionCardStyle}">
                             <StackPanel Spacing="8">
                                 <TextBlock x:Name="IdentitySpineHeroMemoryTitleText"
@@ -2556,6 +2616,16 @@
                                 </StackPanel>
                             </StackPanel>
                         </Button>
+                        <!-- Meme rappel de confidentialite que ModeCompanionPrivacyText
+                             (flyout Classique) - absent ici jusqu'au 2026-08-06, seule
+                             vraie difference trouvee entre les deux presentations
+                             (retour utilisateur, capture Mode Neutre en Lumora). -->
+                        <TextBlock Text="Compagnon local : les notes et préférences restent dans ce profil Lumora."
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   FontSize="11"
+                                   Opacity="0.62" />
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -3213,9 +3283,9 @@
                                               Width="260"
                                               SelectionChanged="ChromeLayoutStyleCombo_SelectionChanged">
                                         <ComboBoxItem Content="Classique" Tag="classic" />
-                                        <ComboBoxItem Content="Colonne identitaire" Tag="identitySpine" />
+                                        <ComboBoxItem Content="Style Lumora" Tag="identitySpine" />
                                     </ComboBox>
-                                    <TextBlock Text="La colonne identitaire remplace la barre d'outils et les onglets classiques par une colonne verticale teintée du Mode d'usage, avec une barre d'adresse invocable. Coexiste avec la position des onglets ci-dessus : revenir en Classique rétablit exactement l'affichage précédent."
+                                    <TextBlock Text="Le Style Lumora remplace la barre d'outils et les onglets classiques par une colonne verticale teintée du Mode d'usage, avec une barre d'adresse invocable. Coexiste avec la position des onglets ci-dessus : revenir en Classique rétablit exactement l'affichage précédent."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                     <ToggleSwitch x:Name="IdentitySpineAutoHideSwitch"
                                                   Header="Masquer automatiquement la colonne et la capsule"
@@ -3248,6 +3318,14 @@
                             <ToggleSwitch x:Name="CompactModeHideBookmarksSwitch"
                                           Header="Masquer les favoris en interface compacte"
                                           Toggled="CompactModeHideBookmarksSwitch_Toggled" />
+                            <ComboBox x:Name="UiDensityCombo" Header="Taille de l'interface" Width="260"
+                                      SelectionChanged="UiDensityCombo_SelectionChanged">
+                                <ComboBoxItem Content="Confortable" Tag="comfortable" />
+                                <ComboBoxItem Content="Standard" Tag="standard" />
+                                <ComboBoxItem Content="Dense" Tag="dense" />
+                            </ComboBox>
+                            <TextBlock Text="Ajuste la taille des boutons de la barre d'outils, de la barre d'adresse et de la barre de favoris. Standard est la taille par défaut, proche des navigateurs courants ; Confortable garde les tailles historiques de Lumora ; Dense réduit au maximum l'espace pris par ces zones."
+                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="FullScreenAutoHideChromeSwitch"
                                           Header="Masquer les barres en plein écran et les révéler au survol"
                                           Toggled="FullScreenAutoHideChromeSwitch_Toggled" />
@@ -3974,6 +4052,10 @@
                     <TextBlock Text="Lumière locale, navigation web claire"
                                Opacity="0.74"
                                HorizontalAlignment="Center" />
+                    <TextBlock Text="Développé par HandiJyhel"
+                               Opacity="0.56"
+                               FontSize="12"
+                               HorizontalAlignment="Center" />
                     <Border Padding="14,8"
                             CornerRadius="8"
                             Background="{StaticResource NovaCoolAccentSoftBrush}"
@@ -3989,34 +4071,25 @@
                     </Border>
                 </StackPanel>
 
-                <Grid Grid.Row="1"
-                      MaxWidth="1080"
-                      HorizontalAlignment="Center"
-                      Margin="0,24,0,0"
-                      ColumnSpacing="22">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="230" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0"
-                            Style="{StaticResource NovaPanelCardStyle}"
-                            VerticalAlignment="Top">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="À propos"
-                                       Style="{StaticResource NovaPanelSectionTitleStyle}"
-                                       Margin="0,0,0,8" />
-                            <RadioButton x:Name="AboutNavSummary" Content="Vue d'ensemble" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="summary" IsChecked="True" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavModules" Content="Modules" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="modules" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavPrivacy" Content="Confidentialité" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="privacy" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavAuthenticity" Content="Authenticité" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="authenticity" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavCredits" Content="Dépendances" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="credits" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavTechnical" Content="Technique" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="technical" Click="AboutNav_Click" />
-                            <RadioButton x:Name="AboutNavProfile" Content="Profil local" Style="{StaticResource NovaSideRailNavRadioButtonStyle}" Tag="profile" Click="AboutNav_Click" />
+                <StackPanel Grid.Row="1"
+                            MaxWidth="900"
+                            HorizontalAlignment="Center"
+                            Margin="0,24,0,0"
+                            Spacing="14">
+                    <ScrollViewer HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled"
+                                  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <RadioButton x:Name="AboutNavSummary" Content="Vue d'ensemble" Style="{StaticResource NovaSubTabRadioButtonStyle}" Tag="summary" GroupName="AboutSubNav" IsChecked="True" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavModules" Content="Modules" Style="{StaticResource NovaSubTabRadioButtonStyle}" Tag="modules" GroupName="AboutSubNav" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavPrivacy" Content="Confidentialité" Style="{StaticResource NovaSubTabRadioButtonStyle}" Tag="privacy" GroupName="AboutSubNav" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavAuthenticity" Content="Authenticité" Style="{StaticResource NovaSubTabRadioButtonStyle}" Tag="authenticity" GroupName="AboutSubNav" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavCredits" Content="Dépendances" Style="{StaticResource NovaSubTabRadioButtonStyle}" Tag="credits" GroupName="AboutSubNav" Click="AboutNav_Click" />
+                            <RadioButton x:Name="AboutNavTechnical" Content="Technique et profil" Style="{StaticResource NovaSubTabRadioButtonStyle}" Tag="technical" GroupName="AboutSubNav" Click="AboutNav_Click" />
                         </StackPanel>
-                    </Border>
+                    </ScrollViewer>
+                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,0,0,4" />
 
-                    <ScrollViewer Grid.Column="1">
+                    <ScrollViewer>
                         <Grid MaxWidth="820">
                             <StackPanel x:Name="AboutSectionSummary" Spacing="14">
                                 <StackPanel Spacing="4">
@@ -4049,9 +4122,9 @@
                                     </Border>
                                     <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource NovaPanelCardStyle}">
                                         <StackPanel Spacing="6">
-                                            <TextBlock Text="Modules intégrés" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                            <TextBlock Text="Accessibilité" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                                       Text="Lecture, annotations, traduction, recherche assistée, vidéo et outils pratiques restent accessibles sans transformer le menu en fourre-tout." />
+                                                       Text="Profils prédéfinis, confort de lecture, contenu des pages et navigation clavier / lecteur d'écran : chantier actif de cette version." />
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource NovaPanelCardStyle}">
@@ -4072,10 +4145,11 @@
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="Modules Lumora" FontSize="24" FontWeight="SemiBold" />
                                     <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
-                                               Text="Les modules sont des outils intégrés au navigateur : ils restent locaux, activables à la demande, et rangés comme de vraies fonctions de Lumora." />
+                                               Text="Les modules sont des outils intégrés au navigateur : ils restent locaux, activables à la demande, et rangés comme de vraies fonctions de Lumora. Même répartition que le menu Démarrer (Modules Lumora)." />
                                 </StackPanel>
                                 <Grid RowSpacing="10">
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -4086,8 +4160,8 @@
                                                 <ColumnDefinition Width="190" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="Lecture et annotations" FontWeight="SemiBold" />
-                                            <TextBlock Grid.Column="1" Text="Mode lecture, surlignage, commentaires, reprise de page" Opacity="0.72" TextWrapping="Wrap" />
+                                            <TextBlock Text="Lecture et contenu" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="Mode lecture, notes locales, traduction hors-ligne, loupe de lecture pour le confort visuel" Opacity="0.72" TextWrapping="Wrap" />
                                         </Grid>
                                     </Border>
                                     <Border Grid.Row="1" Style="{StaticResource NovaPanelCardStyle}">
@@ -4096,8 +4170,8 @@
                                                 <ColumnDefinition Width="190" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="Média" FontWeight="SemiBold" />
-                                            <TextBlock Grid.Column="1" Text="Picture-in-Picture, téléchargement vidéo local, applications web" Opacity="0.72" TextWrapping="Wrap" />
+                                            <TextBlock Text="Confidentialité" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="Coffre de mots de passe, passkeys, portefeuille de cartes locales, sessions actives, navigation Incognito, centre de contrôle du site actuel" Opacity="0.72" TextWrapping="Wrap" />
                                         </Grid>
                                     </Border>
                                     <Border Grid.Row="2" Style="{StaticResource NovaPanelCardStyle}">
@@ -4106,8 +4180,18 @@
                                                 <ColumnDefinition Width="190" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="Assistance locale" FontWeight="SemiBold" />
-                                            <TextBlock Grid.Column="1" Text="Actions rapides, recherche assistée, traduction locale, lecture vocale" Opacity="0.72" TextWrapping="Wrap" />
+                                            <TextBlock Text="Navigation" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="Favoris, historique à recherche sémantique, téléchargements, applications web épinglées, onglet fermé et groupes d'onglets enregistrés" Opacity="0.72" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Row="3" Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Lumora et profil" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="Paramètres, profils locaux (PIN, verrouillage), Studio pour la disposition des onglets/favoris, et cet écran À propos" Opacity="0.72" TextWrapping="Wrap" />
                                         </Grid>
                                     </Border>
                                 </Grid>
@@ -4322,10 +4406,9 @@
                             </StackPanel>
 
                             <StackPanel x:Name="AboutSectionTechnical" Spacing="14" Visibility="Collapsed">
-                                <TextBlock Text="Informations techniques" FontSize="24" FontWeight="SemiBold" />
+                                <TextBlock Text="Technique et profil" FontSize="24" FontWeight="SemiBold" />
                                 <Grid RowSpacing="10">
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -4343,15 +4426,9 @@
                                     <Border Grid.Row="3" Style="{StaticResource NovaPanelCardStyle}">
                                         <TextBlock Text="Chiffrement : AES-256-GCM + Argon2id" />
                                     </Border>
-                                    <Border Grid.Row="4" Style="{StaticResource NovaPanelCardStyle}">
-                                        <TextBlock Text="Développeur : H.J." />
-                                    </Border>
                                 </Grid>
-                            </StackPanel>
-
-                            <StackPanel x:Name="AboutSectionProfile" Spacing="14" Visibility="Collapsed">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="Profil local" FontSize="24" FontWeight="SemiBold" />
+                                <StackPanel Spacing="4" Margin="0,6,0,0">
+                                    <TextBlock Text="Profil local" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                     <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
                                                Text="Ce chemin indique le profil réellement utilisé par l'application." />
                                 </StackPanel>
@@ -4366,7 +4443,7 @@
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
-                </Grid>
+                </StackPanel>
             </Grid>
 
             <Grid x:Name="HistoryPanel" Grid.Column="3" Padding="20" Visibility="Collapsed"
@@ -5996,7 +6073,7 @@
                                           FontSize="18"
                                           HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
-                                          Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                          Foreground="{StaticResource NovaPrimaryTextBrush}" />
                             </Border>
                             <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                 <TextBlock Text="Palette Lumora"
@@ -6019,7 +6096,7 @@
                                 <TextBlock Text="Ctrl+K"
                                            FontSize="10.5"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                           Foreground="{StaticResource NovaPrimaryTextBrush}" />
                             </Border>
                         </Grid>
                     </Border>
@@ -6043,7 +6120,7 @@
                                       FontSize="16"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
-                                      Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                      Foreground="{StaticResource NovaPrimaryTextBrush}" />
                         </Border>
                         <TextBox x:Name="CommandPaletteSearchBox"
                                  Grid.Column="1"
@@ -6081,7 +6158,7 @@
                                     Background="{StaticResource NovaChromeHaloWarmBrush}">
                                 <TextBlock Text="local"
                                            FontSize="10.5"
-                                           Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                           Foreground="{StaticResource NovaPrimaryTextBrush}" />
                             </Border>
                         </Grid>
                     </Border>
@@ -6121,7 +6198,7 @@
                                                       FontSize="13"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
-                                                      Foreground="{StaticResource NovaAddressForegroundBrush}" />
+                                                      Foreground="{StaticResource NovaPrimaryTextBrush}" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="2">
                                             <TextBlock Text="{Binding Title}"
@@ -6961,23 +7038,33 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
             <Grid x:Name="IdentitySpineFooterHost" Grid.Row="3" Margin="0,6,0,10" HorizontalAlignment="Center" />
         </Grid>
 
-        <!-- Capsule d'adresse flottante (style "identitySpine") : centree en
-             haut de la ZONE DE CONTENU (decalee de la largeur de la colonne
-             via Margin gauche), pas confinee dans la colonne de 76px - c'est
-             la ou la premiere passe avait echoue (toute la toolbar classique
-             ecrasee dans la colonne). NavigationToolbarCapsule (Retour/
-             Avancer/Recharger/adresse/Bouclier/etoile/coffre du site/modules
-             epingles) est reparentee dans IdentitySpineCapsuleSlot (pas ce
-             Grid directement) depuis MainWindow.IdentitySpine.cs - choix
-             valide par l'utilisateur : tout ce qui etait dans la toolbar
-             classique reste ensemble, juste flottant plutot que
-             plein-largeur. IdentitySpineBookmarksTop accueille la ligne de
-             favoris quand leur position choisie est "haut", juste en dessous
-             dans le meme overlay flottant. -->
+        <!-- Capsule d'adresse flottante (style "identitySpine") : occupe toute
+             la largeur disponible en haut de la ZONE DE CONTENU (decalee de la
+             largeur de la colonne via Margin gauche), pas confinee dans la
+             colonne de 76px - c'est la ou la premiere passe avait echoue
+             (toute la toolbar classique ecrasee dans la colonne). Pleine
+             largeur (pas centree, pas juste alignee a gauche en taille
+             compacte) depuis le retour utilisateur du 2026-08-05 : un premier
+             correctif l'avait alignee a gauche mais toujours dimensionnee a
+             son contenu (HorizontalAlignment="Left" ici et sur
+             IdentitySpineCapsuleSlot), ce qui laissait un grand vide a droite
+             - flagrant une fois la capsule sortie du centrage symetrique
+             d'origine. NavigationToolbarCapsule (Border sans HorizontalAlignment
+             explicite, donc Stretch par defaut - Retour/Avancer/Recharger/
+             adresse/Bouclier/etoile/coffre du site/modules epingles) est
+             reparentee dans IdentitySpineCapsuleSlot (pas ce Grid directement)
+             depuis MainWindow.IdentitySpine.cs - choix valide par
+             l'utilisateur : tout ce qui etait dans la toolbar classique reste
+             ensemble, et s'etire desormais pleine largeur comme en mode
+             Classique (Grid.Row="2" de NavigationToolbarCapsule, marges
+             symetriques 66/14) plutot que de retomber a sa taille de contenu.
+             IdentitySpineBookmarksTop accueille la ligne de favoris quand leur
+             position choisie est "haut", juste en dessous dans le meme
+             overlay - reste alignee a gauche (pas etiree), comme la barre de
+             favoris classique. -->
         <Grid x:Name="IdentitySpineAddressHost"
               Grid.RowSpan="7"
-              Margin="64,8,64,0"
-              HorizontalAlignment="Center"
+              Margin="64,8,14,0"
               VerticalAlignment="Top"
               Canvas.ZIndex="34"
               Visibility="Collapsed"
@@ -6988,27 +7075,82 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <Grid x:Name="IdentitySpineCapsuleSlot" Grid.Row="0" HorizontalAlignment="Center" />
-            <StackPanel x:Name="IdentitySpineBookmarksTop"
-                        Grid.Row="1"
-                        Orientation="Horizontal"
-                        Spacing="6"
-                        Margin="0,6,0,0"
-                        HorizontalAlignment="Center"
-                        Visibility="Collapsed" />
+            <Grid x:Name="IdentitySpineCapsuleSlot" Grid.Row="0" />
+            <!-- Meme habillage "capsule de verre" pleine largeur que
+                 BookmarksBarRow (mode Classique, plus haut dans ce fichier) -
+                 retour utilisateur du 2026-08-05 : la ligne de favoris
+                 integree flottait nue (StackPanel sans fond/bordure/ombre),
+                 incoherente une fois la capsule d'adresse elle-meme passee en
+                 pleine largeur. Visibilite pilotee depuis
+                 MainWindow.IdentitySpine.cs (IdentitySpineBookmarksTopCard,
+                 en parallele de IdentitySpineBookmarksTop qui garde son seul
+                 role de conteneur des puces). -->
+            <Border x:Name="IdentitySpineBookmarksTopCard"
+                    Grid.Row="1"
+                    Margin="0,6,0,0"
+                    Padding="10,6,10,6"
+                    CornerRadius="18"
+                    Background="{StaticResource NovaFloatingGlassBrush}"
+                    BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}"
+                    BorderThickness="1"
+                    Visibility="Collapsed">
+                <Border.Shadow>
+                    <ThemeShadow />
+                </Border.Shadow>
+                <!-- Colonne "*" (puces epinglees) + colonne Auto (Autres
+                     favoris) : meme patron que BookmarksBarRow en Classique
+                     (Grid.Column="1" etire + Grid.Column="3" fige), pour que
+                     "Autres favoris" reste ancre a droite de la capsule quel
+                     que soit le nombre de puces a gauche (retour utilisateur
+                     du 2026-08-06 - avant ce changement, le dossier suivait
+                     juste la derniere puce dans le meme StackPanel). -->
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="IdentitySpineBookmarksTop"
+                                Grid.Column="0"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center" />
+                    <StackPanel x:Name="IdentitySpineBookmarksTopOtherHost"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center" />
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- Favoris integres, position "bas" : meme overlay flottant que la
-             capsule, ancre en bas de la zone de contenu. -->
-        <StackPanel x:Name="IdentitySpineBookmarksBottomHost"
-                    Grid.RowSpan="7"
-                    Orientation="Horizontal"
-                    Spacing="6"
-                    Margin="64,0,64,10"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Bottom"
-                    Canvas.ZIndex="34"
-                    Visibility="Collapsed" />
+             capsule, ancre en bas de la zone de contenu. Grid deux colonnes
+             (meme patron que IdentitySpineBookmarksTopCard plus haut) pour
+             garder "Autres favoris" ancre a droite quel que soit le nombre
+             de puces a gauche (2026-08-06, suite du correctif position
+             "haut" - meme trou, meme cause). -->
+        <Grid x:Name="IdentitySpineBookmarksBottomRow"
+              Grid.RowSpan="7"
+              ColumnSpacing="8"
+              Margin="64,0,64,10"
+              VerticalAlignment="Bottom"
+              Canvas.ZIndex="34"
+              Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel x:Name="IdentitySpineBookmarksBottomHost"
+                        Grid.Column="0"
+                        Orientation="Horizontal"
+                        Spacing="6"
+                        VerticalAlignment="Center" />
+            <StackPanel x:Name="IdentitySpineBookmarksBottomOtherHost"
+                        Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="6"
+                        VerticalAlignment="Center" />
+        </Grid>
 
         <!-- Favoris integres, position "droite" : rail compact ancre en haut
              a droite, aucun conflit avec la colonne (a gauche). -->

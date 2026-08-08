@@ -72,8 +72,12 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("NovaBookmarkButtonActiveForegroundBrush", bookmarks, StringComparison.Ordinal);
         Assert.Contains("NovaBookmarkButtonActiveBackgroundBrush", bookmarks, StringComparison.Ordinal);
         Assert.Contains("Style = (Style)RootShell.Resources[\"NovaBookmarkBarButtonStyle\"]", bookmarks, StringComparison.Ordinal);
-        Assert.Contains("Height = 36", bookmarks, StringComparison.Ordinal);
-        Assert.Contains("FontSize = 13", bookmarks, StringComparison.Ordinal);
+        // Depuis l'ajout de la Taille de l'interface (UiDensity), les valeurs
+        // fixes 36/13 sont devenues des metriques resolues depuis le palier
+        // de densite courant (36/13 restent les valeurs du palier
+        // "comfortable", cf. UiDensityVisualIdentityTests).
+        Assert.Contains("Height = metrics.BookmarkChipHeight", bookmarks, StringComparison.Ordinal);
+        Assert.Contains("FontSize = metrics.BookmarkChipFontSize", bookmarks, StringComparison.Ordinal);
         Assert.DoesNotContain("_bookmarkStarDefaultForeground", bookmarks, StringComparison.Ordinal);
         Assert.Contains("SyncSharedAppThemeResources()", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("SetChromeGradient(", settingsTheme, StringComparison.Ordinal);
@@ -328,17 +332,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_93_11_5()
+    public void Version_projet_est_alignee_sur_0_93_16_0()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.93.11.5-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.93.11.5-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.93.11.5-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.93.11.5-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.16.0-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.93.16.0-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.93.16.0-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.16.0-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

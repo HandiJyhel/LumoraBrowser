@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Windows.System;
 
 namespace Lumora.WinUI;
 
@@ -51,7 +52,7 @@ public sealed partial class MainWindow
         ApplyChromeLayoutStyle();
         SaveWorkspaceUiSettings();
         UpdateStatusText(_chromeLayoutStyle == "identitySpine"
-            ? "Colonne identitaire activée."
+            ? "Style Lumora activé."
             : "Disposition classique rétablie.");
     }
 
@@ -59,12 +60,40 @@ public sealed partial class MainWindow
     // idempotente via _identitySpineActive, pour ne reparenter les elements
     // qu'une seule fois meme si la fonction est appelee plusieurs fois de suite
     // (meme motif que le reste de la cascade ApplyUiSettings/ApplyCompactModeLayout).
+    // Largeur de la colonne identitaire (IdentitySpineHost, MainWindow.xaml,
+    // Width="64") dupliquee ici en constante : un Margin de contenu doit
+    // exister avant le premier passage de mesure, ActualWidth n'est pas
+    // fiable a ce moment-la. A garder synchronisee si la largeur XAML change.
+    private const double IdentitySpineContentInset = 64d;
+
+    // Corrige le chevauchement remonte par capture d'ecran (2026-08-07) :
+    // IdentitySpineHost est un OVERLAY (Grid.RowSpan="7" dans RootShell, ne
+    // participe a aucune colonne de ContentHost) - le rendre visible ne
+    // redimensionnait jamais la zone de contenu en dessous, qui gardait sa
+    // pleine largeur et se faisait donc simplement recouvrir sur ses 64
+    // premiers pixels (menu/nav propre du site web masque, pas seulement en
+    // plein ecran mais aussi au survol du masquage automatique). Applique un
+    // Margin gauche a ContentHost (ancetre commun a BrowserPanel/
+    // SettingsPanel/ModulesPanel/... - tous Grid.Column="3" du meme Grid) en
+    // miroir exact de la visibilite de la colonne : le contenu recule
+    // vraiment au lieu d'etre seulement recouvert. Appelee a chaque endroit
+    // qui bascule IdentitySpineHost.Visibility (ApplyChromeLayoutStyle,
+    // Enter/ExitIdentitySpineLayout, Show/HideIdentitySpineChrome pour le
+    // masquage automatique, ApplyFullScreenLayout pour le plein ecran).
+    private void UpdateIdentitySpineContentInset()
+    {
+        ContentHost.Margin = IdentitySpineHost.Visibility == Visibility.Visible
+            ? new Thickness(IdentitySpineContentInset, 0, 0, 0)
+            : new Thickness(0);
+    }
+
     private void ApplyChromeLayoutStyle()
     {
         var wantsSpine = _chromeLayoutStyle == "identitySpine";
         if (wantsSpine == _identitySpineActive)
         {
             IdentitySpineHost.Visibility = wantsSpine ? Visibility.Visible : Visibility.Collapsed;
+            UpdateIdentitySpineContentInset();
             return;
         }
 
@@ -91,6 +120,7 @@ public sealed partial class MainWindow
 
         IdentitySpineHost.Visibility = Visibility.Visible;
         IdentitySpineAddressHost.Visibility = Visibility.Visible;
+        UpdateIdentitySpineContentInset();
 
         // Reparenting, pas duplication : la meme AddressBox/Popup de
         // suggestions et le meme ModulesButton/flyout profil continuent de
@@ -118,7 +148,20 @@ public sealed partial class MainWindow
         // est geree separement par ApplyBookmarksBarVisibility() plus bas,
         // qui route vers RenderIdentitySpineBookmarks() plutot que les
         // conteneurs classiques.
-        TopTabsRow.Height = new GridLength(0);
+        //
+        // TopTabsRow garde 52px (bug reel signale par capture d'ecran,
+        // 2026-08-07) : ce n'est PAS juste la bande des onglets classiques,
+        // c'est aussi la bande de fond derriere les boutons systeme (min/max/
+        // fermer, ExtendsContentIntoTitleBar) - meme raison deja documentee
+        // pour le mode Classique + onglets verticaux
+        // (ApplyVerticalTabsLayout, MainWindow.Settings.cs : "comme Edge/
+        // Arc"). La mettre a 0 ici (BrowserTabs reste Collapsed, c'est le
+        // bon reglage) laissait les boutons systeme flotter directement
+        // au-dessus du contenu web, sans aucune bande derriere - la colonne
+        // identitaire elle-meme (IdentitySpineHost, overlay RowSpan="7")
+        // n'est pas affectee par cette hauteur, elle continue de se dessiner
+        // par-dessus normalement.
+        TopTabsRow.Height = new GridLength(52);
         NavigationRow.Height = new GridLength(0);
         BrowserTabs.Visibility = Visibility.Collapsed;
         VerticalTabsRail.Visibility = Visibility.Collapsed;
@@ -144,6 +187,7 @@ public sealed partial class MainWindow
         IdentitySpineHomeHero.Visibility = Visibility.Collapsed;
         IdentitySpineTabItems.Children.Clear();
         HideIdentitySpineBookmarks();
+        UpdateIdentitySpineContentInset();
 
         IdentitySpineCapsuleSlot.Children.Remove(NavigationToolbarCapsule);
         NavigationToolbarCapsule.Margin = _navigationToolbarCapsuleClassicMargin;
@@ -180,6 +224,7 @@ public sealed partial class MainWindow
         IdentitySpineAddressHost.Visibility = Visibility.Visible;
         IdentitySpineLeftRevealZone.Visibility = Visibility.Collapsed;
         IdentitySpineTopRevealZone.Visibility = Visibility.Collapsed;
+        UpdateIdentitySpineContentInset();
     }
 
     private void ScheduleIdentitySpineHide()
@@ -209,6 +254,7 @@ public sealed partial class MainWindow
         IdentitySpineAddressHost.Visibility = Visibility.Collapsed;
         IdentitySpineLeftRevealZone.Visibility = Visibility.Visible;
         IdentitySpineTopRevealZone.Visibility = Visibility.Visible;
+        UpdateIdentitySpineContentInset();
     }
 
     private void IdentitySpineChrome_PointerEntered(object sender, PointerRoutedEventArgs e) => ShowIdentitySpineChrome();
@@ -234,8 +280,8 @@ public sealed partial class MainWindow
 
         SaveWorkspaceUiSettings();
         UpdateStatusText(_uiSettings.IdentitySpineAutoHide
-            ? "Masquage automatique de la colonne identitaire activé."
-            : "Masquage automatique de la colonne identitaire désactivé.");
+            ? "Masquage automatique du Style Lumora activé."
+            : "Masquage automatique du Style Lumora désactivé.");
     }
 
     // ── Pastilles d'onglets de la colonne ────────────────────────────────────
@@ -248,6 +294,52 @@ public sealed partial class MainWindow
         foreach (var tab in _tabs)
         {
             var isActive = current?.Id == tab.Id || IsTabInSplitView(tab.Id);
+
+            // Croix de fermeture TOUJOURS visible mais discrete (meme motif
+            // que le rail compact classique, RenderVerticalTabs -
+            // MainWindow.TabGroups.cs). Deuxieme iteration (2026-08-08) :
+            // premiere version en pastille 16x16 d'angle jugee trop serree
+            // par l'utilisateur (Chrome cite en reference pour la TAILLE de
+            // cible, pas pour son "hover uniquement" - deja rejete une fois
+            // pour manque de decouvrabilite). Troisieme iteration, meme jour :
+            // 32x32 juge trop imposant en usage reel, redescendu a 26x26 -
+            // toujours nettement plus grand que les 20x20 d'origine juges
+            // trop serres, mais moins "pave", plus proche des tailles
+            // Chrome/Edge. TOUJOURS visible a opacite reduite (0.6/1, meme
+            // reglage que la version precedente), fine marge autour ou le
+            // bouton englobant reste cliquable pour selectionner l'onglet.
+            var icon = TabIconElement(tab, 20);
+
+            var closeButton = new Button
+            {
+                Width = 26,
+                Height = 26,
+                Padding = new Thickness(0),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Tag = tab.Id,
+                CornerRadius = new CornerRadius(13),
+                BorderThickness = new Thickness(0),
+                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                // Viewbox plutot que SymbolIcon.FontSize (n'existe pas sur ce
+                // controle) : force le glyphe a une taille lisible (12x12).
+                Content = new Viewbox
+                {
+                    Width = 12,
+                    Height = 12,
+                    Child = new SymbolIcon(Symbol.Cancel)
+                },
+                Opacity = 0.6
+            };
+            ToolTipService.SetToolTip(closeButton, "Fermer l'onglet");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(closeButton, $"Fermer {tab.Title}");
+            closeButton.Click += VerticalTabCloseButton_Click;
+
+            var content = new Grid();
+            content.Children.Add(icon);
+            content.Children.Add(closeButton);
 
             var button = new Button
             {
@@ -263,8 +355,10 @@ public sealed partial class MainWindow
                 BorderThickness = new Thickness(isActive ? 2 : 1),
                 Background = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBackgroundBrush" : "NovaTabPillInactiveBackgroundBrush"],
                 BorderBrush = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBorderBrush" : "NovaTabPillInactiveBorderBrush"],
-                Content = TabIconElement(tab, 20)
+                Content = content
             };
+            button.PointerEntered += (_, _) => { closeButton.Opacity = 1; icon.Opacity = 0.3; };
+            button.PointerExited += (_, _) => { closeButton.Opacity = 0.6; icon.Opacity = 1; };
 
             if (tab.GroupId is int tabGroupId && _tabGroups.FirstOrDefault(g => g.Id == tabGroupId) is { } tabGroup)
             {
@@ -339,7 +433,15 @@ public sealed partial class MainWindow
             .Where(node => node.ParentId == BookmarkStore.ToolbarRootId)
             .OrderBy(node => node.Position)
             .ToList();
-        if (toolbarNodes.Count == 0)
+        // Meme racine "Autres favoris" que RenderBookmarksBar() (Classique) -
+        // toujours presente structurellement (BookmarkStore la seme des la
+        // creation du profil), donc affichee inconditionnellement des que la
+        // racine existe, meme vide. Oubliee lors du premier passage a la
+        // capsule de verre pleine largeur (retour utilisateur du 2026-08-05 :
+        // "il manque toujours le dossier autres favoris") - la ligne
+        // integree ne montrait jusque-la que la racine ToolbarRootId.
+        var otherRoot = _allBookmarkNodes.FirstOrDefault(node => node.Id == BookmarkStore.OtherRootId);
+        if (toolbarNodes.Count == 0 && otherRoot is null)
         {
             return;
         }
@@ -367,15 +469,63 @@ public sealed partial class MainWindow
             target.Children.Add(StyleAsIdentitySpineBookmarkChip(CreateIdentitySpineBookmarksOverflowButton(overflowCount), compact));
         }
 
+        if (otherRoot is not null)
+        {
+            // Positions "haut"/"bas" : "Autres favoris" va dans la colonne
+            // Auto dediee (IdentitySpineBookmarksTopOtherHost /
+            // ...BottomOtherHost), ancree a droite de la ligne pleine
+            // largeur - meme resultat visuel que OtherBookmarksBarHost /
+            // OtherBookmarksBottomHost en Classique. Le separateur y est
+            // systematique (comme la barre verticale, toujours presente,
+            // du mode Classique), pas conditionne au nombre de puces a
+            // gauche. Positions gauche/droite : rails verticaux compacts,
+            // pas d'axe gauche-droite equivalent - le dossier reste ajoute
+            // a la suite des puces (fin de liste), inchange.
+            if (ReferenceEquals(target, IdentitySpineBookmarksTop))
+            {
+                IdentitySpineBookmarksTopOtherHost.Children.Add(CreateIdentitySpineBookmarksDivider(compact));
+                IdentitySpineBookmarksTopOtherHost.Children.Add(StyleAsIdentitySpineBookmarkChip(CreateBookmarkBarButton(otherRoot), compact));
+            }
+            else if (ReferenceEquals(target, IdentitySpineBookmarksBottomHost))
+            {
+                IdentitySpineBookmarksBottomOtherHost.Children.Add(CreateIdentitySpineBookmarksDivider(compact));
+                IdentitySpineBookmarksBottomOtherHost.Children.Add(StyleAsIdentitySpineBookmarkChip(CreateBookmarkBarButton(otherRoot), compact));
+            }
+            else
+            {
+                if (target.Children.Count > 0)
+                {
+                    target.Children.Add(CreateIdentitySpineBookmarksDivider(compact));
+                }
+
+                target.Children.Add(StyleAsIdentitySpineBookmarkChip(CreateBookmarkBarButton(otherRoot), compact));
+            }
+        }
+
         target.Visibility = Visibility.Visible;
+
+        // IdentitySpineBookmarksTop/...BottomHost ne sont que des conteneurs
+        // de puces desormais - l'habillage propre a chaque position
+        // (capsule de verre en haut, simple ligne flottante en bas) vit sur
+        // leur Grid englobante et doit suivre la meme visibilite.
+        if (ReferenceEquals(target, IdentitySpineBookmarksTop))
+        {
+            IdentitySpineBookmarksTopCard.Visibility = Visibility.Visible;
+        }
+        else if (ReferenceEquals(target, IdentitySpineBookmarksBottomHost))
+        {
+            IdentitySpineBookmarksBottomRow.Visibility = Visibility.Visible;
+        }
     }
 
     private void HideIdentitySpineBookmarks()
     {
         IdentitySpineBookmarksTop.Children.Clear();
-        IdentitySpineBookmarksTop.Visibility = Visibility.Collapsed;
+        IdentitySpineBookmarksTopOtherHost.Children.Clear();
+        IdentitySpineBookmarksTopCard.Visibility = Visibility.Collapsed;
         IdentitySpineBookmarksBottomHost.Children.Clear();
-        IdentitySpineBookmarksBottomHost.Visibility = Visibility.Collapsed;
+        IdentitySpineBookmarksBottomOtherHost.Children.Clear();
+        IdentitySpineBookmarksBottomRow.Visibility = Visibility.Collapsed;
         IdentitySpineBookmarksRightHost.Children.Clear();
         IdentitySpineBookmarksRightHost.Visibility = Visibility.Collapsed;
         IdentitySpineFavoritesSection.Children.Clear();
@@ -416,6 +566,27 @@ public sealed partial class MainWindow
         return button;
     }
 
+    // Meme repere visuel que le separateur devant "Autres favoris" dans
+    // BookmarksBarRow (Classique, MainWindow.xaml) - adapte a l'orientation
+    // de la pile hote (verticale en position gauche/droite de la colonne,
+    // horizontale en haut/bas).
+    private Border CreateIdentitySpineBookmarksDivider(bool compact) => compact
+        ? new Border
+        {
+            Height = 1,
+            Margin = new Thickness(4, 4, 4, 4),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Background = (Brush)RootShell.Resources["NovaChromeStrokeBrush"]
+        }
+        : new Border
+        {
+            Width = 1,
+            Height = 18,
+            Margin = new Thickness(2, 0, 2, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Background = (Brush)RootShell.Resources["NovaChromeStrokeBrush"]
+        };
+
     // ── Ecran natif "Compagnon du mode" (home hero) ──────────────────────────
     // Recouvre BrowserHost uniquement quand la colonne identitaire est active
     // ET que l'onglet actif est la page d'accueil - la page HTML continue de
@@ -441,8 +612,11 @@ public sealed partial class MainWindow
         IdentitySpineHeroSecondaryHintText.Text = companion.SecondaryHint;
         IdentitySpineHeroSecondaryHintText.FontSize = AccessibilitySecondaryFontSize();
 
+        IdentitySpineHeroSearchBox.Text = string.Empty;
+
         ApplyNovaControlAccessibility(IdentitySpineHeroObjectiveBox, "Objectif du compagnon");
         ApplyNovaControlAccessibility(IdentitySpineHeroSaveButton, "Garder l'objectif dans Lumie");
+        ApplyNovaControlAccessibility(IdentitySpineHeroSearchBox, "Rechercher ou saisir une URL");
         ApplyNovaControlAccessibility(IdentitySpineHeroPrimaryButton, companion.PrimaryTitle);
         ApplyNovaControlAccessibility(IdentitySpineHeroSecondaryButton, companion.SecondaryTitle);
     }
@@ -453,13 +627,36 @@ public sealed partial class MainWindow
     private void UpdateIdentitySpineHomeHeroVisibility(BrowserTabState? tab)
     {
         var isHome = tab is not null && tab.Address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase);
-        IdentitySpineHomeHero.Visibility = _chromeLayoutStyle == "identitySpine" && isHome
+        // Retour utilisateur (2026-08-08) : le mode Neutre doit rester
+        // "vraiment neutre" meme en Style Lumora - logo + recherche, comme
+        // l'accueil Classique, sans le Compagnon. Les autres modes (Focus,
+        // Lecture...) gardent le Compagnon, seul Neutre en est exempte.
+        var isNeutralMode = string.Equals(_uiSettings.UsageMode, "neutral", StringComparison.OrdinalIgnoreCase);
+        IdentitySpineHomeHero.Visibility = _chromeLayoutStyle == "identitySpine" && isHome && !isNeutralMode
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
 
     private void IdentitySpineHeroSaveButton_Click(object sender, RoutedEventArgs e) =>
         SaveCompanionMemoryAndNotify(IdentitySpineHeroObjectiveBox.Text);
+
+    // Meme logique de navigation que la vraie barre d'adresse
+    // (AddressBox_KeyDown/NavigateFromAddressBox, MainWindow.Navigation.cs) :
+    // on y relaie le texte plutot que de dupliquer la normalisation
+    // d'adresse. Vide apres soumission - ce champ est un point d'entree, pas
+    // un miroir permanent de l'adresse courante (contrairement a AddressBox).
+    private void IdentitySpineHeroSearchBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Enter) return;
+
+        var text = IdentitySpineHeroSearchBox.Text?.Trim() ?? string.Empty;
+        if (text.Length == 0) return;
+
+        AddressBox.Text = text;
+        NavigateFromAddressBox();
+        IdentitySpineHeroSearchBox.Text = string.Empty;
+        e.Handled = true;
+    }
 
     private async void IdentitySpineHeroPrimaryButton_Click(object sender, RoutedEventArgs e) =>
         await RunModeCompanionActionAsync(GetCurrentModeCompanion().PrimaryAction);

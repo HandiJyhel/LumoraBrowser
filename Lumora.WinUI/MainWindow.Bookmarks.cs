@@ -741,20 +741,21 @@ public sealed partial class MainWindow
     private Button CreateBookmarkBarButton(BookmarkNode node)
     {
         var sideLayout = UsesSideBookmarksRail(_bookmarksBarPosition);
+        var metrics = ResolveUiDensityMetrics(_uiDensity);
         var button = new Button
         {
             Content = BookmarkButtonContent(node),
             Tag = node,
             ContextFlyout = CreateBookmarkContextFlyout(node),
             Style = (Style)RootShell.Resources["NovaBookmarkBarButtonStyle"],
-            Height = 36,
-            MinHeight = 36,
+            Height = metrics.BookmarkChipHeight,
+            MinHeight = metrics.BookmarkChipHeight,
             MinWidth = 0,
             Padding = BookmarkStore.IsIconOnlyTitle(node.Title)
-                ? new Thickness(10, 0, 10, 0)
-                : new Thickness(12, 0, 14, 0),
-            CornerRadius = new CornerRadius(14),
-            FontSize = 13,
+                ? metrics.BookmarkChipPaddingIcon
+                : metrics.BookmarkChipPaddingText,
+            CornerRadius = new CornerRadius(metrics.BookmarkChipCornerRadius),
+            FontSize = metrics.BookmarkChipFontSize,
             HorizontalAlignment = sideLayout ? HorizontalAlignment.Stretch : HorizontalAlignment.Left,
             HorizontalContentAlignment = HorizontalAlignment.Left
         };
@@ -778,6 +779,7 @@ public sealed partial class MainWindow
 
     private Button CreateBookmarksOverflowButton(IReadOnlyList<BookmarkNode> overflowNodes)
     {
+        var metrics = ResolveUiDensityMetrics(_uiDensity);
         var button = new Button
         {
             Content = new TextBlock
@@ -789,12 +791,12 @@ public sealed partial class MainWindow
                 VerticalAlignment = VerticalAlignment.Center
             },
             Style = (Style)RootShell.Resources["NovaBookmarkBarButtonStyle"],
-            Height = 36,
-            MinHeight = 36,
-            Width = 36,
-            MinWidth = 36,
+            Height = metrics.BookmarksOverflowChipSize,
+            MinHeight = metrics.BookmarksOverflowChipSize,
+            Width = metrics.BookmarksOverflowChipSize,
+            MinWidth = metrics.BookmarksOverflowChipSize,
             Padding = new Thickness(0),
-            CornerRadius = new CornerRadius(14),
+            CornerRadius = new CornerRadius(metrics.BookmarksOverflowChipCornerRadius),
             Flyout = CreateBookmarksOverflowFlyout(overflowNodes)
         };
         ApplyNovaControlAccessibility(button, $"Afficher {overflowNodes.Count} favori(s) supplémentaire(s)");
