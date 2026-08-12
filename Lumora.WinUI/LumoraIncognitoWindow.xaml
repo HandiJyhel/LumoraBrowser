@@ -228,6 +228,33 @@
                               Toggled="IncognitoTorSwitch_Toggled"
                               AutomationProperties.Name="Masquer l'adresse IP via Tor"
                               ToolTipService.ToolTip="Change l'état de Tor : ferme cette fenêtre Incognito et en rouvre une nouvelle dans le nouvel état (les onglets ouverts sont perdus, vous restez en Incognito)" />
+                <!-- Icone reglages (2026-08-12, retour utilisateur : "donner a
+                     Incognito un acces a certains parametres lies au pistage") -
+                     acces rapide sans quitter cette fenetre, perimetre = ce qui
+                     est reellement actif ici (voir InitPrivacyEngine). -->
+                <Button x:Name="IncognitoPrivacySettingsButton" Padding="8,5"
+                        Style="{StaticResource IncognitoToolbarButtonStyle}"
+                        AutomationProperties.Name="Réglages anti-pistage"
+                        ToolTipService.ToolTip="Réglages anti-pistage de cette fenêtre Incognito">
+                    <FontIcon Glyph="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom" Opening="IncognitoPrivacySettingsFlyout_Opening">
+                            <StackPanel Width="260" Spacing="10">
+                                <TextBlock Text="Anti-pistage technique" FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{StaticResource LumoraWindowTextBrush}" />
+                                <ToggleSwitch x:Name="IncognitoCnameSwitch" OnContent="Activé" OffContent="Désactivé"
+                                              Header="Détecter le CNAME cloaking"
+                                              Toggled="IncognitoCnameSwitch_Toggled" />
+                                <TextBlock Text="Anti-fuite WebRTC : toujours actif dans Incognito, non réglable ici."
+                                           TextWrapping="Wrap" FontSize="11.5" Opacity="0.7"
+                                           Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                                <TextBlock Text="Position fictive et brouillage d'empreinte : pas encore disponibles dans Incognito."
+                                           TextWrapping="Wrap" FontSize="11.5" Opacity="0.7"
+                                           Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <Button x:Name="IncognitoNewCircuitButton" Padding="8,5" Visibility="Collapsed"
                         Style="{StaticResource IncognitoToolbarButtonStyle}"
                         Content="Nouveau circuit" Click="IncognitoNewCircuitButton_Click"

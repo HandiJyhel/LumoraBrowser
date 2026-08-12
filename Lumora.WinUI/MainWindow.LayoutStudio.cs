@@ -35,7 +35,13 @@ public sealed partial class MainWindow
             return;
         }
 
-        CreateWorkspaceLayoutContextFlyout().ShowAt(anchor, e.GetPosition(anchor));
+        // Actions d'onglets (muet global, recherche) ajoutees uniquement quand
+        // le clic droit vient du rail d'onglets verticaux lui-meme (round 3,
+        // 2026-08-12) - ce menu est partage par 3 autres ancrages (favoris,
+        // zone de contenu, barre de statut) ou ces actions n'auraient pas de
+        // sens.
+        var includeVerticalTabsActions = ReferenceEquals(sender, VerticalTabsRail);
+        CreateWorkspaceLayoutContextFlyout(includeVerticalTabsActions).ShowAt(anchor, e.GetPosition(anchor));
         e.Handled = true;
     }
 
@@ -75,6 +81,17 @@ public sealed partial class MainWindow
                 CompactModeSwitch.IsOn = !CompactModeSwitch.IsOn;
                 SaveWorkspaceUiSettings();
                 UpdateStatusText(_compactModeEnabled ? "Interface compacte activée." : "Interface compacte désactivée.");
+                return;
+            // Muet global + recherche du rail reduit (round 3, 2026-08-12) :
+            // reutilisent directement les memes methodes que les anciens
+            // boutons dedies (VerticalTabsMuteAllButton_Click,
+            // ExpandVerticalTabsRailAndFocusSearch), juste invoquees depuis ce
+            // menu plutot que depuis un clic direct.
+            case "railaction:muteall":
+                VerticalTabsMuteAllButton_Click(this, new RoutedEventArgs());
+                return;
+            case "railaction:search":
+                ExpandVerticalTabsRailAndFocusSearch();
                 return;
         }
     }
@@ -149,7 +166,6 @@ public sealed partial class MainWindow
         _uiSettings.BookmarksBarPosition = _bookmarksBarPosition;
         _uiSettings.VerticalTabsEnabled = _verticalTabsEnabled;
         _uiSettings.TabStripPosition = _tabStripPosition;
-        _uiSettings.ChromeLayoutStyle = _chromeLayoutStyle;
         _uiSettings.UiDensity = _uiDensity;
         _uiSettings.VerticalTabsCompact = _verticalTabsCompact;
         _uiSettings.VerticalTabsWidth = Math.Clamp(_verticalTabsExpandedWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
@@ -159,7 +175,7 @@ public sealed partial class MainWindow
         _uiSettings.Save(_profile.UiSettingsFile);
     }
 
-    private MenuFlyout CreateWorkspaceLayoutContextFlyout()
+    private MenuFlyout CreateWorkspaceLayoutContextFlyout(bool includeVerticalTabsActions = false)
     {
         var flyout = new MenuFlyout();
         AddLumoraMenuHeader(
@@ -167,9 +183,32 @@ public sealed partial class MainWindow
             "Studio Lumora",
             CurrentWorkspaceSummary(),
             "\uE790");
+        // Muet global + recherche (round 3, 2026-08-12) : le rail reduit
+        // (40px) n'a plus la place pour un bouton dedie a chacune - ce menu,
+        // deja ouvert au clic droit sur le rail, est le point d'acces de
+        // remplacement plutot qu'une icone permanente. Uniquement sur cet
+        // ancrage precis (voir WorkspaceLayoutSurface_RightTapped), separe du
+        // reste (disposition, favoris, theme) par une ligne.
+        if (includeVerticalTabsActions)
+        {
+            AddVerticalTabsActionMenuItems(flyout.Items);
+            flyout.Items.Add(new MenuFlyoutSeparator());
+        }
         AddWorkspaceLayoutMenuItems(flyout.Items, includeTheme: true);
         HookFlyoutPointerSupport(flyout);
         return flyout;
+    }
+
+    private void AddVerticalTabsActionMenuItems(IList<MenuFlyoutItemBase> items)
+    {
+        items.Add(CreateWorkspaceMenuItem(
+            _allTabsMuted ? "R\u00E9tablir le son de tous les onglets" : "Couper le son de tous les onglets",
+            "railaction:muteall",
+            CreateMenuGlyphIcon("\uE995")));
+        items.Add(CreateWorkspaceMenuItem(
+            "Rechercher un onglet\u2026",
+            "railaction:search",
+            new SymbolIcon(Symbol.Find)));
     }
 
     private void AddWorkspaceLayoutMenuItems(IList<MenuFlyoutItemBase> items, bool includeTheme)

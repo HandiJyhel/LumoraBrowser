@@ -27,10 +27,6 @@ public static class StartMenuTileIds
     public const string AllModules = "allModules";
     public const string About = "about";
     public const string Studio = "studio";
-    // Decouvrabilite du Style Lumora (2026-08-07, retour utilisateur) :
-    // avant cette tuile, le reglage etait enterre a 4 clics de profondeur
-    // (Parametres > Mon Lumora > Disposition), rien ne le mettait en avant.
-    public const string ChromeStyle = "chromeStyle";
     // Decouvrabilite du bloqueur de pub (2026-08-08, retour utilisateur) :
     // seule protection de fond promue en tuile epinglable par defaut, avec
     // Coffre - voir UiSettings.DefaultPinnedStartMenuTileIds.
@@ -50,7 +46,13 @@ public sealed record StartMenuTileUsage(string TileId, int OpenCount, DateTimeOf
 // compile, {Binding} classique - meme motif que CommandPaletteItem). IsPinned
 // pilote a la fois l'etat visuel eventuel et le libelle du menu contextuel
 // epingler/desepingler.
-public sealed record StartMenuTileViewModel(string Id, string Title, string Subtitle, string Glyph, bool IsPinned)
+// FamilyKey (2026-08-10) : "content"/"protection"/"tools"/null, resolu
+// depuis la section de la tuile (StartMenuTileRegistry.ResolveFamilyKey).
+// Reste une chaine simple ici (pas de Brush) pour que ce fichier continue de
+// compiler dans Lumora.Tests, sans reference a Microsoft.UI.Xaml - le rendu
+// en couleur reelle se fait cote XAML via
+// Converters.StartMenuFamilyKeyToBrushConverter.
+public sealed record StartMenuTileViewModel(string Id, string Title, string Subtitle, string Glyph, bool IsPinned, string? FamilyKey)
 {
     public string PinActionLabel => IsPinned ? "Désépingler" : "Épingler";
 }
@@ -61,4 +63,12 @@ public sealed record StartMenuSectionViewModel(string Title, string HeaderGlyph,
 // "maitre/detail" a la Windows 7 - Cle "Epingles" ou nom de section). La
 // selection courante est portee par MainWindow (_startMenuSelectedCategoryKey),
 // pas par ce record : IsSelected serait redondant avec ListView.SelectedItem.
-public sealed record StartMenuCategoryViewModel(string Key, string Title, string Glyph);
+// FamilyKey (2026-08-10, "choses a revoir") : meme principe que
+// StartMenuTileViewModel ci-dessus - "Epingles" reste null (degrade neutre,
+// ce n'est pas une famille de contenu), les autres categories reprennent la
+// famille de leur section (StartMenuTileRegistry.ResolveFamilyKey). Avant
+// cette date, StartMenuCategoryTemplate (MainWindow.xaml) recyclait le meme
+// degrade pour toutes les categories - retour utilisateur : le rail semblait
+// "moins quali" que les cartes Epingles juste a cote, qui avaient deja leur
+// couleur par famille.
+public sealed record StartMenuCategoryViewModel(string Key, string Title, string Glyph, string? FamilyKey);

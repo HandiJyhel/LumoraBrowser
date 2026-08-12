@@ -119,7 +119,8 @@ function Invoke-WinUiRestore {
         [psobject]$Context,
         [string]$Configuration,
         [string]$Platform,
-        [string]$RuntimeIdentifier = ""
+        [string]$RuntimeIdentifier = "",
+        [string[]]$AdditionalProperties = @()
     )
 
     if ($Context.HasCachedRestore) {
@@ -129,6 +130,7 @@ function Invoke-WinUiRestore {
 
     $args = @($ProjectPath, "/t:Restore") +
         (Get-WinUiMsbuildPropertyArgs -Context $Context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier $RuntimeIdentifier) +
+        $AdditionalProperties +
         @("/p:RestoreIgnoreFailedSources=true")
 
     & $MsbuildPath @args

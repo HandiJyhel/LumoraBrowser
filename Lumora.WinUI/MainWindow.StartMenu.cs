@@ -137,10 +137,12 @@ public sealed partial class MainWindow
         StartMenuNoResultsText.Visibility = Visibility.Collapsed;
 
         _startMenuCategories.Clear();
-        _startMenuCategories.Add(new StartMenuCategoryViewModel(PinnedCategoryKey, "Épinglés", "\uE718"));
+        _startMenuCategories.Add(new StartMenuCategoryViewModel(PinnedCategoryKey, "Épinglés", "\uE718", FamilyKey: null));
         foreach (var sectionName in StartMenuTileRegistry.All.Select(t => t.Section).Distinct())
         {
-            _startMenuCategories.Add(new StartMenuCategoryViewModel(sectionName, sectionName, SectionHeaderGlyph(sectionName)));
+            _startMenuCategories.Add(new StartMenuCategoryViewModel(
+                sectionName, sectionName, SectionHeaderGlyph(sectionName),
+                StartMenuTileRegistry.ResolveFamilyKey(sectionName)));
         }
 
         // Reassignation de l'ItemsSource ci-dessus reinitialise la selection de la
@@ -195,8 +197,18 @@ public sealed partial class MainWindow
         }
     }
 
+    // Couleur par famille de sens (chantier identite visuelle, 2026-08-10) :
+    // le badge derriere le glyphe d'une tuile suit desormais la famille de sa
+    // section plutot qu'un unique degrade identique pour toutes les tuiles -
+    // Confidentialite = protection, Navigation = contenu personnel,
+    // Lecture et contenu/Modules = outils. "Lumora et profil" (parametres,
+    // profils, a propos, studio) garde le degrade Lumora d'origine : c'est la
+    // categorie systeme, deliberement neutre pour ne pas rivaliser avec les
+    // 3 familles de sens. La resolution en couleur reelle se fait cote XAML
+    // (StartMenuFamilyKeyToBrushConverter) : ToStartMenuTileViewModel reste
+    // une fonction pure qui ne fait que lire StartMenuTileRegistry.
     private static StartMenuTileViewModel ToStartMenuTileViewModel(StartMenuTileDefinition t, List<string> pinnedIds) =>
-        new(t.Id, t.Title, t.Subtitle, t.Glyph, pinnedIds.Contains(t.Id, StringComparer.Ordinal));
+        new(t.Id, t.Title, t.Subtitle, t.Glyph, pinnedIds.Contains(t.Id, StringComparer.Ordinal), StartMenuTileRegistry.ResolveFamilyKey(t.Section));
 
     private static string SectionHeaderGlyph(string section) => section switch
     {
@@ -232,7 +244,6 @@ public sealed partial class MainWindow
         StartMenuTileIds.AllModules => () => ModulesMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.About => () => AboutMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.Studio => OpenWorkspaceSettings,
-        StartMenuTileIds.ChromeStyle => OpenChromeStyleSettings,
         _ => () => { }
     };
 }

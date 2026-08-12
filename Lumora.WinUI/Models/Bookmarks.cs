@@ -980,8 +980,19 @@ public static class BookmarkTreePresenter
             title = "(icone seule)";
         }
 
+        // Pluriel resolu (2026-08-10, "choses a revoir" - bug releve par
+        // l'utilisateur sur sa propre capture d'ecran : "2 element(s)" et
+        // "0 element(s)" affiches tels quels, le texte n'etait jamais
+        // realise). Meme convention que BookmarkFolderChildCountLabel
+        // (MainWindow.BookmarksFlyouts.cs, menu contextuel des favoris).
+        var folderChildCount = nodes.Count(candidate => candidate.ParentId == node.Id);
         var detail = node.Kind == BookmarkKind.Folder
-            ? $"{nodes.Count(candidate => candidate.ParentId == node.Id)} element(s)"
+            ? folderChildCount switch
+            {
+                0 => "Dossier vide",
+                1 => "1 élément",
+                _ => $"{folderChildCount} éléments"
+            }
             : node.Url;
         var hasIcon = node.Kind == BookmarkKind.Url &&
             !string.IsNullOrWhiteSpace(node.IconPath) &&

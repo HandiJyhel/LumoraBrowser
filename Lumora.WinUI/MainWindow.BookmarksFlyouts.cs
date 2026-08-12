@@ -98,17 +98,37 @@ public sealed partial class MainWindow
             flyout.Items.Add(deleteItem);
         }
 
+        // "Gerer les favoris" remplace le sous-menu "Studio Lumora" ici
+        // (2026-08-10, "choses a revoir" - demande explicite utilisateur : le
+        // reglage de la disposition de la fenetre n'a rien a faire sur le
+        // clic droit d'UN favori precis, et l'acces au gestionnaire manquait -
+        // convention deja etablie par Chrome/Edge/Firefox). Ouvre le panneau
+        // directement sur le dossier concerne (celui qui contient ce favori,
+        // ou le favori/dossier lui-meme s'il s'agit deja d'un dossier) plutot
+        // que systematiquement a la racine.
         flyout.Items.Add(new MenuFlyoutSeparator());
-        var studioSubItem = new MenuFlyoutSubItem
+        var manageItem = new MenuFlyoutItem
         {
-            Text = "Studio Lumora",
-            Icon = CreateMenuGlyphIcon("\uE790")
+            Text = "G\u00E9rer les favoris",
+            Tag = node,
+            Icon = CreateMenuGlyphIcon("\uE735")
         };
-        AddWorkspaceLayoutMenuItems(studioSubItem.Items, includeTheme: true);
-        flyout.Items.Add(studioSubItem);
+        manageItem.Click += BookmarkContextManage_Click;
+        flyout.Items.Add(manageItem);
         HookFlyoutPointerSupport(flyout);
 
         return flyout;
+    }
+
+    private void BookmarkContextManage_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: BookmarkNode node })
+        {
+            return;
+        }
+
+        var folderId = node.Kind == BookmarkKind.Folder ? node.Id : node.ParentId;
+        ShowBookmarksFolder(folderId, "Favoris Lumora");
     }
 
     private void BookmarkContextOpen_Click(object sender, RoutedEventArgs e)

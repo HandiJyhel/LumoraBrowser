@@ -17,12 +17,11 @@ public sealed partial class MainWindow
 {
     // ── Settings ─────────────────────────────────────────────────────────────
 
-    // Style Classique + onglets verticaux (2026-08-08) : TopTabsRow n'a plus
-    // besoin d'accueillir une vraie barre d'onglets, seulement la bande de
-    // fond des boutons systeme (min/max/fermer). 36 = hauteur standard des
-    // boutons de legende WinUI (~32px a 100%) + marge de securite, a
-    // confirmer visuellement - voir ApplyVerticalTabsLayout().
-    private const double ReducedTitleBarHeightForVerticalTabs = 36;
+    // Style Classique + onglets verticaux : TopTabsRow n'a plus besoin
+    // d'accueillir une vraie barre d'onglets. Etait reduite a 36px (constante
+    // ReducedTitleBarHeightForVerticalTabs, retiree le 2026-08-09) le temps
+    // d'une premiere passe prudente ; supprimee (0) depuis, voir
+    // ApplyVerticalTabsLayout() pour l'historique complet du risque.
 
     private static string NormalizeTabStripPosition(string? value) =>
         value?.Trim().ToLowerInvariant() switch
@@ -480,16 +479,81 @@ public sealed partial class MainWindow
         StatusText.Text = _verticalTabsCompact ? "Onglets verticaux réduits." : "Onglets verticaux élargis.";
     }
 
+    // Recherche d'onglet (2026-08-12, comparaison utilisateur avec le rail
+    // d'onglets verticaux d'Edge) : filtre en direct, meme principe que
+    // StartMenuSearchBox_TextChanged - pas de bouton "Rechercher" separe.
+    private void VerticalTabsSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        _verticalTabsFilter = VerticalTabsSearchBox.Text;
+        RenderVerticalTabs();
+    }
+
+    // "Rechercher un onglet..." du clic droit sur le rail reduit (round 3,
+    // 2026-08-12) : le rail reduit n'a plus la place pour un bouton dedie
+    // (VerticalTabsSearchBox restait affiche mais tronque a 64px de large
+    // avant le correctif round 2 ; round 3 retire meme l'icone loupe pour
+    // descendre a 40px). Agrandit le rail puis met le focus dans le TextBox -
+    // meme filtre qu'avant, pas de recherche distincte. Appelee directement
+    // depuis MainWindow.LayoutStudio.cs (ExecuteStudioQuickAction), pas un
+    // gestionnaire de clic de bouton.
+    private void ExpandVerticalTabsRailAndFocusSearch()
+    {
+        if (_verticalTabsCompact)
+        {
+            _verticalTabsCompact = false;
+            ApplyVerticalTabsWidth();
+            RenderVerticalTabs();
+            SaveWorkspaceUiSettings();
+        }
+        VerticalTabsSearchBox.Focus(FocusState.Programmatic);
+    }
+
+    // Coupe-son global (2026-08-12, meme comparaison) : bascule IsMuted sur
+    // TOUS les onglets, epingles ou non, qu'ils jouent du son ou pas
+    // (comportement le plus previsible - pas besoin de deviner qui joue quoi).
+    private void VerticalTabsMuteAllButton_Click(object sender, RoutedEventArgs e)
+    {
+        _allTabsMuted = !_allTabsMuted;
+        foreach (var tab in _tabs)
+        {
+            var core = tab.View?.CoreWebView2;
+            if (core is not null) core.IsMuted = _allTabsMuted;
+        }
+        // E74F (Mute) / E995 (Volume3) : verifies sur la table officielle Segoe
+        // MDL2 Assets avant utilisation. E767 (deja utilise dans ce fichier XAML
+        // pour "Lecture a voix haute") est en realite le glyphe officiel
+        // "Volume" - deja mal etiquete la-bas, pas retouche ici, hors perimetre
+        // de cette session ; volontairement evite pour ce bouton.
+        ToolTipService.SetToolTip(VerticalTabsMuteAllButton,
+            _allTabsMuted ? "Rétablir le son de tous les onglets" : "Couper le son de tous les onglets");
+        StatusText.Text = _allTabsMuted ? "Son coupé sur tous les onglets." : "Son rétabli sur tous les onglets.";
+    }
+
     private void VerticalTabsResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
     {
         // Pendant le drag : uniquement mettre à jour la largeur, pas de re-render ni de sauvegarde
         // (RenderVerticalTabs est trop lent pour être appelé à chaque micro-événement)
         var currentWidth = double.IsNaN(VerticalTabsRail.Width) ? VerticalTabsRail.ActualWidth : VerticalTabsRail.Width;
-        var targetWidth = Math.Clamp(currentWidth + e.HorizontalChange, VerticalTabsCompactWidth, VerticalTabsMaxWidth);
+        var rawTarget = currentWidth + e.HorizontalChange;
 
-        _verticalTabsCompact = targetWidth <= VerticalTabsCompactWidth + 24;
-        if (!_verticalTabsCompact)
-            _verticalTabsExpandedWidth = Math.Clamp(targetWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
+        // Pas de zone morte : un seul seuil (VerticalTabsMinExpandedWidth). En
+        // dessous, on snappe directement sur la largeur compacte EXACTE au lieu
+        // de suivre la position brute de la souris - avant ce correctif, le
+        // rail pouvait rester a une largeur intermediaire (ex. 90px, entre
+        // l'ancien seuil de bascule a 88px et le minimum elargi de 120px) tout
+        // en affichant la presentation elargie (textes complets), prevue pour
+        // au moins 120px. Bug reel signale par l'utilisateur, 2026-08-12.
+        double targetWidth;
+        _verticalTabsCompact = rawTarget < VerticalTabsMinExpandedWidth;
+        if (_verticalTabsCompact)
+        {
+            targetWidth = VerticalTabsCompactWidth;
+        }
+        else
+        {
+            targetWidth = Math.Clamp(rawTarget, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
+            _verticalTabsExpandedWidth = targetWidth;
+        }
 
         VerticalTabsRail.Width = targetWidth;
         ApplyVerticalTabsPresentation();
@@ -515,7 +579,11 @@ public sealed partial class MainWindow
 
     private void VerticalTabsResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
     {
-        // Fin du drag : re-render des onglets et sauvegarde
+        // Fin du drag : on ré-applique la largeur figée par _verticalTabsCompact /
+        // _verticalTabsExpandedWidth pour garantir que le rail retombe exactement
+        // sur VerticalTabsCompactWidth ou sur la largeur élargie enregistrée -
+        // jamais sur une valeur brute intermédiaire issue du drag.
+        ApplyVerticalTabsWidth();
         RenderVerticalTabs();
         SaveWorkspaceUiSettings();
     }
@@ -531,7 +599,6 @@ public sealed partial class MainWindow
                     : _uiSettings.TabStripPosition);
             _bookmarksBarPosition = NormalizeBookmarksBarPosition(_uiSettings.BookmarksBarPosition);
             _verticalTabsEnabled = UsesVerticalTabRail(_tabStripPosition);
-            _chromeLayoutStyle = NormalizeChromeLayoutStyle(_uiSettings.ChromeLayoutStyle);
             _uiDensity = NormalizeUiDensity(_uiSettings.UiDensity);
             _verticalTabsCompact = _uiSettings.VerticalTabsCompact;
             _compactModeEnabled = _uiSettings.CompactModeEnabled;
@@ -553,9 +620,7 @@ public sealed partial class MainWindow
             SelectComboByTag(PersonalizationMotionCombo, _uiSettings.PersonalizationMotionStyle, "luminous");
             SelectComboByTag(TabStripPositionCombo, _tabStripPosition, "top");
             SelectComboByTag(BookmarksBarPositionCombo, _bookmarksBarPosition, "top");
-            SelectComboByTag(ChromeLayoutStyleCombo, _chromeLayoutStyle, "classic");
             SelectComboByTag(UiDensityCombo, _uiDensity, "standard");
-            IdentitySpineAutoHideSwitch.IsOn = _uiSettings.IdentitySpineAutoHide;
             InitializeModeAccentColorPickers();
             NewTabFocusSearchSwitch.IsOn = _uiSettings.NewTabFocusSearchOnOpen;
             NewTabShortcutsSwitch.IsOn = _uiSettings.NewTabShortcutsVisible;
@@ -584,7 +649,6 @@ public sealed partial class MainWindow
             UpdateSearchAssistButtonVisibility();
             ApplyCompactModeLayout();
             ApplyVerticalTabsLayout();
-            ApplyChromeLayoutStyle();
             ApplyWindowBackdrop();
             ApplyAccessibilitySettings();
             ApplyUiDensity();
@@ -649,12 +713,7 @@ public sealed partial class MainWindow
             RenderPrivacyWhitelist();
             UpdateModulesPinUi();
             UpdateUsageModeButtonUi();
-            UpdateModeCompanionUi();
-            // Le Compagnon Style Lumora se masque en mode Neutre (voir
-            // UpdateIdentitySpineHomeHeroVisibility) - sans cet appel, changer
-            // de mode en restant sur l'onglet d'accueil ne rafraichissait la
-            // visibilite qu'au prochain changement d'onglet.
-            UpdateIdentitySpineHomeHeroVisibility(CurrentTab());
+            UpdateCompanionButtonUi();
             UpdateAccessibilityQuickButtonUi();
         }
         finally
@@ -678,18 +737,6 @@ public sealed partial class MainWindow
 
     private void ApplyVerticalTabsLayout()
     {
-        // La colonne identitaire possede deja sa propre presentation des
-        // onglets (MainWindow.IdentitySpine.cs) : cette fonction n'a rien a
-        // faire pendant qu'elle est active, et surtout ne doit jamais
-        // reafficher BrowserTabs/VerticalTabsRail par-dessus (bug "double
-        // onglets" signale par l'utilisateur - le declencheur reel n'etait
-        // pas ici mais dans ApplyCompactModeLayout/ApplyFullScreenLayout qui
-        // pouvaient l'appeler independamment).
-        if (_chromeLayoutStyle == "identitySpine")
-        {
-            return;
-        }
-
         _suppressTabNavigation = true;
         try
         {
@@ -706,24 +753,33 @@ public sealed partial class MainWindow
                 return;
             }
 
-            // TopTabsRow ne descend JAMAIS a 0 : c'est la bande de titre reservee
-            // au drag de fenetre + aux boutons systeme (min/max/fermer), comme
-            // Edge/Arc. La mettre a 0 en mode onglets verticaux faisait remonter
-            // NavigationToolbar dans cette zone reservee par Windows, ce qui
-            // rendait ses boutons (bouclier, favoris...) inutilisables - les
-            // clics y etaient interceptes par le chrome systeme de la fenetre.
+            // TopTabsRow reduit puis carrement supprime (2026-08-08 puis 2026-08-09).
+            // Historique du risque : la mettre a 0 avait deja regresse 2 fois avant
+            // le 2026-08-08 (NavigationToolbar remontait dans la zone reservee par
+            // Windows aux boutons systeme, boutons de la capsule interceptes par le
+            // chrome systeme). Le 2026-08-08, palliatif prudent : reduire a
+            // ReducedTitleBarHeightForVerticalTabs (36) au lieu de supprimer.
             //
-            // Repris le 2026-08-08 (retour utilisateur, comparaison avec Chrome
-            // onglets verticaux qui recupere cet espace) : contrairement aux 2
-            // tentatives precedentes qui visaient 0px et regressaient, ceci
-            // REDUIT la hauteur (52 -> ReducedTitleBarHeightForVerticalTabs) sans
-            // la supprimer - la bande de fond des boutons systeme reste presente,
-            // juste plus fine. Seulement quand BrowserTabs n'affiche rien dedans
-            // (onglets verticaux) ; en onglets horizontaux, 52 reste necessaire
-            // pour la vraie barre d'onglets.
+            // Le 2026-08-09 (Go utilisateur explicite apres arbitrage sur le conflit
+            // pilule-arrondie/boutons-carres, voir NavigationToolbarCapsule plus bas) :
+            // vraie suppression (0), cette fois avec les 2 causes de regression
+            // traitees explicitement plutot qu'evitees en gardant une bande non-nulle :
+            // 1) ChromeTitleBackdrop (fond uni derriere les boutons systeme,
+            //    MainWindow.xaml) recoit un RowSpan=2 pour continuer a peindre
+            //    derriere les boutons systeme meme si sa propre ligne (Row 1) n'a
+            //    plus de hauteur - sinon "boutons systeme flottants sans fond".
+            // 2) NavigationToolbarCapsule (la pilule arrondie) perd sa marge et son
+            //    arrondi du HAUT uniquement dans ce mode (voir plus bas, apres
+            //    ApplyTitleBarSafeArea) pour toucher proprement le coin ou Windows
+            //    dessine ses boutons - le bas reste arrondi.
+            // 3) UpdateTitleBarDragRegion confine desormais la zone de drag a la
+            //    marge de securite (safeRight), jamais sur les vrais boutons de la
+            //    barre d'adresse desormais dans cette ligne (voir ce correctif la-bas) -
+            //    c'est la cause du tout premier echec (drag interceptant les clics).
             TopTabsRow.Height = horizontalTabsVisible
                 ? new GridLength(52)
-                : new GridLength(ReducedTitleBarHeightForVerticalTabs);
+                : new GridLength(0);
+            Grid.SetRowSpan(ChromeTitleBackdrop, horizontalTabsVisible ? 1 : 2);
             Grid.SetRow(BrowserTabs, tabsAtBottom ? 5 : 1);
             Grid.SetRow(ModeChromeAccentStrip, tabsAtBottom ? 5 : 1);
             BottomTabsRow.Height = horizontalTabsVisible && tabsAtBottom
@@ -744,11 +800,33 @@ public sealed partial class MainWindow
             RenderVerticalTabs();
             EnforceMinWindowWidth();
             ApplyTitleBarSafeArea();
+            ApplyFlattenedToolbarCapsule(horizontalTabsVisible);
             UpdateTitleBarDragRegion();
         }
         finally
         {
             _suppressTabNavigation = false;
+        }
+    }
+
+    // Coins/marge du HAUT de la capsule d'adresse (2026-08-09) : appelee APRES
+    // ApplyTitleBarSafeArea() pour que _titleBarSafeRight soit a jour (meme
+    // marge de securite que BrowserTabs, pas une valeur inventee). Aplatie
+    // uniquement quand TopTabsRow est a 0 (onglets verticaux, hors colonne
+    // identitaire qui ne passe jamais par cette fonction) - horizontalTabsVisible
+    // restaure la forme d'origine (pilule complete) des que TopTabsRow reprend
+    // sa vraie hauteur de bande d'onglets.
+    private void ApplyFlattenedToolbarCapsule(bool horizontalTabsVisible)
+    {
+        if (horizontalTabsVisible)
+        {
+            NavigationToolbarCapsule.Margin = new Thickness(66, 6, 14, 6);
+            NavigationToolbarCapsule.CornerRadius = new CornerRadius(22);
+        }
+        else
+        {
+            NavigationToolbarCapsule.Margin = new Thickness(66, 0, _titleBarSafeRight, 6);
+            NavigationToolbarCapsule.CornerRadius = new CornerRadius(0, 0, 22, 22);
         }
     }
 
@@ -766,7 +844,6 @@ public sealed partial class MainWindow
         _uiSettings.BookmarksBarPosition = _bookmarksBarPosition;
         _uiSettings.VerticalTabsEnabled = _verticalTabsEnabled;
         _uiSettings.TabStripPosition = _tabStripPosition;
-        _uiSettings.ChromeLayoutStyle = _chromeLayoutStyle;
         _uiSettings.VerticalTabsCompact = _verticalTabsCompact;
         _uiSettings.CompactModeEnabled = _compactModeEnabled;
         _uiSettings.CompactModeHidesBookmarks = CompactModeHideBookmarksSwitch.IsOn;
@@ -825,28 +902,91 @@ public sealed partial class MainWindow
 
     private void ApplyVerticalTabsPresentation()
     {
-        VerticalTabsRail.Padding = _verticalTabsCompact ? new Thickness(4, 8, 4, 8) : new Thickness(8);
-        VerticalTabsActionsPanel.Orientation = _verticalTabsCompact ? Orientation.Vertical : Orientation.Horizontal;
-        VerticalTabsNewTabButton.Width = _verticalTabsCompact ? 54 : double.NaN;
-        VerticalTabsNewTabButton.Height = _verticalTabsCompact ? 50 : double.NaN;
-        VerticalTabsNewTabButton.HorizontalAlignment = _verticalTabsCompact ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
-        VerticalTabsNewTabLabel.Visibility = _verticalTabsCompact ? Visibility.Collapsed : Visibility.Visible;
-        VerticalTabsNewTabButton.Content = _verticalTabsCompact
-            ? CompactRailAction(Symbol.Add, "Onglet")
-            : ExpandedRailAction(Symbol.Add, "Nouvel onglet");
+        // Padding resserré en réduit (round 3, 2026-08-12) : le rail est passé
+        // de 64 à 40px, l'ancien padding (4,8,4,8) ne laissait presque plus
+        // rien pour les tuiles d'onglet. 3px de marge horizontale suffit pour
+        // une tuile de 30px de large (40 - 2×3 = 34, marge de 2px de chaque
+        // côté de la tuile).
+        VerticalTabsRail.Padding = _verticalTabsCompact ? new Thickness(3, 6, 3, 6) : new Thickness(8);
+        ApplyVerticalTabsActionsLayout();
 
-        VerticalTabsCompactButton.Width = _verticalTabsCompact ? 54 : double.NaN;
-        VerticalTabsCompactButton.Height = _verticalTabsCompact ? 50 : double.NaN;
-        VerticalTabsCompactButton.HorizontalAlignment = _verticalTabsCompact ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        VerticalTabsNewTabLabel.Visibility = _verticalTabsCompact ? Visibility.Collapsed : Visibility.Visible;
+        VerticalTabsSearchBox.Visibility = _verticalTabsCompact ? Visibility.Collapsed : Visibility.Visible;
+        VerticalTabsCompactActionsColumn.Visibility = _verticalTabsCompact ? Visibility.Visible : Visibility.Collapsed;
+
         if (_verticalTabsCompact)
         {
-            VerticalTabsCompactButton.Content = CompactRailAction(Symbol.OpenPane, "Liste");
+            // Muet global et recherche n'ont plus de bouton dédié en réduit
+            // (round 3) : accessibles depuis le clic droit du rail, voir
+            // VerticalTabsRailContextMenu_MuteAll / _Search
+            // (MainWindow.LayoutStudio.cs). Seules les 2 actions les plus
+            // fréquentes restent dans la colonne.
+            SetCompactActionButton(VerticalTabsCompactButton, Symbol.OpenPane);
+            SetCompactActionButton(VerticalTabsNewTabButton, Symbol.Add);
         }
         else
         {
+            // ClearValue(PaddingProperty) plutôt qu'une valeur codée en dur : les 3
+            // boutons n'avaient jamais de Padding local avant ce correctif (juste le
+            // padding par défaut du style Button), seule la présentation réduite en
+            // impose un (0, pour les icônes de la colonne - voir SetCompactActionButton). On
+            // revient donc exactement à l'état d'origine plutôt que de deviner sa valeur.
+            VerticalTabsNewTabButton.Width = double.NaN;
+            VerticalTabsNewTabButton.Height = double.NaN;
+            VerticalTabsNewTabButton.ClearValue(Button.PaddingProperty);
+            VerticalTabsNewTabButton.HorizontalAlignment = HorizontalAlignment.Stretch;
+            VerticalTabsNewTabButton.Content = ExpandedRailAction(Symbol.Add, "Nouvel onglet");
+
+            VerticalTabsMuteAllButton.Width = 34;
+            VerticalTabsMuteAllButton.Height = double.NaN;
+            VerticalTabsMuteAllButton.ClearValue(Button.PaddingProperty);
+
+            VerticalTabsCompactButton.Width = double.NaN;
+            VerticalTabsCompactButton.Height = double.NaN;
+            VerticalTabsCompactButton.ClearValue(Button.PaddingProperty);
+            VerticalTabsCompactButton.HorizontalAlignment = HorizontalAlignment.Stretch;
             VerticalTabsCompactButton.Content = ExpandedRailAction(Symbol.ClosePane, "Réduire");
         }
         ToolTipService.SetToolTip(VerticalTabsCompactButton, _verticalTabsCompact ? "Agrandir les onglets verticaux" : "Réduire les onglets verticaux");
+    }
+
+    // Bascule nouvel onglet + réduire/agrandir entre la rangée élargie
+    // (VerticalTabsActionsPanel) et la colonne réduite
+    // (VerticalTabsCompactActionsColumn). Muet global reste toujours dans
+    // VerticalTabsActionsPanel (jamais déplacé, invoqué directement en réduit
+    // via le clic droit - round 3) : seul son panneau parent, masqué en
+    // réduit, change de visibilité. Enfants recréés à chaque appel plutôt que
+    // déplacés au coup par coup : plus simple et sans risque d'ordre
+    // incohérent qu'un suivi manuel de qui est déjà où.
+    private void ApplyVerticalTabsActionsLayout()
+    {
+        VerticalTabsActionsPanel.Children.Clear();
+        VerticalTabsCompactActionsColumn.Children.Clear();
+
+        if (_verticalTabsCompact)
+        {
+            VerticalTabsCompactActionsColumn.Children.Add(VerticalTabsCompactButton);
+            VerticalTabsCompactActionsColumn.Children.Add(VerticalTabsNewTabButton);
+        }
+        else
+        {
+            VerticalTabsActionsPanel.Children.Add(VerticalTabsNewTabButton);
+            VerticalTabsActionsPanel.Children.Add(VerticalTabsMuteAllButton);
+            VerticalTabsActionsPanel.Children.Add(VerticalTabsCompactButton);
+        }
+    }
+
+    // Largeur laissée à Stretch (remplit VerticalTabsCompactActionsColumn,
+    // dont la largeur suit celle du rail - 40px), hauteur fixée à 30px
+    // (assortie à la tuile d'onglet compacte, 28px - voir
+    // MainWindow.TabGroups.cs) : les 2 actions restantes gardent une cible de
+    // clic confortable malgré la colonne étroite.
+    private static void SetCompactActionButton(Button button, Symbol symbol)
+    {
+        button.ClearValue(FrameworkElement.WidthProperty);
+        button.Height = 30;
+        button.Padding = new Thickness(0);
+        button.Content = new SymbolIcon(symbol);
     }
 
     private FrameworkElement ExpandedRailAction(Symbol symbol, string label)
@@ -857,57 +997,11 @@ public sealed partial class MainWindow
         return content;
     }
 
-    private FrameworkElement CompactRailAction(Symbol symbol, string label)
-    {
-        var content = new StackPanel
-        {
-            Orientation = Orientation.Vertical,
-            Spacing = 1,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        content.Children.Add(new SymbolIcon
-        {
-            Symbol = symbol,
-            HorizontalAlignment = HorizontalAlignment.Center
-        });
-        content.Children.Add(new TextBlock
-        {
-            Text = label,
-            FontSize = 9,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextAlignment = TextAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
-        });
-
-        return new Border
-        {
-            Width = 46,
-            Height = 42,
-            CornerRadius = new CornerRadius(8),
-            Background = (Brush)RootShell.Resources["NovaAccentSoftBrush"],
-            BorderBrush = (Brush)RootShell.Resources["NovaChromeStrokeBrush"],
-            BorderThickness = new Thickness(1),
-            Child = content
-        };
-    }
-
     private void ApplyCompactModeLayout()
     {
         if (IsImmersiveFullScreenActive())
         {
             ApplyFullScreenLayout();
-            return;
-        }
-
-        // Meme garde que ApplyVerticalTabsLayout() : la colonne identitaire
-        // gere deja sa propre presentation, cette fonction ne doit pas
-        // reafficher le chrome classique par-dessus (c'etait le declencheur
-        // le plus probable du bug "double onglets" - appelee par tous les
-        // toggles de Reglages, le bouton "Appliquer les changements", et le
-        // menu contextuel Studio Lumora).
-        if (_chromeLayoutStyle == "identitySpine")
-        {
             return;
         }
 
@@ -929,25 +1023,6 @@ public sealed partial class MainWindow
         _bookmarksBarPosition = NormalizeBookmarksBarPosition(_bookmarksBarPosition);
         var hiddenByCompactChoice = _compactModeEnabled && CompactModeHideBookmarksSwitch.IsOn;
         var visible = BookmarksBarSwitch.IsOn && !hiddenByCompactChoice && !IsImmersiveFullScreenActive();
-
-        if (_chromeLayoutStyle == "identitySpine")
-        {
-            // Les favoris ne disparaissent pas, ils rejoignent la colonne
-            // identitaire / la capsule flottante a la place (voir
-            // RenderIdentitySpineBookmarks(), appelee via RenderBookmarksBar()
-            // plus bas) - les conteneurs classiques sont neutralises a plat,
-            // meme logique que le reste du chrome classique en colonne
-            // identitaire.
-            BookmarksRow.Height = new GridLength(0);
-            BookmarksBarRow.Visibility = Visibility.Collapsed;
-            WorkspaceBottomBookmarksRow.Height = new GridLength(0);
-            BookmarksBottomRow.Visibility = Visibility.Collapsed;
-            WorkspaceLeftBookmarksColumn.Width = new GridLength(0);
-            WorkspaceRightBookmarksColumn.Width = new GridLength(0);
-            BookmarksSideRail.Visibility = Visibility.Collapsed;
-            RenderBookmarksBar();
-            return;
-        }
 
         var topVisible = visible && _bookmarksBarPosition == "top";
         var bottomVisible = visible && _bookmarksBarPosition == "bottom";
@@ -1000,18 +1075,6 @@ public sealed partial class MainWindow
             VerticalTabsRail.HorizontalAlignment = _tabStripPosition == "right"
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
-
-            if (_chromeLayoutStyle == "identitySpine")
-            {
-                // Le plein ecran immersif (F11, video) doit aussi masquer la
-                // colonne identitaire - sinon elle resterait affichee
-                // par-dessus une video plein ecran.
-                VerticalTabsRail.Visibility = Visibility.Collapsed;
-                IdentitySpineHost.Visibility = Visibility.Collapsed;
-                IdentitySpineAddressHost.Visibility = Visibility.Collapsed;
-                IdentitySpineHomeHero.Visibility = Visibility.Collapsed;
-                UpdateIdentitySpineContentInset();
-            }
         }
         else
         {
@@ -1023,43 +1086,14 @@ public sealed partial class MainWindow
             FullScreenLeftRevealZone.Visibility = Visibility.Collapsed;
             FullScreenRightRevealZone.Visibility = Visibility.Collapsed;
 
-            if (_chromeLayoutStyle == "identitySpine")
-            {
-                // Symetrique de la branche immersive : on restaure la
-                // colonne identitaire plutot que le chrome classique.
-                // TopTabsRow = 52 (pas 0) : meme correctif que
-                // EnterIdentitySpineLayout (MainWindow.IdentitySpine.cs,
-                // 2026-08-07) - cette ligne reserve aussi la bande de fond
-                // derriere les boutons systeme, pas seulement les onglets.
-                TopTabsRow.Height = new GridLength(52);
-                NavigationRow.Height = new GridLength(0);
-                IdentitySpineHost.Visibility = Visibility.Visible;
-                IdentitySpineAddressHost.Visibility = Visibility.Visible;
-                // BUG REEL trouve en verification (2026-08-07, capture utilisateur) :
-                // seule la barre de favoris revenait apres la sortie du plein ecran,
-                // adresse et navigation portees disparues. Cause - NavigationToolbar
-                // (la capsule adresse/back/forward/reload, reparentee ici dans
-                // IdentitySpineCapsuleSlot par EnterIdentitySpineLayout) est mise en
-                // Collapsed sans condition de style en entrant en plein ecran (ligne
-                // ci-dessus, branche commune), mais seule la branche Classique la
-                // remettait en Visible ci-dessous - IdentitySpineAddressHost (son
-                // conteneur) redevenait bien visible, mais NavigationToolbar restait
-                // Collapsed a l'interieur, invisible malgre un ancetre visible.
-                NavigationToolbar.Visibility = Visibility.Visible;
-                UpdateIdentitySpineHomeHeroVisibility(CurrentTab());
-                UpdateIdentitySpineContentInset();
-            }
-            else
-            {
-                TopTabsRow.Height = new GridLength(52);
-                NavigationRow.Height = new GridLength(ResolveNavigationRowHeight());
-                Grid.SetColumn(VerticalTabsRail, _tabStripPosition == "right" ? 5 : 1);
-                Grid.SetColumnSpan(VerticalTabsRail, 1);
-                VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Stretch;
-                NavigationToolbar.Visibility = Visibility.Visible;
-                BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
-                NavigationToolbar.Padding = ResolveNavigationToolbarPadding();
-            }
+            TopTabsRow.Height = new GridLength(52);
+            NavigationRow.Height = new GridLength(ResolveNavigationRowHeight());
+            Grid.SetColumn(VerticalTabsRail, _tabStripPosition == "right" ? 5 : 1);
+            Grid.SetColumnSpan(VerticalTabsRail, 1);
+            VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Stretch;
+            NavigationToolbar.Visibility = Visibility.Visible;
+            BrowserTabs.Visibility = _verticalTabsEnabled ? Visibility.Collapsed : Visibility.Visible;
+            NavigationToolbar.Padding = ResolveNavigationToolbarPadding();
 
             ApplyBookmarksBarVisibility();
             ApplyVerticalTabsLayout();

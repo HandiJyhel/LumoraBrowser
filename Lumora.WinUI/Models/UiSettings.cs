@@ -25,18 +25,20 @@ internal sealed class UiSettings
     public string BookmarksBarPosition { get; set; } = "top";
     public bool VerticalTabsEnabled { get; set; }
     public string TabStripPosition { get; set; } = "top";
-    // "classic" (tabstrip + toolbar existants) ou "identitySpine" (colonne
-    // verticale identitaire + capsule d'adresse flottante, pilotee par le
-    // Mode d'usage). Purement additif : coexiste avec TabStripPosition, qui
-    // reste la seule source de verite du style "classic".
-    public string ChromeLayoutStyle { get; set; } = "classic";
-    // Masquage automatique de la colonne identitaire (+ capsule), reveles au
-    // survol comme la barre des taches Windows. Opt-in : jamais actif par
-    // defaut, meme en colonne identitaire (decouvrabilite pour un public deja
-    // fragile face aux navigateurs classiques, cf. AGENTS.md).
-    public bool IdentitySpineAutoHide { get; set; } = false;
     public bool VerticalTabsCompact { get; set; }
-    public double VerticalTabsWidth { get; set; } = 230;
+    // 230 -> 310 (2026-08-12) : a 230, la rangee d'actions du rail elargi
+    // ("+ Nouvel onglet" / muet / "Reduire") debordait de l'espace interieur
+    // disponible - le bouton "Reduire" se faisait comprimer a ~26px et
+    // perdait son libelle texte, coupe par le bord du rail (mesure en reel,
+    // skill verify). 310 est le minimum mesure (icone+texte des 3 boutons =
+    // ~287px + ~16px de marges interieures du rail) plus une petite marge,
+    // sans depasser VerticalTabsMaxWidth (320, MainWindow.xaml.cs). Doit
+    // rester coherent avec VerticalTabsDefaultWidth (meme fichier) : c'est
+    // CETTE valeur-ci qui est reellement appliquee au demarrage
+    // (ApplyUiSettings lit _uiSettings.VerticalTabsWidth), le champ
+    // VerticalTabsDefaultWidth ne sert que d'initialiseur avant le
+    // chargement des reglages.
+    public double VerticalTabsWidth { get; set; } = 310;
     public bool CompactModeEnabled { get; set; }
     public bool CompactModeHidesBookmarks { get; set; }
     public bool FullScreenAutoHideChrome { get; set; } = true;
@@ -71,6 +73,12 @@ internal sealed class UiSettings
     // espaces separes avec leurs propres onglets.
     public string UsageMode { get; set; } = "neutral";
     public string LastIntroducedUsageMode { get; set; } = string.Empty;
+    // Interrupteur simple (2026-08-10, demande explicite utilisateur) : le
+    // compagnon n'est plus rattache a l'affichage d'un mode d'usage precis
+    // ("peu importe le mode, il est toujours la"), juste active ou pas. Vrai
+    // par defaut pour ne rien changer au comportement existant tant que
+    // personne n'a explicitement desactive.
+    public bool CompanionEnabled { get; set; } = true;
     public string CompanionBalancedMemo { get; set; } = string.Empty;
     public string CompanionFocusObjective { get; set; } = string.Empty;
     public string CompanionReadingNote { get; set; } = string.Empty;
@@ -81,7 +89,7 @@ internal sealed class UiSettings
     // par defaut du mode, codee en dur dans ResolveModeChromePalette). Le
     // second ton du degrade (CoolAccent/WarmAccent) est toujours derive
     // automatiquement de cette seule couleur (DeriveModeAccentTones,
-    // MainWindow.IdentitySpine.cs), jamais stocke separement. "Equilibre"
+    // MainWindow.ModeAccentColor.cs), jamais stocke separement. "Equilibre"
     // (balanced) n'a pas d'entree ici : hors perimetre de ce palier, garde sa
     // palette par defaut.
     public string ModeAccentColorNeutral { get; set; } = string.Empty;
@@ -368,18 +376,18 @@ internal sealed class UiSettings
         NewTabShortcutsVisible = false;
     }
 
+    // Retour utilisateur du 2026-08-08 (2e session) : la regle "rien
+    // d'epingle par defaut, seuls Bloqueur de pub/Coffre/Favoris restent
+    // visibles" avait ete appliquee a PinnedStartMenuTileIds (ci-dessus)
+    // mais pas ici - un profil migre depuis un ancien reglage recevait
+    // encore 5 modules pre-epingles d'office, contredisant la regle deja
+    // en place ailleurs. Alignee : plus aucun pre-epinglage, meme logique
+    // que le champ (liste vide par defaut pour un profil neuf, ligne 208).
     private void ApplyPinnedModulesMigration(string json)
     {
         if (HasJsonProperty(json, nameof(PinnedModuleIds))) return;
 
-        PinnedModuleIds =
-        [
-            "reader",
-            "notes",
-            "readAloud",
-            "videoDownload",
-            "searchAssist"
-        ];
+        PinnedModuleIds = [];
     }
 
     private static bool HasJsonProperty(string json, string propertyName)

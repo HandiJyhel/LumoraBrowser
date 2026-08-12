@@ -27,7 +27,6 @@ public sealed class AccessibilityRegressionTests
         var passkeys = ReadRepoFile("Lumora.WinUI", "MainWindow.Passkeys.cs");
         var wallet = ReadRepoFile("Lumora.WinUI", "MainWindow.Wallet.cs");
         var vaultQuickAccess = ReadRepoFile("Lumora.WinUI", "MainWindow.VaultQuickAccess.cs");
-        var identitySpine = ReadRepoFile("Lumora.WinUI", "MainWindow.IdentitySpine.cs");
 
         Assert.Contains("Retirer {moduleName} de la barre de modules", usageMode, StringComparison.Ordinal);
         Assert.Contains("Épingler {moduleName} dans la barre de modules", usageMode, StringComparison.Ordinal);
@@ -46,7 +45,6 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("ApplyNovaControlAccessibility(fillBtn, $\"Utiliser la carte {title} sur la page active\")", wallet, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(unlockBtn, \"Deverrouiller le coffre\")", vaultQuickAccess, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(copyTotpBtn, $\"Copier le code TOTP pour", vaultQuickAccess, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(button, $\"Onglet {tab.Title}\")", identitySpine, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -130,15 +128,17 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("Contrôle Alt R recentre le focus sur la zone utile.", settings, StringComparison.Ordinal);
         Assert.Contains("Contrôle Alt S active le mode secours.", settings, StringComparison.Ordinal);
         Assert.Contains("Contrôle Alt X restaure l'état de confort précédent.", settings, StringComparison.Ordinal);
-        // Menus "Mode" et "Confort" fusionnes en un seul point d'entree
-        // (UsageModeButton/UsageModeFlyout) a la demande explicite de
-        // l'utilisateur - AccessibilityQuickButton/AccessibilityQuickFlyout
-        // n'existent plus en tant qu'elements XAML autonomes.
+        // Menu "Accessibilite" independant (2026-08-10, defusion des 3 menus
+        // de la barre du bas - Mode/Compagnon/Accessibilite, demande
+        // explicite utilisateur) - AccessibilityQuickButton/AccessibilityQuickFlyout
+        // n'ont jamais existe en tant qu'elements XAML autonomes,
+        // AccessibilityMenuButton/AccessibilityMenuFlyout portent le sujet.
         Assert.DoesNotContain("x:Name=\"AccessibilityQuickButton\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Name=\"AccessibilityQuickFlyout\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"UsageModeButton\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Opening=\"AccessibilityQuickFlyout_Opening\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Ctrl+Alt+6 et Ctrl+Alt+8", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"AccessibilityMenuButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Opening=\"AccessibilityFlyout_Opening\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Ctrl+Alt+6", xaml, StringComparison.Ordinal);
+        Assert.Contains("Ctrl+Alt+8", xaml, StringComparison.Ordinal);
         Assert.Contains("Ctrl+Alt+F", xaml, StringComparison.Ordinal);
         Assert.Contains("Ctrl+Alt+R", xaml, StringComparison.Ordinal);
         Assert.Contains("Ctrl+Alt+S", xaml, StringComparison.Ordinal);

@@ -2,12 +2,13 @@ using Xunit;
 
 namespace Lumora.Tests;
 
-// Meme style que IdentitySpineVisualIdentityTests/UsageModeVisualIdentityTests :
+// Meme style que UsageModeVisualIdentityTests :
 // assertions structurelles sur le source (pas d'execution UI). Couvre la
 // Taille de l'interface (UiDensity, MainWindow.UiDensity.cs) - reglage
 // utilisateur pour la taille des boutons de la barre d'outils, de la barre
-// d'adresse et de la barre de favoris, hors fenetre Incognito et hors barre
-// d'onglets (hors perimetre).
+// d'adresse, de la barre de favoris et (depuis le 2026-08-09, demande
+// explicite utilisateur) de la barre du bas (StatusBarRow/ApplyFooterDensity),
+// hors fenetre Incognito et hors barre d'onglets (hors perimetre).
 public sealed class UiDensityVisualIdentityTests
 {
     [Fact]
@@ -66,6 +67,33 @@ public sealed class UiDensityVisualIdentityTests
         Assert.Contains("NavigationRowHeight: 72", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("AddressBoxMinHeight: 42", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("BookmarkChipHeight: 36", comfortableBlock, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Barre_du_bas_suit_desormais_la_taille_de_l_interface()
+    {
+        // Demande explicite utilisateur (2026-08-09, chantier "menu confort") :
+        // la barre du bas (StatusBarRow) etait jusque-la hors perimetre de la
+        // Taille de l'interface (tailles figees en dur). "Confortable" reprend
+        // les valeurs historiques (aucune regression), meme principe que les
+        // autres paliers deja verrouilles ci-dessus. Depuis le 2026-08-10 la
+        // barre porte 3 menus independants (Mode/Compagnon/Accessibilite) qui
+        // suivent tous les 3 la meme metrique.
+        var densityCode = ReadRepoFile("Lumora.WinUI", "MainWindow.UiDensity.cs");
+
+        Assert.Contains("ApplyFooterDensity(metrics);", densityCode, StringComparison.Ordinal);
+        Assert.Contains("ModeUsageButton.MinHeight = metrics.FooterPillMinHeight;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("CompanionButton.MinHeight = metrics.FooterPillMinHeight;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("AccessibilityMenuButton.MinHeight = metrics.FooterPillMinHeight;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("StatusText.FontSize = metrics.StatusTextFontSize;", densityCode, StringComparison.Ordinal);
+
+        var comfortableIndex = densityCode.IndexOf("\"comfortable\" => new UiDensityMetrics(", StringComparison.Ordinal);
+        Assert.True(comfortableIndex >= 0, "Palier \"comfortable\" introuvable dans ResolveUiDensityMetrics.");
+        var comfortableBlock = densityCode.Substring(comfortableIndex, Math.Min(1400, densityCode.Length - comfortableIndex));
+
+        Assert.Contains("FooterPillMinHeight: 30", comfortableBlock, StringComparison.Ordinal);
+        Assert.Contains("FooterBoldFontSize: 11.5", comfortableBlock, StringComparison.Ordinal);
+        Assert.Contains("StatusTextFontSize: 12", comfortableBlock, StringComparison.Ordinal);
     }
 
     [Fact]

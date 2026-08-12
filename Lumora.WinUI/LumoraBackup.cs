@@ -14,11 +14,20 @@ namespace Lumora.WinUI;
 //   Version 0x01 (héritée, lue seulement) : clé PBKDF2-SHA256 100k, AES-256-CBC.
 //     [24-39] IV (16) ‖ [40+] ciphertext
 //
-// Le zip contient les fichiers de navigation décryptés (texte brut).
-// Le coffre n'est pas inclus (chiffré séparément).
+// Le zip contient tout ce qui fait le profil, décrypté du DPAPI machine
+// (fichiers .lumora) au moment de l'export : navigation, groupes d'onglets,
+// web apps + icônes, favicons, flux RSS, clés d'accès, avatar, paramètres.
+// Le coffre (mots de passe/cartes) n'est inclus que s'il est en mode "mot de
+// passe maître" (portable) : un coffre resté en mode DPAPI ne se
+// déchiffrerait pas sur une autre machine, voir VaultStore.IsPortable.
 
 internal static class LumoraBackup
 {
+    // Vault* : reflete ce qui a ete decide au moment de l'export, pour que
+    // l'appelant (bouton "Exporter") puisse informer l'utilisateur si le
+    // coffre n'a pas pu etre inclus.
+    public readonly record struct ExportResult(bool VaultIncluded, bool VaultSkippedNotPortable);
+
     private static readonly byte[] Magic = "NOVABAK"u8.ToArray();
     private const byte FormatVersion = 0x02;
     private const byte LegacyFormatVersion = 0x01;
@@ -34,12 +43,15 @@ internal static class LumoraBackup
     private const int Argon2Iterations = 3;
     private const int Argon2Parallelism = 4;
 
-    public static void Export(string destPath, string password, LumoraProfilePaths profile)
+    public static ExportResult Export(string destPath, string password, LumoraProfilePaths profile)
     {
+        var vaultIncluded = false;
+        var vaultSkippedNotPortable = false;
+
         using var zipStream = new MemoryStream();
         using (var zip = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            var manifest = $"{{\"format\":1,\"created_at\":\"{DateTime.UtcNow:O}\"}}";
+            var manifest = $"{{\"format\":2,\"created_at\":\"{DateTime.UtcNow:O}\"}}";
             WriteEntry(zip, "manifest.json", manifest);
 
             WriteProfileEntry(zip, profile.BookmarksFile, "navigation/bookmarks.txt");
@@ -48,10 +60,37 @@ internal static class LumoraBackup
             WriteProfileEntry(zip, profile.AnnotationsFile, "navigation/annotations.txt");
             WriteProfileEntry(zip, profile.TabsFile, "navigation/tabs.txt");
             WriteProfileEntry(zip, profile.UiSettingsFile, "navigation/ui-settings.txt");
+            WriteProfileEntry(zip, profile.SavedTabGroupsFile, "navigation/saved-tab-groups.txt");
+            WriteProfileEntry(zip, profile.SiteRelocationsFile, "navigation/site-relocations.txt");
+            WriteProfileEntry(zip, profile.SemanticIndexFile, "navigation/semantic-index.txt");
+            WriteProfileEntry(zip, profile.DownloadsFile, "navigation/downloads.txt");
+            WriteProfileEntry(zip, profile.PasskeysFile, "navigation/passkeys.txt");
+            WriteProfileEntry(zip, profile.WebAppsFile, "navigation/webapps.txt");
+            WriteProfileEntry(zip, profile.RssFeedsFile, "navigation/rss-feeds.txt");
+
+            WriteDirectoryEntries(zip, profile.FaviconsDir, "navigation/favicons");
+            WriteDirectoryEntries(zip, profile.WebAppIconsDir, "navigation/webapp-icons");
 
             var profileContent = LumoraFile.TryReadAllText(profile.ProfileFile);
             if (profileContent is not null)
                 WriteEntry(zip, "profile.txt", profileContent);
+
+            var avatarPath = ProfileAvatarResolver.Find(profile.ProfileDir);
+            if (avatarPath is not null)
+                WriteBinaryEntry(zip, "avatar" + Path.GetExtension(avatarPath), File.ReadAllBytes(avatarPath));
+
+            if (File.Exists(profile.VaultFile))
+            {
+                if (VaultStore.IsPortable(profile.VaultFile))
+                {
+                    WriteEntry(zip, "vault.lumora", File.ReadAllText(profile.VaultFile, Encoding.UTF8));
+                    vaultIncluded = true;
+                }
+                else
+                {
+                    vaultSkippedNotPortable = true;
+                }
+            }
         }
 
         var salt  = RandomNumberGenerator.GetBytes(SaltSize);
@@ -71,6 +110,8 @@ internal static class LumoraBackup
         file.Write(nonce);
         file.Write(tag);
         file.Write(cipher);
+
+        return new ExportResult(vaultIncluded, vaultSkippedNotPortable);
     }
 
     public static void Import(string srcPath, string password, LumoraProfilePaths profile)
@@ -112,12 +153,46 @@ internal static class LumoraBackup
             ReadProfileEntry(zip, "navigation/annotations.txt", profile.AnnotationsFile);
             ReadProfileEntry(zip, "navigation/tabs.txt", profile.TabsFile);
             ReadProfileEntry(zip, "navigation/ui-settings.txt", profile.UiSettingsFile);
+            ReadProfileEntry(zip, "navigation/saved-tab-groups.txt", profile.SavedTabGroupsFile);
+            ReadProfileEntry(zip, "navigation/site-relocations.txt", profile.SiteRelocationsFile);
+            ReadProfileEntry(zip, "navigation/semantic-index.txt", profile.SemanticIndexFile);
+            ReadProfileEntry(zip, "navigation/downloads.txt", profile.DownloadsFile);
+            ReadProfileEntry(zip, "navigation/passkeys.txt", profile.PasskeysFile);
+            ReadProfileEntry(zip, "navigation/webapps.txt", profile.WebAppsFile);
+            ReadProfileEntry(zip, "navigation/rss-feeds.txt", profile.RssFeedsFile);
+
+            ReadDirectoryEntries(zip, "navigation/favicons/", profile.FaviconsDir);
+            ReadDirectoryEntries(zip, "navigation/webapp-icons/", profile.WebAppIconsDir);
 
             var profileEntry = zip.GetEntry("profile.txt");
             if (profileEntry is not null)
             {
                 using var reader = new StreamReader(profileEntry.Open(), Encoding.UTF8);
                 LumoraFile.WriteAllText(profile.ProfileFile, reader.ReadToEnd());
+            }
+
+            var avatarEntry = zip.Entries.FirstOrDefault(entry =>
+                entry.FullName.StartsWith("avatar.", StringComparison.Ordinal));
+            if (avatarEntry is not null)
+            {
+                Directory.CreateDirectory(profile.ProfileDir);
+                foreach (var ext in ProfileAvatarResolver.Extensions)
+                {
+                    var existing = Path.Combine(profile.ProfileDir, "avatar" + ext);
+                    if (File.Exists(existing)) File.Delete(existing);
+                }
+                using var destStream = File.Create(Path.Combine(profile.ProfileDir, avatarEntry.FullName));
+                using var avatarStream = avatarEntry.Open();
+                avatarStream.CopyTo(destStream);
+            }
+
+            var vaultEntry = zip.GetEntry("vault.lumora");
+            if (vaultEntry is not null)
+            {
+                using var reader = new StreamReader(vaultEntry.Open(), Encoding.UTF8);
+                var dir = Path.GetDirectoryName(profile.VaultFile);
+                if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
+                File.WriteAllText(profile.VaultFile, reader.ReadToEnd(), Encoding.UTF8);
             }
         }
         catch (InvalidDataException)
@@ -196,5 +271,38 @@ internal static class LumoraBackup
         if (zipEntry is null) return;
         using var reader = new StreamReader(zipEntry.Open(), Encoding.UTF8);
         LumoraFile.WriteAllText(destinationPath, reader.ReadToEnd());
+    }
+
+    // Fichiers binaires (favicons, icônes de web apps, avatar) : copiés tels
+    // quels, aucun n'est protégé par DPAPI (contrairement aux .lumora).
+    private static void WriteBinaryEntry(ZipArchive zip, string name, byte[] content)
+    {
+        var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
+        using var stream = entry.Open();
+        stream.Write(content, 0, content.Length);
+    }
+
+    private static void WriteDirectoryEntries(ZipArchive zip, string dirPath, string zipDirPrefix)
+    {
+        if (!Directory.Exists(dirPath)) return;
+        foreach (var filePath in Directory.GetFiles(dirPath))
+            WriteBinaryEntry(zip, $"{zipDirPrefix}/{Path.GetFileName(filePath)}", File.ReadAllBytes(filePath));
+    }
+
+    private static void ReadDirectoryEntries(ZipArchive zip, string zipDirPrefix, string destDir)
+    {
+        var entries = zip.Entries
+            .Where(entry => entry.FullName.StartsWith(zipDirPrefix, StringComparison.Ordinal))
+            .ToList();
+        if (entries.Count == 0) return;
+
+        Directory.CreateDirectory(destDir);
+        foreach (var entry in entries)
+        {
+            var destPath = Path.Combine(destDir, Path.GetFileName(entry.FullName));
+            using var destStream = File.Create(destPath);
+            using var entryStream = entry.Open();
+            entryStream.CopyTo(destStream);
+        }
     }
 }

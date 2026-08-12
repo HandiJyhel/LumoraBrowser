@@ -53,7 +53,6 @@ public sealed partial class MainWindow
         AddressBox.Text = DisplayAddressForBar(tab.Address);
         UpdateBookmarkStar(tab.Address);
         ShowPanel(BrowserPanel, tab.Title);
-        UpdateIdentitySpineHomeHeroVisibility(tab);
 
         foreach (var other in _tabs)
         {
@@ -354,6 +353,11 @@ public sealed partial class MainWindow
         // Popups / target=_blank / window.open : ouvrir dans un onglet Lumora au lieu
         // d'une fenêtre parasite non contrôlée.
         sender.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+
+        // Menu contextuel (clic droit) restylise a l'identite Lumora
+        // (chantier identite visuelle, 2026-08-10) - voir
+        // MainWindow.PageContextMenu.cs.
+        sender.CoreWebView2.ContextMenuRequested += CoreWebView2_ContextMenuRequested;
 
         // Scripts privacy + passkeys + capture d'identifiants : chaque moteur reçoit
         // les siens (un WebView2 par onglet). Attendus avant la navigation ci-dessous :
@@ -1097,7 +1101,6 @@ public sealed partial class MainWindow
         {
             AddressBox.Text = DisplayAddressForBar(address);
             UpdateBookmarkStar(address);
-            UpdateIdentitySpineHomeHeroVisibility(tab);
         }
 
         SaveTabSession();

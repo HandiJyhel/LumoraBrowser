@@ -11,18 +11,12 @@ public sealed partial class MainWindow
     // (IncognitoProcessLauncher), pas une fenetre in-process : voir
     // LumoraIncognitoWindow pour le pourquoi (fiabilite WebView2).
 
+    // Point d'entree partage : menu Lumora, Menu Demarrer et icone de la
+    // capsule d'outils (IncognitoToolbarButton, MainWindow.xaml, deplacee du
+    // flyout "Mode et confort" le 2026-08-09) appellent tous ce meme
+    // gestionnaire, aucune logique de lancement dupliquee.
     private void IncognitoWindowMenu_Click(object sender, RoutedEventArgs e) =>
         OpenIncognitoWindow();
-
-    // Entree du selecteur de mode (Neutre/Equilibre/Focus/.../Incognito) : place
-    // a cote des autres modes pour l'ergonomie, mais n'en est pas un au sens
-    // strict - ca n'appelle jamais ApplyUsageModeFromUi, ca ouvre juste la
-    // fenetre a part comme le ferait le menu ou le raccourci clavier.
-    private void UsageModeIncognitoButton_Click(object sender, RoutedEventArgs e)
-    {
-        UsageModeFlyout.Hide();
-        OpenIncognitoWindow();
-    }
 
     private void IncognitoWindowAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {

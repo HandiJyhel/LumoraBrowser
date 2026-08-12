@@ -50,11 +50,21 @@ public static class StartMenuTileRegistry
         // Ouvre directement Confidentialite > Publicites et traceurs
         // (OpenAdBlockerSettings, MainWindow.xaml.cs), pas la vue
         // d'ensemble de Confidentialite.
-        new(StartMenuTileIds.AdBlocker, "Confidentialité", "Bloqueur de pub", "Publicités et traceurs", ""),
+        // Glyphe corrige (2026-08-12, retour utilisateur) : dupliquait E72E
+        // (cadenas) avec Coffre - stocke comme caractere Unicode brut au lieu
+        // de l'echappement C# "\uXXXX" utilise partout ailleurs dans ce
+        // fichier, ce qui le rendait invisible a l'inspection texte (zone
+        // privee Unicode, aucun glyphe hors police Segoe MDL2). EA18, meme
+        // bouclier deja verifie sur ShieldButton (barre d'outils).
+        new(StartMenuTileIds.AdBlocker, "Confidentialité", "Bloqueur de pub", "Publicités et traceurs", "\uEA18"),
         new(StartMenuTileIds.Passkeys, "Confidentialité", "Passkeys", "Sans mot de passe", "\uE8D7"),
         new(StartMenuTileIds.Sessions, "Confidentialité", "Sessions", "Connexions actives", "\uE7F4"),
         new(StartMenuTileIds.Wallet, "Confidentialité", "Portefeuille", "Cartes locales", "\uE8C7"),
-        new(StartMenuTileIds.Incognito, "Confidentialité", "Incognito", "Nouvelle fenêtre privée", "\uE72E"),
+        // Glyphe corrige (2026-08-12, retour utilisateur) : dupliquait aussi
+        // E72E (cadenas) avec Coffre. E890, deja verifie dans ce depot
+        // (icone "oeil", AccessibilityQuickVisionButton) - distinct du
+        // cadenas.
+        new(StartMenuTileIds.Incognito, "Confidentialité", "Incognito", "Nouvelle fenêtre privée", "\uE890"),
         new(StartMenuTileIds.SiteControl, "Confidentialité", "Site actuel", "Centre de contrôle", "\uE774"),
 
         new(StartMenuTileIds.Favoris, "Navigation", "Favoris", "Enregistrés", "\uE735"),
@@ -68,16 +78,36 @@ public static class StartMenuTileRegistry
         new(StartMenuTileIds.Profiles, "Lumora et profil", "Profils locaux", "PIN, verrouillage", "\uE77B"),
         new(StartMenuTileIds.About, "Lumora et profil", "À propos", "Version, licences", "\uE946"),
         new(StartMenuTileIds.Studio, "Lumora et profil", "Studio", "Position des onglets/favoris", "\uE82D"),
-        // Decouvrabilite du Style Lumora (2026-08-07) : distinct de "Studio"
-        // (qui regle les POSITIONS - haut/bas/gauche/droite - dans le style
-        // deja choisi) - cette tuile mene directement au choix du style
-        // lui-meme (Classique <-> Style Lumora), auparavant a 4 clics de
-        // profondeur sans aucune mise en avant.
-        new(StartMenuTileIds.ChromeStyle, "Lumora et profil", "Style Lumora", "Colonne identitaire ou classique", "\uE771"),
     ];
 
     public static StartMenuTileDefinition? Find(string id) =>
         All.FirstOrDefault(t => string.Equals(t.Id, id, StringComparison.Ordinal));
+
+    // Famille de sens d'une section (chantier identite visuelle, 2026-08-10) :
+    // "content" = ce qui est a vous (Navigation : favoris, historique,
+    // telechargements...), "protection" = ce qui vous protege
+    // (Confidentialite), "tools" = ce qui vous aide a agir sur le contenu
+    // (Lecture et contenu, Modules), "identity" = Lumora lui-meme (Lumora et
+    // profil). "Epingles" (categorie synthetique, pas une section du
+    // registre) reste seule sur le degrade neutre - chaque tuile y garde sa
+    // propre famille (Parametres suit desormais "identity" comme partout
+    // ailleurs). Fonction pure : le rendu (resolution en Brush) reste cote UI
+    // (MainWindow.StartMenu.cs), voir la meme separation que ScoreTile.
+    //
+    // "Lumora et profil" corrige (2026-08-12, retour utilisateur : "Paramètres"
+    // epingle et la categorie elle-meme restaient au degrade neutre terne,
+    // contraste net avec les 3 familles vives ci-dessus) - violet dedie
+    // (NovaTileFamilyIdentityBrush), plutot que de laisser cette categorie
+    // hors du systeme de couleur introduit le 10/08.
+    public static string? ResolveFamilyKey(string section) => section switch
+    {
+        "Navigation" => "content",
+        "Confidentialité" => "protection",
+        "Lecture et contenu" => "tools",
+        "Modules" => "tools",
+        "Lumora et profil" => "identity",
+        _ => null,
+    };
 
     // Meme forme que ScoreCommandPaletteItem (MainWindow.CommandPalette.cs) :
     // requete vide -> tout passe (ordre du registre) ; sinon score par

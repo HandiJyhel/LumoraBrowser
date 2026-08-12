@@ -15,6 +15,7 @@ public sealed partial class MainWindow
         WizardSearchDuckDuckGo.IsChecked = _uiSettings.SearchEngine == "duckduckgo";
         WizardSearchBrave.IsChecked     = _uiSettings.SearchEngine == "brave";
         WizardSearchBing.IsChecked      = _uiSettings.SearchEngine == "bing";
+        SelectWizardTabsOrientation();
         SelectWizardUsageMode(_uiSettings.UsageMode);
         SelectWizardModules();
         _suppressUiSettingsSave = false;
@@ -24,15 +25,17 @@ public sealed partial class MainWindow
 
     private void UpdateWizardStep()
     {
-        WizardStepIndicator.Text = $"Étape {_wizardStep + 1} / 4";
+        WizardStepIndicator.Text = $"Étape {_wizardStep + 1} / 6";
         WizardStep0.Visibility = _wizardStep == 0 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep1.Visibility = _wizardStep == 1 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep2.Visibility = _wizardStep == 2 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep3.Visibility = _wizardStep == 3 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep4.Visibility = _wizardStep == 4 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep5.Visibility = _wizardStep == 5 ? Visibility.Visible : Visibility.Collapsed;
         WizardPrevButton.IsEnabled = _wizardStep > 0;
-        WizardNextButton.Content = _wizardStep == 3 ? "Terminer" : "Suivant";
+        WizardNextButton.Content = _wizardStep == 5 ? "Terminer" : "Suivant";
 
-        if (_wizardStep == 3)
+        if (_wizardStep == 5)
         {
             WizardSummarySearch.Text = "Moteur de recherche : " + _uiSettings.SearchEngine switch
             {
@@ -41,6 +44,8 @@ public sealed partial class MainWindow
                 "bing"       => "Bing",
                 _            => "Google",
             };
+            WizardSummaryTabs.Text = "Disposition des onglets : "
+                + (WizardTabsVertical.IsChecked == true ? "Verticaux" : "Horizontaux");
             WizardSummaryUsage.Text = "Mode d'usage : " + UsageModeDisplayName(_uiSettings.UsageMode);
             WizardSummaryModules.Text = _uiSettings.PinnedModuleIds.Count == 0
                 ? "Modules visibles : aucun module impose"
@@ -59,7 +64,7 @@ public sealed partial class MainWindow
 
     private void WizardNextButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_wizardStep < 3)
+        if (_wizardStep < 5)
         {
             _wizardStep++;
             UpdateWizardStep();
@@ -68,6 +73,65 @@ public sealed partial class MainWindow
         {
             FinishWizard();
         }
+    }
+
+    // Import direct d'une sauvegarde depuis l'assistant (etape "Profil
+    // existant ?") : reutilise le meme flux que le bouton Parametres >
+    // Stockage. En cas de succes, le profil importe a deja son moteur de
+    // recherche/mode d'usage/disposition d'onglets - inutile de continuer
+    // a les demander, l'assistant se termine directement.
+    private async void WizardImportBackupButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (await RunImportBackupFlowAsync())
+        {
+            await FinishWizardAfterImportAsync();
+        }
+    }
+
+    private async Task FinishWizardAfterImportAsync()
+    {
+        // ui-settings.lumora vient d'etre remplace par celui de la sauvegarde :
+        // recharge en memoire avant de fermer l'assistant, sinon FinishWizard()
+        // ecraserait les valeurs importees avec celles encore en memoire (issues
+        // du profil neuf, jamais reconciliees avec le fichier tout juste importe).
+        _uiSettings = UiSettings.Load(_profile.UiSettingsFile, _profile.LegacyUiSettingsFile);
+        _uiSettings.SetupWizardCompleted = true;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        SetupWizardOverlay.Visibility = Visibility.Collapsed;
+        ApplyUiSettings();
+        RefreshNovaHomePages();
+
+        var dialog = new ContentDialog
+        {
+            Title = "Sauvegarde importée",
+            Content = "Vos favoris, onglets, coffre et réglages ont été restaurés. Redémarrez Lumora pour que tout s'applique correctement.",
+            PrimaryButtonText = "Fermer Lumora",
+            CloseButtonText = "Plus tard",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            Application.Current.Exit();
+    }
+
+    private void WizardTabsOrientation_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        if (sender is RadioButton rb && rb.Tag is string position)
+        {
+            _uiSettings.TabStripPosition = position;
+            _uiSettings.VerticalTabsEnabled = position is "left" or "right";
+        }
+    }
+
+    private void SelectWizardTabsOrientation()
+    {
+        var position = string.IsNullOrWhiteSpace(_uiSettings.TabStripPosition)
+            ? (_uiSettings.VerticalTabsEnabled ? "left" : "top")
+            : _uiSettings.TabStripPosition;
+        var vertical = position is "left" or "right";
+        WizardTabsHorizontal.IsChecked = !vertical;
+        WizardTabsVertical.IsChecked = vertical;
     }
 
     private void WizardSearch_Checked(object sender, RoutedEventArgs e)
@@ -169,6 +233,8 @@ public sealed partial class MainWindow
             "webApps" => "applications web",
             "dictation" => "dictee",
             "detachVideo" => "video detachee",
+            "rss" => "flux RSS",
+            "readingLens" => "loupe de lecture",
             _ => moduleId
         };
 }

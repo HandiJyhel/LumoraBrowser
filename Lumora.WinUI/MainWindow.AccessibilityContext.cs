@@ -120,8 +120,9 @@ public sealed partial class MainWindow
             }
 
             if (IsDescendantOf(dependencyObject, StatusBarRow) ||
-                IsDescendantOf(dependencyObject, ModeCompanionButton) ||
-                IsDescendantOf(dependencyObject, UsageModeButton) ||
+                IsDescendantOf(dependencyObject, ModeUsageButton) ||
+                IsDescendantOf(dependencyObject, CompanionButton) ||
+                IsDescendantOf(dependencyObject, AccessibilityMenuButton) ||
                 IsDescendantOf(dependencyObject, ProfileStatusButton))
             {
                 return AccessibilityShellZone.Companion;

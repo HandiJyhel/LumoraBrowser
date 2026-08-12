@@ -72,6 +72,23 @@ internal sealed class VaultStore
 
     public bool HasMasterPassword => _header.Mode == "aes256";
 
+    // Verifie si un coffre est portable (mot de passe maitre Argon2id,
+    // independant de la machine) sans le deverrouiller ni charger d'instance -
+    // utilise par LumoraBackup pour decider si le coffre peut rejoindre la
+    // sauvegarde .lumorabackup. Un coffre en mode "dpapi" (aucun mot de passe
+    // maitre defini) ne se dechiffrerait pas sur une autre machine/compte.
+    public static bool IsPortable(string vaultFile)
+    {
+        try
+        {
+            if (!File.Exists(vaultFile)) return false;
+            var outer = File.ReadAllText(vaultFile, Encoding.UTF8);
+            var header = JsonSerializer.Deserialize<VaultHeader>(outer, JsonOpts);
+            return header?.Mode == "aes256";
+        }
+        catch { return false; }
+    }
+
     // Verrouillé = mode AES activé ET clé non encore fournie (Unlock() pas appelé)
     public bool IsLocked => HasMasterPassword && _unlockedKey is null && _recoveryDataKey is null;
 

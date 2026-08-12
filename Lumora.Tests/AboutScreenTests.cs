@@ -2,7 +2,7 @@ using Xunit;
 
 namespace Lumora.Tests;
 
-// Meme style que IdentitySpineVisualIdentityTests/UiDensityVisualIdentityTests :
+// Meme style que UiDensityVisualIdentityTests :
 // assertions structurelles sur le source (pas d'execution UI). Couvre la
 // fusion des onglets "Technique" et "Profil local" de l'ecran A propos en un
 // seul onglet "Technique et profil" (demande utilisateur du 2026-08-05 : les

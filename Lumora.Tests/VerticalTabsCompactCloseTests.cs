@@ -15,10 +15,17 @@ namespace Lumora.Tests;
 // qu'il faut survoler. Deuxieme version (pastille 16x16 dans le coin de
 // l'icone) jugee trop serree (2026-08-08, Google Chrome cite en reference
 // pour la TAILLE de cible - pas pour son "hover uniquement", deja rejete).
-// Troisieme version, actuelle : croix large et centree (30x30 dans une
-// tuile 44x38), meme reglage d'opacite 0.6/1 deja prouve suffisant pour la
-// decouvrabilite, juste une cible bien plus grande - validee via maquette
-// HTML avant implementation.
+// Troisieme version : croix large et centree (24x24 dans une tuile 44x38),
+// meme reglage d'opacite 0.6/1 deja prouve suffisant pour la decouvrabilite,
+// juste une cible bien plus grande - validee via maquette HTML avant
+// implementation.
+//
+// Quatrieme version, actuelle (round 3, 2026-08-12) : tuile et croix
+// reduites une 2e fois (44x38 -> 30x28, croix 24x24 -> 18x18) suite a un
+// retour utilisateur avec capture d'ecran d'un rail Edge reel a l'appui -
+// avec ~15 onglets/session, meme la tuile 44x38 restait trop large. Taille
+// reduite PROPORTIONNELLEMENT a la tuile (~30%), pas re-arbitree a part :
+// le debat "24 vs 30 vs 20" ci-dessus reste tranche, seule l'echelle change.
 public sealed class VerticalTabsCompactCloseTests
 {
     [Fact]
@@ -39,11 +46,11 @@ public sealed class VerticalTabsCompactCloseTests
         Assert.Contains("compactClose.Opacity = 1; icon.Opacity = 0.3;", compactBranch, StringComparison.Ordinal);
         Assert.Contains("compactClose.Opacity = 0.6; icon.Opacity = 1;", compactBranch, StringComparison.Ordinal);
 
-        // Cible agrandie (2026-08-08) : 24x24 au lieu des 20x20 d'origine
-        // ("trop serree"), redescendue depuis un premier essai a 30x30
-        // ("trop imposant" en usage reel le meme jour).
-        Assert.Contains("Width = 24,", compactBranch, StringComparison.Ordinal);
-        Assert.Contains("Height = 24,", compactBranch, StringComparison.Ordinal);
+        // Cible reduite proportionnellement (round 3, 2026-08-12) : 18x18,
+        // suite au resserrement de la tuile elle-meme (44x38 -> 30x28) - voir
+        // le commentaire d'en-tete pour l'historique complet des tailles.
+        Assert.Contains("Width = 18,", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("Height = 18,", compactBranch, StringComparison.Ordinal);
     }
 
     // Verrouille que le bouton reutilise bien le meme gestionnaire que la

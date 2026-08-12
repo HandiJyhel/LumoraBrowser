@@ -91,8 +91,10 @@ public sealed partial class MainWindow
 
         try
         {
-            LumoraBackup.Export(file.Path, password, _profile);
-            StatusText.Text = "Sauvegarde exportée avec succès.";
+            var result = LumoraBackup.Export(file.Path, password, _profile);
+            StatusText.Text = result.VaultSkippedNotPortable
+                ? "Sauvegarde exportée. Coffre non inclus : définissez un mot de passe maître dans le coffre pour qu'il devienne portable."
+                : "Sauvegarde exportée avec succès.";
         }
         catch (Exception ex)
         {
@@ -102,7 +104,21 @@ public sealed partial class MainWindow
 
     private async void ImportBackupButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
+        if (await RunImportBackupFlowAsync())
+        {
+            StorageImportBar.IsOpen = true;
+            StatusText.Text = "Sauvegarde importée.";
+        }
+    }
+
+    // Flux d'import partage entre le bouton Parametres > Stockage et l'etape
+    // "Profil existant ?" de l'assistant de premier lancement
+    // (MainWindow.SetupWizard.cs). Renvoie true si l'import a reussi ; met a
+    // jour StatusText en cas d'echec/annulation, laisse l'appelant gerer la
+    // suite en cas de succes (les deux appelants ont un apres-import different).
+    private async Task<bool> RunImportBackupFlowAsync()
+    {
+        if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return false; }
 
         var picker = new FileOpenPicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
@@ -111,25 +127,26 @@ public sealed partial class MainWindow
         picker.FileTypeFilter.Add(".novabackup");
 
         var file = await picker.PickSingleFileAsync();
-        if (file is null) return;
+        if (file is null) return false;
 
         var password = await PromptBackupPasswordAsync("Importer une sauvegarde", confirm: false);
-        if (password is null) return;
+        if (password is null) return false;
 
         try
         {
             LumoraBackup.Import(file.Path, password, _profile);
             ReloadBookmarks();
-            StorageImportBar.IsOpen = true;
-            StatusText.Text = "Sauvegarde importée.";
+            return true;
         }
         catch (CryptographicException)
         {
             StatusText.Text = "Mot de passe incorrect ou sauvegarde corrompue.";
+            return false;
         }
         catch (Exception ex)
         {
             StatusText.Text = $"Erreur lors de l'import : {ex.Message}";
+            return false;
         }
     }
 

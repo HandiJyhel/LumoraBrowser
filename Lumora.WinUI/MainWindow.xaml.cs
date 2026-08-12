@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.17.2-dev";
+    internal const string Version = "0.93.27.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -50,9 +50,22 @@ public sealed partial class MainWindow : Window
     // aujourd'hui) ; a renseigner ("1.0.0") au moment precis de couper une
     // vraie release, pour que l'ecran A propos n'affiche plus que ce numero.
     internal const string? ReleaseVersion = null;
-    private const double VerticalTabsCompactWidth = 64;
+    // 64 -> 40 (round 3, 2026-08-12) : retour utilisateur avec capture d'ecran
+    // d'un vrai rail Edge reduit a l'appui - notre grille 2x2 de 4 icones
+    // n'existait que pour loger 4 boutons d'action dans le rail. Ces 4
+    // boutons sont retombes a 2 (agrandir, nouvel onglet - les plus
+    // frequents) empiles en colonne simple ; muet global et recherche
+    // rejoignent le menu clic droit du rail (deja cable, voir
+    // WorkspaceLayoutSurface_RightTapped). 40px correspond a peu pres a la
+    // largeur d'un favicon + marge, comme la reference montree.
+    private const double VerticalTabsCompactWidth = 40;
     private const double VerticalTabsMinExpandedWidth = 120;
-    private const double VerticalTabsDefaultWidth = 210;
+    // Valeur alignee sur UiSettings.VerticalTabsWidth (Models/UiSettings.cs) -
+    // voir le commentaire la-bas pour le detail de la mesure (2026-08-12).
+    // Cette constante ne sert que d'initialiseur avant chargement des
+    // reglages ; UiSettings.VerticalTabsWidth est la valeur reellement
+    // appliquee au demarrage.
+    private const double VerticalTabsDefaultWidth = 310;
     private const double VerticalTabsMaxWidth = 320;
 
     private readonly LumoraProfilePaths _profile = LumoraProfilePaths.Default();
@@ -102,25 +115,34 @@ public sealed partial class MainWindow : Window
     // par le lanceur), il faut entrer en mode invite immediatement sans
     // montrer le picker de profil. Voir InitializeLoginOverlayAsync.
     private readonly bool _pendingGuestLaunch;
+    // Vrai tant que la page de demarrage (ApplyStartupPage, notamment la
+    // restauration des onglets de la derniere session) n'a pas encore ete
+    // appliquee. Trouve en usage reel le 2026-08-12 : ApplyStartupPage() etait
+    // appele directement dans le constructeur, AVANT InitializeLoginOverlayAsync -
+    // un onglet restaure (site necessitant une connexion Google, par exemple)
+    // commencait donc a charger et executer son JS derriere l'ecran de connexion,
+    // avant meme que le profil soit deverrouille (StopAllTabNavigations, appele
+    // seulement une fois l'ecran affiche, arrivait trop tard pour les requetes
+    // deja parties). Desormais ApplyStartupPage() n'est declenche qu'a la sortie
+    // reussie de l'ecran de connexion (DismissLoginOverlay), une seule fois par
+    // process - un reverrouillage/deverrouillage en cours de session (LockSessionNow)
+    // ne doit pas re-restaurer/dupliquer les onglets deja ouverts.
+    private bool _pendingStartupPageApply = true;
     private bool _verticalTabsEnabled;
     private bool _verticalTabsCompact;
+    // Recherche + coupe-son global du rail d'onglets verticaux (2026-08-12,
+    // comparaison utilisateur avec Edge) : etat de session, pas persiste
+    // (comme _verticalTabsCompact, remis a zero a chaque redemarrage).
+    private string _verticalTabsFilter = string.Empty;
+    private bool _allTabsMuted;
     private bool _compactModeEnabled;
     private string _tabStripPosition = "top";
     private string _bookmarksBarPosition = "top";
-    // Style de disposition du chrome ("classic" | "identitySpine") : coexiste
-    // avec _tabStripPosition, qui reste la seule source de verite du style
-    // classique. _identitySpineActive reflete l'etat physique reel (chrome
-    // deja reparente ou non) pour rendre ApplyChromeLayoutStyle() idempotent
-    // - voir MainWindow.IdentitySpine.cs.
-    private string _chromeLayoutStyle = "classic";
-    private bool _identitySpineActive;
     // Taille de l'interface (boutons de la barre d'outils, ligne d'outils,
     // barre d'adresse, barre de favoris) : "comfortable" | "standard" |
     // "dense", voir MainWindow.UiDensity.cs. Reglage independant du Mode
     // d'usage et de _compactModeEnabled.
     private string _uiDensity = "standard";
-    private bool _navigationToolbarCapsuleMarginCaptured;
-    private Thickness _navigationToolbarCapsuleClassicMargin;
     private bool _isFullScreenMode;
     private string _lastAnnouncedStatus = string.Empty;
     private DateTimeOffset _lastStatusAnnouncementAt = DateTimeOffset.MinValue;
@@ -400,9 +422,13 @@ public sealed partial class MainWindow : Window
         AddressSuggestionsList.ItemsSource = _addressSuggestionItems;
         WinUiRuntimeTrace.Write("History store loaded");
         LoadPasskeys();
-        ApplyStartupPage();
-
-        WinUiRuntimeTrace.Write("Initial tab ready");
+        // ApplyStartupPage() (restauration des onglets de la derniere session,
+        // donc navigation reseau reelle vers des sites externes) N'EST PLUS
+        // appele ici : differe a DismissLoginOverlay() pour qu'aucun onglet ne
+        // commence a charger avant que l'ecran de connexion soit deverrouille
+        // (voir _pendingStartupPageApply). ShowPanel bascule quand meme sur le
+        // panneau navigateur (vide pour l'instant) : LoginOverlay le recouvre
+        // entierement (fond opaque) tant que le profil n'est pas deverrouille.
         ShowPanel(BrowserPanel, "Accueil Lumora");
         _suppressTabSave = false;
         WinUiRuntimeTrace.Write("MainWindow constructor end");
@@ -460,6 +486,15 @@ public sealed partial class MainWindow : Window
         var tab = CurrentTab();
         if (tab is null)
         {
+            // Si l'ecran de connexion n'est pas encore deverrouille,
+            // ApplyStartupPage() (differe a DismissLoginOverlay, voir
+            // _pendingStartupPageApply) creera bientot le ou les bons onglets -
+            // ne pas ajouter ici un "Nouvel onglet" de secours qui se retrouverait
+            // en double a cote des onglets restaures des que l'utilisateur se
+            // connecte. L'activation de la fenetre (qui appelle cette methode)
+            // peut survenir avant la decision de InitializeLoginOverlayAsync.
+            if (_pendingStartupPageApply) return;
+
             AddTab("Nouvel onglet", "lumora://accueil", select: true);
             return;
         }
@@ -769,22 +804,6 @@ public sealed partial class MainWindow : Window
         SettingsNav_Click(SettingsNavNavigation, new RoutedEventArgs());
     }
 
-    // Decouvrabilite du Style Lumora (2026-08-07, retour utilisateur : le
-    // reglage etait a 4 clics de profondeur sans jamais etre mis en avant).
-    // Distinct de OpenWorkspaceSettings ("Studio", qui regle les POSITIONS -
-    // haut/bas/gauche/droite - dans le style deja choisi) : celle-ci ouvre
-    // directement le sous-onglet "Disposition" de "Mon Lumora", ou vit
-    // ChromeLayoutStyleCombo (Classique <-> Style Lumora).
-    private void OpenChromeStyleSettings()
-    {
-        StorageCurrentFolderText.Text = _profile.ProfileDir;
-        ShowPanel(SettingsPanel, "Mon Lumora");
-        SettingsNavAppearance.IsChecked = true;
-        SettingsNav_Click(SettingsNavAppearance, new RoutedEventArgs());
-        AppearanceSubNavLayout.IsChecked = true;
-        AppearanceSubNav_Click(AppearanceSubNavLayout, new RoutedEventArgs());
-    }
-
     private void OpenProfileSettings()
     {
         StorageCurrentFolderText.Text = _profile.ProfileDir;
@@ -794,7 +813,7 @@ public sealed partial class MainWindow : Window
     }
 
     // Tuile "Bloqueur de pub" du Menu Demarrer (StartMenuTileIds.AdBlocker) :
-    // meme motif que OpenChromeStyleSettings() - ouvre directement le
+    // meme motif que OpenProfileSettings() - ouvre directement le
     // sous-onglet "Publicités et traceurs" de Confidentialité, ou vivent
     // NetworkBlockerSwitch/StrictAdBlockSwitch, plutot que la vue
     // d'ensemble de Confidentialité.

@@ -34,7 +34,11 @@ public sealed partial class MainWindow
         Content.KeyboardAccelerators.Add(accelerator);
     }
 
-    private void AccessibilityQuickFlyout_Opening(object sender, object e)
+    // Renomme depuis AccessibilityQuickFlyout_Opening (2026-08-10, defusion
+    // des 3 menus) : ce flyout est desormais celui du menu "Accessibilite"
+    // independant - plus d'appel a UpdateModeCompanionUi(), le Compagnon a
+    // son propre flyout/Opening (CompanionFlyout_Opening, MainWindow.UsageMode.cs).
+    private void AccessibilityFlyout_Opening(object sender, object e)
     {
         UpdateAccessibilityQuickFlyoutUi();
         UpdateAccessibilityQuickContextUi();
@@ -81,10 +85,10 @@ public sealed partial class MainWindow
     private void AccessibilityQuickAnnounceButton_Click(object sender, RoutedEventArgs e) =>
         AnnounceAccessibilityComfortState();
 
-    // Le libelle "Confort" et le tooltip/nom d'accessibilite du bouton
-    // fusionne "Mode et confort" sont pilotes par UpdateUsageModeButtonUi()
-    // (MainWindow.UsageMode.cs) depuis la fusion des deux menus - ce texte
-    // ne fait plus que mettre a jour son propre libelle interne.
+    // Menu "Accessibilite" independant depuis le 2026-08-10 (defusion des 3
+    // menus, demande explicite utilisateur) : porte desormais son propre
+    // tooltip/nom d'accessibilite, plus besoin d'appeler UpdateUsageModeButtonUi()
+    // (Mode est un bouton a part, voir MainWindow.UsageMode.cs).
     private void UpdateAccessibilityQuickButtonUi()
     {
         if (AccessibilityQuickCurrentText is null)
@@ -96,7 +100,13 @@ public sealed partial class MainWindow
         var preset = FindAccessibilityComfortPreset(profileKey);
         var label = profileKey == "custom" ? "Personnalisé" : preset?.Label ?? "Confort";
         AccessibilityQuickCurrentText.Text = label;
-        UpdateUsageModeButtonUi();
+
+        var eclipsedByHighContrast = _uiSettings.AccessibilityHighContrast;
+        var tooltip = eclipsedByHighContrast
+            ? $"Confort : {label}. Couleurs remplacées tant que le contraste élevé est actif."
+            : $"Confort : {label}.";
+        ToolTipService.SetToolTip(AccessibilityMenuButton, tooltip);
+        AutomationProperties.SetName(AccessibilityMenuButton, tooltip);
     }
 
     private void UpdateAccessibilityQuickFlyoutUi()

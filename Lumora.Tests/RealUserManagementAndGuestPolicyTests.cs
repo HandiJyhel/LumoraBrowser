@@ -56,10 +56,32 @@ public sealed class RealUserManagementAndGuestPolicyTests
     [Fact]
     public void Panneau_gestion_utilisateur_propose_modifier_et_supprimer()
     {
+        // Depuis la session "Ecran de connexion" (2026-08-10) : Modifier/Supprimer/
+        // Ouvrir le dossier vivent derriere le menu "..." de chaque carte (MenuFlyoutItem,
+        // propriete Text) plutot qu'en boutons visibles en permanence (Content) - la
+        // fonction reste identique, seule sa presentation a change.
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
 
-        Assert.Contains("Content = \"Modifier\"", code, StringComparison.Ordinal);
-        Assert.Contains("Content = \"Supprimer\"", code, StringComparison.Ordinal);
+        Assert.Contains("Text = \"Modifier\"", code, StringComparison.Ordinal);
+        Assert.Contains("Text = \"Supprimer\"", code, StringComparison.Ordinal);
+        Assert.Contains("Text = \"Ouvrir le dossier\"", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Reinitialiser_son_propre_profil_redemande_le_mot_de_passe()
+    {
+        // Trouve en revoyant l'ecran (session "Ecran de connexion", 10/08, point 4) :
+        // "Reinitialiser" supprime immediatement et definitivement le dossier du
+        // profil actif (contrairement a "Supprimer" un autre profil, qui met en
+        // quarantaine et exige deja son mot de passe) mais ne redemandait qu'une
+        // simple confirmation textuelle - l'action la plus destructrice de l'ecran
+        // etait la moins protegee. Meme regle appliquee ici : redemander le mot de
+        // passe du profil qu'on s'apprete a reinitialiser.
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
+        var resetMethod = ExtractMethod(code, "private async void ResetProfileButton_Click(object sender, RoutedEventArgs e)");
+
+        Assert.Contains("VerifyPassword(passwordBox.Password)", resetMethod, StringComparison.Ordinal);
+        Assert.Contains("Mot de passe incorrect : profil non réinitialisé.", resetMethod, StringComparison.Ordinal);
     }
 
     [Fact]

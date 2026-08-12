@@ -1,11 +1,18 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
+// Alias plutot qu'un "using Microsoft.UI.Xaml.Shapes;" complet : ce namespace
+// contient aussi une classe Path, qui entrerait en collision avec
+// System.IO.Path deja utilise partout dans ce fichier (Path.Combine,
+// Path.GetFullPath...).
+using Ellipse = Microsoft.UI.Xaml.Shapes.Ellipse;
 
 namespace Lumora.WinUI;
 
@@ -86,6 +93,17 @@ public sealed partial class MainWindow
         {
             case "create":
                 CreateProfilePanel.Visibility = Visibility.Visible;
+                // Titre contextuel : "Bienvenue" uniquement au tout premier lancement
+                // (aucun profil n'a jamais existe sur cette machine - meme condition que
+                // la branche "premier lancement reel" d'InitializeLoginOverlayAsync).
+                // Sinon ("Créer un autre profil" depuis le sélecteur ou les Réglages, un
+                // profil existe deja) : "Nouveau profil", pour ne pas prétendre que c'est
+                // un premier lancement alors qu'il y a déjà un utilisateur sur ce poste.
+                var isFirstEverProfile = _userProfile is null && _profileEntries.Count == 0;
+                CreateProfileTitleText.Text = isFirstEverProfile ? "Bienvenue" : "Nouveau profil";
+                CreateProfileSubtitleText.Text = isFirstEverProfile
+                    ? "Créez votre profil pour protéger vos données."
+                    : "Ce profil aura ses propres favoris, historique et coffre, séparés des autres.";
                 // Annuler n'a de sens que s'il existe reellement une session ou un profil
                 // vers lequel revenir ; le lien invite n'a de sens que si aucun profil
                 // n'est deja choisi cette session (sinon "continuer sans profil" swappe
@@ -157,7 +175,13 @@ public sealed partial class MainWindow
     private void ShowProfilePicker()
     {
         _profileEntries = LumoraProfileRegistry.Discover(LumoraConfig.Load());
-        ProfilePickerList.ItemsSource = _profileEntries.Select(entry => entry.Label).ToList();
+        ProfilePickerList.ItemsSource = _profileEntries
+            .Select(entry => new ProfilePickerItem(
+                entry.Name,
+                entry.IsCustom ? "Emplacement personnalisé" : "Profil local",
+                entry.AvatarPath,
+                entry.IsActive))
+            .ToList();
         var activeIndex = Math.Max(0, _profileEntries.FindIndex(entry => entry.IsActive));
         ProfilePickerList.SelectedIndex = _profileEntries.Count == 0 ? -1 : activeIndex;
         ProfilePickerContinueButton.IsEnabled = _profileEntries.Count > 0;
@@ -358,6 +382,20 @@ public sealed partial class MainWindow
         BrowserHost.IsHitTestVisible = true;
         _pinBuffer = string.Empty;
         _pinFailCount = 0;
+        // Restauration des onglets de la derniere session (donc navigation reseau
+        // reelle) differee jusqu'ici expres : voir _pendingStartupPageApply. Une
+        // seule fois par process - un reverrouillage/deverrouillage en cours de
+        // session (LockSessionNow -> DismissLoginOverlay) ne doit pas dupliquer les
+        // onglets deja ouverts. _suppressTabSave suspendu le temps de la
+        // restauration, comme au tout premier demarrage (evite de reecrire
+        // TabsFile a chaque onglet recree alors qu'on vient tout juste de le lire).
+        if (_pendingStartupPageApply)
+        {
+            _pendingStartupPageApply = false;
+            _suppressTabSave = true;
+            ApplyStartupPage();
+            _suppressTabSave = false;
+        }
         RefreshProfileSettings();
         UpdateProfileStatus();
         InitSessionTimer();
@@ -561,17 +599,23 @@ public sealed partial class MainWindow
         ProfileManagementPanel.Children.Clear();
         _profileEntries = LumoraProfileRegistry.Discover(LumoraConfig.Load());
 
-        if (_profileEntries.Count == 0)
+        // Le profil actif a deja sa propre carte "Mon profil" plus haut (avec ses
+        // actions dediees) : ne plus le lister ici a cote des autres avec des boutons
+        // desactives - trouve confus en usage reel des qu'il y a plusieurs profils
+        // (rien ne distinguait "le mien, inactif ici" d'"un autre, vraiment inactif").
+        var others = _profileEntries.Where(entry => !entry.IsActive).ToList();
+
+        if (others.Count == 0)
         {
             ProfileManagementPanel.Children.Add(new TextBlock
             {
-                Text = "Aucun profil local détecté.",
+                Text = "Aucun autre profil sur cet appareil.",
                 Opacity = 0.65
             });
             return;
         }
 
-        foreach (var entry in _profileEntries)
+        foreach (var entry in others)
         {
             ProfileManagementPanel.Children.Add(BuildProfileManagementCard(entry));
         }
@@ -579,20 +623,37 @@ public sealed partial class MainWindow
 
     private UIElement BuildProfileManagementCard(LumoraProfileEntry entry)
     {
-        var header = new Grid { ColumnSpacing = 8 };
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var avatarHost = new Grid { Width = 40, Height = 40, VerticalAlignment = VerticalAlignment.Center };
+        var avatarPath = entry.AvatarPath;
+        var avatarCircle = new Ellipse { Width = 40, Height = 40 };
+        avatarCircle.Fill = avatarPath is null
+            ? (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"]
+            : new ImageBrush
+            {
+                ImageSource = new BitmapImage(new Uri(avatarPath, UriKind.Absolute)),
+                Stretch = Stretch.UniformToFill
+            };
+        avatarHost.Children.Add(avatarCircle);
+        if (avatarPath is null)
+        {
+            avatarHost.Children.Add(new FontIcon
+            {
+                Glyph = "",
+                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontSize = 16,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+        }
+        Grid.SetColumn(avatarHost, 0);
 
         var title = new TextBlock
         {
-            Text = entry.IsActive ? $"{entry.Name} (actif)" : entry.Name,
+            Text = entry.Name,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(title, 0);
-        header.Children.Add(title);
-
         var type = new TextBlock
         {
             Text = entry.IsCustom ? "Emplacement personnalisé" : "Profil local",
@@ -600,70 +661,75 @@ public sealed partial class MainWindow
             FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(type, 1);
-        header.Children.Add(type);
+        var identity = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
+        identity.Children.Add(title);
+        identity.Children.Add(type);
+        Grid.SetColumn(identity, 1);
+
+        var switchButton = new Button
+        {
+            Content = "Basculer",
+            Style = (Style)Application.Current.Resources["AccentButtonStyle"]
+        };
+        switchButton.Click += (_, _) => SwitchToProfile(entry);
+
+        // Modifier/Supprimer/Ouvrir le dossier derriere un menu "..." plutot qu'en
+        // boutons visibles en permanence (point 2, session "Ecran de connexion",
+        // valide par l'utilisateur apres une demo interactive) : ce sont des actions
+        // rares, deja protegees par le mot de passe du profil cible
+        // (RequireTargetProfilePasswordAsync) - les regrouper evite d'avoir
+        // "Supprimer" colle a cote de "Basculer" sur une liste qu'on scanne vite.
+        var menu = new MenuFlyout();
+        var openItem = new MenuFlyoutItem { Text = "Ouvrir le dossier" };
+        openItem.Click += async (_, _) => await OpenProfileDirectory(entry);
+        var modifyItem = new MenuFlyoutItem { Text = "Modifier" };
+        modifyItem.Click += async (_, _) => await ModifyProfileAsync(entry);
+        var deleteItem = new MenuFlyoutItem
+        {
+            Text = "Supprimer",
+            Foreground = new SolidColorBrush(new Windows.UI.Color { A = 255, R = 220, G = 70, B = 70 })
+        };
+        deleteItem.Click += async (_, _) => await DeleteProfileAsync(entry);
+        menu.Items.Add(openItem);
+        menu.Items.Add(modifyItem);
+        menu.Items.Add(deleteItem);
+
+        var moreButton = new Button { Content = "···", Flyout = menu };
+        ToolTipService.SetToolTip(moreButton, "Ouvrir le dossier, modifier ou supprimer");
+        AutomationProperties.SetName(moreButton, $"Autres actions pour {entry.Name}");
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+        actions.Children.Add(switchButton);
+        actions.Children.Add(moreButton);
+        Grid.SetColumn(actions, 2);
+
+        var header = new Grid { ColumnSpacing = 10 };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.Children.Add(avatarHost);
+        header.Children.Add(identity);
+        header.Children.Add(actions);
 
         var path = new TextBlock
         {
             Text = entry.ProfileDir,
             TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.62,
-            FontSize = 12,
-            Margin = new Thickness(0, 4, 0, 0)
+            Opacity = 0.55,
+            FontSize = 11,
+            Margin = new Thickness(50, 6, 0, 0)
         };
-
-        var actions = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            Margin = new Thickness(0, 10, 0, 0)
-        };
-
-        var switchButton = new Button
-        {
-            Content = "Basculer",
-            IsEnabled = !entry.IsActive
-        };
-        switchButton.Click += (_, _) => SwitchToProfile(entry);
-        actions.Children.Add(switchButton);
-
-        var openButton = new Button { Content = "Ouvrir le dossier" };
-        openButton.Click += async (_, _) => await OpenProfileDirectory(entry);
-        actions.Children.Add(openButton);
-
-        // Modifier/Supprimer un AUTRE profil que le sien exigent son mot de passe
-        // (RequireTargetProfilePasswordAsync) : aucune notion d'admin dans Lumora,
-        // personne ne peut agir sur le compte d'un tiers sans preuve. Pour son
-        // propre profil actif, les boutons dedies au-dessus (nom/mot de
-        // passe/PIN) suffisent deja - pas de doublon ici.
-        var modifyButton = new Button
-        {
-            Content = "Modifier",
-            IsEnabled = !entry.IsActive
-        };
-        modifyButton.Click += async (_, _) => await ModifyProfileAsync(entry);
-        actions.Children.Add(modifyButton);
-
-        var deleteButton = new Button
-        {
-            Content = "Supprimer",
-            IsEnabled = !entry.IsActive,
-            Foreground = new SolidColorBrush(new Windows.UI.Color { A = 255, R = 220, G = 70, B = 70 })
-        };
-        deleteButton.Click += async (_, _) => await DeleteProfileAsync(entry);
-        actions.Children.Add(deleteButton);
 
         var body = new StackPanel();
         body.Children.Add(header);
         body.Children.Add(path);
-        body.Children.Add(actions);
 
         return new Border
         {
             BorderThickness = new Thickness(1),
             BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(14, 10, 14, 10),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(12, 10, 12, 10),
             Child = body
         };
     }
@@ -1332,15 +1398,14 @@ public sealed partial class MainWindow
             _pinBuffer += tag;
         }
 
-        PinDotsDisplay.Text = string.Concat(Enumerable.Repeat("✦ ", _pinBuffer.Length)) +
-                              string.Concat(Enumerable.Repeat("✧ ", 6 - _pinBuffer.Length));
+        UpdatePinDots(_pinBuffer.Length);
         _ = ClearHomeSearchFieldAsync(blur: true);
 
         if (_pinBuffer.Length == 6)
         {
             var pin = _pinBuffer;
             _pinBuffer = string.Empty;
-            PinDotsDisplay.Text = "✧ ✧ ✧ ✧ ✧ ✧";
+            UpdatePinDots(0);
 
             var ok = await Task.Run(() => _userProfile!.VerifyPin(pin));
             if (ok)
@@ -1356,6 +1421,20 @@ public sealed partial class MainWindow
                     ? "Trop de tentatives. Utilisez votre mot de passe."
                     : $"Code PIN incorrect. ({_pinFailCount}/5)";
             }
+        }
+    }
+
+    // Pastilles PIN (2026-08-12) : bascule seulement l'Opacity de chaque
+    // Ellipse deja posee en XAML (PinDotsPanel) - la couleur reste
+    // NovaAccentBrush partout, deja tenue a jour par ApplyUsageModeChrome
+    // pour le Mode d'usage actif, aucun lookup de resource ici.
+    private void UpdatePinDots(int filledCount)
+    {
+        var i = 0;
+        foreach (var dot in PinDotsPanel.Children.OfType<Ellipse>())
+        {
+            dot.Opacity = i < filledCount ? 1.0 : 0.28;
+            i++;
         }
     }
 
@@ -1551,16 +1630,46 @@ public sealed partial class MainWindow
         // invite (seul _userProfile devient null). Sans cette garde, une session
         // invite pouvait detruire definitivement le vrai profil actif d'un simple clic.
         if (_isGuestMode) return;
+        if (_userProfile is null) return;
+
+        // Meme regle que Modifier/Supprimer sur un AUTRE profil
+        // (RequireTargetProfilePasswordAsync) : reappliquee ici a SON PROPRE profil
+        // (point 4, session "Ecran de connexion") - Reinitialiser est plus
+        // destructeur que Supprimer un autre profil (suppression immediate et
+        // definitive du dossier, pas une mise en quarantaine recuperable) et n'avait
+        // pourtant aucune verification autre qu'une simple boite de confirmation.
+        var passwordBox = new PasswordBox { PlaceholderText = "Mot de passe", MinWidth = 300 };
+        var panel = new StackPanel { Spacing = 10 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Cette action supprime définitivement toutes vos données : favoris, historique, onglets, paramètres, coffre et identifiants de connexion. Cette opération est irréversible.",
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Confirmez avec le mot de passe de {_userProfile.Name}.",
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.72,
+            FontSize = 12
+        });
+        panel.Children.Add(passwordBox);
 
         var dlg = new ContentDialog
         {
             Title = "Réinitialiser le profil ?",
-            Content = "Cette action supprime définitivement toutes vos données : favoris, historique, onglets, paramètres, coffre et identifiants de connexion. Cette opération est irréversible.",
+            Content = panel,
             PrimaryButtonText = "Réinitialiser",
             CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
             XamlRoot = Content.XamlRoot
         };
         if (await dlg.ShowAsync() != ContentDialogResult.Primary) return;
+
+        if (!await Task.Run(() => _userProfile.VerifyPassword(passwordBox.Password)))
+        {
+            StatusText.Text = "Mot de passe incorrect : profil non réinitialisé.";
+            return;
+        }
 
         // Supprimer tout le dossier de profil (navigation, vault, favicons, profile.nova)
         if (Directory.Exists(_profile.ProfileDir))

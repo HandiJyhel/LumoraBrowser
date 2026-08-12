@@ -146,13 +146,30 @@ public sealed class AccessibilityComfortNamingTests
     // Lumora restait fixe (#81786d, brun-gris) meme en contraste eleve, alors
     // que le fond de la barre devient blanc pur dans ce mode - correspond
     // probablement a "on voit plus rien" signale par l'utilisateur.
+    //
+    // Assertion mise a jour le 2026-08-10 : le correctif original codait la
+    // couleur en dur dans la regle CSS elle-meme (ternaire inline), mais
+    // NewTabThemeVariablesCss() a depuis ete reorganise pour piloter toutes
+    // les couleurs de l'accueil via des variables CSS (--nt-*), y compris en
+    // contraste eleve (bloc :root dedie). Le test verifiait donc un motif de
+    // code qui n'existe plus, alors que le comportement reel (texte
+    // d'indication lisible en contraste eleve) est toujours correct - verifie
+    // desormais la regle CSS (utilise la variable) et la variable elle-meme
+    // dans les deux branches, plutot qu'un unique ternaire inline.
     [Fact]
     public void Le_texte_d_indication_de_la_recherche_suit_le_contraste_eleve()
     {
         var source = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
 
         Assert.Contains(
-            ".search input::placeholder{color:{{(_uiSettings.AccessibilityHighContrast ? \"#4a4a4a\" : \"#81786d\")}}}",
+            ".search input::placeholder{color:var(--nt-search-placeholder)}",
+            source, StringComparison.Ordinal);
+        // Contraste eleve : fond blanc pur, texte d'indication gris fonce
+        // lisible (bloc :root dedie, aucune dependance au theme clair/sombre).
+        Assert.Contains("--nt-search-placeholder:#4a4a4a", source, StringComparison.Ordinal);
+        // Hors contraste eleve : depend du theme clair/sombre, jamais fixe.
+        Assert.Contains(
+            "--nt-search-placeholder:{{(isDark ? \"#81786d\" : \"#7f705f\")}}",
             source, StringComparison.Ordinal);
     }
 

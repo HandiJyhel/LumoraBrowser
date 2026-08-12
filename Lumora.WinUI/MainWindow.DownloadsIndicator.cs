@@ -11,21 +11,26 @@ namespace Lumora.WinUI;
 // interne et pouvait s'afficher detachee sur un autre ecran. Cette icone
 // redonne un signal visible pendant et apres un telechargement, comme
 // Chrome/Edge/Firefox le font nativement dans leur propre barre d'outils.
+//
+// Bouton toujours visible (2026-08-10, "choses a revoir" - demande explicite
+// utilisateur : accessible en permanence, au meme titre que Favoris/Bloqueur
+// de pub/Coffre, jamais conditionne a un telechargement deja lance). Avant
+// cette date, DownloadsIndicatorButton restait Collapsed tant qu'aucun
+// telechargement n'avait eu lieu dans la session (_hasSessionDownload) - le
+// seul acces au gestionnaire etait alors Menu Demarrer > Navigation >
+// Telechargements, a plusieurs clics.
 public sealed partial class MainWindow
 {
-    private bool _hasSessionDownload;
     private int _unseenDownloadsCount;
 
     private void NotifyDownloadStarted()
     {
-        _hasSessionDownload = true;
         _unseenDownloadsCount++;
         RefreshDownloadsIndicator();
     }
 
     private void RefreshDownloadsIndicator()
     {
-        DownloadsIndicatorButton.Visibility = _hasSessionDownload ? Visibility.Visible : Visibility.Collapsed;
         DownloadsIndicatorBadge.Visibility = _unseenDownloadsCount > 0 ? Visibility.Visible : Visibility.Collapsed;
         DownloadsIndicatorBadgeText.Text = _unseenDownloadsCount > 99 ? "99+" : _unseenDownloadsCount.ToString();
 

@@ -37,16 +37,6 @@ public sealed partial class MainWindow
 
     private void RenderVerticalTabs()
     {
-        // Rafraichit aussi la colonne identitaire, en tete et avant le
-        // retour anticipe ci-dessous : ainsi tout site d'appel existant
-        // (ajout/fermeture/reordonnancement d'onglet, changement d'onglet
-        // actif, split view) garde les deux rendus synchronises sans qu'il
-        // faille les traquer un par un.
-        if (_chromeLayoutStyle == "identitySpine")
-        {
-            RenderIdentitySpineTabs();
-        }
-
         if (!_verticalTabsEnabled)
         {
             VerticalTabsPanelItems.Children.Clear();
@@ -62,8 +52,23 @@ public sealed partial class MainWindow
         // pour des fleches).
         var unpinnedOrder = _tabs.Where(t => !t.Pinned).ToList();
 
+        // Recherche d'onglet (2026-08-12) : filtre titre/adresse, insensible a la
+        // casse. Verifie AVANT le bloc d'en-tete de groupe (juste apres) pour
+        // qu'un groupe sans aucun onglet visible n'affiche pas son en-tete non
+        // plus - meme esprit que le filtre du Menu Demarrer (rien affiche =
+        // rien annonce).
+        var filter = _verticalTabsFilter?.Trim();
+        var hasFilter = !string.IsNullOrEmpty(filter);
+
         foreach (var tab in _tabs)
         {
+            if (hasFilter &&
+                !(tab.Title?.Contains(filter!, StringComparison.OrdinalIgnoreCase) == true) &&
+                !(tab.Address?.Contains(filter!, StringComparison.OrdinalIgnoreCase) == true))
+            {
+                continue;
+            }
+
             if (tab.GroupId != lastGroupId && tab.GroupId is int headerGroupId)
             {
                 var headerGroup = _tabGroups.FirstOrDefault(g => g.Id == headerGroupId);
@@ -114,28 +119,35 @@ public sealed partial class MainWindow
                 // reel une fois testee, comparee a la taille des boutons
                 // Chrome/Edge - toujours nettement plus grande que les 20x20
                 // d'origine juges trop serres, mais moins "pavee".
-                var icon = TabIconElement(tab, 18);
+                // Tuile et bouton de fermeture reduits une 2e fois (round 3,
+                // 2026-08-12) : retour utilisateur avec capture d'ecran d'Edge
+                // a l'appui - meme la tuile 44x38 restait beaucoup plus grande
+                // que des onglets reels avec ~15 onglets par session, ou
+                // chaque tuile n'est guere plus large que le favicon lui-meme,
+                // sans marge visible. Toutes les tailles ci-dessous reduites
+                // proportionnellement (~30%) plutot que redevinees a part.
+                var icon = TabIconElement(tab, 14);
 
                 var compactClose = new Button
                 {
-                    Width = 24,
-                    Height = 24,
+                    Width = 18,
+                    Height = 18,
                     Padding = new Thickness(0),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalContentAlignment = HorizontalAlignment.Center,
                     VerticalContentAlignment = VerticalAlignment.Center,
                     Tag = tab.Id,
-                    CornerRadius = new CornerRadius(12),
+                    CornerRadius = new CornerRadius(9),
                     BorderThickness = new Thickness(0),
                     Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
                     // Viewbox plutot que SymbolIcon.FontSize (n'existe pas sur ce
-                    // controle) : force le glyphe a une taille lisible (11x11)
+                    // controle) : force le glyphe a une taille lisible (8x8)
                     // dans le bouton de fermeture.
                     Content = new Viewbox
                     {
-                        Width = 11,
-                        Height = 11,
+                        Width = 8,
+                        Height = 8,
                         Child = new SymbolIcon(Symbol.Cancel)
                     },
                     Opacity = 0.6
@@ -151,16 +163,22 @@ public sealed partial class MainWindow
 
                 button = new Button
                 {
-                    Width = 44,
-                    Height = 38,
+                    Width = 30,
+                    Height = 28,
                     Padding = new Thickness(0),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     HorizontalContentAlignment = HorizontalAlignment.Center,
                     VerticalContentAlignment = VerticalAlignment.Center,
                     Tag = tab.Id,
-                    Margin = new Thickness(0, 2, 0, 2),
-                    CornerRadius = new CornerRadius(16),
-                    BorderThickness = new Thickness(1),
+                    Margin = new Thickness(0, 1, 0, 1),
+                    CornerRadius = new CornerRadius(9),
+                    // Bordure retiree en compact (round 3) : l'indicatif d'onglet
+                    // actif ne repose plus que sur le fond teinte (comme la
+                    // capture Edge de reference - simple surbrillance discrete,
+                    // pas de cadre marque), pour rester coherent avec la tuile
+                    // resserree. Le contour de selection multiple ci-dessous
+                    // (Ctrl/Shift+clic) reste prioritaire et se pose par-dessus.
+                    BorderThickness = new Thickness(0),
                     Background = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBackgroundBrush" : "NovaTabPillInactiveBackgroundBrush"],
                     BorderBrush = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBorderBrush" : "NovaTabPillInactiveBorderBrush"]
                 };

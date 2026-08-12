@@ -65,6 +65,11 @@ public sealed partial class LumoraIncognitoWindow : Window
     // Onglets verticaux (2026-08-07) : bascule de session, pas de reglage
     // persiste - coherent avec l'esprit "ephemere" de cette fenetre.
     private bool _verticalTabsEnabled;
+    // Icone reglages (2026-08-12, retour utilisateur) : reference gardee pour
+    // pouvoir basculer IsEnabled a chaud depuis le flyout, comme
+    // CnameUncloakerSwitch_Toggled le fait cote MainWindow (ApplyPrivacySettings).
+    private CnameUncloakerModule? _cnameUncloaker;
+    private bool _suppressPrivacySwitchSave;
 
     internal LumoraIncognitoWindow(
         LumoraProfilePaths profile, string? startUrl = null, bool initialTorEnabled = false, bool returnToMain = false)
@@ -191,9 +196,39 @@ public sealed partial class LumoraIncognitoWindow : Window
 
         _privacy.Register(new ParameterCleanerModule { IsEnabled = _uiSettings.ParameterCleanerEnabled });
         _privacy.Register(new HttpsEnforcerModule    { IsEnabled = _uiSettings.HttpsEnforcerEnabled });
-        _privacy.Register(new CnameUncloakerModule(network) { IsEnabled = _uiSettings.CnameUncloakerEnabled });
+        _cnameUncloaker = new CnameUncloakerModule(network) { IsEnabled = _uiSettings.CnameUncloakerEnabled };
+        _privacy.Register(_cnameUncloaker);
 
         _ = network.LoadAsync();
+    }
+
+    // Icone reglages (2026-08-12, retour utilisateur du 12/08 - "donner a
+    // Incognito un acces a certains parametres lies au pistage"). Perimetre
+    // volontairement reduit a CE QUI EST DEJA REELLEMENT ACTIF ici : le
+    // detecteur CNAME. L'anti-fuite WebRTC est deja force au demarrage du
+    // process (WebView2Bootstrap.ConfigureOnce appele sans parametre =
+    // valeur par defaut true, App.xaml.cs) - toujours actif, non reglable ici
+    // par choix (aucun reglage a exposer). La position fictive
+    // (GeolocationSpoofScript) et le brouillage d'empreinte
+    // (FingerprintProtectionScript) NE SONT PAS injectes sur les onglets
+    // Incognito du tout (verifie - aucune reference dans ce fichier avant
+    // cette session) : trouve en construisant ce panneau, pas encore porte
+    // ici (script par onglet, distinct du systeme de modules ci-dessus) -
+    // signale a l'utilisateur plutot que suppose corrige.
+    private void IncognitoPrivacySettingsFlyout_Opening(object sender, object e)
+    {
+        _suppressPrivacySwitchSave = true;
+        try { IncognitoCnameSwitch.IsOn = _uiSettings.CnameUncloakerEnabled; }
+        finally { _suppressPrivacySwitchSave = false; }
+    }
+
+    private void IncognitoCnameSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressPrivacySwitchSave) return;
+        var enabled = IncognitoCnameSwitch.IsOn;
+        _uiSettings.CnameUncloakerEnabled = enabled;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        if (_cnameUncloaker is not null) _cnameUncloaker.IsEnabled = enabled;
     }
 
     // Filet de securite : si une fenetre Incognito precedente a plante ou a ete

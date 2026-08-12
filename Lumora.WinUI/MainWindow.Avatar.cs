@@ -11,20 +11,17 @@ namespace Lumora.WinUI;
 // simple fichier local, comme une favicon.
 public sealed partial class MainWindow
 {
-    private static readonly string[] AvatarExtensions = [".png", ".jpg", ".jpeg", ".webp", ".bmp"];
+    // Extensions/logique de resolution partagees avec les profils non actifs
+    // (selecteur, gestion des utilisateurs) via ProfileAvatarResolver
+    // (Models/Profiles.cs) - garde une reference locale pour
+    // ChangeAvatarButton_Click/ApplyPendingAvatarChange, qui restent propres
+    // au profil actif.
+    private static readonly string[] AvatarExtensions = ProfileAvatarResolver.Extensions;
     private string? _pendingAvatarSourcePath;
     private bool _pendingAvatarRemoval;
 
-    private string? FindAvatarFile()
-    {
-        if (_isGuestMode || string.IsNullOrEmpty(_profile.ProfileDir)) return null;
-        foreach (var ext in AvatarExtensions)
-        {
-            var path = Path.Combine(_profile.ProfileDir, "avatar" + ext);
-            if (File.Exists(path)) return path;
-        }
-        return null;
-    }
+    private string? FindAvatarFile() =>
+        _isGuestMode ? null : ProfileAvatarResolver.Find(_profile.ProfileDir);
 
     private void RefreshAvatarUi()
     {
@@ -36,6 +33,8 @@ public sealed partial class MainWindow
             ProfileStatusAvatar.Visibility = Visibility.Collapsed;
             RemoveAvatarButton.Visibility = Visibility.Collapsed;
             AvatarPendingText.Visibility = Visibility.Collapsed;
+            ProfileSectionAvatarBrush.ImageSource = null;
+            ProfileSectionAvatarPlaceholder.Visibility = Visibility.Visible;
             return;
         }
 
@@ -45,6 +44,8 @@ public sealed partial class MainWindow
         ProfileStatusAvatar.Visibility = Visibility.Visible;
         RemoveAvatarButton.Visibility = Visibility.Visible;
         AvatarPendingText.Visibility = Visibility.Collapsed;
+        ProfileSectionAvatarBrush.ImageSource = image;
+        ProfileSectionAvatarPlaceholder.Visibility = Visibility.Collapsed;
     }
 
     private async void ChangeAvatarButton_Click(object sender, RoutedEventArgs e)

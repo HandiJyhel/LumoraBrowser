@@ -10,7 +10,7 @@ namespace Lumora.WinUI;
 // plein ecran/immersif, pas une densite de boutons - les deux peuvent
 // coexister, voir les regles de priorite ci-dessous). Nouveau fichier
 // plutot qu'un ajout a MainWindow.Settings.cs/SettingsTheme.cs (deja
-// volumineux), meme logique de decoupage que MainWindow.IdentitySpine.cs.
+// volumineux), meme logique de decoupage que MainWindow.TabGroups.cs.
 public sealed partial class MainWindow
 {
     private static string NormalizeUiDensity(string? value) => value switch
@@ -40,7 +40,16 @@ public sealed partial class MainWindow
         double BookmarkChipCornerRadius,
         double BookmarkChipFontSize,
         double BookmarksOverflowChipSize,
-        double BookmarksOverflowChipCornerRadius);
+        double BookmarksOverflowChipCornerRadius,
+        double FooterPillMinHeight,
+        double FooterPillPaddingHorizontal,
+        double FooterBoldFontSize,
+        double FooterLabelFontSize,
+        double FooterIconFontSize,
+        double FooterChevronFontSize,
+        double FooterAccentBarHeight,
+        double FooterDividerHeight,
+        double StatusTextFontSize);
 
     // "comfortable" reprend a l'identique les valeurs historiques de Lumora
     // (aucune regression pour qui choisit ce palier). "standard"/"dense" sont
@@ -61,7 +70,11 @@ public sealed partial class MainWindow
             BookmarksRowHeight: 60, BookmarksBottomRowHeight: 42,
             BookmarkChipHeight: 36, BookmarkChipPaddingText: new Thickness(12, 0, 14, 0), BookmarkChipPaddingIcon: new Thickness(10, 0, 10, 0),
             BookmarkChipCornerRadius: 14, BookmarkChipFontSize: 13,
-            BookmarksOverflowChipSize: 36, BookmarksOverflowChipCornerRadius: 14),
+            BookmarksOverflowChipSize: 36, BookmarksOverflowChipCornerRadius: 14,
+            FooterPillMinHeight: 30, FooterPillPaddingHorizontal: 10,
+            FooterBoldFontSize: 11.5, FooterLabelFontSize: 10.5, FooterIconFontSize: 11.5,
+            FooterChevronFontSize: 8, FooterAccentBarHeight: 14, FooterDividerHeight: 12,
+            StatusTextFontSize: 12),
         "dense" => new UiDensityMetrics(
             IconButtonSize: 24, ModulesButtonSize: 32,
             NavigationRowHeight: 50, NavigationToolbarPadding: new Thickness(8, 3, 8, 4),
@@ -71,7 +84,11 @@ public sealed partial class MainWindow
             BookmarksRowHeight: 44, BookmarksBottomRowHeight: 34,
             BookmarkChipHeight: 26, BookmarkChipPaddingText: new Thickness(8, 0, 10, 0), BookmarkChipPaddingIcon: new Thickness(6, 0, 6, 0),
             BookmarkChipCornerRadius: 10, BookmarkChipFontSize: 11,
-            BookmarksOverflowChipSize: 26, BookmarksOverflowChipCornerRadius: 10),
+            BookmarksOverflowChipSize: 26, BookmarksOverflowChipCornerRadius: 10,
+            FooterPillMinHeight: 24, FooterPillPaddingHorizontal: 7,
+            FooterBoldFontSize: 10, FooterLabelFontSize: 9, FooterIconFontSize: 10,
+            FooterChevronFontSize: 7, FooterAccentBarHeight: 11, FooterDividerHeight: 10,
+            StatusTextFontSize: 11),
         _ => new UiDensityMetrics(
             IconButtonSize: 28, ModulesButtonSize: 36,
             NavigationRowHeight: 60, NavigationToolbarPadding: new Thickness(10, 4, 10, 5),
@@ -81,7 +98,11 @@ public sealed partial class MainWindow
             BookmarksRowHeight: 52, BookmarksBottomRowHeight: 38,
             BookmarkChipHeight: 30, BookmarkChipPaddingText: new Thickness(10, 0, 12, 0), BookmarkChipPaddingIcon: new Thickness(8, 0, 8, 0),
             BookmarkChipCornerRadius: 12, BookmarkChipFontSize: 12,
-            BookmarksOverflowChipSize: 30, BookmarksOverflowChipCornerRadius: 12),
+            BookmarksOverflowChipSize: 30, BookmarksOverflowChipCornerRadius: 12,
+            FooterPillMinHeight: 27, FooterPillPaddingHorizontal: 9,
+            FooterBoldFontSize: 11, FooterLabelFontSize: 10, FooterIconFontSize: 11,
+            FooterChevronFontSize: 7.5, FooterAccentBarHeight: 13, FooterDividerHeight: 11,
+            StatusTextFontSize: 11.5),
     };
 
     // Priorite "mode compact gagne" sur la ligne d'outils : CompactModeEnabled
@@ -168,5 +189,47 @@ public sealed partial class MainWindow
         // idempotente comme le reste d'ApplyUiSettings().
         ApplyCompactModeLayout();
         ApplyIconButtonSizing();
+        ApplyFooterDensity(metrics);
+    }
+
+    // Barre du bas : demande explicite utilisateur 2026-08-09 ("elle aussi
+    // doit etre plus petite, moyenne ou plus grande") - jusqu'ici hors du
+    // perimetre de la Taille de l'interface (tailles figees en dur). Depuis
+    // le 2026-08-10, la barre du bas porte 3 menus independants (Mode,
+    // Compagnon, Accessibilite - defusion demandee explicitement) : les 3
+    // suivent la meme metrique, plus de UsageModeDividerBorder (disparu avec
+    // le bouton fusionne). "Comfortable" reprend les valeurs historiques
+    // (aucune regression), standard/dense reduisent dans des proportions
+    // comparables a IconButtonSize/NavigationRowHeight.
+    private void ApplyFooterDensity(UiDensityMetrics metrics)
+    {
+        var pillPadding = new Thickness(metrics.FooterPillPaddingHorizontal, 0, metrics.FooterPillPaddingHorizontal, 0);
+
+        ModeUsageButton.MinHeight = metrics.FooterPillMinHeight;
+        ModeUsageButton.Padding = pillPadding;
+        CompanionButton.MinHeight = metrics.FooterPillMinHeight;
+        CompanionButton.Padding = pillPadding;
+        AccessibilityMenuButton.MinHeight = metrics.FooterPillMinHeight;
+        AccessibilityMenuButton.Padding = pillPadding;
+
+        UsageModeAccentBar.Height = metrics.FooterAccentBarHeight;
+        CompanionAccentBar.Height = metrics.FooterAccentBarHeight;
+        AccessibilityQuickAccentBar.Height = metrics.FooterAccentBarHeight;
+
+        UsageModeIcon.FontSize = metrics.FooterIconFontSize;
+        CompanionIcon.FontSize = metrics.FooterIconFontSize;
+        AccessibilityQuickIcon.FontSize = metrics.FooterIconFontSize;
+        UsageModeChevronIcon.FontSize = metrics.FooterChevronFontSize;
+        CompanionChevronIcon.FontSize = metrics.FooterChevronFontSize;
+        AccessibilityChevronIcon.FontSize = metrics.FooterChevronFontSize;
+
+        UsageModeLabelText.FontSize = metrics.FooterLabelFontSize;
+        CompanionLabelText.FontSize = metrics.FooterLabelFontSize;
+        AccessibilityQuickLabelText.FontSize = metrics.FooterLabelFontSize;
+        UsageModeCurrentText.FontSize = metrics.FooterBoldFontSize;
+        CompanionStateText.FontSize = metrics.FooterBoldFontSize;
+        AccessibilityQuickCurrentText.FontSize = metrics.FooterBoldFontSize;
+
+        StatusText.FontSize = metrics.StatusTextFontSize;
     }
 }

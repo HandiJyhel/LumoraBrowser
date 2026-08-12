@@ -1,13 +1,43 @@
 <Application
     x:Class="Lumora.WinUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:Lumora.WinUI.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
             <Color x:Key="SystemAccentColor">#FFFFB935</Color>
+            <!-- Familles de sens du Menu Demarrer (chantier identite visuelle,
+                 2026-08-10) : badge de tuile colore par famille plutot que le
+                 meme degrade Lumora partout. Content = ambre (issu du meme
+                 degrade que NovaIdentityMarkBrush, ce qui vous appartient),
+                 Protection = rose (ce qui vous protege), Outils = cyan (meme
+                 teinte que NovaCoolAccentBrush - deja l'accent
+                 technique/verification ailleurs dans la chrome ; copie plutot
+                 que reference directe car NovaCoolAccentBrush vit dans les
+                 ressources de la fenetre, hors de portee ici). Ces 3 brushes
+                 vivent en Application.Resources (pas RootShell.Resources) car
+                 le convertisseur qui les consomme n'a pas de reference a la
+                 fenetre - a la difference de NovaIdentityMarkBrush (reste
+                 dans MainWindow.xaml, mute en direct par SetIdentityGradient),
+                 rien d'autre n'ecrit dans ces 3-la, aucun risque a les avoir
+                 ici. -->
+            <SolidColorBrush x:Key="NovaTileFamilyContentBrush" Color="#FFE6AA48" />
+            <SolidColorBrush x:Key="NovaTileFamilyProtectionBrush" Color="#FFE2897F" />
+            <SolidColorBrush x:Key="NovaTileFamilyToolsBrush" Color="#FF56C2E4" />
+            <!-- Famille "identity" (2026-08-12, retour utilisateur : "Lumora et
+                 profil" reste dégradé neutre terne à côté des 3 familles vives
+                 ci-dessus) - violet dédié, distinct des 3 teintes existantes. -->
+            <SolidColorBrush x:Key="NovaTileFamilyIdentityBrush" Color="#FF9E8CD6" />
+            <conv:StartMenuFamilyKeyToBrushConverter x:Key="StartMenuFamilyKeyToBrushConverter" />
+            <!-- Ecran de connexion / gestion des utilisateurs (session
+                 "Ecran de connexion", 2026-08-10) : avatars par profil dans le
+                 selecteur de profil. -->
+            <conv:AvatarPathToBrushConverter x:Key="AvatarPathToBrushConverter" />
+            <conv:AvatarPathToPlaceholderVisibilityConverter x:Key="AvatarPathToPlaceholderVisibilityConverter" />
+            <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <Color x:Key="SystemAccentColorLight1">#FFFFCA66</Color>
             <Color x:Key="SystemAccentColorLight2">#FFFFDEA0</Color>
             <Color x:Key="SystemAccentColorLight3">#FFFFF1CC</Color>

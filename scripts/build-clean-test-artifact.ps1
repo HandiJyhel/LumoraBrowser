@@ -2,7 +2,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
-    [string]$Version = "0.93.17.2-dev",
+    [string]$Version = "0.93.27.0-dev",
     [string]$OutputRoot = "artifacts\clean-test",
     [switch]$NoRestore
 )
@@ -43,13 +43,25 @@ if (-not (Test-Path $project)) {
 
 $msbuild = Get-WinUiMsbuildPath
 $context = New-WinUiBuildContext -RepoRoot $repoRoot -ProjectName "Lumora.WinUI" -Configuration $Configuration -Platform $Platform
+
+# Le raccourci "cache NuGet detecte" de New-WinUiBuildContext copie le
+# obj\ courant du projet tel quel. Ce dossier peut avoir ete restaure
+# entre-temps par un service en arriere-plan (ex. l'extension C# de
+# l'IDE) sans SelfContained=true, donc sans le pack runtime win-x64
+# necessaire a une publication self-contained : un cache present n'y
+# garantit pas que le pack est la. On force ici un restore reel avec
+# les proprietes self-contained, quel que soit l'etat de ce cache.
+$context.HasCachedRestore = $false
 $xamlOutputDir = Get-WinUiOutputDir -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64"
 New-Item -ItemType Directory -Force -Path $appDir | Out-Null
 New-Item -ItemType Directory -Force -Path $signatureDir | Out-Null
 
 Set-Location $repoRoot
 if (-not $NoRestore) {
-    Invoke-WinUiRestore -MsbuildPath $msbuild -ProjectPath $project -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64"
+    Invoke-WinUiRestore -MsbuildPath $msbuild -ProjectPath $project -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64" -AdditionalProperties @(
+        "/p:SelfContained=true",
+        "/p:PublishSelfContained=true"
+    )
 }
 else {
     Write-Host "Restore WinUI ignore (-NoRestore): utilisation du cache local deja restaure."

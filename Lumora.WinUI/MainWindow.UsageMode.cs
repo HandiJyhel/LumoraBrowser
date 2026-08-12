@@ -83,21 +83,16 @@ public sealed partial class MainWindow : Window
         UsageModeLabelText.Text = eclipsedByHighContrast ? "Mode (masqué)" : "Mode";
         UsageModeCurrentText.Text = label;
 
-        // Bouton fusionne "Mode et confort" (menus rassembles en un seul
-        // point d'entree a la demande de l'utilisateur, cf. AGENTS.md) - le
-        // tooltip/nom d'accessibilite doit refleter les deux etats, pas
-        // seulement le mode d'usage. Calcule ici plutot que dans
-        // UpdateAccessibilityQuickButtonUi() pour n'avoir qu'un seul
-        // ecrivain du texte du bouton.
-        var comfortProfileKey = ResolveAccessibilityComfortProfileFromControls();
-        var comfortPreset = FindAccessibilityComfortPreset(comfortProfileKey);
-        var comfortLabel = comfortProfileKey == "custom" ? "Personnalisé" : comfortPreset?.Label ?? "Confort";
-
+        // Menu "Mode" independant depuis le 2026-08-10 (defusion des 3 menus,
+        // demande explicite utilisateur) : le tooltip ne porte plus que sur le
+        // mode d'usage lui-meme, plus sur Confort (voir
+        // UpdateAccessibilityMenuButtonUi, MainWindow.AccessibilityQuickActions.cs,
+        // pour le menu Accessibilite desormais separe).
         var tooltip = eclipsedByHighContrast
-            ? $"Mode d'usage : {label}. Confort : {comfortLabel}. Couleurs remplacées tant que le contraste élevé (Confort) est actif."
-            : $"Mode d'usage : {label}. Confort : {comfortLabel}.";
-        ToolTipService.SetToolTip(UsageModeButton, tooltip);
-        AutomationProperties.SetName(UsageModeButton, tooltip);
+            ? $"Mode d'usage : {label}. Couleurs remplacées tant que le contraste élevé (Confort) est actif."
+            : $"Mode d'usage : {label}.";
+        ToolTipService.SetToolTip(ModeUsageButton, tooltip);
+        AutomationProperties.SetName(ModeUsageButton, tooltip);
 
         void Mark(Button button, string tag)
         {
@@ -120,13 +115,8 @@ public sealed partial class MainWindow : Window
         var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
         var label = UsageModeLabel(mode);
         var companion = ModeCompanion(mode);
-        var isNeutral = string.Equals(mode, "neutral", StringComparison.OrdinalIgnoreCase);
 
-        ModeCompanionButton.Visibility = Visibility.Visible;
-
-        ModeCompanionIcon.Glyph = companion.Icon;
         ModeCompanionMascotIcon.Glyph = companion.Icon;
-        ModeCompanionModeText.Text = isNeutral ? "Rapide" : label;
         ModeCompanionTitleText.Text = $"Compagnon {label}";
         ModeCompanionBodyText.Text = companion.Body;
         ModeCompanionMemoryTitleText.Text = companion.MemoryTitle;
@@ -138,48 +128,65 @@ public sealed partial class MainWindow : Window
         ModeCompanionSecondaryIcon.Glyph = companion.SecondaryIcon;
         ModeCompanionSecondaryTitleText.Text = companion.SecondaryTitle;
         ModeCompanionSecondaryHintText.Text = companion.SecondaryHint;
-
-        ToolTipService.SetToolTip(ModeCompanionButton, $"Compagnon {label}");
-        AutomationProperties.SetName(ModeCompanionButton, $"Compagnon du mode {label}");
-
-        // Ecran natif "Compagnon du mode" de la colonne identitaire
-        // (MainWindow.IdentitySpine.cs) : meme donnees que ci-dessus, un seul
-        // point d'entree a maintenir en synchro plutot que de traquer chaque
-        // site d'appel de UpdateModeCompanionUi().
-        UpdateIdentitySpineHeroUi(mode, label, companion);
     }
 
     // Factorise la resolution du compagnon du mode courant : utilisee par
-    // UpdateModeCompanionUi() et par MainWindow.IdentitySpine.cs pour ne
-    // jamais dupliquer les textes par mode (Body/MemoryPlaceholder/...).
+    // UpdateModeCompanionUi() pour ne jamais dupliquer les textes par mode
+    // (Body/MemoryPlaceholder/...).
     private ModeCompanionDefinition GetCurrentModeCompanion() =>
         ModeCompanion((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant());
 
-    private void ModeCompanionButton_Click(object sender, RoutedEventArgs e)
+    // Menu "Compagnon" independant depuis le 2026-08-10 (defusion des 3 menus,
+    // demande explicite utilisateur) : interrupteur simple, plus rattache a
+    // l'affichage d'un mode precis ("peu importe le mode, il est toujours la").
+    // CompanionOnState porte le contenu (inchange), CompanionOffState un
+    // message court + le meme bouton CompanionToggleButton sert d'action
+    // "Activer"/"Desactiver" selon l'etat, ecrit en toutes lettres.
+    private void UpdateCompanionButtonUi()
     {
-        UpdateModeCompanionUi();
-        StatusText.Text = $"Compagnon {UsageModeLabel(_uiSettings.UsageMode)} disponible.";
+        var enabled = _uiSettings.CompanionEnabled;
+
+        CompanionStateText.Text = enabled ? "Activé" : "Désactivé";
+        CompanionAccentBar.Opacity = enabled ? 0.78 : 0.35;
+        CompanionIcon.Opacity = enabled ? 0.76 : 0.4;
+        ToolTipService.SetToolTip(CompanionButton, enabled ? "Compagnon : activé" : "Compagnon : désactivé");
+        AutomationProperties.SetName(CompanionButton, enabled ? "Compagnon, activé" : "Compagnon, désactivé");
+
+        CompanionOnState.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        CompanionOffState.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
+        CompanionToggleButton.Content = enabled ? "Désactiver" : "Activer";
+
+        if (enabled)
+        {
+            UpdateModeCompanionUi();
+        }
+    }
+
+    private void CompanionFlyout_Opening(object sender, object e) => UpdateCompanionButtonUi();
+
+    private void CompanionToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        _uiSettings.CompanionEnabled = !_uiSettings.CompanionEnabled;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        UpdateCompanionButtonUi();
+        StatusText.Text = _uiSettings.CompanionEnabled ? "Compagnon Lumie activé." : "Compagnon Lumie désactivé.";
     }
 
     private async void ModeCompanionPrimaryButton_Click(object sender, RoutedEventArgs e)
     {
-        ModeCompanionFlyout.Hide();
+        CompanionFlyout.Hide();
         await RunModeCompanionActionAsync(ModeCompanion((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant()).PrimaryAction);
     }
 
     private async void ModeCompanionSecondaryButton_Click(object sender, RoutedEventArgs e)
     {
-        ModeCompanionFlyout.Hide();
+        CompanionFlyout.Hide();
         await RunModeCompanionActionAsync(ModeCompanion((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant()).SecondaryAction);
     }
 
     private void ModeCompanionSaveButton_Click(object sender, RoutedEventArgs e) =>
         SaveCompanionMemoryAndNotify(ModeCompanionMemoryBox.Text);
 
-    // Factorisee pour etre partagee avec l'ecran natif "Compagnon du mode" de
-    // la colonne identitaire (IdentitySpineHeroSaveButton_Click,
-    // MainWindow.IdentitySpine.cs) - une seule ecriture/notification, pas deux
-    // copies du meme code.
     private void SaveCompanionMemoryAndNotify(string text)
     {
         var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
@@ -247,12 +254,12 @@ public sealed partial class MainWindow : Window
                 break;
 
             case "read_aloud":
-                ReadAloudFlyout.ShowAt(ReadAloudButton.Visibility == Visibility.Visible ? ReadAloudButton : ModeCompanionButton);
+                ReadAloudFlyout.ShowAt(ReadAloudButton.Visibility == Visibility.Visible ? ReadAloudButton : CompanionButton);
                 StatusText.Text = "Compagnon voix locale ouvert.";
                 break;
 
             case "search_assist":
-                await RunSearchAssistAsync(SearchAssistButton.Visibility == Visibility.Visible ? SearchAssistButton : ModeCompanionButton);
+                await RunSearchAssistAsync(SearchAssistButton.Visibility == Visibility.Visible ? SearchAssistButton : CompanionButton);
                 break;
 
             case "history":
@@ -557,6 +564,10 @@ public sealed partial class MainWindow : Window
         TranslatePinnedButton.Visibility = IsPinned("translate") ? Visibility.Visible : Visibility.Collapsed;
         WebAppsPinnedButton.Visibility = IsPinned("webApps") ? Visibility.Visible : Visibility.Collapsed;
         DictationPinnedButton.Visibility = IsPinned("dictation") ? Visibility.Visible : Visibility.Collapsed;
+        // Flux RSS et Loupe de lecture (2026-08-09) : integres au systeme de
+        // pin, demande explicite - avant, boutons fixes toujours visibles.
+        RssModuleButton.Visibility = IsPinned("rss") ? Visibility.Visible : Visibility.Collapsed;
+        ReadingLensButton.Visibility = IsPinned("readingLens") ? Visibility.Visible : Visibility.Collapsed;
 
         UpdatePinToggle(PanelReaderPinToggleButton, "reader");
         UpdatePinToggle(PanelNotesPinToggleButton, "notes");
@@ -567,6 +578,8 @@ public sealed partial class MainWindow : Window
         UpdatePinToggle(PanelTranslatePinToggleButton, "translate");
         UpdatePinToggle(PanelWebAppsPinToggleButton, "webApps");
         UpdatePinToggle(PanelDictationPinToggleButton, "dictation");
+        UpdatePinToggle(PanelRssPinToggleButton, "rss");
+        UpdatePinToggle(PanelReadingLensPinToggleButton, "readingLens");
 
         // Meme etat, meme fonction de mise a jour, juste un 2e endroit qui
         // l'affiche (bouton rapide "puzzle", MainWindow.xaml) - aucune 2e
@@ -580,6 +593,8 @@ public sealed partial class MainWindow : Window
         UpdatePinToggle(QuickTranslatePinToggleButton, "translate");
         UpdatePinToggle(QuickWebAppsPinToggleButton, "webApps");
         UpdatePinToggle(QuickDictationPinToggleButton, "dictation");
+        UpdatePinToggle(QuickRssPinToggleButton, "rss");
+        UpdatePinToggle(QuickReadingLensPinToggleButton, "readingLens");
     }
 
     private static string UsageModeLabel(string usageMode) =>

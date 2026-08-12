@@ -172,7 +172,7 @@ public class UiSettingsMigrationTests
     }
 
     [Fact]
-    public void ModeAccentColors_et_ChromeLayoutStyle_absents_du_json_conservent_le_defaut_sans_migration_dediee()
+    public void ModeAccentColors_absents_du_json_conservent_le_defaut_sans_migration_dediee()
     {
         var dir = CreateTempDir();
         var path = Path.Combine(dir, "ui-settings.lumora"); // n'existe pas encore
@@ -183,7 +183,6 @@ public class UiSettingsMigrationTests
 
         var loaded = UiSettings.Load(path, legacyPath);
 
-        Assert.Equal("classic", loaded.ChromeLayoutStyle);
         Assert.Equal(string.Empty, loaded.ModeAccentColorNeutral);
         Assert.Equal(string.Empty, loaded.ModeAccentColorFocus);
         Assert.Equal(string.Empty, loaded.ModeAccentColorReading);
@@ -193,48 +192,41 @@ public class UiSettingsMigrationTests
     }
 
     [Fact]
-    public void ModeAccentColorFocus_et_ChromeLayoutStyle_survivent_a_un_aller_retour_SaveLoad()
+    public void ModeAccentColorFocus_survit_a_un_aller_retour_SaveLoad()
     {
         var dir = CreateTempDir();
         var path = Path.Combine(dir, "ui-settings.lumora");
         var original = UiSettings.Default();
         original.ModeAccentColorFocus = "#3A8FD1";
-        original.ChromeLayoutStyle = "identitySpine";
 
         original.Save(path);
         var loaded = UiSettings.Load(path);
 
         Assert.Equal("#3A8FD1", loaded.ModeAccentColorFocus);
-        Assert.Equal("identitySpine", loaded.ChromeLayoutStyle);
         // Les modes non touches restent au defaut Nova (vide).
         Assert.Equal(string.Empty, loaded.ModeAccentColorNight);
     }
 
+    // Suppression du Style Lumora (2026-08-10, demande explicite utilisateur -
+    // "trop difficile a gerer") : ChromeLayoutStyle/IdentitySpineAutoHide ont
+    // ete retires de UiSettings. Un profil existant dont le JSON contient
+    // encore "ChromeLayoutStyle":"identitySpine" n'a plus besoin de migration
+    // dediee - System.Text.Json ignore silencieusement les cles inconnues au
+    // chargement, le profil retombe simplement en disposition classique
+    // (la seule qui reste).
     [Fact]
-    public void IdentitySpineAutoHide_absent_du_json_reste_desactive_par_defaut()
+    public void ChromeLayoutStyle_residuel_dans_un_fichier_existant_ne_fait_pas_echouer_le_chargement()
     {
         var dir = CreateTempDir();
         var path = Path.Combine(dir, "ui-settings.lumora");
-        var legacyPath = Path.Combine(dir, "ui-settings.json");
-        File.WriteAllText(legacyPath, """{ "SearchEngine": "duckduckgo" }""");
+        // Meme format que Save() (LumoraFile, pas du JSON en clair) : simule
+        // un vrai profil existant sauvegarde avant la suppression du Style
+        // Lumora, avec la cle residuelle encore presente.
+        LumoraFile.WriteAllText(path, """{ "ChromeLayoutStyle": "identitySpine", "IdentitySpineAutoHide": true, "SearchEngine": "duckduckgo" }""");
 
-        var loaded = UiSettings.Load(path, legacyPath);
-
-        Assert.False(loaded.IdentitySpineAutoHide);
-    }
-
-    [Fact]
-    public void IdentitySpineAutoHide_survit_a_un_aller_retour_SaveLoad()
-    {
-        var dir = CreateTempDir();
-        var path = Path.Combine(dir, "ui-settings.lumora");
-        var original = UiSettings.Default();
-        original.IdentitySpineAutoHide = true;
-
-        original.Save(path);
         var loaded = UiSettings.Load(path);
 
-        Assert.True(loaded.IdentitySpineAutoHide);
+        Assert.Equal("duckduckgo", loaded.SearchEngine);
     }
 
     // Taille de l'interface (UiDensity) : le nouveau defaut "standard" est

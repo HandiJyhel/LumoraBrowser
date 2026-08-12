@@ -210,8 +210,9 @@ public sealed partial class MainWindow
 
     private bool TryFocusCompanionZone() =>
         TryFocusCandidate(BackToPageButton) ||
-        TryFocusCandidate(ModeCompanionButton) ||
-        TryFocusCandidate(UsageModeButton);
+        TryFocusCandidate(ModeUsageButton) ||
+        TryFocusCandidate(CompanionButton) ||
+        TryFocusCandidate(AccessibilityMenuButton);
 
     private FrameworkElement CurrentAccessibilityContentPanel()
     {

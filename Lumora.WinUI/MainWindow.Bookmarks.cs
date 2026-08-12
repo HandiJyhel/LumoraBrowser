@@ -53,6 +53,10 @@ public sealed partial class MainWindow
     {
         if (_bookmarkDialogOpen) return;
         _bookmarkDialogOpen = true;
+        // Flyout ajoute le 2026-08-12 : ferme-le avant le ContentDialog, sinon les
+        // deux se superposent visuellement (meme geste que VaultQuickAccessFlyout
+        // avant FillAsync).
+        AddBookmarkFlyout.Hide();
         try
         {
             var address = NormalizeAddress(AddressBox.Text);
@@ -584,16 +588,6 @@ public sealed partial class MainWindow
 
     private void RenderBookmarksBar()
     {
-        // Rafraichit aussi les favoris integres a la colonne identitaire, en
-        // tete et avant le traitement classique ci-dessous : meme patron que
-        // RenderVerticalTabs()/RenderIdentitySpineTabs() - tout site d'appel
-        // existant (ajout/suppression/reordonnancement de favori) garde les
-        // deux presentations synchronisees sans call-site supplementaire.
-        if (_chromeLayoutStyle == "identitySpine")
-        {
-            RenderIdentitySpineBookmarks();
-        }
-
         BookmarksBarPanel.Children.Clear();
         OtherBookmarksBarHost.Children.Clear();
         BookmarksBottomBarPanel.Children.Clear();

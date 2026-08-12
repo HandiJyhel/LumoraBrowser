@@ -43,7 +43,7 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("ResolveModeChromePalette", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("ModeChromePalette", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("SetIdentityGradient", settingsTheme, StringComparison.Ordinal);
-        Assert.Contains("UsageModeButton.Background", settingsTheme, StringComparison.Ordinal);
+        Assert.Contains("ModeUsageButton.Background", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("NovaOverlayBrush", xaml, StringComparison.Ordinal);
         Assert.Contains("NovaTextOnAccentBrush", xaml, StringComparison.Ordinal);
         Assert.Contains("NovaChromeButtonBackgroundBrush", xaml, StringComparison.Ordinal);
@@ -180,14 +180,17 @@ public sealed class UsageModeVisualIdentityTests
         var settings = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
         var settingsTheme = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
 
-        Assert.Contains("ModeCompanionButton", xaml, StringComparison.Ordinal);
-        Assert.Contains("ModeCompanionFlyout", xaml, StringComparison.Ordinal);
+        // Compagnon Lumie : a eu un pill autonome, puis fusionne dans "Mode et
+        // confort" (2026-08-09), puis defusionne en menu "Compagnon" a part
+        // entiere avec interrupteur Active/Desactive (2026-08-10, demande
+        // explicite utilisateur - voir
+        // Chrome_bas_separe_mode_compagnon_et_accessibilite_en_3_menus).
+        Assert.Contains("Compagnon Lumie", xaml, StringComparison.Ordinal);
         Assert.Contains("ModeCompanionMemoryBox", xaml, StringComparison.Ordinal);
         Assert.Contains("Lumie", xaml, StringComparison.Ordinal);
         Assert.Contains("UsageModeLabelText", xaml, StringComparison.Ordinal);
         Assert.Contains("UsageModeCurrentText", xaml, StringComparison.Ordinal);
         Assert.Contains("UsageModeAccentBar", xaml, StringComparison.Ordinal);
-        Assert.Contains("ModeCompanionAccentDot", xaml, StringComparison.Ordinal);
         Assert.Contains("NovaCompanionPillButtonStyle", xaml, StringComparison.Ordinal);
         Assert.Contains("NovaCompanionGlassBrush", xaml, StringComparison.Ordinal);
         Assert.Contains("NovaModuleHubButtonStyle", xaml, StringComparison.Ordinal);
@@ -198,7 +201,7 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("RunModeCompanionActionAsync", usageMode, StringComparison.Ordinal);
         Assert.Contains("ModeCompanionDefinition", usageMode, StringComparison.Ordinal);
         Assert.Contains("CompanionMemory(string mode)", usageMode, StringComparison.Ordinal);
-        Assert.Contains("UpdateModeCompanionUi();", settings, StringComparison.Ordinal);
+        Assert.Contains("UpdateCompanionButtonUi();", settings, StringComparison.Ordinal);
         Assert.Contains(".home-grid", navigation, StringComparison.Ordinal);
         Assert.Contains(".home-primary", navigation, StringComparison.Ordinal);
         Assert.Contains(".mode-side", navigation, StringComparison.Ordinal);
@@ -243,7 +246,11 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("if (mode == \"neutral\" || mode == \"balanced\")", navigation, StringComparison.Ordinal);
         Assert.Contains("NewTabUsageMode() != \"neutral\"", navigation, StringComparison.Ordinal);
         Assert.Contains("PinnedModuleIds.Clear()", usageMode, StringComparison.Ordinal);
-        Assert.Contains("ModeCompanionButton.Visibility = Visibility.Visible", usageMode, StringComparison.Ordinal);
+        // Le contenu du compagnon se met a jour inconditionnellement (y
+        // compris en Neutre) des que le menu Compagnon est active - la
+        // bascule Active/Desactive (2026-08-10) est un interrupteur explicite
+        // de l'utilisateur, pas une regle liee au mode d'usage courant.
+        Assert.Contains("ModeCompanionMascotIcon.Glyph = companion.Icon;", usageMode, StringComparison.Ordinal);
         Assert.Contains("Ajouter un raccourci", usageMode, StringComparison.Ordinal);
         Assert.Contains("\"neutral\" => \"neutral\"", webMessaging, StringComparison.Ordinal);
         Assert.Contains("UsageMode { get; set; } = \"neutral\"", uiSettings, StringComparison.Ordinal);
@@ -270,8 +277,12 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Chrome_bas_regroupe_mode_et_lumie()
+    public void Chrome_bas_separe_mode_compagnon_et_accessibilite_en_3_menus()
     {
+        // Remplace Chrome_bas_fusionne_mode_et_lumie_en_un_seul_point_d_entree
+        // (verrouillait 1 seul pill fusionne) : demande explicite utilisateur
+        // du 2026-08-10 - "l'utilisateur n'est pas perdu" - 3 menus distincts,
+        // bien separes, chacun avec son nom et sa propre couleur d'accent.
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
         var statusBarStart = xaml.IndexOf("<Grid x:Name=\"StatusBarRow\"", StringComparison.Ordinal);
         var navigationToolbarStart = xaml.IndexOf("<Grid x:Name=\"NavigationToolbar\"", StringComparison.Ordinal);
@@ -286,10 +297,31 @@ public sealed class UsageModeVisualIdentityTests
                 ? statusBarStart - navigationToolbarStart
                 : xaml.Length - navigationToolbarStart);
 
-        Assert.Contains("ModeCompanionButton", statusBarSection, StringComparison.Ordinal);
-        Assert.Contains("UsageModeButton", statusBarSection, StringComparison.Ordinal);
-        Assert.DoesNotContain("ModeCompanionButton", navigationSection, StringComparison.Ordinal);
-        Assert.DoesNotContain("UsageModeButton", navigationSection, StringComparison.Ordinal);
+        // 3 boutons distincts, chacun avec sa propre couleur d'accent.
+        Assert.Contains("x:Name=\"ModeUsageButton\"", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"CompanionButton\"", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"AccessibilityMenuButton\"", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("NovaAccentBrush", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("NovaCompanionAccentBrush", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("NovaCoolAccentBrush", statusBarSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ModeUsageButton", navigationSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("CompanionButton", navigationSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("AccessibilityMenuButton", navigationSection, StringComparison.Ordinal);
+
+        // Le menu Compagnon garde son contenu complet (interrupteur +
+        // contenu quand actif) - profondeur normale pour un menu qu'on a
+        // choisi d'ouvrir expres.
+        Assert.Contains("CompanionToggleButton", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("CompanionOnState", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("CompanionOffState", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("Compagnon Lumie", statusBarSection, StringComparison.Ordinal);
+        Assert.Contains("ModeCompanionMemoryBox", statusBarSection, StringComparison.Ordinal);
+
+        // Plus de pill fusionne "UsageModeButton"/"Mode et confort" nulle
+        // part : la defusion est complete, pas un habillage par-dessus.
+        Assert.DoesNotContain("x:Name=\"UsageModeButton\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ModeCompanionButton", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ModeCompanionFlyout", xaml, StringComparison.Ordinal);
 
         // Le profil a ete deplace en en-tete du menu Demarrer (0.93.5.0-dev,
         // "comme un vrai menu demarrer Windows") : il ne doit plus etre dans
@@ -332,17 +364,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_93_17_2()
+    public void Version_projet_est_alignee_sur_0_93_27_0()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.93.17.2-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.93.17.2-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.93.17.2-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.93.17.2-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.27.0-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.93.27.0-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.93.27.0-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.27.0-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 using Lumora.WinUI.Credentials;
 using Lumora.WinUI.PasswordManager;
 using Windows.ApplicationModel.DataTransfer;
@@ -103,6 +104,14 @@ public sealed partial class MainWindow
         return row;
     }
 
+    // Carte plutot que simple ligne de texte (2026-08-10, "choses a revoir" -
+    // retour utilisateur sur le Coffre : "ca ressemble a un tableau Excel
+    // inachevé"). Pastille de robustesse ajoutee (reutilise
+    // PasswordHealthAnalyzer.EvaluateStrength, deja utilise par le Bilan de
+    // sante - aucun nouvel algorithme), visible sans avoir a ouvrir le
+    // detail. Bordure/coin arrondi repris de NovaChromeStrokeSoftBrush deja
+    // utilise par le cadre du volet de detail juste a cote, pour rester dans
+    // la meme famille visuelle.
     private UIElement BuildVaultRow(VaultCredential cred)
     {
         var isSelected = _selectedVaultCredential?.Id == cred.Id;
@@ -112,22 +121,38 @@ public sealed partial class MainWindow
         {
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Left,
-            Padding = new Thickness(10, 7, 10, 7),
-            Margin = new Thickness(0, 0, 0, 2),
+            Padding = new Thickness(10, 8, 10, 8),
+            Margin = new Thickness(0, 0, 0, 4),
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            BorderBrush = RootShell.Resources["NovaChromeStrokeSoftBrush"] as Brush,
             Background = isSelected
                 ? RootShell.Resources["NovaAccentSoftBrush"] as Brush
                 : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-            BorderThickness = new Thickness(0),
             Tag = cred
         };
 
-        button.Content = new TextBlock
+        var row = new Grid { ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var text = new TextBlock
         {
             Text = hasUser ? cred.Username : "(aucun identifiant enregistré)",
             Opacity = hasUser ? 0.85 : 0.5,
             FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic,
-            TextTrimming = TextTrimming.CharacterEllipsis
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
         };
+        Grid.SetColumn(text, 0);
+        row.Children.Add(text);
+
+        var dot = new Ellipse { Width = 8, Height = 8, Fill = StrengthBrush(cred.Password), VerticalAlignment = VerticalAlignment.Center };
+        ToolTipService.SetToolTip(dot, $"Mot de passe {StrengthLabel(cred.Password).ToLowerInvariant()}");
+        Grid.SetColumn(dot, 1);
+        row.Children.Add(dot);
+
+        button.Content = row;
 
         button.Click += (_, _) =>
         {
@@ -136,6 +161,53 @@ public sealed partial class MainWindow
         };
 
         return button;
+    }
+
+    // ── Robustesse d'un mot de passe (badges) ────────────────────────────────
+    // Reutilise PasswordHealthAnalyzer.EvaluateStrength (deja alimente au
+    // Bilan de sante du coffre) plutot que de recalculer une notion de
+    // robustesse differente ici - un seul et meme critere partout dans
+    // l'app. Couleurs semantiques deja definies globalement (App.xaml),
+    // jamais inventees pour l'occasion.
+    private static Brush StrengthBrush(string password) => PasswordHealthAnalyzer.EvaluateStrength(password) switch
+    {
+        PasswordStrength.Strong => (Brush)Application.Current.Resources["NovaSuccessBrush"],
+        PasswordStrength.Medium => (Brush)Application.Current.Resources["NovaWarningBrush"],
+        _ => (Brush)Application.Current.Resources["NovaDangerBrush"],
+    };
+
+    private static Brush StrengthSurfaceBrush(string password) => PasswordHealthAnalyzer.EvaluateStrength(password) switch
+    {
+        PasswordStrength.Strong => (Brush)Application.Current.Resources["NovaSuccessSurfaceBrush"],
+        PasswordStrength.Medium => (Brush)Application.Current.Resources["NovaWarningSurfaceBrush"],
+        _ => (Brush)Application.Current.Resources["NovaDangerSurfaceBrush"],
+    };
+
+    private static string StrengthLabel(string password) => PasswordHealthAnalyzer.EvaluateStrength(password) switch
+    {
+        PasswordStrength.Strong => "Robuste",
+        PasswordStrength.Medium => "Moyen",
+        _ => "Faible",
+    };
+
+    private static UIElement BuildStrengthPill(string password)
+    {
+        var border = new Border
+        {
+            Background = StrengthSurfaceBrush(password),
+            CornerRadius = new CornerRadius(100),
+            Padding = new Thickness(9, 3, 9, 3),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0)
+        };
+        border.Child = new TextBlock
+        {
+            Text = StrengthLabel(password),
+            FontSize = 11,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = StrengthBrush(password)
+        };
+        return border;
     }
 
     // Icône de site à partir du cache favicon déjà alimenté par la navigation
@@ -203,6 +275,7 @@ public sealed partial class MainWindow
             titleStack.Children.Add(new TextBlock { Text = cred.Origin, Opacity = 0.55, FontSize = 12 });
         }
         headerRow.Children.Add(titleStack);
+        headerRow.Children.Add(BuildStrengthPill(cred.Password));
         VaultDetailPanel.Children.Add(headerRow);
 
         var hasUser = !string.IsNullOrWhiteSpace(cred.Username);

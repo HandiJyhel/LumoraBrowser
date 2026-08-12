@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "0.93.17.2-dev",
+    [string]$Version = "0.93.27.0-dev",
     [string]$CleanArtifactDir = "",
     [string]$OutputDirectory = "artifacts\installer"
 )
@@ -195,8 +195,9 @@ Write-Template -TemplatePath $programTemplate -DestinationPath $programPath -Tok
 dotnet publish $projectPath `
     --configuration Release `
     --runtime win-x64 `
-    --self-contained false `
+    --self-contained true `
     /p:PublishSingleFile=true `
+    /p:IncludeNativeLibrariesForSelfExtract=true `
     /p:DebugType=None `
     /p:DebugSymbols=false `
     --output $publishDir
@@ -221,6 +222,7 @@ Signature Sigstore : non signée pour ce build
 Signature Windows : non signée Authenticode
 Installation : dossier visible et modifiable ; par défaut sans privilège administrateur sous LOCALAPPDATA
 Contenu : application Lumora et modules intégrés inclus ; nom complet Lumora Browser ; logo LumoraApp.png embarqué avec rendu haute qualité ; options à cocher redessinées et visibles ; code d'installateur réorganisé en template propre ; WebView2 embarqué en mode Fixed Version (aucun téléchargement, autorisation App Container posée via icacls à l'installation) ; moteur Tor installable via une case à cocher (décochée par défaut), téléchargé depuis dist.torproject.org et vérifié par empreinte SHA256 épinglée dans le code de Lumora
+Dépendances : installateur et application self-contained (runtime .NET embarqué dans chacun des deux) ; aucun prérequis système à installer au préalable, fonctionne sur un poste Windows vierge
 Profil : aucun profil embarqué ; aucun dossier de profil forcé au lancement
 Source build propre : $($cleanArtifact.FullName)
 

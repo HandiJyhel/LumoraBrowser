@@ -85,6 +85,17 @@ public sealed partial class MainWindow
         SetBrush("NovaBookmarkButtonActiveBackgroundBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(74, 57, 24, translucent ? (byte)232 : (byte)255) : UiColor(255, 243, 205, translucent ? (byte)248 : (byte)255)));
         SetBrush("NovaBookmarkButtonActiveBorderBrush", highContrast ? UiColor(255, 255, 255) : (isDark ? UiColor(230, 170, 72) : UiColor(196, 128, 12)));
         SetBrush("NovaBookmarkButtonActiveForegroundBrush", highContrast ? UiColor(0, 0, 0) : (isDark ? UiColor(255, 233, 170) : UiColor(138, 84, 0)));
+        // Familles de sens (chantier identite visuelle, 2026-08-10) : les
+        // valeurs sombres sont celles deja posees dans App.xaml (design-time
+        // default) - redeclarees ici pour que le clair (contraste ~2:1 avec
+        // les memes valeurs, mesure insuffisant) bascule sur des teintes
+        // plus foncees de la meme famille, memes couleurs deja utilisees
+        // ailleurs dans ce fichier (Bookmark actif clair, cool accent clair)
+        // plutot que d'en inventer de nouvelles. Contraste eleve : memes 3
+        // couleurs signal que les barres d'accent du bas.
+        SetAppBrush("NovaTileFamilyContentBrush", highContrast ? UiColor(255, 213, 0) : (isDark ? UiColor(230, 170, 72) : UiColor(196, 128, 12)));
+        SetAppBrush("NovaTileFamilyProtectionBrush", highContrast ? UiColor(255, 120, 140) : (isDark ? UiColor(226, 137, 127) : UiColor(190, 70, 55)));
+        SetAppBrush("NovaTileFamilyToolsBrush", highContrast ? UiColor(0, 255, 226) : (isDark ? UiColor(86, 194, 228) : UiColor(0, 129, 168)));
         // Blanc pur ici videait le mot "attenue" de son sens (texte secondaire
         // aussi voyant que le texte principal) - passe au meme gris que les
         // bordures au repos, cf. hcRestBorder plus haut.
@@ -207,12 +218,14 @@ public sealed partial class MainWindow
                      TranslatePinnedButton,
                      WebAppsPinnedButton,
                      ModulesButton,
-                     ModeCompanionButton,
                      ModeCompanionMemoryBox,
                      ModeCompanionSaveButton,
                      ModeCompanionPrimaryButton,
                      ModeCompanionSecondaryButton,
-                     UsageModeButton,
+                     ModeUsageButton,
+                     CompanionButton,
+                     CompanionToggleButton,
+                     AccessibilityMenuButton,
                      DictationPinnedButton,
                      VideoDownloadStartButton,
                      MainMenuButton,
@@ -240,6 +253,7 @@ public sealed partial class MainWindow
         SyncSharedAppThemeResources();
         ApplyWindowTitleBarColors();
         UpdateUsageModeButtonUi();
+        UpdateAccessibilityQuickButtonUi();
         ApplyIconButtonSizing();
     }
 
@@ -329,6 +343,20 @@ public sealed partial class MainWindow
         }
     }
 
+    // Meme forme que SetBrush, mais cible Application.Current.Resources : les
+    // 3 brushes de famille du chantier identite visuelle (Content/Protection/
+    // Tools, 2026-08-10) vivent la plutot que dans RootShell.Resources, car
+    // StartMenuFamilyKeyToBrushConverter (un convertisseur XAML, sans
+    // reference a la fenetre) doit pouvoir les resoudre - voir
+    // Converters/StartMenuFamilyKeyToBrushConverter.cs.
+    private static void SetAppBrush(string key, Windows.UI.Color color)
+    {
+        if (Application.Current.Resources[key] is SolidColorBrush brush)
+        {
+            brush.Color = color;
+        }
+    }
+
     private void SetGlowBrush(string key, Windows.UI.Color color, byte centerAlpha)
     {
         if (RootShell.Resources[key] is not RadialGradientBrush gradient || gradient.GradientStops.Count != 2)
@@ -372,11 +400,11 @@ public sealed partial class MainWindow
             // PAS d'equivalent generique : l'accent visuel du Mode d'usage
             // (bande de couleur, degrade de la colonne identitaire) et les
             // boutons dont la couleur depend du mode courant
-            // (UsageModeButton/ModeCompanionButton - Focus/Lecture/etc. ont
-            // chacun leur teinte, impossible a exprimer par un
-            // {StaticResource} statique). ModulesButton en a ete retire :
-            // il n'a jamais ete teinte par mode (toujours la meme "chrome"
-            // generique), sa couleur venait deja entierement de
+            // (ModeUsageButton/CompanionButton/AccessibilityMenuButton -
+            // Focus/Lecture/etc. ont chacun leur teinte, impossible a
+            // exprimer par un {StaticResource} statique). ModulesButton en a
+            // ete retire : il n'a jamais ete teinte par mode (toujours la
+            // meme "chrome" generique), sa couleur venait deja entierement de
             // NovaChromeButtonBackgroundBrush/BorderBrush/ForegroundBrush
             // via le Style de son bouton - cette reecriture directe etait
             // superflue et c'est elle qui restait collee au bouton une fois
@@ -386,16 +414,27 @@ public sealed partial class MainWindow
             ModeChromeAccentStrip.Height = 3;
             ModeChromeAccentStrip.Opacity = 1;
             SetChromeGradient(UiColor(0, 0, 0), UiColor(0, 0, 0), UiColor(0, 0, 0));
-            UsageModeButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
-            UsageModeButton.BorderBrush = new SolidColorBrush(hcRestBorder);
-            UsageModeButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
-            ModeCompanionButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
-            ModeCompanionButton.BorderBrush = new SolidColorBrush(hcRestBorder);
-            ModeCompanionButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
+            ModeUsageButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            ModeUsageButton.BorderBrush = new SolidColorBrush(hcRestBorder);
+            ModeUsageButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
+            CompanionButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            CompanionButton.BorderBrush = new SolidColorBrush(hcRestBorder);
+            CompanionButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
+            AccessibilityMenuButton.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            AccessibilityMenuButton.BorderBrush = new SolidColorBrush(hcRestBorder);
+            AccessibilityMenuButton.Foreground = new SolidColorBrush(UiColor(255, 255, 255));
             UsageModeAccentBar.Background = new SolidColorBrush(UiColor(255, 213, 0));
-            ModeCompanionAccentDot.Background = new SolidColorBrush(UiColor(0, 255, 226));
-            ModeCompanionGlow.Background = new SolidColorBrush(UiColor(0, 0, 0));
+            CompanionAccentBar.Background = new SolidColorBrush(UiColor(255, 120, 140));
+            AccessibilityQuickAccentBar.Background = new SolidColorBrush(UiColor(0, 255, 226));
             SetIdentityGradient(UiColor(255, 213, 0), UiColor(255, 255, 255), UiColor(0, 255, 226));
+            // Familles de sens (chantier identite visuelle, 2026-08-10) : en
+            // contraste eleve, reprend exactement les 3 memes couleurs signal
+            // deja utilisees juste au-dessus pour les barres d'accent du bas
+            // (Mode/Compagnon/Accessibilite) - aucune nouvelle teinte, pas de
+            // risque de lisibilite propre a ce mode.
+            SetAppBrush("NovaTileFamilyContentBrush", UiColor(255, 213, 0));
+            SetAppBrush("NovaTileFamilyProtectionBrush", UiColor(255, 120, 140));
+            SetAppBrush("NovaTileFamilyToolsBrush", UiColor(0, 255, 226));
             NavigationToolbar.Opacity = 1;
             VerticalTabsRail.Opacity = 1;
             return;
@@ -411,13 +450,22 @@ public sealed partial class MainWindow
         ModulesButton.ClearValue(Control.BackgroundProperty);
         ModulesButton.ClearValue(Control.BorderBrushProperty);
         ModulesButton.ClearValue(Control.ForegroundProperty);
-        ModulesButtonMark.ClearValue(Microsoft.UI.Xaml.Shapes.Shape.FillProperty);
+        // NB (2026-08-10, toujours vrai le 2026-08-12 apres le retour de
+        // ModulesButtonMark en Path vectoriel - voir plus haut dans ce meme
+        // fichier) : ModulesButtonMark.Fill n'est JAMAIS ecrit ailleurs dans
+        // le code - c'est une valeur locale posee une seule fois en XAML
+        // (NovaIdentityMarkBrush). Le ClearValue qui etait ici l'effacait donc
+        // pour de bon a chaque application de theme, rendant le symbole du
+        // bouton Demarrer invisible en permanence (regression signalee par
+        // l'utilisateur - "il y a meme plus l'icone"). Retire : rien ne
+        // justifie de le filet defensif sur cette propriete tant que rien
+        // d'autre ne lui ecrit de valeur locale.
 
         var alpha = translucent ? (byte)232 : (byte)255;
         var mode = (_uiSettings.UsageMode ?? "neutral").ToLowerInvariant();
         var chrome = ResolveModeChromePalette(mode, isDark, alpha);
 
-        // Couleur personnalisee par mode (MainWindow.IdentitySpine.cs) :
+        // Couleur personnalisee par mode (MainWindow.ModeAccentColor.cs) :
         // strictement apres le "return" du contraste eleve ci-dessus, jamais
         // avant - le contraste eleve doit continuer a ecraser toute couleur
         // de mode/personnalisee exactement comme avant cette fonctionnalite.
@@ -501,6 +549,16 @@ public sealed partial class MainWindow
         SetBrush("NovaBookmarkButtonActiveForegroundBrush", isDark
             ? LumoraTheme.ResolveTextOnColor(chrome.Accent)
             : ChromeTint(chrome.Accent, chrome.Text, 0.20, 255));
+        // Familles de sens (chantier identite visuelle, 2026-08-10) : valeurs
+        // FIXES, pas derivees de chrome.Accent/CoolAccent comme Bookmark
+        // ci-dessus - contrairement a la couleur de mode (Focus/Lecture/...),
+        // le sens "protection"/"contenu"/"outils" doit rester le meme quel
+        // que soit le mode d'usage actif. Le contraste eleve est deja gere
+        // plus haut dans ApplyUsageModeChrome (return anticipe) : rien a
+        // faire ici pour ce cas.
+        SetAppBrush("NovaTileFamilyContentBrush", isDark ? UiColor(230, 170, 72) : UiColor(196, 128, 12));
+        SetAppBrush("NovaTileFamilyProtectionBrush", isDark ? UiColor(226, 137, 127) : UiColor(190, 70, 55));
+        SetAppBrush("NovaTileFamilyToolsBrush", isDark ? UiColor(86, 194, 228) : UiColor(0, 129, 168));
         SetBrush("NovaFocusBrush", chrome.Focus);
         SetBrush("NovaFocusInnerBrush", isDark ? UiColor(13, 20, 34) : UiColor(255, 255, 255));
         SetBrush("NovaTextOnAccentBrush", LumoraTheme.ResolveTextOnColor(chrome.Accent));
@@ -561,15 +619,25 @@ public sealed partial class MainWindow
             "night" => 0.68,
             _ => 0.95
         };
-        UsageModeButton.Background = new SolidColorBrush(ChromeTint(chrome.Surface, chrome.Accent, 0.055, translucent ? (byte)214 : (byte)232));
-        UsageModeButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.Accent, 0.13, 178));
-        UsageModeButton.Foreground = new SolidColorBrush(chrome.Text);
+        ModeUsageButton.Background = new SolidColorBrush(ChromeTint(chrome.Surface, chrome.Accent, 0.055, translucent ? (byte)214 : (byte)232));
+        ModeUsageButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.Accent, 0.13, 178));
+        ModeUsageButton.Foreground = new SolidColorBrush(chrome.Text);
         UsageModeAccentBar.Background = new SolidColorBrush(chrome.Accent);
-        ModeCompanionButton.Background = new SolidColorBrush(ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.10, translucent ? (byte)218 : (byte)236));
-        ModeCompanionButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.CoolAccent, 0.24, 190));
-        ModeCompanionButton.Foreground = new SolidColorBrush(chrome.Text);
-        ModeCompanionAccentDot.Background = new SolidColorBrush(chrome.CoolAccent);
-        ModeCompanionGlow.Background = new SolidColorBrush(ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.18, translucent ? (byte)160 : (byte)190));
+
+        // Compagnon et Accessibilite (2026-08-10, defusion des 3 menus) : le
+        // fond tinte suit le meme Cool Accent que celui deja utilise pour ce
+        // genre de pill (translucide, coherent avec le reste du chrome) - la
+        // distinction visuelle entre les 2 menus vient de leur barre d'accent
+        // et de leur icone (CompanionAccentBar en rose fixe, non mode-tinte,
+        // AccessibilityQuickAccentBar en Cool Accent comme avant), pas de leur
+        // fond.
+        CompanionButton.Background = new SolidColorBrush(ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.10, translucent ? (byte)218 : (byte)236));
+        CompanionButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.CoolAccent, 0.24, 190));
+        CompanionButton.Foreground = new SolidColorBrush(chrome.Text);
+        AccessibilityMenuButton.Background = new SolidColorBrush(ChromeTint(chrome.SurfaceRaised, chrome.CoolAccent, 0.10, translucent ? (byte)218 : (byte)236));
+        AccessibilityMenuButton.BorderBrush = new SolidColorBrush(ChromeTint(chrome.StrokeSoft, chrome.CoolAccent, 0.24, 190));
+        AccessibilityMenuButton.Foreground = new SolidColorBrush(chrome.Text);
+        AccessibilityQuickAccentBar.Background = new SolidColorBrush(chrome.CoolAccent);
 
         NavigationToolbar.Opacity = mode == "night" ? 0.94 : 1;
         VerticalTabsRail.Opacity = mode == "night" ? 0.95 : 1;

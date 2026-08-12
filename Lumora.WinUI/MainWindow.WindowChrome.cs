@@ -198,30 +198,51 @@ public sealed partial class MainWindow : Window
         try
         {
             var scale = Content?.XamlRoot?.RasterizationScale ?? 1.0;
-            var rowHeight = TopTabsRow.ActualHeight > 0 ? TopTabsRow.ActualHeight : 52;
             var windowWidth = RootShell.ActualWidth;
             if (windowWidth <= 0) return;
 
-            double leftEdge = 0;
-            var lastTab = BrowserTabs.TabItems.OfType<TabViewItem>().LastOrDefault();
-            if (lastTab is not null && lastTab.ActualWidth > 0)
+            // Bande de titre aplatie (2026-08-09) : TopTabsRow.ActualHeight tombe a 0
+            // quand la ligne est vraiment supprimee (Classique + onglets verticaux,
+            // voir ApplyVerticalTabsLayout) - a distinguer du cas horizontal, ou le
+            // calcul ci-dessous (base sur le dernier onglet de BrowserTabs) reste
+            // valable tel quel. En mode aplati, NavigationRow n'a PAS d'espace vide :
+            // elle est pleine de vrais boutons (adresse, bouclier, favoris, modules...)
+            // jusqu'a la marge de securite - calquer le calcul sur cette meme ligne
+            // aurait recouvert ces boutons (cause du tout premier echec historique).
+            // Seule la marge de securite elle-meme (deja hors de portee des boutons
+            // reels, meme reserve que les boutons systeme) est une zone de drag sure ;
+            // si elle est trop fine, aucune zone n'est posee plutot que d'empieter -
+            // consequence assumee : impossible de deplacer la fenetre en cliquant la
+            // ligne d'adresse dans ce mode precis, seule la reserve systeme le permet
+            // encore (double-clic sur la barre de titre au sens Windows classique).
+            var flattened = TopTabsRow.ActualHeight <= 0;
+            var rowHeight = flattened
+                ? NavigationRow.ActualHeight
+                : (TopTabsRow.ActualHeight > 0 ? TopTabsRow.ActualHeight : 52);
+
+            double dragLeft;
+            double dragRight;
+            if (flattened)
             {
-                var bounds = lastTab.TransformToVisual(RootShell)
-                    .TransformBounds(new Windows.Foundation.Rect(0, 0, lastTab.ActualWidth, lastTab.ActualHeight));
-                leftEdge = bounds.Right;
+                dragRight = windowWidth;
+                dragLeft = windowWidth - _titleBarSafeRight;
+            }
+            else
+            {
+                double leftEdge = 0;
+                var lastTab = BrowserTabs.TabItems.OfType<TabViewItem>().LastOrDefault();
+                if (lastTab is not null && lastTab.ActualWidth > 0)
+                {
+                    var bounds = lastTab.TransformToVisual(RootShell)
+                        .TransformBounds(new Windows.Foundation.Rect(0, 0, lastTab.ActualWidth, lastTab.ActualHeight));
+                    leftEdge = bounds.Right;
+                }
+
+                const double addTabButtonReserve = 56; // bouton "+" : jamais recouvert par la zone de drag
+                dragLeft = Math.Min(leftEdge + addTabButtonReserve, windowWidth - _titleBarSafeRight);
+                dragRight = Math.Max(dragLeft, windowWidth - _titleBarSafeRight);
             }
 
-            const double addTabButtonReserve = 56; // bouton "+" : jamais recouvert par la zone de drag
-            var dragLeft = Math.Min(leftEdge + addTabButtonReserve, windowWidth - _titleBarSafeRight);
-            if (_chromeLayoutStyle == "identitySpine")
-            {
-                // La colonne identitaire recouvre les premiers pixels de cette
-                // ligne (marque Lumora) : sans ce plancher, la zone de drag
-                // systeme les recouvre aussi et absorbe les clics destines a
-                // la marque.
-                dragLeft = Math.Max(dragLeft, IdentitySpineHost.ActualWidth + 4);
-            }
-            var dragRight = Math.Max(dragLeft, windowWidth - _titleBarSafeRight);
             if (dragRight - dragLeft < 8) return;
 
             var rect = new RectInt32

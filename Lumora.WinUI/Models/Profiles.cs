@@ -10,6 +10,39 @@ internal sealed record LumoraProfileEntry(
     bool IsCustom)
 {
     public string Label => IsCustom ? $"{Name} - emplacement personnalise" : Name;
+
+    // Lu a chaque acces (pas mis en cache) : ces entrees sont reconstruites a
+    // chaque Discover(), un cache deviendrait perime des qu'un autre profil
+    // change son avatar. Cout negligeable, la liste des profils locaux reste
+    // courte.
+    public string? AvatarPath => ProfileAvatarResolver.Find(ProfileDir);
+}
+
+// Vue d'affichage du selecteur de profil (ProfilePickerList, MainWindow.xaml) :
+// separee de LumoraProfileEntry (internal, chemins reels compris) pour ne
+// donner au binding XAML que ce qui doit vraiment s'afficher.
+public sealed record ProfilePickerItem(string Name, string TypeLabel, string? AvatarPath, bool IsActive);
+
+// Resolution de l'avatar local d'un profil (avatar.<ext> dans son dossier).
+// Partagee entre le profil actif (MainWindow.Avatar.cs) et les profils
+// listes/pas encore charges (selecteur, gestion des utilisateurs) - vit ici
+// (Models/) plutot que dans MainWindow car aucun type WinUI n'est requis et
+// Models/ est aussi compile par Lumora.Tests (sans reference a
+// Microsoft.UI.Xaml).
+internal static class ProfileAvatarResolver
+{
+    public static readonly string[] Extensions = [".png", ".jpg", ".jpeg", ".webp", ".bmp"];
+
+    public static string? Find(string? profileDir)
+    {
+        if (string.IsNullOrWhiteSpace(profileDir)) return null;
+        foreach (var ext in Extensions)
+        {
+            var path = Path.Combine(profileDir, "avatar" + ext);
+            if (File.Exists(path)) return path;
+        }
+        return null;
+    }
 }
 
 internal static class LumoraProfileRegistry
