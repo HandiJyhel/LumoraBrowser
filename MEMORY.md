@@ -21795,3 +21795,18 @@ confirmes lors d'une prochaine session (delais plus courts entre etapes pour evi
 
 - Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 766/766 verts. Pas d'installeur reconstruit a ce stade (pas redemande).
 
+
+## 2026-08-14 (suite 13) - Consolidation git : commit du travail en attente, main synchronisee, branches obsoletes supprimees
+
+- Constat en debut de session : ~50 fichiers modifies + une douzaine de nouveaux fichiers non commites sur `feature/refonte-coffre-0-79-1`, correspondant au travail des passes precedentes (suite 1 a 12, jusqu'a `0.93.41.0-dev`) jamais committe. Demande utilisateur : "commite".
+
+- **Verification avant commit** : build MSBuild propre (0 erreur). `dotnet test` -> 764/766 en serie complete ; les 2 echecs (`LumoraConfigTests.Save_puis_Load_restent_confines_au_dossier_isole` et `ProfileRegistryTests.Discover_ne_marque_pas_un_profil_custom_actif_si_le_runtime_utilise_un_autre_dossier`) confirmes flaky par parallelisme xUnit (les deux manipulent la variable d'environnement `LUMORA_PROFILE_DIR`, process-wide) - repasses isolement, 2/2 verts. Pas de regression fonctionnelle ; a corriger separement (isoler ces tests du parallelisme, non fait cette session).
+
+- **Commit unique** `5737f67` : "Reorganisation barre d'outils, favoris et onglets, coffre et connexions (0.93.41.0-dev)", 68 fichiers, `0.93.27.0-dev -> 0.93.41.0-dev`. Regroupe les 9 fonctionnalites des passes precedentes (reorganisation barre d'outils, glisser-depose favoris, detachement d'onglets, nouvelle fenetre a profil WebView2 partage, bouton Connexions, profil sans mot de passe, mot de passe de compte renforce a 12 caracteres + cle de sauvegarde, correctif zone de drag de la barre de titre, refonte des scripts de capture d'identifiants).
+
+- Retour utilisateur, suite a la remarque sur la branche ne correspondant pas : "je veux que le programme soit complètement à jour partout avant de continuer". Verification : build reel (`current/`) deja aligne (exe identique) ; les 5 branches historiques (`feat/mode-lecture-annotations-0-78-3-2`, `feature/anti-pub-etoile-0-78-2`, `feature/bloc-notes-0-78-3`, `fix/anti-parasite-0-78-3-1`, `refactor/navigation-health-0-78-1`) deja toutes ancetres de `HEAD` ; seule `main` en retard (`0.72.0-dev`, jamais fusionnee). Pas de remote configure (depot 100% local).
+
+- Question posee avant d'agir (fast-forward `main` seul, ou aussi supprimer les 5 branches obsoletes) - reponse utilisateur : "Si y a des choses inutiles, tu dois les supprimer, ça sert à rien de les garder, ça alourdit la chose." **`main` avancee en fast-forward jusqu'a `5737f67`** (sans risque, `main` etait un simple ancetre) **et les 5 branches supprimees** (deja entierement contenues dans `HEAD`, recuperables via `git reflog` si besoin). Il ne reste que `main` et `feature/refonte-coffre-0-79-1`, sur le meme commit.
+
+- Direction annoncee par l'utilisateur pour la prochaine session : applications web installables (voir memoire personnelle `prochaine-session-webapps-et-menu-demarrer` - point 1, code existant a reverifier dans `Lumora.WinUI/WebApps/` avant d'estimer quoi que ce soit). Pas de Go donne ce soir, aucun code touche sur ce sujet.
+
