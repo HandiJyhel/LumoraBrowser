@@ -35,6 +35,13 @@ public sealed partial class MainWindow
             return;
         }
 
+        // Complement a la capture d'identifiants classique, voir
+        // MaybeOfferSessionKeepFromRecentLoginAsync (MainWindow.Sessions.cs) :
+        // memorise qu'un champ mot de passe a ete vu ici, meme si aucun POST
+        // classique ne suit (flux JS multi-etapes, ex. Google).
+        if (pageState.HasPasswordField)
+            DispatcherQueue.TryEnqueue(() => RecordPasswordFieldSighting(pageState.Origin));
+
         DispatcherQueue.TryEnqueue(() =>
         {
             var decision = _passwordManagerInteraction.EvaluatePage(pageState.LoginUrl, pageState);
@@ -54,16 +61,18 @@ public sealed partial class MainWindow
             return;
 
         _pendingCredential = (draft.Origin, draft.Username, draft.Password, draft.LoginUrl, draft.Label);
-        var forWhom = string.IsNullOrWhiteSpace(offer.Username)
-            ? offer.DisplayOrigin
-            : $"{offer.Username} sur {offer.DisplayOrigin}";
         // Cas "changement de domaine" : le meme compte existe deja sous un autre
         // domaine. On propose de rattacher le nouveau, pas juste d'"enregistrer".
+        // L'identifiant n'est plus mis dans ce texte : il est affiche (et
+        // modifiable) dans le champ juste en dessous, seule vraie source de
+        // verite au moment d'enregistrer.
         CredentialSaveText.Text = offer.LinkedFromDomain is { } linkedFrom
             ? $"Ce compte est déjà enregistré pour {linkedFrom}. Ajouter aussi {offer.DisplayOrigin} ?"
             : offer.IsUpdate
-                ? $"Mettre à jour le mot de passe pour {forWhom} ?"
-                : $"Enregistrer le mot de passe pour {forWhom} ?";
+                ? $"Mettre à jour le mot de passe pour {offer.DisplayOrigin} ?"
+                : $"Enregistrer le mot de passe pour {offer.DisplayOrigin} ?";
+        CredentialSaveUsernameBox.Text = draft.Username;
+        CredentialSavePasswordBox.Password = draft.Password;
         CredentialSaveBar.Visibility = Visibility.Visible;
     }
 
@@ -72,20 +81,32 @@ public sealed partial class MainWindow
         CredentialSaveBar.Visibility = Visibility.Collapsed;
         if (_pendingCredential is not { } cred) return;
         _pendingCredential = null;
+
+        // La detection reste une heuristique (surtout pour l'identifiant, voir
+        // CredentialCaptureUsernameModule.js) : on enregistre les valeurs telles
+        // qu'affichees dans la barre, que l'utilisateur ait pu les corriger ou
+        // non, jamais la capture brute directement.
+        var username = CredentialSaveUsernameBox.Text?.Trim() ?? string.Empty;
+        var password = CredentialSavePasswordBox.Password ?? string.Empty;
+
         if (!_isGuestMode)
             _passwordManager.Save(new PasswordManagerEntryDraft(
                 cred.Origin,
-                cred.Username,
-                cred.Password,
+                username,
+                password,
                 cred.LoginUrl,
                 cred.Label));
         StatusText.Text = $"Identifiants enregistrés pour {cred.Origin}.";
+        CredentialSaveUsernameBox.Text = string.Empty;
+        CredentialSavePasswordBox.Password = string.Empty;
     }
 
     private void CredentialSaveDismiss_Click(object sender, RoutedEventArgs e)
     {
         CredentialSaveBar.Visibility = Visibility.Collapsed;
         _pendingCredential = null;
+        CredentialSaveUsernameBox.Text = string.Empty;
+        CredentialSavePasswordBox.Password = string.Empty;
     }
 
     // ── Remplissage automatique des identifiants ──────────────────────────────

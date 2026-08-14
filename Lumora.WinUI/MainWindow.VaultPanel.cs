@@ -286,6 +286,28 @@ public sealed partial class MainWindow
             FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic
         });
 
+        // Mot de passe masqué par défaut (points), démasquable à la demande —
+        // avant ce correctif, aucune vue directe n'existait, seule la copie
+        // presse-papiers était possible.
+        var passwordRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var passwordText = new TextBlock { Opacity = 0.8, FontFamily = new FontFamily("Consolas") };
+        var passwordVisible = false;
+        var revealBtn = new Button { Content = "Afficher" };
+        void RenderPasswordVisibility()
+        {
+            passwordText.Text = passwordVisible ? cred.Password : new string('•', Math.Max(cred.Password.Length, 8));
+            revealBtn.Content = passwordVisible ? "Masquer" : "Afficher";
+        }
+        RenderPasswordVisibility();
+        revealBtn.Click += (_, _) =>
+        {
+            passwordVisible = !passwordVisible;
+            RenderPasswordVisibility();
+        };
+        passwordRow.Children.Add(passwordText);
+        passwordRow.Children.Add(revealBtn);
+        VaultDetailPanel.Children.Add(passwordRow);
+
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
 
         var openBtn = new Button { Content = "Ouvrir la page de connexion" };
@@ -352,6 +374,31 @@ public sealed partial class MainWindow
             StatusText.Text = "Identifiant mis à jour.";
         };
         manageActions.Children.Add(editUsernameBtn);
+
+        var editPasswordBtn = new Button { Content = "Modifier le mot de passe" };
+        editPasswordBtn.Click += async (_, _) =>
+        {
+            var box = new TextBox
+            {
+                Text = cred.Password,
+                PlaceholderText = "Mot de passe",
+                MinWidth = 320
+            };
+            var dlg = new ContentDialog
+            {
+                Title = "Modifier le mot de passe",
+                Content = box,
+                PrimaryButtonText = "Enregistrer",
+                CloseButtonText = "Annuler",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot
+            };
+            if (await dlg.ShowAsync() != ContentDialogResult.Primary) return;
+            _passwordManager.SetPasswordById(cred.Id, box.Text);
+            RefreshVaultPanel();
+            StatusText.Text = "Mot de passe mis à jour.";
+        };
+        manageActions.Children.Add(editPasswordBtn);
 
         var deleteBtn = new Button { Content = "Supprimer" };
         deleteBtn.Click += async (_, _) =>

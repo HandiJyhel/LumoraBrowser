@@ -21003,3 +21003,795 @@ confirmes lors d'une prochaine session (delais plus courts entre etapes pour evi
   par ailleurs dans [[assistant-premier-lancement-6-etapes]].
 - Livrable : `artifacts\installer\LumoraSetup-0.93.27.0-dev-win-x64.exe` (514 Mo, SHA256 dans
   `artifacts\signatures\`).
+
+## 2026-08-12 (suite) - Installeur reellement bloque en test utilisateur : deadlock icacls corrige (0.93.27.1-dev)
+
+- L'utilisateur a lance lui-meme `LumoraSetup-0.93.27.0-dev-win-x64.exe` (capture d'ecran a l'appui) :
+  fige indefiniment sur "Autorisation du moteur WebView2 embarque..." (etape `GrantFixedRuntimeAccess`
+  -> `RunIcacls`, `scripts/installer/Program.cs.template`). Cause reelle, pas une lenteur : `icacls /T`
+  imprime une ligne par fichier traite (`FixedRuntime` contient 260 fichiers), `RedirectStandardOutput`/
+  `RedirectStandardError` etaient positionnes a `true` mais JAMAIS lus avant `process.WaitForExit()` -
+  deadlock classique de pipe .NET (le tampon se remplit, `icacls` bloque en ecriture, `WaitForExit`
+  attend indefiniment un process qui n'aboutira jamais). Corrige avec le motif documente Microsoft :
+  `BeginOutputReadLine()`/`BeginErrorReadLine()` + handlers `OutputDataReceived`/`ErrorDataReceived`
+  pour drainer les deux flux en continu pendant l'attente (stderr accumule dans un `StringBuilder` pour
+  le message d'erreur en cas d'echec).
+- **Verification directe du correctif, sans passer par l'UI de l'installeur** (evite l'obstacle des
+  cases a cocher WinForms non pilotables, voir [[verifier-lapp-winui]]) : reproduction du motif exact
+  en PowerShell (`System.Diagnostics.Process` + `Register-ObjectEvent` pour un drainage sans crash de
+  runspace) contre le vrai dossier `FixedRuntime` de l'artefact propre. Motif d'origine -> confirme
+  bloque (tue apres 15s de timeout volontaire). Motif corrige -> termine en 109 ms, code 0. Diagnostic
+  et correctif confirmes tous les deux en conditions reelles, pas seulement plausibles.
+- Version : `0.93.27.0-dev` -> `0.93.27.1-dev` (4e chiffre, correctif sur une version deja commitee).
+  Rebuild complet (artefact propre + installeur) + `dotnet test Lumora.Tests` -> 711/711 verts.
+
+## 2026-08-12 (suite) - Icone Bureau refaite : "goutte + etincelle renforcee" (0.93.27.2-dev)
+
+- Retour utilisateur direct ("j'ai toujours un icone de bureau de degeu") independant du sujet
+  installeur. Diagnostic : PAS un cache perime (l'ico installe reel etait deja identique octet pour
+  octet au depot, meme date). Le vrai probleme : le motif actuel (goutte + petite etincelle fine) est
+  propre a 256px mais l'etincelle disparait des 48px, laissant un blob flou orange/vert - confirme en
+  extrayant les frames 16/32/48/256 directement depuis le fichier `.ico` (8 tailles, toutes en PNG
+  embarque) plutot que via `Icon.ExtractAssociatedIcon` (celui-ci ne recupere pas fiablement la frame
+  256 - a eviter pour ce genre de diagnostic, extraire les octets PNG bruts par offset a la place).
+- Presente 4 pistes de correction en artefact HTML (comparatif SVG cote a cote a 16-256px + mockup
+  "sur Bureau" fond clair/sombre) plutot que de trancher seul (choix visuel, pas un bug) :
+  A goutte epuree (sans etincelle), B etincelle seule, C goutte + etincelle 2x plus grande/epaisse,
+  D monogramme "L". Utilisateur a choisi **C**.
+- `scripts/generate-app-icon.ps1` : decouvert PERIME avant de commencer (generait encore l'ancien
+  signe "globe/soleil/tourbillon" d'une identite anterieure - deja documente comme refondu plusieurs
+  fois dans l'historique, `docs/APP_ICON_LEGIBILITY_FIX_0_48_2.md`, `docs/IDENTITE_LUMORA_0_79.md` -
+  mais jamais mis a jour lors du dernier chantier identite droplet/etincelle 0.93.21.0-dev qui a du
+  produire l'ico actuel par un autre moyen, non retrouve). Reecrit entierement pour dessiner la
+  variante C retenue : formes PLEINES (pas de traits fins, contrairement a l'ancien signe) en
+  `GraphicsPath`/Bezier reprenant exactement les coordonnees SVG validees avec l'utilisateur, rendues
+  nativement a chaque taille (16/20/24/32/40/48/64/256, meme jeu que l'ico existant) - pas besoin du
+  mecanisme "rendu simplifie sous 48px" de l'ancien script, un remplissage plein reste net sans ce
+  contournement. `LumoraApp.ico`/`LumoraApp.png` regeneres, verifies visuellement (frames extraites
+  et relues une par une) avant remplacement des fichiers reels du depot.
+- Version : `0.93.27.1-dev` -> `0.93.27.2-dev` (4e chiffre, correctif visuel sur asset deja commite).
+  Rebuild complet (artefact propre + installeur) + `dotnet test Lumora.Tests` -> 711/711 verts.
+  Pas encore reinstalle/reconfirme sur le vrai Bureau de l'utilisateur (le fichier repo est pret,
+  mais l'installation reelle pointe encore vers l'ancien ico tant que l'utilisateur ne relance pas
+  l'installeur ou ne copie pas le nouveau fichier).
+
+## 2026-08-12 (suite) - Retour utilisateur : sauvegarde complete n'inclut pas les mots de passe reels
+
+- Apres son propre test de la sauvegarde complete (0.93.26.0-dev, voir plus haut dans ce fichier) :
+  les favoris sont bien restaures, mais PAS les mots de passe - jugee inutilisable en l'etat par
+  l'utilisateur ("ca sert a rien de revoir"). Pas d'investigation/correctif demande pour l'instant
+  (a reprendre plus tard si demande). Piste deja visible dans le code (`LumoraBackup.cs`) :
+  `vault.lumora` n'est inclus dans l'export QUE si `VaultStore.IsPortable(profile.VaultFile)` est
+  vrai (`ExportResult.VaultSkippedNotPortable` sinon) - un coffre protege en DPAPI classique
+  (non portable) est donc silencieusement exclu de la sauvegarde, sans avertissement visible releve
+  par l'utilisateur au moment de l'export. A verifier/corriger dans une prochaine session si demande :
+  soit avertir clairement quand le coffre est exclu, soit permettre un export portable explicite.
+- Suite a ce retour, l'utilisateur a demande la suppression complete du profil reel `handi-jyhel`
+  qu'il avait recree (pour repartir sur un profil neuf). Confirme explicitement apres alerte sur la
+  perte reelle et definitive des mots de passe actuellement dans le coffre de ce profil (pas
+  seulement la sauvegarde ratee) via `AskUserQuestion`. Verifie avant suppression : `vault.lumora`
+  bien present (4,1 Ko), aucun process Lumora en cours (pas de fichier verrouille). Verifie dans le
+  code (`MainWindow.Profile.cs`, `InitializeLoginOverlayAsync`) que la suppression du dossier seul
+  (sans toucher `config.json`) mene proprement a l'ecran de creation de profil au prochain lancement
+  (`_userProfile is null` + `_profileEntries.Count == 0` + `WelcomeSlidesShown` deja `true` ->
+  `ShowLoginPanel("create")`), donc pas besoin d'editer `config.json` a la main. Dossier
+  `%LocalAppData%\Lumora\profiles\handi-jyhel` supprime. Seul `default` (placeholder deja note comme
+  quasi-vide, jamais un vrai profil) reste sous `profiles\`.
+
+## 2026-08-13 - Bug reel signale par l'utilisateur : identifiant Google enregistre = le mot de passe
+
+- Retour utilisateur (capture d'ecran, coffre de mots de passe) : en se connectant a
+  `accounts.google.com` avec un compte de test tout propre, Lumora a propose d'enregistrer
+  l'identifiant, accepte, puis le coffre a stocke un "identifiant" identique au mot de passe genere
+  (`7hJK?q5Q8NpQ@Dy!` dans les deux champs). L'utilisateur a aussi remarque qu'il ne pouvait ni
+  visionner ni modifier le mot de passe a la main dans le coffre (seule la copie presse-papiers
+  existait).
+- **Cause racine (capture) identifiee par trace de code** dans
+  `Lumora.WinUI/Credentials/CredentialCaptureScript.js` : la page de connexion Google (et d'autres
+  sites) propose un oeil "Afficher le mot de passe" qui bascule l'attribut `type` du champ mot de
+  passe de `password` a `text` apres la saisie. Au moment de la capture (submit), ce champ redevenu
+  `type=text` n'est plus reconnu comme mot de passe par `passwordFields()` (qui filtre strictement
+  sur `input[type='password']`) mais devient eligible a `isUsernameCandidate()` (qui accepte `text`).
+  Comme il contient encore la valeur du mot de passe, il finit par etre choisi comme "meilleur
+  identifiant" (`bestUsername`), ecrasant le vrai identifiant (souvent absent du DOM a cette etape,
+  Google separant email et mot de passe sur deux pages).
+- **Correctif** : un `WeakSet` (`passwordEverElements`) retient chaque champ deja vu avec
+  `type="password"` (marque des la frappe, avant toute bascule visuelle, + balayages de securite
+  dans `usernameFields()` et `pickUsernameFieldForFill()`) et l'exclut definitivement de
+  `isUsernameCandidate()`/`isUsernameCandidateForFill()`, meme apres bascule de son `type`. Le champ
+  identifiant tombe alors correctement sur le `lastUser` memorise en `sessionStorage` (persistant
+  entre les pages du meme onglet Google).
+- **Verification reelle du correctif JS** (sans installer jsdom, sans reseau) : harnais Node
+  (`vm` + DOM factice minimal ecrit sur mesure - `querySelectorAll`, `elementFromPoint`,
+  `getComputedStyle`, `closest`, event dispatch manuel) qui charge et execute **le vrai fichier**
+  `CredentialCaptureScript.js` (avant = version HEAD via `git show`, apres = version corrigee du
+  depot) sur un scenario reproduisant fidelement le cas reel (email tape puis retire du DOM comme
+  sur la vraie page Google, mot de passe tape puis champ bascule en `type=text`, puis `submit`).
+  Resultat : **avant** correctif, message poste `{username: "MotDePasse123!", password:
+  "MotDePasse123!"}` (bug reproduit a l'identique) ; **apres** correctif, `{username:
+  "test@exemple.fr", password: "MotDePasse123!"}` (correct). Preuve executee par le vrai moteur JS
+  (V8/Node) sur le fichier reellement livre, pas une simple relecture.
+- **Gap UI signale (visionner/modifier le mot de passe)** confirme reel dans
+  `MainWindow.VaultPanel.cs` : le panneau de detail du coffre n'affichait que "Copier mot de passe"
+  et "Modifier l'identifiant" - aucune vue demasquable ni edition manuelle du mot de passe. Ajoute :
+  affichage masque (points) avec bouton "Afficher"/"Masquer", et bouton "Modifier le mot de passe"
+  (boite de dialogue, meme schema que "Modifier l'identifiant"). Nouvelle methode
+  `VaultStore.SetPasswordById` (miroir exact de `SetUsernameById`, deja existante) exposee via
+  `PasswordManagerService.SetPasswordById`. Test unitaire symetrique ajoute dans
+  `VaultStoreTests.cs`.
+- Verification : `dotnet test Lumora.Tests` -> 712/712 verts (nouveau test inclus) ; build MSBuild
+  `Lumora.WinUI.csproj` -> 0 avertissement, 0 erreur.
+- Version : `0.93.27.2-dev` -> `0.93.27.3-dev` (4e chiffre - l'ensemble reste, du point de vue de
+  l'utilisateur, la correction du meme bug signale, y compris le gap visionner/modifier qu'il a
+  decouvert en investiguant ce bug). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`,
+  `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`.
+- Rebuild complet demande explicitement par l'utilisateur ("go" x4, y compris "renouveler
+  l'installeur") : artefact propre (`build-clean-test-artifact.ps1`, Release self-contained) puis
+  `LumoraSetup-0.93.27.3-dev-win-x64.exe` (`build-installer.ps1`) regeneres avec succes (0
+  avertissement/erreur), 550 Mo, SHA256
+  `9cb0a056ff9f63f7d110210b3c3d1957e2595b76d8a3784e7e2b04ac49ca1269`, ecrit dans
+  `artifacts\installer\`. Pas encore reinstalle/reconfirme par l'utilisateur sur sa machine
+  reelle (a faire par lui : desinstaller/remplacer l'ancien LumoraSetup, relancer une connexion
+  Google de test pour confirmer que l'identifiant capture est bien correct cette fois).
+
+## 2026-08-13 (suite) - Demande explicite : rendre le correctif durable, pas un patch au cas par cas
+
+- L'utilisateur a demande "pour les autres sites" et propose lui-meme une architecture : 3
+  informations (site/page, identifiant, mot de passe) qui devraient etre des variables separees et
+  non melangees - exactement le defaut qui vient de causer le bug precedent. Demande explicitement
+  des fichiers separes par module (deja une consigne recurrente de sa part).
+- **Plan valide et implemente (Go)** :
+  1. **Decoupage de `CredentialCaptureScript.js`** (~570 lignes, un seul fichier tout-en-un) en 5
+     modules a fichier separe sous `Lumora.WinUI/Credentials/` :
+     - `CredentialCaptureDom.js` - utilitaires bas niveau partages (visible/topmost/fieldText/
+       contextText/queryAllDeep/setValueForFill...), aucune connaissance identifiant/mot de passe.
+     - `CredentialCaptureSiteModule.js` - la 3e info (site/page), triviale (juste
+       `isAutomationSuppressed()`, la liste noire Google GSI/OAuth).
+     - `CredentialCapturePasswordModule.js` - SEUL module a connaitre `passwordEverElements`
+       (le WeakSet prive du correctif precedent), expose uniquement `wasEverPassword(el)` comme
+       API pour l'exterieur.
+     - `CredentialCaptureUsernameModule.js` - toute la logique d'identifiant (le seul cote
+       intrinsequement flou : HTML n'a pas de marqueur universel pour "ceci est l'identifiant",
+       contrairement au mot de passe qui a `type="password"`). Ne peut lire l'etat du module mot
+       de passe QUE via `Password.wasEverPassword(el)` - frontiere imposee par le code, pas une
+       convention qu'on espere respecter. Renforcement au passage : `autocomplete="username"`
+       (signal standard W3C explicite, quasi jamais faux) ecrase desormais tous les autres indices
+       du score (`score = Math.max(score + 45, 400)`) au lieu de peser comme un indice parmi
+       d'autres.
+     - `CredentialCaptureOrchestrator.js` - cablage des evenements (input/submit/click/...) et
+       assemblage des 3 informations avant `postMessage`, zero heuristique propre.
+     - `CredentialService.cs` (`LoadCredentialCaptureScriptAsync`) charge et concatene les 5
+       fichiers dans cet ordre de dependance avant injection WebView2 (`AddScriptToExecuteOn
+       DocumentCreatedAsync` ne prend qu'UNE chaine, WebView2 n'a pas de mecanisme d'import JS).
+       Le csproj incluait deja `Credentials\*.js` en glob, rien a changer cote packaging.
+  2. **Barre de proposition d'enregistrement editable** (`CredentialSaveBar` dans
+     `MainWindow.xaml` + `MainWindow.VaultCapture.cs`) : avant, le texte affichait l'identifiant
+     capture en dur, non modifiable, decouvert seulement apres coup dans le coffre en cas d'erreur.
+     Maintenant : `TextBox` identifiant + `PasswordBox` (PasswordRevealMode="Peek") mot de passe,
+     pre-remplis mais modifiables, et c'est leur contenu (pas la capture brute) qui est enregistre
+     au clic sur "Enregistrer". Filet de securite pour le flou residuel de detection d'identifiant
+     qui restera *toujours* possible sur un site atypique (limite du web, pas un defaut Lumora -
+     vrai pour tous les gestionnaires de mots de passe du marche).
+- **Verification reelle du refactor** (meme technique que le correctif precedent - harnais Node
+  `vm` + DOM factice, sans jsdom, sans reseau - voir [[verifier-js-capture-sans-jsdom]]) : script
+  `harness2.js` qui charge et concatene les 5 fichiers reels dans le meme ordre que
+  `LoadCredentialCaptureScriptAsync`, rejoue 2 scenarios : (1) le meme cas Google reveal-toggle
+  qu'avant - toujours correct apres le decoupage ; (2) un cas piege ou le texte autour du champ
+  ressemble a un faux-positif "newsletter" (gros malus dans le score) mais `autocomplete="username"`
+  est pose explicitement - le signal autocomplete gagne bien malgre le malus. Les deux passent.
+- **Un vrai bug trouve en verifiant** : le premier build a echoue - `MainWindow.xaml` : commentaire
+  XML contenant `--` (interdit par la specification XML, meme a l'interieur d'un commentaire),
+  ligne ajoutee pour expliquer la barre editable. Corrige (`--` remplace par `;`), rebuild propre.
+- Un test existant (`UsageModeVisualIdentityTests.Version_projet_est_alignee_sur_0_93_27_2`, deja
+  present avant cette session) pinne la version exacte dans 4 fichiers - renomme/adapte a
+  `..._0_93_27_3` en meme temps que le reste (meme version, pas de nouveau bump : ce chantier fait
+  partie du meme correctif que le bug initial de la session).
+- Verification : `dotnet test Lumora.Tests` -> 712/712 verts. Build MSBuild `Lumora.WinUI.csproj`
+  (Debug) -> 0 erreur apres correction du commentaire XML. Rebuild complet relance avec le refactor
+  inclus : artefact propre Release puis `LumoraSetup-0.93.27.3-dev-win-x64.exe` regeneres avec
+  succes, 550 Mo, SHA256 `a63de821ce21d3b6583622ebb62c8fb3cbe9cb99a2c52a331b618852cd5f475d` (nouveau
+  hash - remplace celui du build precedent dans `artifacts\installer\`). Toujours pas reinstalle/
+  reconfirme par l'utilisateur sur sa machine reelle.
+
+## 2026-08-13 (suite) - Session "bug à corriger" : 5 points navigation/fenêtres (0.93.28.0-dev)
+
+- Demande initiale de l'utilisateur, 5 points : (1) nouvel onglet en mode vertical
+  loin de l'onglet actif ; (2) plusieurs fenêtres Lumora sans se reconnecter à
+  chaque fois ; (3) faux positif "remplir l'identifiant" sur Gmail/Drive déjà
+  connecté ; (4) nouvelle fenêtre = redemande de connexion Google/2FA à chaque
+  fois ; (5) pouvoir détacher un onglet en nouvelle fenêtre. Plan discuté et
+  validé avec l'utilisateur avant tout code (capture d'écran fournie pour le
+  point 3, confirmant que c'était bien la barre Lumora et non un vrai écran
+  Google). Go donné explicitement, y compris pour l'installeur en fin de
+  session sans re-demander (règle 20 : autorisation explicite et actuelle,
+  pas une exception permanente).
+
+- **Point 3 - faux positif "Remplir l'identifiant" sur Gmail/Drive** :
+  `PasswordManagerInteractionService.EvaluatePage` proposait la barre dès
+  qu'un champ "identifiant plausible" existait (`usernameFields()`, seuil
+  `score > -20`, volontairement permissif pour la capture/le remplissage)
+  ET qu'un identifiant était en coffre pour le domaine - sans jamais vérifier
+  qu'on est sur un vrai écran de connexion. Sur Gmail, un champ recherche
+  anodin captait le mot "compte" d'un bouton de profil voisin via
+  `Dom.contextText` (remonte jusqu'à 5 niveaux d'ancêtres). Corrigé dans
+  `CredentialCaptureUsernameModule.js` : `scoreUsername` sépare désormais un
+  `ownScore` (signal propre au champ : type/texte) d'un bonus de contexte qui
+  ne peut plus s'appliquer QUE si `ownScore > 0` (le contexte confirme, il ne
+  fabrique plus un candidat à partir de rien) ; nouvelle fonction
+  `confidentUsernameFields` (seuil `>= 30`, réservée à la suggestion
+  PROACTIVE) branchée dans `CredentialCaptureOrchestrator.publishState` à la
+  place de `usernameFields` permissif (qui reste inchangé pour la capture
+  réelle). Vérifié par harnais Node (voir [[verifier-js-capture-sans-jsdom]]) :
+  bug reproduit sur la logique d'avant (Gmail -> `hasUsernameField=true`),
+  corrigé après (`false`), vraie page de connexion Google toujours détectée
+  (`true`), et non-régression confirmée sur le scénario du bug identifiant=
+  mot de passe corrigé plus tôt dans la journée (capture au submit toujours
+  correcte).
+
+- **Points 2/4 - cause réelle trouvée : PAS un problème de partage de profil
+  WebView2** (contrairement à l'hypothèse de départ). `MainWindow.Sessions.cs`
+  a un mécanisme produit assumé : purge de tous les cookies non "de confiance"
+  À CHAQUE DÉMARRAGE (`PurgeStartupSessionsAsync`, guardé par
+  `_sessionsPurgedThisLaunch`). Ce garde était un champ **par instance**, pas
+  process-wide - sans conséquence tant qu'il n'existait jamais plus d'une
+  `MainWindow` par process (Incognito/Invité/Apps web tournent TOUJOURS dans
+  un process séparé). Dès qu'une notion de "Nouvelle fenêtre" existe dans le
+  MÊME process, cette 2e fenêtre se croit à un nouveau "démarrage" et repurge
+  les cookies non approuvés de la 1ère fenêtre. **C'était exactement le bug de
+  reconnexion Google remonté par l'utilisateur.** Corrigé en une ligne :
+  `_sessionsPurgedThisLaunch` passé en `static` (process-wide).
+
+- **Fonction "Nouvelle fenêtre" créée** (`MainWindow.NewWindow.cs`, nouveau) :
+  Ctrl+N + entrée "Nouvelle fenêtre" dans le menu Lumora classique (sous-menu
+  Navigation) + tuile dans le Menu Démarrer (catégorie Navigation,
+  `StartMenuTileIds.NewWindow`). Contrairement à Incognito (process séparé
+  volontairement isolé), reste dans le MÊME process que la fenêtre d'origine
+  -> réutilise le même environnement WebView2 (`WebView2Bootstrap.
+  ConfigureOnce` déjà posé, no-op) -> cookies/connexions partagés. Propage
+  l'état invité de la fenêtre d'origine (`_pendingGuestLaunch`) à la nouvelle,
+  sans quoi une nouvelle fenêtre depuis une session invité retombait sur
+  l'écran "Choisir un profil" du vrai profil (repéré et corrigé pendant la
+  vérification).
+  Limites assumées et documentées dans le code : l'écran de déverrouillage du
+  coffre (PIN/mot de passe local) réapparaît pour la 2e fenêtre (pas de canal
+  pour transmettre un déverrouillage déjà fait - différent du verrou des
+  comptes web, qui lui reste bien partagé) ; deux fenêtres du même profil qui
+  modifient TOUTES LES DEUX favoris/onglets en même temps peuvent s'écraser
+  (chaque fenêtre garde sa copie en mémoire, dernière sauvegarde gagne, pas de
+  synchronisation) - sans impact pour le cas d'usage visé (naviguer dans une
+  2e fenêtre en restant connecté).
+
+- **Vérification réelle du partage de session** (pas juste supposée) :
+  pilotage UIA (PowerShell + `System.Windows.Automation`, voir
+  [[verifier-lapp-winui]]) d'un vrai Lumora.WinUI.exe en mode invité + un
+  mini-serveur HTTP loopback (`python -m http.server` sur 127.0.0.1, aucun
+  paquet ne sort de la machine) servant une page qui pose un cookie horodaté
+  et l'affiche. Fenêtre 1 -> cookie `hit-<timestamp>` ; "Nouvelle fenêtre" ->
+  fenêtre 2 navigue vers la MÊME URL -> **cookie strictement identique**
+  (même timestamp) confirmé par capture d'écran, AVANT le correctif du champ
+  static le cookie différait (fenêtre 2 posait le sien, preuve du bug) - donc
+  diagnostic ET correctif tous deux prouvés par exécution réelle, pas
+  seulement plausibles. Cycle de vie du process vérifié aussi : fermer une
+  seule des deux fenêtres laisse le process vivant, fermer les deux le
+  termine. Piège rencontré en cours de route : le `file://` ne posait/
+  n'affichait jamais le cookie de façon fiable (comportement Chromium sur les
+  origines file://, pas un bug Lumora) - basculé sur http loopback, résolu.
+  Note technique : l'accessibilité UIA de WebView2 n'expose pas le texte de
+  la page à une lecture par nom (`Find-ByName` sur le contenu échoue toujours,
+  y compris avec du texte confirmé visible à l'écran) - la preuve est passée
+  par capture d'écran, pas par lecture UIA du DOM.
+
+- **Point 1 - nouvel onglet juste après l'onglet actif en mode vertical** :
+  `AddNewBlankTab()` (nouveau, `MainWindow.Navigation.cs`), point d'entrée
+  commun au bouton "+" et au menu "Nouvel onglet" (avant : deux appels directs
+  dupliqués à `AddTab`). Réutilise `PlaceTabAfter` (déjà existant, déjà
+  éprouvé pour "Dupliquer l'onglet") plutôt qu'une nouvelle logique de
+  réordonnancement - seulement si `_verticalTabsEnabled` est vrai, mode
+  horizontal inchangé (comportement existant : fin de liste) comme demandé.
+  **Vérifié en conditions réelles** avec un profil de test crafté directement
+  par DPAPI/PBKDF2 (voir [[verifier-lapp-winui]], technique déjà documentée -
+  nécessaire car le mode invité masque entièrement les réglages "Mon Lumora"/
+  Disposition, seul endroit pour activer les onglets verticaux) : `Disposition
+  onglets = Gauche` pré-posé dans `ui-settings.lumora` crafté, connexion réelle
+  au profil (mot de passe PBKDF2 600k itérations généré et vérifié par le vrai
+  code de l'app), 3 onglets ouverts en reproduisant le scénario (onglet A,
+  onglet B en fin de liste, ré-sélection de A, onglet C) -> capture d'écran
+  confirmant l'ordre réel A, C, B (C juste après A, pas en fin de liste).
+  Profil de test supprimé après coup, `config.json` global vérifié intact
+  (toujours "handi-jyhel").
+
+- **Point 5 - détacher un onglet en nouvelle fenêtre** (`MainWindow.
+  TabDetach.cs`, nouveau) : deux points d'entrée comme discuté avec
+  l'utilisateur (glisser-déposer à la souris = le geste principal demandé
+  explicitement ; entrée "Déplacer vers une nouvelle fenêtre" dans le clic
+  droit = alternative accessible, idée proposée par Claude et acceptée -
+  même raisonnement que "Monter"/"Descendre" déjà présents pour le
+  réordonnancement). Un WebView2 ne peut pas être déplacé physiquement d'une
+  Window à l'autre (limitation de plateforme) : la nouvelle fenêtre recharge
+  la même adresse plutôt que de migrer le moteur - session intacte grâce au
+  partage de profil du point 2/4, seul l'état en page (formulaire en cours...)
+  ne survit pas, même limite déjà acceptée pour "Dupliquer l'onglet".
+  Glisser-déposer hors fenêtre détecté via `DropCompleted` (`DropResult ==
+  None`) + position du curseur (P/Invoke `GetCursorPos`) comparée aux limites
+  de `_appWindow` - un dépose refusé À L'INTÉRIEUR de la fenêtre (ex. mélange
+  épinglé/normal) ne déclenche pas le détachement, seul un relâchement hors
+  fenêtre le fait. Nouvel évènement `BrowserReady` (une fois par fenêtre,
+  levé après `ApplyStartupPage()`) pour savoir quand ajouter l'onglet détaché
+  à la fenêtre destination sans dupliquer avec sa propre restauration de
+  session.
+  **Non vérifié en conditions réelles pilotées** : deux limites
+  environnementales indépendantes et déjà documentées ([[verifier-lapp-winui]])
+  s'appliquent ici - les injections souris/clavier synthétiques sont refusées
+  (impossible de simuler un vrai glisser-déposer), et les `ContextFlyout`
+  (clic droit) ne s'ouvrent pas de façon fiable par UIA (`InvokePattern`
+  insuffisant, déjà noté pour d'autres flyouts). Confiance basée sur la
+  relecture de code et la réutilisation de mécanismes déjà prouvés ailleurs
+  dans cette même session (`AddTab`/`CloseTab`/`BrowserReady` reposent sur les
+  mêmes briques que "Nouvelle fenêtre", déjà vérifiée réelle) - à confirmer
+  par l'utilisateur lui-même en usage réel (glisser un onglet hors de la
+  fenêtre, et clic droit > "Déplacer vers une nouvelle fenêtre").
+
+- Version : `0.93.27.3-dev` -> `0.93.28.0-dev` (3e chiffre - choix explicite
+  de l'utilisateur face à l'ambiguïté ajout/correctif : un seul bump, les
+  nouvelles fonctions dominent même si des bugs ont aussi été corrigés au
+  passage). Mis à jour dans `MainWindow.xaml.cs`, `AGENTS.md`,
+  `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`,
+  test de cohérence renommé dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+- Vérification finale : `dotnet test Lumora.Tests` -> 712/712 verts. Build
+  MSBuild `Lumora.WinUI.csproj` (Debug) -> 0 avertissement, 0 erreur, à
+  chaque étape significative de la session (pas seulement à la fin).
+
+## 2026-08-13 (suite) - Mono-instance + déverrouillage rapide entre fenêtres (0.93.29.0-dev)
+
+- Suite directe de la session précédente (0.93.28.0-dev) : l'utilisateur a testé "Nouvelle fenêtre" en relançant l'icône Lumora deux fois (pas via Ctrl+N) et a montré une capture (Google déconnecté dans une fenêtre, YouTube connecté dans l'autre) - preuve que relancer l'icône pendant que Lumora tourne déjà lance un DEUXIÈME PROCESS complet, hors du correctif de session-purge de la session précédente (qui ne couvrait que deux fenêtres DANS le même process). Diagnostic expliqué, deux idées proposées par Claude (mono-instance + mise en avant dans les slides de bienvenue), les deux validées par l'utilisateur ("Go" explicite, plus "j'ai besoin d'un nouvel installeur").
+
+- **Mono-instance** (`App.xaml.cs`) : utilise l'API `Microsoft.Windows.AppLifecycle.AppInstance` du Windows App SDK déjà référencé (jamais utilisée avant dans ce dépôt). Clé dérivée du dossier de profil actif (SHA256 tronqué, pas de PBKDF2 nécessaire ici - juste un identifiant stable, pas un secret). Seul le lancement NORMAL (ni Incognito, ni Invité, ni Appli web - chacun garde son process séparé par choix d'isolation) enregistre/vérifie cette clé : `AppInstance.FindOrRegisterForKey(...)`, et si `!IsCurrent`, `RedirectActivationToAsync` puis sortie immédiate SANS jamais créer de fenêtre/WebView2 (donc sans jamais purger quoi que ce soit). Le process gagnant s'abonne à `Activated` (peut arriver hors thread UI - toujours rebondir via une `DispatcherQueue` capturée au tout début de `OnLaunched`) et appelle `MainWindow.OpenNewWindowFromExternalActivation()` (nouvelle méthode statique, `MainWindow.NewWindow.cs`) qui pioche dans une liste statique `_liveInstances` (pas juste `App._window`, qui peut pointer vers une fenêtre déjà fermée si l'utilisateur en a gardé d'autres) pour porter l'ouverture.
+
+- **Déverrouillage rapide entre fenêtres** (le vrai gain UX, trouvé en vérifiant le mono-instance en réel) : la première vérification a révélé que même avec le mono-instance qui marche, la nouvelle fenêtre réaffichait l'écran "Choisir un profil" + redemandait le mot de passe - plus gênant que ce qui avait été annoncé la session précédente ("juste un PIN"). Signalé explicitement à l'utilisateur avec capture à l'appui plutôt que de livrer tel quel ; 3 options proposées, l'utilisateur a choisi la correction complète.
+  - `VaultStore.UnlockWithKey(byte[] key)` (nouveau, à côté de `Unlock(string password)`) : déverrouille directement avec une clé déjà dérivée, sans re-dérivation Argon2id (volontairement coûteuse - c'est justement ce qu'on veut éviter de refaire). `UnlockedKeySnapshot` (nouveau) : copie défensive de la clé courante (jamais la référence interne, pour qu'un `Lock()` ailleurs ne l'efface pas aussi côté fenêtre sœur).
+  - `MainWindow` : nouveau paramètre constructeur `unlockSource` (nullable). `TryFastUnlockFrom(MainWindow source)` (`MainWindow.NewWindow.cs`) copie `_userProfile` et la clé de coffre de `source`, appelle `_vault.UnlockWithKey(...)`, met `_pendingStartupPageApply = false` (évite de dupliquer TOUTE la session d'onglets restaurée dans la nouvelle fenêtre - un "nouvelle fenêtre" doit ouvrir un onglet vierge, pas recopier tous les onglets ouverts) puis `DismissLoginOverlay()` - tout ça de façon SYNCHRONE dans le constructeur, pour qu'il n'y ait jamais une course avec le flux `InitializeLoginOverlayAsync()` normal (les deux ne doivent jamais tourner en même temps - un seul démarre, décidé une fois pour toutes à la fin du constructeur). Repli automatique et silencieux sur l'écran de connexion normal si `TryFastUnlockFrom` échoue (coffre en mode DPAPI sans mot de passe maître, etc.).
+  - `IsBrowserReady` (propriété booléenne, `MainWindow.NewWindow.cs`) ajoutée à côté de l'événement `BrowserReady` existant (déplacé depuis `MainWindow.TabDetach.cs`, qui ne le déclarait plus en double) : nécessaire parce que le déverrouillage rapide étant synchrone, `DismissLoginOverlay()` (et donc `BrowserReady?.Invoke()`) peut se déclencher PENDANT la construction, avant même que l'appelant (`DetachTabToNewWindow`) ait eu la chance de s'abonner à l'événement après `new MainWindow(...)` - sans ce garde-fou, l'abonnement arrivait trop tard et l'onglet détaché n'était jamais adopté. `DetachTabToNewWindow` vérifie maintenant `window.IsBrowserReady` juste après construction : si déjà vrai, adopte l'onglet tout de suite (chemin rapide) ; sinon s'abonne à l'événement comme avant (chemin normal, asynchrone).
+  - `OpenNewWindow()` et `DetachTabToNewWindow()` passent tous les deux `unlockSource: this` désormais.
+
+- **Vérifications réelles** (pilotage UIA + traces) :
+  - Mono-instance : lancement process A, "relance" de l'exe (process B), confirmé `Get-Process -Name Lumora.WinUI` -> 1 seul PID (celui de A), process B mort (`$procBAlive = False`), 2 fenêtres top-level trouvées sur le PID de A.
+  - Déverrouillage rapide : AVANT le correctif, la 2e fenêtre (via mono-instance ET via Ctrl+N) réaffichait bien "Choisir un profil" (capture à l'appui, profil de test crafté par DPAPI/PBKDF2 comme la session précédente, coexistant sans risque avec le vrai profil "Handi-Jyhel" sur la machine). APRÈS le correctif, les deux fenêtres affichent directement le navigateur ("Accueil Lumora"), aucun écran de connexion. Trace runtime confirmée : `Redirected activation received` -> `Launch redirected to existing Lumora instance` -> `MainWindow fast-unlocked from sibling window`, et `vaultLocked=False` dans les logs `CredentialService_PageStateChanged` de la 2e fenêtre (preuve que le coffre est réellement déverrouillé, pas juste que l'écran est masqué).
+  - Profil de test supprimé après coup, `config.json` réel vérifié intact (`ActiveProfileId: handi-jyhel`) à chaque fois.
+
+- **6e slide de bienvenue** ("Plusieurs fenêtres, une seule connexion", catégorie "PLUSIEURS FENÊTRES", glyphe `\uE8A7` réutilisé du menu Lumora/Menu Démarrer) ajoutée après la slide Accessibilité, à la demande explicite de l'utilisateur ("mettre cette fonctionnalité en avant... l'utilisateur est prévenu"). `WelcomeSlideCount` 5 -> 6, `WelcomeStep5`/`WelcomeHalo5`/`WelcomeRing5`/`Welcome5Pulse` ajoutés en XAML en suivant exactement le patron des 5 slides existantes, rail de progression étendu à 6 pastilles. Vérifiée en réel : profil de test crafté, Menu Démarrer > Lumora et profil > Studio > Vue d'ensemble > Mon Lumora > Personnaliser > onglet **Découverte** (pas "Identité", piège rencontré une fois) > "Revoir l'écran de bienvenue" > 5x "Suivant" -> capture de la 6e diapositive, rendu correct (icône, titre, texte, 6 pastilles, bouton "Commencer" au lieu de "Suivant" sur la dernière étape).
+
+- Version : `0.93.28.0-dev` -> `0.93.29.0-dev` (3e chiffre, ajout de fonctionnalité sans ambiguïté cette fois - contrairement au bump précédent). Mis à jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renommé dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+- Vérification finale : `dotnet test Lumora.Tests` -> 712/712 verts. Build MSBuild `Lumora.WinUI.csproj` (Debug) -> 0 avertissement, 0 erreur, à chaque étape.
+
+## 2026-08-13 (suite 2) - Explication "sessions purgées" dans la slide de bienvenue + nouvel installeur (0.93.30.0-dev)
+
+- Point de départ : l'utilisateur a remarqué qu'il doit se reconnecter à Google après une fermeture complète de Lumora (extinction du PC), alors que l'objectif fondateur du projet (AGENTS.md) est justement d'éviter les reconnexions forcées. Diagnostic : ce n'est pas un bug, c'est le comportement voulu de la purge de sessions au démarrage (`MainWindow.Sessions.cs`, `SessionPurgeEnabled = true` par défaut, `TrustedSessionSites` vide par défaut) - Google n'était simplement jamais passé en site de confiance, faute d'avoir déclenché ou accepté la barre "Rester connecté ?" (`MaybeOfferSessionKeep`, appelée depuis la capture d'identifiants - un flux de connexion Google en plusieurs étapes/JS peut ne pas la déclencher). L'utilisateur reconnaît que c'est lui qui a demandé cette purge à l'origine, mais constate qu'elle n'a jamais été expliquée nulle part dans l'app.
+
+- Demande explicite de l'utilisateur ("il faut que tu fasses... on est d'accord ?") : expliquer ce mécanisme dans la slide de bienvenue du dépôt, puis produire un nouvel installeur (satisfait la règle 20 d'AGENTS.md, qui exige une demande explicite avant tout exécutable).
+
+- **Slide 6 de bienvenue** (`WelcomeStep5`, `MainWindow.xaml`) réutilisée (catégorie "PLUSIEURS FENÊTRES" -> "CONNEXIONS", titre "Plusieurs fenêtres, une seule connexion" -> "Toujours connecté, sans y repenser") plutôt qu'une 7e slide ajoutée (aurait demandé de retoucher tout le rail de pastilles/pulses/tableaux `WelcomeStepCount` pour un gain marginal) : le thème "rester connecté" recouvre naturellement le sujet déjà traité (connexions multi-fenêtres). Texte final (après un premier jet trop long, raccourci à la demande implicite de rester dans le gabarit des slides existantes - ~156 caractères, comparable à la plus longue des 4 autres slides à ~170) : "Lumora efface les sessions oubliées à chaque démarrage, même après avoir tout fermé — sauf les sites que vous marquez « à conserver » dans Sites connectés."
+
+- Version : `0.93.29.0-dev` -> `0.93.30.0-dev` (3e chiffre - ambiguïté ajout/micro-correction posée explicitement à l'utilisateur, qui a tranché "ajout", au sens de "nouvelle aide" cité comme exemple dans la règle de versionnement d'AGENTS.md). Mis à jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renommé dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Vérification : `dotnet test Lumora.Tests` -> 712/712 verts (avant et après le raccourcissement du texte). Build MSBuild `Lumora.WinUI.csproj` (Debug) -> 0 avertissement, 0 erreur, à chaque étape.
+
+- **Vérification visuelle en conditions réelles NON aboutie** - tentative avortée par un incident (voir aussi mémoire persistante `capture-ecran-uia-risque-vie-privee`) : profil de test crafté comme la session précédente (DPAPI+PBKDF2 via `UserProfile.Create`, plus un `ui-settings.lumora` pré-rempli avec `SetupWizardCompleted = true` pour éviter que l'assistant premier lancement s'interpose). Pendant le pilotage UIA (connexion PIN réussie, mais navigation Menu Lumora > Paramètres jamais confirmée), le process Lumora s'est visiblement arrêté sans que le script s'en aperçoive ; la capture d'écran par coordonnées de fenêtre a alors photographié **la fenêtre WhatsApp Desktop de l'utilisateur** (conversations familiales visibles), affichée dans la conversation par erreur. Fichier immédiatement supprimé, script et profil de test nettoyés, incident signalé à l'utilisateur sans détour. Le texte de la slide 6 n'a donc PAS été confirmé visuellement à l'écran - seulement raisonné par comparaison de longueur avec les 4 autres slides déjà vérifiées et shippées (même `Width="340"`, même `TextWrapping="Wrap"`, même `FontSize="14"`).
+
+- **Installeur** : `scripts/build-clean-test-artifact.ps1` puis `scripts/build-installer.ps1` exécutés avec succès pour 0.93.30.0-dev -> `artifacts/installer/LumoraSetup-0.93.30.0-dev-win-x64.exe`. D'anciens installeurs (0.93.8.0, 0.93.27.0/1/2/3, 0.93.28.0, 0.93.29.0-dev) restent présents dans `artifacts/installer/` - pas supprimés sans demande explicite (règle du 2026-08-12).
+- **Nettoyage des anciens installeurs** : demande explicite de l'utilisateur juste après ("supprime tous les anciens, garde que la dernière version") - les 7 anciens (`.exe` + `.VERIFICATION.txt`) supprimés, seul `LumoraSetup-0.93.30.0-dev-win-x64.exe` reste dans `artifacts/installer/`. `artifacts/signatures/` (manifestes SHA256 historiques) non touché, pas demandé.
+
+## 2026-08-13 (suite 3) - Detection "rester connecte" independante de la capture d'identifiants (0.93.31.0-dev)
+
+- Idee de l'utilisateur (soumise comme avis, "qu'est-ce que tu en penses") : en plus de proposer d'enregistrer le mot de passe a la connexion, proposer aussi d'ajouter le site aux sites de confiance au meme moment. Analyse : ce couplage EXISTE DEJA (`CredentialService_CredentialCaptured`, `MainWindow.VaultCapture.cs` - `MaybeOfferSessionKeep` et l'offre d'enregistrement partent du meme evenement `CredentialCaptured`). Le vrai probleme (deja diagnostique la fois precedente) : cet evenement ne se declenche JAMAIS pour Google, dont le flux de connexion est en plusieurs etapes JS sans POST classique - documente comme limite connue depuis `docs/LOCAL_PROFILE_AND_PRIVACY.md` (version d'origine du projet, alors nomme Pulse Browser). Proposition alternative faite par Claude, validee par l'utilisateur ("oui") : decoupler l'offre "rester connecte" de la capture d'identifiants et la brancher sur un signal plus robuste - apparition de cookies sur un domaine ayant recemment montre un champ mot de passe, independamment de toute capture de POST.
+
+- **Implementation** (`MainWindow.Sessions.cs`, `MainWindow.VaultCapture.cs`, `MainWindow.Navigation.cs`) :
+  - `RecordPasswordFieldSighting(origin)` : memorise (dictionnaire domaine racine -> horodatage UTC, purge opportuniste des entrees > 3 min a chaque appel) qu'un champ mot de passe a ete vu sur ce domaine. Appelee depuis `CredentialService_PageStateChanged` des que `pageState.HasPasswordField` est vrai - c'est le SEUL evenement qui capte deja la page de connexion Google (`accounts.google.com`, non exclue par `IsFederatedIdentityIntermediary` qui ne vise que les popups OAuth/GSI utilisees par des SITES TIERS pour "Se connecter avec Google", pas la connexion Google elle-meme).
+  - `MaybeOfferSessionKeepFromRecentLoginAsync(core, address)` : appelee a chaque `NavigationCompleted` reussi de l'onglet actif (`MainWindow.Navigation.cs`, juste apres `OfferAutoFill`). Verifie si le domaine de la nouvelle page (ou un domaine de la meme famille via `SessionDomainFamilies`, ex. google.com/youtube.com) a un apercu de mot de passe recent ; si oui, verifie que des cookies existent deja pour cette adresse (`CookieManager.GetCookiesAsync`) - sinon la redirection continue peut-etre, on ne consomme pas l'apercu tant qu'aucun cookie n'est present. Des que des cookies sont trouves, consomme l'apercu et delegue a `MaybeOfferSessionKeep` (deja existant, deja soumis a `SessionKeepAdvisor` - sites deja en confiance ou deja refuses restent silencieux, aucune duplication de cette logique).
+  - Couvre nativement le cas Google (accounts.google.com montre le mot de passe, redirection vers google.com pose des cookies -> offre declenchee) sans dependre d'une capture de POST qui n'arrivera jamais pour ce genre de flux.
+
+- Version : `0.93.30.0-dev` -> `0.93.31.0-dev` (3e chiffre, ajout sans ambiguite - nouveau mecanisme de detection). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : `dotnet test Lumora.Tests` -> 712/712 verts. Build MSBuild `Lumora.WinUI.csproj` (Debug) -> 0 avertissement, 0 erreur. **Pas de test de connexion reelle a un site tiers (Google)** : demanderait les identifiants reels de l'utilisateur, hors de question de les utiliser pour une verification automatisee - reste a confirmer par l'utilisateur lui-meme en usage reel. Aucune tentative de pilotage UIA/capture d'ecran cette fois (risque deja materialise 2x dans la session precedente sur ce meme fil, voir memoire persistante).
+
+- Nouvel installeur demande explicitement et genere : `LumoraSetup-0.93.31.0-dev-win-x64.exe`. Anciens installeurs a nouveau nettoyes a la demande de l'utilisateur (meme regle que pour 0.93.30.0-dev).
+
+## 2026-08-13 (suite 4) - Sessions persistantes par defaut, purge en option (0.93.32.0-dev)
+
+- L'utilisateur confirme en usage reel que "rester connecte" marche desormais (session Google conservee), mais juge le modele "trop compliqué, trop long" pour un utilisateur de base : il faut se connecter, remarquer une barre qui n'apparait pas toujours, comprendre ce qu'elle veut dire, ou sinon rattraper via un panneau cache. Claude propose (avis demande explicitement avant toute action) d'inverser le defaut : sessions persistantes pour tout le monde, purge au demarrage devient une option de confidentialite explicite. L'utilisateur objecte : est-ce que ça ne va pas a l'encontre de l'identite "vie privee" du projet ? Claude repond que non - les engagements reels de Lumora (zero telemetrie, coffre chiffre local, cookies TIERS bloques, zero pub) restent intacts ; un cookie de session sur un site ou l'utilisateur s'est authentifie volontairement n'est pas un cookie de tracking ; le scenario que protegeait la purge (quelqu'un reprend la machine physique) reste couvert par Incognito et le verrouillage auto du coffre, independants de ce reglage. Utilisateur d'accord ("oui").
+
+- **Implementation** (`Lumora.WinUI/Models/UiSettings.cs`) :
+  - `SessionPurgeEnabled` : defaut `true` -> `false`. Commentaire etoffe expliquant le changement et renvoyant vers Incognito/verrouillage auto pour le scenario "machine partagee".
+  - `CurrentSchemaVersion` : 1 -> 2, avec une vraie etape de migration JSON (`MigrationSteps[1]`) qui bascule `SessionPurgeEnabled` a `false` pour tout profil DEJA enregistre le portant a `true` (l'ancien defaut) - un simple changement de defaut C# n'aurait touche que les profils jamais encore sauvegardes, `Save()` serialisant TOUJOURS toutes les proprietes. Logiciel non publie : aucun moyen de distinguer un `true` "jamais touche" d'un `true` choisi expressement une fois deja ecrit sur disque, donc tout `true` herite est traite comme l'ancien defaut. Un profil qui reactive volontairement la purge APRES cette migration (donc deja a `SchemaVersion=2`) n'est plus jamais re-bascule (verifie par test).
+  - Cascade automatique sans autre code a toucher : `PurgeStartupSessionsAsync` retourne immediatement si `!SessionPurgeEnabled` (deja le cas), et `SessionKeepAdvisor.ShouldOfferKeepSession` retourne `false` dans le meme cas - la barre "Rester connecte ?" (et la nouvelle detection par cookies de la session precedente) ne s'affichent donc plus DU TOUT pour un profil par defaut, puisqu'il n'y a plus rien a perdre a purger. Le mecanisme construit plus tot dans la journee n'est pas perdu : il ne sert plus desormais qu'aux utilisateurs qui activent explicitement la purge (Reglages > Vie privee > Hygiene de session).
+  - **Slide 6 de bienvenue corrigee dans la foulee** : le texte ecrit plus tot ce jour ("Lumora efface les sessions oubliees a chaque demarrage...") decrivait desormais l'INVERSE du comportement reel - corrige en "Vos connexions restent actives d'une fermeture a l'autre, comme sur n'importe quel navigateur. Vous preferez tout effacer a chaque demarrage ? C'est une option dans Vie privee et securite."
+  - 3 nouveaux tests dans `Lumora.Tests/UiSettingsMigrationTests.cs` (meme patron que les tests `UiDensity` deja existants) : defaut `false`, migration d'un profil v1 avec `true` herite -> `false`, reactivation explicite qui survit a un nouvel aller-retour.
+
+- Version : `0.93.31.0-dev` -> `0.93.32.0-dev` (3e chiffre, ajout sans ambiguite). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : `dotnet test Lumora.Tests` -> 715/715 verts (712 + 3 nouveaux). Build MSBuild -> 0 avertissement, 0 erreur, a chaque etape (avant fix slide, apres fix slide, apres bump version). Pas d'installeur construit a ce stade de cette sous-session (pas redemande).
+
+## 2026-08-13 (suite 5) - Faux positif "mot de passe genere" (Instant Gaming) + bouton Connexions (0.93.33.0-dev)
+
+- Point de depart : capture d'ecran fournie par l'utilisateur en debut de session (page de connexion Instant Gaming) - Lumora proposait "Utiliser un mot de passe fort genere ?" sur un simple ecran "Se connecter", comme si c'etait une inscription. Diagnostic mene AVANT toute demande d'action (question explicite de l'utilisateur, reponse attendue avant Go) : `curl` sur `instant-gaming.com/fr/` (lecture publique, aucune donnee utilisateur) montre que la modale du site regroupe connexion ET inscription dans le meme DOM, avec un conteneur ancetre du champ mot de passe de connexion nomme litteralement `class="register"` (et `id="loginbox-register"` un niveau plus haut). `CredentialCapturePasswordModule.js` remontait jusqu'a 5 niveaux d'ancetres (`Dom.contextText`) et traitait ce nom de conteneur technique comme un indice d'inscription, alors que le champ de connexion lui-meme (nom/id/placeholder/autocomplete) n'avait aucun signal propre.
+
+- **Plan presente et Go obtenu** pour 2 chantiers distincts, mais rassembles dans un seul palier (ajout domine, meme principe que le bump `0.93.28.0-dev`) :
+  1. Correctif du faux positif.
+  2. Nouveau bouton "Connexions" dans la barre d'outils (demande initialement comme "connexion persistante", precisee ensuite par l'utilisateur : doit aussi montrer la LISTE des sites concernes, pas juste un interrupteur oui/non). Design itere avec l'utilisateur (icone trousseau de cles retenue apres 2 refus - un flyout "icone->panneau->interrupteur" juge trop complique, puis un `SplitButton` icone+chevron juge "pire" sans que l'utilisateur en detaille la raison exacte - retour a une maquette minimale, une seule icone, sans interaction superflue, qui a fini par convenir).
+
+- **Correctif faux positif** (`CredentialCapturePasswordModule.js`, fonction `newPasswordScore`) : meme architecture que le correctif Gmail du meme jour (voir plus haut) - separation d'un `ownScore` (signal PROPRE au champ : autocomplete=new-password, >=2 champs mot de passe vides, mots-cles dans son propre nom/id/placeholder) et d'un `contextBonus` (texte/classes des ancetres, phrases comme "creer un compte"/"register"/"inscription"). Le bonus de contexte ne s'applique plus QUE si `ownScore > 0` - un conteneur generique nomme "register" ne peut plus, a lui seul, faire basculer un champ de connexion neutre.
+  - **Verifie par execution reelle** (harnais Node `vm` + DOM factice fait main, voir [[verifier-js-capture-sans-jsdom]]) : DOM factice reproduisant fidelement la structure reelle d'Instant Gaming (formulaire login ET formulaire inscription presents simultanement, l'un visible/l'autre `display:none` selon l'onglet actif, `elementFromPoint` simule par recherche du rect visible sous le point). Fichier "avant" reconstruit par inversion exacte de l'edition (le fichier est nouveau sur cette branche, jamais commite - `git show HEAD` indisponible). Resultat : **avant**, onglet connexion actif -> champ de connexion signale a tort comme "nouveau mot de passe" (`true`) ; **apres**, `false`. Non-regression verifiee sur le meme scenario cote onglet inscription : le vrai champ d'inscription (`class="ig-register-fields password"`, qui contient lui-meme "register" dans SON PROPRE nom) reste correctement detecte (`true`) dans les deux cas.
+
+- **Bouton "Connexions"** (icone trousseau de cles, dessinee en vecteur - pas de glyphe cle/trousseau disponible dans "Segoe MDL2 Assets", verifie par recherche externe des glyphes reels de la police avant de choisir cette approche, meme principe que `ModulesButtonMark`) :
+  - `MainWindow.xaml` : `ConnectionsQuickAccessButton` ajoute juste apres `ModulesQuickAccessButton` (le bouton puzzle "Modules"), avant le "groupe fixe" existant - emplacement demande explicitement par l'utilisateur ("a cote des modules").
+  - `MainWindow.ConnectionsQuickAccess.cs` (nouveau) : meme patron que `MainWindow.VaultQuickAccess.cs` deja existant (Button + Flyout rempli a l'ouverture, apercu + lien vers un panneau complet) - AUCUNE logique dupliquee. La liste vient de `_uiSettings.TrustedSessionSites` (deja existant), le retrait reutilise `SetTrustedSessionSite(..., trusted:false)` (deja existant dans `MainWindow.Sessions.cs`), le lien "Gerer toutes les sessions" ouvre le panneau "Sites connectes" deja existant (`SessionsMenu_Click`) - **decouverte en cours de route** que ce panneau complet existait deja (cookies enumeres, toggle par site, bouton oublier) mais n'etait accessible que par un menu profond, jamais depuis la barre d'outils.
+  - Texte d'etat en haut du panneau reflete `_uiSettings.SessionPurgeEnabled` (persistant par defaut vs effacement actif) sans dupliquer `SessionKeepAdvisor`.
+
+- **Verification reelle complete** (pilotage UIA, voir [[verifier-lapp-winui]]) - **piege decouvert et documente** : un premier essai avec un `ui-settings.lumora` crafte en JSON en clair a echoue silencieusement (la liste de sites restait vide, ET l'assistant premier lancement se declenchait malgre `SetupWizardCompleted:true` dans le JSON) - AUCUNE exception dans les traces, donc pas evident a diagnostiquer. Cause reelle : contrairement a `profile.lumora` (DPAPI simple, entropie `null`, voir `UserProfile.cs`), les fichiers `.lumora` de reglages passent par `LumoraFile.WriteAllText/TryReadAllText` (`Storage/LumoraFile.cs`) qui chiffre en DPAPI avec une **entropie dediee `"Lumora.WinUI.v1"`** - un fichier ecrit sans cette entropie exacte fait echouer `ProtectedData.Unprotect` a l'interieur de `TryReadAllText`, qui avale l'exception et retourne `null`, et `UiSettings.Load` retombe alors sur `Default()` sans rien logger. Corrige en chiffrant le JSON crafte avec `ProtectedData.Protect(bytes, Encoding.UTF8.GetBytes("Lumora.WinUI.v1"), DataProtectionScope.CurrentUser)` avant de l'ecrire sur disque - a reutiliser telle quelle pour tout futur profil de test qui a besoin d'un `ui-settings.lumora` (ou tout autre fichier `.lumora` hors `profile.lumora`/`vault.lumora`) pre-rempli.
+  - Profil de test entierement isole via `$env:LUMORA_PROFILE_DIR` (dossier scratch, jamais le vrai `ProfilesRoot()`) : `profile.lumora` crafte (DPAPI+PBKDF2 600k, technique deja documentee) + `ui-settings.lumora` crafte avec 2 domaines factices dans `TrustedSessionSites`. Connexion reelle au profil de test via UIA (`ValuePattern.SetValue` sur le champ mot de passe, `InvokePattern` sur "Se connecter"), confirmee par capture d'ecran ("Bonjour, Verif Connexions").
+  - Capture d'ecran du panneau ouvert : titre "Connexions", texte d'etat correct, les 2 domaines factices listes chacun avec un bouton "Retirer", lien "Gerer toutes les sessions". Clic reel sur "Retirer" pour le premier domaine -> reconfirme par relecture UIA : le domaine disparait de la liste, l'autre reste - preuve que le retrait ecrit reellement dans `_uiSettings` et rafraichit l'affichage.
+  - Nettoyage : process arrete, dossier de profil de test supprime, `config.json` reel reverifie intact (`ActiveProfileId: handi-jyhel`, jamais touche puisque le test n'a jamais utilise `ProfilesRoot()`).
+
+- Version : `0.93.32.0-dev` -> `0.93.33.0-dev` (3e chiffre - ajout domine, meme principe explicitement pose par l'utilisateur le `0.93.28.0-dev`). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification finale : `dotnet test Lumora.Tests` -> 715/715 verts. Build MSBuild `Lumora.WinUI.csproj` (Debug) -> 0 avertissement, 0 erreur. Pas d'installeur construit (pas redemande a ce stade).
+
+## 2026-08-13 (suite 6) - Réorganisation personnalisée de la barre d'outils (0.93.34.0-dev)
+
+- Point de départ : implémentation complète d'un système de drag-drop permettant aux utilisateurs de réorganiser les 16 boutons de la barre d'outils, avec persistence de l'ordre personnalisé et réinitialisation à la disposition par défaut. Trois fichiers créés, deux modifiés pour le support complet.
+
+- **Correction des erreurs C# de compilation** (MainWindow.ToolbarCustomization.cs) :
+  - Erreur 1 : `using Microsoft.UI.DataTransfer;` n'existe pas en WinUI 3. Correction : remplacé par `using Windows.ApplicationModel.DataTransfer;` (namespace réel pour les opérations DataPackage/DataPackageOperation).
+  - Erreur 2 : `HoldingState` non qualifié. Correction : utilisation de `Microsoft.UI.Input.HoldingState.Started` pour accéder correctement à l'enum.
+  - Erreur 3 : `DragStartingEventArgs.Handled` n'existe pas en WinUI 3 (contrairement à WPF). Correction : suppression de la ligne `e.Handled = true;` dans `ToolbarButton_DragStarted`, le pattern drag-drop de WinUI 3 ne requiert pas cette marque.
+  - Références `Microsoft.UI.DataTransfer.DataPackageOperation` remplacées par `DataPackageOperation` (simple, via le using importé).
+
+- **Architecture du système** (décrit précédemment, confirmé compilable et testable) :
+  - `ToolbarCustomizationService.cs` : service isolé gérant persistance de l'ordre (`_buttonOrder`), positions des séparateurs (`_separatorPositions`), mode édition, et drag-drop avec validations. Charge l'ordre au démarrage, applique dynamiquement au StackPanel lors de chaque drop.
+  - `MainWindow.ToolbarCustomization.cs` (partial) : gestionnaires d'événements UI (`Holding` long-clic, `DragStarted`, `DragOver`, `Drop`), affichage/masquage de l'overlay "Mode édition".
+  - `MainWindow.xaml.cs` : appel `_toolbarCustomization.Initialize()` après `InitializeComponent()`, passage du chemin `_profile.UiSettingsFile` pour la persistance.
+  - `MainWindow.xaml` : border → grid pour supporter overlay multi-enfants, ajout drag-drop event handlers à tous 16 boutons, overlay "Mode édition" masqué par défaut.
+  - `UiSettings.cs` : deux propriétés JSON pour persistance (`ToolbarButtonOrder: List<string>`, `ToolbarSeparatorPositions: List<int>`), vides par défaut (aucun changement = défaut interne).
+
+- Version : `0.93.33.0-dev` → `0.93.34.0-dev` (3e chiffre, ajout sans ambiguïté - nouvelle fonctionnalité globale de personnalisation). Mis à jour dans `MainWindow.xaml.cs` (ligne 39), `AGENTS.md` (ligne 73), `scripts/build-installer.ps1` (ligne 3), `scripts/build-clean-test-artifact.ps1` (ligne 5), test renommé dans `Lumora.Tests/UsageModeVisualIdentityTests.cs` (4 assertions, lignes 374-377).
+
+- Vérification : `dotnet test Lumora.Tests` → **715/715 verts** (aucune régression, confirmé avant et après bump version). Build MSBuild `Lumora.WinUI.csproj` (Debug, x64) → **0 avertissement, 0 erreur**. Tous les problèmes de typage C# resolved. Pas d'installeur construit à ce stade (pas redemandé).
+
+
+## 2026-08-13 (suite 7) - Nouvel installeur 0.93.34.0-dev, ancien supprimé
+
+- Demande explicite de l'utilisateur : "Tu me fais un nouvel installeur complet Et tu supprimes les autres".
+- Avant construction, correction de 8 avertissements `CS8618` (champs non-nullable jamais nuls en pratique, mais non détectés comme tels par le compilateur : `_settings`, `_settingsPath`, `_draggedButtonId`, `_toolbarPanel` dans `ToolbarCustomizationService.cs`) découverts lors du build Release (le build Debug précédent affichait 0/0 mais ces avertissements n'apparaissent qu'en configuration Release/Publish). Corrigé par initialisation par défaut à la déclaration plutôt que d'accepter le null (`new UiSettings()`, `string.Empty`, `new StackPanel()`) - cohérent avec le fait que `Initialize()` les réaffecte de toute façon immédiatement après construction.
+- Build Release re-vérifié : 0 avertissement, 0 erreur. Tests : 715/715 verts.
+- `scripts/build-clean-test-artifact.ps1` -> `Lumora-0.93.34.0-dev-win-x64-clean-20260813-221118` (runtime WebView2 Fixed Version 150.0.4078.105 present, verifie avant l'installeur).
+- `scripts/build-installer.ps1` -> `LumoraSetup-0.93.34.0-dev-win-x64.exe` genere avec succes (~538 Mo, self-contained, SHA256 manifeste dans `artifacts/signatures/`).
+- Ancien installeur `LumoraSetup-0.93.32.0-dev-win-x64.exe` (+ son `.VERIFICATION.txt`) supprime du dossier `artifacts/installer/` - suppression explicitement demandee, pas besoin de reconfirmer. Les manifestes SHA256 historiques dans `artifacts/signatures/` (tres nombreux, tout l'historique du projet) et les anciens `artifacts/clean-test/` n'ont PAS ete touches - la demande portait sur "l'installeur", pas sur ces archives distinctes.
+
+
+## 2026-08-13 (suite 8) - Correctifs reels du drag-drop barre d'outils + favoris glissables (0.93.35.0-dev)
+
+- Retour utilisateur apres livraison de 0.93.34.0-dev : "je ne vois pas comment on peut deplacer les elements" (barre d'outils) + "on peut pas deplacer les dossiers ou les icones" dans la barre de favoris. Diagnostic AVANT toute action (question explicite, reponse attendue) : le `Holding` (appui long) pose sur `ModulesQuickAccessButton` (un `Button`) ne se declenche quasiment jamais - un `Button` capte deja le pointeur pour son propre `Click`, geste concurrent au maintien. La barre de favoris n'avait quant a elle JAMAIS eu de cablage drag-drop (`CreateBookmarkBarButton` verifie : aucun `AllowDrop`/`Drop`) - pas une regression, un manque preexistant.
+
+- **Plan presente avec maquette visuelle** (Artifact HTML, menu contextuel + favoris glissables) avant tout code. Question posee sur l'ecran de bienvenue (l'utilisateur voulait y mentionner la decouvrabilite) - Claude a exprime un desaccord argumente (les 6 slides portent chacune un pilier d'identite fort ; la personnalisation de barre n'en est pas un, et aucun navigateur n'explique "clic droit pour personnaliser" a l'accueil) ; l'utilisateur a tranche en faveur de l'avis de Claude ("Tu as raison ne le fais pas pour le slide"), Go donne pour le reste.
+
+- **Barre d'outils - declencheur remplace** (Option B validee) : `Holding="ModulesQuickAccessButton_Holding"` retire de `MainWindow.xaml`. Un `ContextFlyout` (clic droit, `MenuFlyout` avec l'entree "Reorganiser la barre d'outils…") pose sur le conteneur `ModulesQuickBar` (Grid), pas sur chaque bouton individuellement - `ContextRequested` route/bubble et aucun bouton du groupe ne pose son propre `ContextFlyout`, donc un clic droit n'importe ou dans la barre (bouton ou espace vide) ouvre le menu. `ModulesQuickAccessButton_Holding` supprime de `MainWindow.ToolbarCustomization.cs`, remplace par `ToolbarReorganizeMenuItem_Click` qui appelle `EnterToolbarEditMode()` (deja existant, inchange).
+
+- **2 bugs latents supplementaires trouves EN VERIFIANT avant de reconstruire un installeur** (l'utilisateur avait explicitement demande de ne pas croire sur parole et de verifier) :
+  1. **`CanDrag` jamais pose** sur les 16 boutons de la barre livres en 0.93.34.0-dev. Confirme par la documentation Microsoft officielle (`learn.microsoft.com/.../uielement.candrag`) : valeur par defaut `false`, et "`DragStarting` fires when the system begins a drag operation on an element that has `CanDrag=\"True\"`". Sans ca, meme en atteignant le mode edition, le glisser n'aurait jamais demarre. `CanDrag="True"` ajoute aux 16 boutons (`MainWindow.xaml`, `replace_all`).
+  2. **`RequestedOperation` jamais fixe explicitement** dans `ToolbarButton_DragStarted` - la doc officielle du drag-and-drop WinUI montre systematiquement `args.Data.RequestedOperation = ...` dans l'exemple `DragStarting`. Ajoute (`DataPackageOperation.Move`) dans `ToolbarButton_DragStarted` et dans le nouveau code des favoris, par prudence (paire avec `AcceptedOperation=Move` deja pose en `DragOver`).
+  - Verification faite via `WebFetch`/`WebSearch` sur la documentation Microsoft Learn AVANT de reconstruire quoi que ce soit - pas une simple relecture du code, une source externe autoritative citee et expliquee a l'utilisateur.
+
+- **Favoris glissables, sans mode dedie** (comme Chrome/Edge, demande explicite : "que les favoris aient le même comportement que dans tout autre navigateur") :
+  - `BookmarkStore.ReorderNode(string movedId, string? beforeId)` (nouveau, `Models/Bookmarks.cs`) : reordonne entre freres du MEME parent uniquement (deposer DANS un dossier, avec ouverture automatique au survol, explicitement hors perimetre pour cette passe - accepte par l'utilisateur dans le plan). Refuse silencieusement (retourne `false`) tout deplacement de racine ou entre parents differents. Reassigne des `Position` sequentielles a TOUS les freres du parent concerne (pas seulement aux 2 nodes impliques) pour eliminer d'eventuels trous/doublons herites d'anciens imports.
+  - `MainWindow.BookmarksDragDrop.cs` (nouveau fichier, toute la logique d'evenements) : `BookmarkBarButton_DragStarting/DragOver/Drop`. Cable dans `CreateBookmarkBarButton` (`MainWindow.Bookmarks.cs`, +8 lignes seulement - objectif explicite de l'utilisateur de ne pas alourdir ce fichier deja a 1000+ lignes tenu) uniquement pour `!node.IsRoot` (jamais sur les 2 dossiers racine "Barre des favoris"/"Autres favoris").
+  - **Tests reels tentes puis abandonnes pour `BookmarkStore`** : un premier jet de tests comportementaux (instanciation reelle, meme patron que `VaultStoreTests.cs`) ne compile pas - `Lumora.Tests.csproj` est un projet "pur" qui liste explicitement chaque fichier source compilable (`<Compile Include>`), SANS `Models/Bookmarks.cs` (qui depend de `Microsoft.UI.Xaml.Visibility` et `Microsoft.Web.WebView2.Core`, absents du projet de test). C'est pour cette raison que TOUS les tests de favoris existants (`BookmarkBarRegressionTests.cs`) sont deja des verifications par lecture de source, jamais par instanciation - convention deliberee du projet, pas un oubli. Tests ajoutes selon ce meme patron (2 nouveaux dans `BookmarkBarRegressionTests.cs`) + nouveau fichier `ToolbarCustomizationRegressionTests.cs` (3 tests : menu contextuel present/Holding absent, les 16 `CanDrag` presents, `RequestedOperation` fixe).
+
+- Version : `0.93.34.0-dev` -> `0.93.35.0-dev` (3e chiffre, ajout - reorganisation barre d'outils fiabilisee + favoris glissables). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs` (methode ET assertions - la session precedente avait renomme les assertions mais pas la methode, corrige au passage).
+
+- Verification : `dotnet test Lumora.Tests` -> **720/720 verts** (715 + 5 nouveaux). Build MSBuild (Debug x64) -> **0 avertissement, 0 erreur**. Lancement reel en profil jetable + mode invite (UIA) : demarrage sans crash confirme, titre de fenetre "Lumora 0.93.35.0-dev — Mode invite" verifie, capture d'ecran montrant barre d'outils et barre de favoris rendues normalement. **Limite assumee et dite a l'utilisateur** : les injections de glisser-deposer synthetique (mouse down + move + release) sont refusees par ce bac a sable (contrairement a `ValuePattern`/`InvokePattern`, voir [[verifier-lapp-winui]]) - le geste de drag lui-meme n'a PAS pu etre simule ici, seul le demarrage sans crash et le rendu visuel ont ete verifies reellement. La confirmation finale du glisser-deposer en conditions reelles reste a faire par l'utilisateur.
+
+- Pas d'installeur reconstruit a ce stade de cette sous-session (pas redemande).
+
+
+## 2026-08-13 (suite 9) - Coffre toujours inclus dans la sauvegarde + mot de passe de compte renforce et reutilise (0.93.36.0-dev)
+
+- Point de depart : question de l'utilisateur sur le contenu exact de `.lumorabackup`, puis scenario concret expose ("utilisateur basique, formate, restaure, decouvre son coffre absent") pour contester le choix pris le 12/08 (coffre exclu si mode DPAPI, le mode par defaut). Claude a d'abord defendu le choix existant, puis reconnu apres lecture attentive du code que c'etait un vrai defaut de conception (tous les autres elements du profil - favoris/notes/etc. - sont deja dechiffres a l'export, seul le coffre etait traite differemment sans raison technique qui tienne).
+
+- **Idee de l'utilisateur, discutee et affinee avant le Go** : reutiliser le mot de passe du COMPTE Lumora comme cle de la sauvegarde, au lieu d'un mot de passe dedie invente a l'export. Objection initiale de Claude (le PIN pourrait etre faible) levee en verifiant le code : le compte a un vrai mot de passe (`PasswordHash`) distinct du PIN (option de confort en plus, pas un substitut). Reserve suivante (8 caracteres sans complexite exigee, verifie dans `MainWindow.Profile.cs`) confirmee par l'utilisateur, qui a alors demande explicitement le renforcement a 12 caracteres + 1 caractere special. Claude a valide l'ensemble (reutiliser un mot de passe fort pour plusieurs usages sensibles n'est pas un probleme en soi, meme principe qu'un mot de passe Windows qui protege deja tout le PC) et obtenu confirmation ("go") avant de coder.
+
+- **Renforcement du mot de passe de compte** (`MainWindow.Profile.cs`) : nouveau validateur partage `IsAccountPasswordStrongEnough` (12 caracteres minimum + au moins un caractere non alphanumerique), remplace l'ancienne regle "8 caracteres, aucune complexite" aux 3 points ou elle existait (creation de compte, changement volontaire, reinitialisation par cle de recuperation) - un seul point de verite au lieu de 3 verifications dupliquees et desormais incoherentes entre elles. Placeholders XAML/inline mis a jour en consequence.
+
+- **Le coffre est desormais TOUJOURS inclus dans `.lumorabackup`** (`LumoraBackup.cs`) : son propre chiffrement (DPAPI ou mot de passe maitre) est retire a l'export - protection assuree uniquement par l'enveloppe .lumorabackup elle-meme (Argon2id + AES-256-GCM), exactement comme pour favoris/notes/etc. deja traites ainsi. Nouvelles entrees zip `vault-credentials.json`/`vault-cards.json` (JSON en clair, protege par l'enveloppe), remplacent l'ancienne copie brute conditionnelle `vault.lumora`. Si le coffre est en mode "mot de passe maitre" et encore VERROUILLE au moment de l'export (mot de passe pas encore entre cette session), l'export est BLOQUE entierement (nouvelle exception `VaultLockedForBackupException`, message clair affiche a l'utilisateur) plutot que de continuer silencieusement sans le coffre - c'est le comportement explicitement demande par l'utilisateur ("bloque l'export tant que tu ne l'as pas deverrouille").
+  - `VaultStore.RestoreFromBackup(credentials, cards)` (nouveau) : reconstruction en bloc, Id/Totp/Label/dates preserves a l'identique (contrairement a `Upsert()`, prevu pour des mises a jour incrementales au quotidien, qui aurait perdu les secrets TOTP/labels des entrees restaurees). Retourne `false` sans rien modifier si le coffre CIBLE est deja en mode "mot de passe maitre" et verrouille (cas d'un import DANS un profil existant, pas le scenario principal de premier lancement) - `Save()` n'aurait rien ecrit de nouveau silencieusement dans ce cas.
+  - Repli de compatibilite a l'import : les sauvegardes creees AVANT ce format (jusqu'a 0.93.35.0-dev, `vault.lumora` copie brute) restent lisibles - `Import` cherche d'abord le nouveau format, retombe sur l'ancien si absent.
+  - `LumoraBackup.Export`/`Import` prennent desormais un `VaultStore` (l'instance LIVE de la session, pas une relecture depuis le disque) en 4e parametre - necessaire pour refleter l'etat de deverrouillage REEL du coffre en cours d'usage, pas un coffre fraichement recharge qui semblerait toujours verrouille meme si l'utilisateur l'a deja deverrouille cette session.
+
+- **Le mot de passe de la sauvegarde EST desormais le mot de passe du compte** (`MainWindow.SettingsStorage.cs`) : `ExportBackupButton_Click` demande le mot de passe du compte (`PromptAccountPasswordAsync`, champ unique - plus de "confirmer" par double saisie puisqu'on ne cree plus un nouveau secret), le verifie contre `_userProfile.VerifyPassword` AVANT d'exporter, puis le reutilise tel quel comme cle de chiffrement. `RunImportBackupFlowAsync` (partage avec l'assistant de premier lancement) redemande le meme type de mot de passe, formule differemment ("mot de passe du compte associe a cette sauvegarde") - la tentative de dechiffrement EST la verification a ce stade, aucun profil local a comparer n'existe encore au tout premier lancement. Message de succes de l'export desormais explicite : "Sauvegarde exportee avec succes (N mot(s) de passe inclus)."
+
+- **Tests reels** (pas de simple regression texte quand c'etait possible - `LumoraBackup.cs`/`VaultStore.cs`/`UserProfile.cs` sont deja dans la liste `<Compile Include>` "pure" de `Lumora.Tests.csproj`, decouverte utile en verifiant avant d'ecrire) :
+  - `LumoraBackupTests.cs` : 2 tests reecrits (coffre portable ET coffre DPAPI desormais tous deux inclus et restitues, plus de test "coffre ignore"), 2 nouveaux (coffre verrouille leve `VaultLockedForBackupException` ET n'ecrit aucun fichier ; cartes de paiement round-trip).
+  - `VaultStoreTests.cs` : 2 nouveaux tests pour `RestoreFromBackup` (restitution fidele des champs Id/Totp/Label/dates ; refus propre si coffre cible verrouille).
+  - `AccountBackupPasswordTests.cs` (nouveau, regression texte - `MainWindow.Profile.cs`/`MainWindow.SettingsStorage.cs` dependent de WinUI, meme contrainte que les autres fichiers UI) : regle 12+special presente aux 3 points, plus de mot de passe de sauvegarde dedie, coffre verrouille bloque proprement.
+
+- Version : `0.93.35.0-dev` -> `0.93.36.0-dev` (3e chiffre, ajout). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : `dotnet test Lumora.Tests` -> **728/728 verts** (720 + 8 nouveaux/reecrits). Build MSBuild (Debug x64) -> **0 avertissement, 0 erreur** des le premier essai. **Verification reelle en conditions reelles** (profil jetable, UIA) sur la partie NON couverte par les tests purs (la validation dans l'ecran de connexion en direct, `MainWindow.Profile.cs` etant WinUI) : mot de passe faible ("faible1", 7 caracteres) rejete avec le nouveau message exact "Le mot de passe doit faire au moins 12 caracteres." ; mot de passe fort ("Sup3r-Secure-Backup!2026") accepte, creation de compte reussie, capture d'ecran a l'appui (titre de fenetre confirmant la version). Le round-trip export/import complet du coffre n'a PAS ete rejoue en direct (deja couvert par des tests comportementaux reels avec vraie crypto/vrais fichiers, plus fort qu'une capture d'ecran pour cette partie-la). Pas d'installeur reconstruit a ce stade (pas redemande).
+
+
+## 2026-08-13 (suite 10) - Profil sans mot de passe, choix permanent (0.93.37.0-dev)
+
+- Demande de l'utilisateur : permettre a un utilisateur de creer un profil SANS mot de passe (libre choix), mais couper la sauvegarde pour ce profil ("sans mot de passe, le navigateur devient un navigateur presque banal"). Discussion avant le Go : Claude a d'abord propose de permettre d'ajouter un mot de passe plus tard depuis les reglages ; l'utilisateur a object e que ca n'a pas de sens (changer un mot de passe demande normalement l'ancien, donc rien ne prouve l'identite sans mot de passe existant). Claude a reflechi et confirme avec un argument plus fort que celui de l'utilisateur : le vrai risque n'est pas le vol de donnees (deja exposees sans mot de passe, comme pour tout navigateur grand public par defaut) mais le **detournement** - n'importe qui avec un acces bref pourrait poser SON mot de passe sur le profil de quelqu'un d'autre et l'en exclure. Accord mutuel : choix permanent, aucune porte derobee.
+
+- **Decouverte cle avant de coder** : le mot de passe de compte est DEJA couple au coffre (`_vault.EnsureUnlockedWith(pw)` appele a la creation ET a chaque connexion, `ProfileLocationContinueButton_Click`/`LoginButton_Click`) - un profil AVEC mot de passe bascule automatiquement son coffre en mode "mot de passe maitre" (aes256), pas DPAPI comme suppose plus tot dans la session. Un profil SANS mot de passe n'appelle jamais cette liaison : son coffre reste simplement en mode DPAPI par defaut, coherent avec l'absence de porte d'entree.
+
+- **Implementation** :
+  - `UserProfile.HasAccountPassword` (nouveau, `Models/UserProfile.cs`) : derive de PasswordHash/PasswordSalt non vides. `Create(name, password: string?, pin: string?)` accepte desormais un mot de passe nul (profil sans mot de passe) et ignore silencieusement un PIN fourni sans mot de passe de base (rien a raccourcir).
+  - Creation de compte (`MainWindow.xaml`/`MainWindow.Profile.cs`) : nouveau `ToggleSwitch NoPasswordSwitch` + `InfoBar NoPasswordWarningBar` (avertissement explicite, "choix definitif"). Active : masque mot de passe/confirmation/PIN, `CreateProfileButton_Click` branche vers `UserProfile.Create(name, null, null)` sans validation de force, sans PIN, sans cle de recuperation (rien a recuperer sans mot de passe).
+  - Ecran de connexion : **5 points** verifient desormais `!_userProfile.HasAccountPassword` pour sauter l'ecran de connexion entierement - `InitializeLoginOverlayAsync` (premier lancement/profil unique), `ProfilePickerContinueButton_Click` (meme profil deja actif), `LockSessionNow` (aucun verrouillage automatique possible sans mot de passe - "reste un navigateur presque banal"), et 2 gardes en profondeur (`ChangeProfilePasswordButton_Click`/`CreateRecoveryKeyButton_Click`, deja masques par l'UI). `RequireTargetProfilePasswordAsync` (preuve d'identite pour agir sur le profil d'un AUTRE utilisateur) retourne directement le profil cible sans dialogue si celui-ci n'a pas de mot de passe - aucune preuve a demander qui n'existe pas.
+  - Reglages "Mon profil" (`RefreshProfileSettings`) : bandeau d'avertissement permanent + boutons "Changer le mot de passe"/"Nouvelle cle de recuperation" masques pour un profil sans mot de passe (menent a une impasse sinon).
+  - Sauvegarde (`MainWindow.SettingsStorage.cs`) : `ExportBackupButton_Click` bloque en tete avec message clair si `!_userProfile.HasAccountPassword` - coherent avec "le mot de passe de compte EST la cle de sauvegarde" pose la session precedente (rien a reutiliser si absent).
+
+- **Tests** : `UserProfileTests.cs` (+3, comportementaux reels - `HasAccountPassword` false/vrai, PIN ignore sans mot de passe, `VerifyPassword` toujours false). `PasswordlessProfileTests.cs` (nouveau, +5, regression source - meme contrainte WinUI que les autres fichiers UI). Total **736/736 verts**. Build MSBuild -> 0 avertissement, 0 erreur.
+
+- **Incident reel trouve ET corrige en verifiant** (pas releve avant de construire un nouvel installeur) : la creation de profil de test ("SansMdp", profil jetable prevu pour verification) a ecrit dans le VRAI `config.json` partage (`%LOCALAPPDATA%\Lumora\config.json`, `ActiveProfileId` bascule sur "sansmdp") et cree un vrai dossier `profiles\sansmdp\` a cote du vrai profil `handi-jyhel` - `LUMORA_PROFILE_DIR` n'isole que le lancement initial, PAS `ProfileLocationContinueButton_Click` (chemin par defaut, sans dossier personnalise choisi), qui resout via `LumoraProfilePaths.ForProfileId` contre le vrai `%LOCALAPPDATA%`, hors de portee de la variable d'environnement. Corrige immediatement : `ActiveProfileId` restaure a `"handi-jyhel"`, dossier `sansmdp` supprime, contenu du vrai profil verifie intact (date de derniere ecriture inchangee). **A retenir pour toute verification future** : la creation de compte (contrairement au simple lancement/mode invite) n'est PAS isolable par `LUMORA_PROFILE_DIR` seul des qu'on va jusqu'au bout du flux normal (dossier par defaut) - un test de creation de profil doit soit choisir un dossier personnalise explicite pendant le flux, soit etre suivi d'une verification immediate de `config.json`/`profiles/` reels avant de continuer, exactement comme fait ici.
+
+- **Verifie en conditions reelles** (le reste, avant l'incident ci-dessus) : bascule "Ne pas definir de mot de passe" active correctement (capture d'ecran : champs mot de passe/PIN masques, avertissement affiche mot pour mot), creation reussie, **aucun ecran de connexion** affiche ensuite - entree directe dans l'etape import de favoris de l'assistant de premier lancement, confirmant le contournement de l'ecran de connexion fonctionne reellement, pas seulement en theorie.
+
+- Version : `0.93.36.0-dev` -> `0.93.37.0-dev` (3e chiffre, ajout). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Pas d'installeur reconstruit a ce stade (pas redemande).
+
+
+## 2026-08-14 - Correctif isolation LUMORA_PROFILE_DIR, cause reelle de l'incident (0.93.37.1-dev)
+
+- Suite a l'incident signale la veille (config.json/dossier reel touches par un profil de test), l'utilisateur a pose une question factuelle precise ("comment ca se fait que le dossier a ete cree a cote du mien, sachant que mon emplacement est personnalise") puis a demande explicitement de corriger le probleme avant tout nouvel installeur.
+
+- **Cause reelle identifiee en creusant** (pas juste `ForProfileId`, comme corrige superficiellement la veille) : `LumoraConfig` (fichier `config.json`) ignorait TOTALEMENT `LUMORA_PROFILE_DIR` - son chemin etait un `static readonly` fige sur le vrai `%LOCALAPPDATA%\Lumora\config.json`, sans aucune verification de la variable d'environnement, contrairement a `LumoraProfilePaths.Default()` qui la respectait deja. Resultat : `ProfileLocationContinueButton_Click` (etape "Ou stocker votre profil ?") ecrit TOUJOURS `config.json` sur la vraie machine des la creation d'un profil, meme sous isolation complete du reste - c'est la vraie cause de la bascule de `ActiveProfileId` sur le profil de test observee la veille, independamment de savoir si les FICHIERS du profil lui-meme fuitaient aussi.
+
+- **4 correctifs coordonnes, tous necessaires ensemble** (`Models/ProfilePaths.cs`, `LumoraConfig.cs`, `Models/Profiles.cs`) :
+  1. `LumoraConfig.ConfigPath` : redirige vers `<LUMORA_PROFILE_DIR>\config.json` quand la variable est positionnee (nouvelle propriete calculee `IsolatedRootOverride()`), sinon inchange. `Load()` ne consulte plus les vrais chemins herites NovaBrowser/PulseBrowser sous isolation (rien a migrer dans un sandbox neuf).
+  2. `LumoraProfilePaths.ForProfileId(profileId)` : respecte desormais la meme variable que `Default()` - MAIS avec la meme convention exacte (le dossier isole EST le profil, a plat, l'id demande est ignore), pas une racine a sous-dossiers par id. Choix deliberatoire : un design "sous-dossier par id" avait ete tente puis abandonne, il aurait fait boucler `CreateProfileId` a l'infini (chaque candidat aurait teste l'existence du MEME dossier).
+  3. `LumoraProfileRegistry.CreateProfileId` : sous isolation, retourne l'id de base directement sans boucle d'unicite (un seul profil existe conceptuellement dans un sandbox de test, rien a departager).
+  4. `LumoraProfileRegistry.Discover` : sous isolation, ne scanne JAMAIS le vrai `ProfilesRoot()` de la machine - retourne uniquement le profil du dossier isole lui-meme (ou une liste vide si aucun n'existe encore). Empeche les vrais profils de l'utilisateur d'apparaitre dans un selecteur pendant une session de verification/invite.
+  - Nouvelle fonction partagee `LumoraProfilePaths.HasIsolatedProfileDirOverride()` utilisee par les points 3 et 4 pour rester coherents entre eux.
+
+- **Effet de bord positif non planifie** : avec ces 4 correctifs, `ProfileLocationContinueButton_Click` calcule desormais `_restartRequired = false` sous isolation (le dossier cible et le dossier actif de session coincident enfin), ce qui evite AUSSI le redemarrage du processus qui retirait `LUMORA_PROFILE_DIR` en cours de route (`RestartApp()` le supprime volontairement avant de relancer, pour l'usage normal) - c'etait en realite le veritable mecanisme par lequel le processus perdait son isolation en cours de test la veille.
+
+- **Tests reels ajoutes** (tous les fichiers concernes sont deja dans la liste `<Compile Include>` "pure" du projet de test) : `ProfilePathsTests.cs` (+2 : `ForProfileId` ignore l'id sous isolation et correspond a `Default()`, `HasIsolatedProfileDirOverride` faux par defaut), `LumoraConfigTests.cs` (+2 : `Save`/`Load` confines au dossier isole, config neuve ne consulte jamais les chemins reels herites), `ProfileRegistryTests.cs` (+2 : `Discover` isole ne retourne QUE le profil du dossier isole - un "vrai profil" cree a cote dans le test reste invisible -, `CreateProfileId` ne boucle pas sous isolation). Total **742/742 verts**.
+
+- **Verifie en conditions reelles en reproduisant l'incident exact** : etat du vrai `config.json`/`profiles/` capture AVANT (ActiveProfileId=handi-jyhel, dossiers default+handi-jyhel), creation d'un profil "VerifIsolation" via le chemin PAR DEFAUT (sans dossier personnalise, exactement le scenario qui avait fuite) sous `LUMORA_PROFILE_DIR`, PID du processus reste identique tout du long (confirmation directe qu'aucun redemarrage n'a eu lieu, donc aucune perte d'isolation en cours de route) - etat du vrai `config.json`/`profiles/` recapture APRES : strictement identique a avant (`ActiveProfileId` toujours `handi-jyhel`, aucun nouveau dossier). Le dossier de test isole contient bien son propre `config.json` (`ActiveProfileId: verifisolation`) et son profil complet (`profile.lumora`, `vault.lumora`, `navigation/`), entierement confines.
+
+- Version : `0.93.37.0-dev` -> `0.93.37.1-dev` (4e chiffre, correctif - pas un ajout, corrige un defaut d'isolation dev/verification decouvert la veille). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Installeur reconstruit a la demande explicite de l'utilisateur ("après tu me fais un installeur") - voir entree suivante.
+
+
+## 2026-08-14 (suite) - Glisser-deposer refait sans CanDrag, limitation WinUI 3 confirmee (0.93.37.2-dev)
+
+- Retour utilisateur : le glisser des favoris "ne fait rien" (clic maintenu sur l'icone YouTube, deplacement, relachement - aucun effet). Diagnostic avant tout code (recherche web + documentation officielle Microsoft, meme rigueur que les correctifs precedents) : **`CanDrag`/`DragStarting` ne fonctionnent JAMAIS sur un `Button` en WinUI 3, quel que soit le cablage** - limitation documentee, pas un bug de code. Citation Microsoft Q&A : *"WinUI3 is intentionally designed to only allow dragging of specific, non-interactive content... Since Button is an interactive control meant for user input, it's excluded from the default drag-and-drop behavior."* Confirme par un second cas identique (TextBox). Ca invalidait donc AUSSI la reorganisation de la barre d'outils construite la veille (jamais testee avec un vrai geste, seule la presence de `CanDrag="True"` avait ete verifiee).
+
+- **Remplacement complet du mecanisme** (les deux fonctionnalites) : abandon de `CanDrag`/`DragStarting`/`DragOver`/`Drop` au profit d'un suivi manuel du pointeur (`PointerPressed`/`PointerMoved`/`PointerReleased`/`PointerCaptureLost`), approche standard pour ce cas precis en WinUI 3. Seuil de 8 pixels avant de considerer que c'est un glissement plutot qu'un simple clic - en dessous, le clic normal du bouton (ouvrir le favori, action du module) continue de fonctionner normalement.
+  - `HorizontalDragReorderMath.cs` (nouveau, isole de tout type WinUI expres) : logique pure "sur quel voisin se trouve le pointeur" (`FindTargetId`, centre le plus proche) et "seuil de glissement depasse" (`ExceedsDragThreshold`) - testable directement avec des donnees, sans instancier de vrai `FrameworkElement`. Position calculee via `TransformToVisual` (API officielle documentee) plutot que `ActualOffset` (verifie avant d'ecrire le code, pas suppose).
+  - **Barre d'outils** (`MainWindow.ToolbarCustomization.cs`) : reordonne EN DIRECT pendant `PointerMoved` (comme avant), sans souci de recreation - `ApplyOrderToToolbar()` reutilise toujours les MEMES instances de bouton (`_buttonMap`), seule leur position dans `Children` change.
+  - **Favoris** (`MainWindow.BookmarksDragDrop.cs`) : reordonne SEULEMENT au relachement (`PointerReleased`), pas en direct - contrairement a la barre d'outils, `RenderBookmarksBar()` DETRUIT et RECREE tous les boutons a chaque rafraichissement (`CreateBookmarkBarButton` retourne de nouvelles instances) ; reordonner en direct aurait detruit le bouton glisse en cours de route et rendu la capture du pointeur orpheline (plus aucun `PointerMoved` ne serait parvenu). Legere transparence (opacite 0.55) comme seul retour visuel pendant le glissement. Nouveau champ `_bookmarkSuppressNextClick` : un clic qui suit immediatement un vrai glissement n'ouvre plus le favori qu'on vient de deplacer.
+  - **Hors perimetre, assume** : pas de garde-fou equivalent pour les boutons de la barre d'outils (16 gestionnaires de clic distincts, effort disproportionne pour un cas mineur - cliquer sur un module juste apres l'avoir glisse en mode edition, jamais signale comme genant avant) ; pas de garde-fou sur l'ouverture automatique du Flyout d'un dossier de favoris apres un glissement (mineur, se referme facilement).
+
+- **Tests** : `HorizontalDragReorderMathTests.cs` (nouveau, +9 tests comportementaux reels sur la logique pure - centre le plus proche, exclusion de soi-meme, liste vide, seuil dans les 4 directions). `ToolbarCustomizationRegressionTests.cs` et `BookmarkBarRegressionTests.cs` mis a jour (les anciennes assertions `CanDrag`/`DragStarting` remplacees par les nouvelles `PointerPressed`/`PointerMoved`, + verification explicite que `CanDrag` n'apparait plus du tout). Total **752/752 verts**.
+
+- Version : `0.93.37.1-dev` -> `0.93.37.2-dev` (4e chiffre, correctif). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. Test de fumee reel (profil jetable, mode invite) : lancement sans crash, barre d'outils et barre de favoris rendues normalement. **Le vrai process installe de l'utilisateur (PID distinct, lance par lui pour verifier son profil apres le correctif config.json) etait actif en parallele pendant ce test - jamais touche, seul mon propre process de test a ete manipule/arrete**, verifie explicitement par ligne de commande avant toute action Stop-Process. Le geste de glisser lui-meme reste impossible a simuler dans ce bac a sable (injections souris synthetiques refusees) - a confirmer par l'utilisateur en conditions reelles. Pas d'installeur reconstruit a ce stade (pas redemande).
+
+
+## 2026-08-14 (suite 2) - 2e correctif drag-drop (AddHandler) + panneau mode edition repositionne (0.93.37.3-dev)
+
+- Retour utilisateur apres livraison de 0.93.37.2-dev : le glisser des favoris ne fonctionne toujours pas, ET le clic droit "Reorganiser la barre d'outils" affiche un panneau illisible ("tout se colle, on sait meme pas comment valider"). Diagnostic complet AVANT tout code (meme rigueur que d'habitude), 2 causes distinctes trouvees et confirmees via documentation officielle Microsoft :
+
+- **Cause du glisser toujours mort** : le remplacement CanDrag -> PointerPressed/Moved/Released (0.93.37.2-dev) etait insuffisant. `ButtonBase` intercepte AUSSI `PointerPressed` en interne pour son propre `Click` - confirme par la doc Microsoft elle-meme : *"ButtonBase has class handling that handles PointerPressed and instead fires Click... the event is not raised for handling by any user code handlers on that control."* Une simple souscription (`+=` ou attribut XAML) ne recoit donc jamais l'evenement sur un `Button`, meme geree "a la main". Confirme par un GitHub issue identique sur AppBarButton.
+  - **Le vrai correctif documente** : `UIElement.AddHandler(RoutedEvent, handler, handledEventsToo: true)` - la SEULE methode officielle pour recevoir un evenement deja marque "Handled" par le controle. Pas exprimable en simple attribut XAML, doit se faire en code.
+  - Applique aux 2 endroits : `MainWindow.xaml.cs` (boucle sur `toolbarButtonMap.Values`, apres `_toolbarCustomization.Initialize`) pour les 16 boutons de la barre d'outils, et `CreateBookmarkBarButton` (`MainWindow.Bookmarks.cs`) pour les favoris. Les 4 attributs XAML `PointerPressed=`/`PointerMoved=`/`PointerReleased=`/`PointerCaptureLost=` retires des 16 boutons (le simple attribut XAML ne fonctionnait pas, meme raison).
+  - **A retenir pour tout futur geste personnalise sur un Button en WinUI 3** : ni `CanDrag`, ni une souscription normale a `PointerPressed` ne fonctionnent - seul `AddHandler(..., handledEventsToo: true)` marche. Deux correctifs successifs ont ete necessaires avant de trouver ca, chacun verifie contre la documentation officielle plutot que suppose.
+
+- **Cause du panneau illisible** : `ToolbarEditModeOverlay` etait imbrique A L'INTERIEUR de `ModulesQuickBar` (le meme Grid etroit que les boutons eux-memes), avec `Background="Transparent"` - se superposait donc litteralement sur les icones, sans aucune separation visuelle. Pas une impression, verifie dans le XAML lui-meme.
+  - **Correctif** : deplace au meme niveau que les autres overlays de la fenetre (`LoginOverlay`/`SetupWizardOverlay`, enfants directs de `RootShell`, `Grid.RowSpan="7"`), flotte SOUS la barre d'outils (`Margin="0,124,16,0"`, 124 = hauteur fixe TopTabsRow 52 + NavigationRow 72), fond opaque reel (`NovaPanelBackgroundBrush`), bordure, coin arrondi, ombre (`ThemeShadow`), `Canvas.ZIndex="80"` (sous les ecrans modaux Login=90/Wizard=95/Welcome=99, au-dessus du reste). Le conteneur EXTERNE reste volontairement sans Background (contrairement a LoginOverlay qui doit bloquer toute la fenetre) pour ne pas empecher les clics sur le reste de la page.
+
+- **Tests** : `ToolbarCustomizationRegressionTests.cs`/`BookmarkBarRegressionTests.cs` mis a jour (verifient desormais `AddHandler(UIElement.Pointer*Event, new PointerEventHandler(...), true)` au lieu des anciennes souscriptions, + absence explicite de l'ancien pattern). Nouveau test verifiant que le panneau mode edition a un fond opaque et vit au bon niveau (`Grid.RowSpan="7"`, `Canvas.ZIndex="80"`). Total **753/753 verts**.
+
+- Version : `0.93.37.2-dev` -> `0.93.37.3-dev` (4e chiffre, correctif). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. Lancement reel (profil jetable, mode invite) -> pas de crash. **Le clic droit lui-meme (comme le geste de glisser) n'a pas pu etre declenche via UIA dans ce bac a sable** (meme categorie de limitation : injection souris synthetique refusee) - l'aspect visuel du nouveau panneau n'a donc pas pu etre confirme par capture d'ecran cette fois, seule la structure XAML (position, fond opaque, ZIndex) a ete verifiee par les tests de regression. Pas d'installeur reconstruit a ce stade (pas redemande).
+
+
+## 2026-08-14 (suite 3) - Glisser TOUJOURS mort en reel malgre 2 correctifs confirmes par la doc : ajout de tracage diagnostique (0.93.37.4-dev)
+
+- Retour utilisateur, avec confirmation explicite du geste (appui maintenu, deplacement, relachement - le bon geste) et de la version testee (script `run-winui` du depot, donc code a jour, pas un installeur perime) : **le glisser des favoris ne fonctionne toujours pas**. 3e signalement du meme probleme malgre 2 correctifs successifs (CanDrag -> PointerPressed/Moved/Released en 0.93.37.2-dev, puis `AddHandler(..., handledEventsToo: true)` en 0.93.37.3-dev), chacun verifie a l'epoque contre la documentation officielle Microsoft et un exemple utilisateur confirme fonctionnel (issue GitHub microsoft-ui-xaml#7324, commentaire d'un ingenieur Microsoft + exemple minimal poste par un autre utilisateur).
+
+- Avant de retenter un 3e correctif a l'aveugle : relecture complete du code (`MainWindow.BookmarksDragDrop.cs`), aucune erreur logique trouvee ; theorie du dossier `current/` perime ecartee (`run-winui.ps1` reconstruit bien depuis les sources avant de copier, verifie dans le script). Faute de pouvoir simuler le geste souris reel dans ce bac a sable (injections refusees), **decision de ne plus deviner** : ajout d'un tracage diagnostique reel via le mecanisme deja existant du projet (`WinUiRuntimeTrace.Write`, `LUMORA_TRACE_STARTUP=1`), a chaque etape des 2 pipelines de glisser (favoris ET barre d'outils, meme mecanisme, meme incertitude) :
+  - `PointerPressed` : trace des l'entree du gestionnaire (avant tout retour anticipe), puis une 2e trace si les verifications passent et que la capture du pointeur a lieu. Permet de distinguer "le gestionnaire n'est jamais appele" de "il est appele mais sort tot".
+  - `PointerMoved` : trace uniquement au moment ou le seuil de 8px est depasse (entree en mode glissement) - pas a chaque mouvement, trop bruyant.
+  - `PointerReleased` : trace systematique avec l'etat du glissement et la cible trouvee (ou son absence).
+  - Aucune trace ajoutee en dehors du bloc `if (LUMORA_TRACE_STARTUP != "1")` deja present dans `WinUiRuntimeTrace.Write` - zero cout/bruit en usage normal.
+
+- **Tests** : suite existante non touchee dans sa logique (ajout de simples appels de journalisation, rien dans le comportement metier) - 753/753 toujours verts.
+
+- Version : `0.93.37.3-dev` -> `0.93.37.4-dev` (4e chiffre, correctif/diagnostic sur une fonction deja livree). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 753/753 verts. Le geste de glisser lui-meme reste hors de portee de ce bac a sable (injection souris refusee) - **cette passe ne pretend pas avoir corrige le glisser**, seulement avoir instrumente le code pour que le prochain essai reel de l'utilisateur produise une preuve exploitable au lieu d'un 4e pari a l'aveugle. Pas d'installeur reconstruit (pas demande, et inutile tant que la vraie cause n'est pas identifiee).
+
+- **Prochaine etape, a faire par l'utilisateur** : `$env:LUMORA_TRACE_STARTUP = "1"` dans le MEME terminal PowerShell juste avant de lancer `run-winui.cmd` (ou `scripts\run-winui.ps1`), reproduire le glisser rate (favoris, et si possible le clic droit "Reorganiser la barre d'outils" + glisser un bouton), fermer l'appli, puis partager le contenu de `artifacts\tmp\winui-run\Lumora.WinUI\x64\Debug\current\winui-runtime-trace.log`.
+
+
+## 2026-08-14 (suite 4) - VRAIE cause trouvee via la trace fournie : capture posee sur le mauvais element (0.93.37.5-dev)
+
+- L'utilisateur a fourni `winui-runtime-trace.log` reel (3 tentatives sur un favori, 3 tentatives sur la barre d'outils). Lecture attentive de la sequence :
+  ```
+  PointerPressed OK pour 'bookmark-...', capture du pointeur
+  Seuil depasse, glissement demarre pour 'bookmark-...'
+  PointerReleased, isDragging=False, cible=(aucune)          <- isDragging deja FAUX ici !
+  ```
+  `_bookmarkIsDragging` venait d'etre mis a `true` par le PointerMoved precedent - la SEULE facon qu'il soit deja `false` a l'entree de `PointerReleased` (avant meme le reset de fin de methode) est que `PointerCaptureLost` se soit declenche silencieusement ENTRE LES DEUX (ce gestionnaire remet `_bookmarkIsDragging` a `false`). Deduction directe de la trace, pas une supposition. Meme motif exact sur la barre d'outils (3 `PointerPressed` sur le meme bouton sans aucun `PointerReleased` entre les deux premiers - la capture se perdait avant meme que l'utilisateur relache).
+
+- **Cause reelle** : la capture du pointeur (`btn.CapturePointer(e.Pointer)`) etait posee SUR LE BOUTON glisse lui-meme. Un `Button` (`ButtonBase`) gere DEJA sa propre capture en interne pour son etat visuel Pressed -> Click, et la RELACHE des que le pointeur sort de ses limites (Bounds) - ce qui arrive tres tot dans un glissement horizontal (quelques dizaines de pixels). Notre `CapturePointer` sur ce meme element se faisait donc silencieusement ecraser par cette logique interne, sans que rien ne le signale (pas d'exception, juste `PointerCaptureLost` qui se declenche comme dans n'importe quel autre cas de perte de capture legitime).
+  - Verifie en inspectant le XAML : ni `ToolbarButtonsPanel` ni `BookmarksBarPanel`/`BookmarksBottomBarPanel` n'ont de `ScrollViewer` ancetre direct (hypothese alternative "vol de capture par un ScrollViewer/manipulation tactile" ecartee par lecture du XAML, pas juste supposee).
+
+- **Correctif** (les 2 mecanismes, meme cause) : la capture se pose desormais sur le PANNEAU parent (`ToolbarButtonsPanel` pour la barre d'outils, `BookmarksBarPanel`/`BookmarksBottomBarPanel` selon la position de la barre de favoris pour les favoris) plutot que sur le bouton. Un `StackPanel` n'a aucune gestion de capture interne, donc rien ne vient l'ecraser en cours de route.
+  - Consequence structurelle : `PointerMoved`/`PointerReleased`/`PointerCaptureLost` ne sont plus cables PAR BOUTON (seul `PointerPressed` reste cable ainsi, via `AddHandler(handledEventsToo: true)`, puisque c'est le seul evenement qui nait reellement sur le bouton) - ils sont desormais cables UNE SEULE FOIS sur le(s) panneau(x), qui existent des `InitializeComponent` et ne sont jamais recrees (contrairement aux boutons de favoris, recrees a chaque `RenderBookmarksBar()`).
+  - `MainWindow.BookmarksDragDrop.cs` : nouvelle methode `WireBookmarkDragPanels()` (appelee une fois dans le constructeur, juste apres `ReloadBookmarks()`), cable les 2 panneaux possibles (haut/bas). Gestionnaires renommes `BookmarkDragPanel_PointerMoved/Released/CaptureLost` (avant : `BookmarkBarButton_Pointer*`). Nouveau champ `_bookmarkDragPanel` (retient quel panneau a recu la capture, necessaire puisque 2 panneaux existent).
+  - `MainWindow.ToolbarCustomization.cs` : gestionnaires renommes `ToolbarButtonsPanel_PointerMoved/Released/CaptureLost` (avant : `ToolbarButton_Pointer*`), cables une fois dans `MainWindow.xaml.cs` juste apres la boucle qui cable `PointerPressed` sur chacun des 16 boutons.
+  - Traces de diagnostic (ajoutees dans la passe precedente, 0.93.37.4-dev) CONSERVEES telles quelles - elles sont ce qui a permis de trouver la vraie cause, elles serviront pour la prochaine anomalie de ce type. Cout nul en usage normal (`LUMORA_TRACE_STARTUP` desactive par defaut).
+
+- **Tests** : `ToolbarCustomizationRegressionTests.cs` et `BookmarkBarRegressionTests.cs` mis a jour + 2 nouveaux tests explicites (`Capture_du_pointeur_se_fait_sur_le_panneau_pas_sur_le_bouton` pour chaque mecanisme) qui verifient noir sur blanc l'absence de `btn.CapturePointer` et la presence du cablage panneau. Total **755/755 verts**.
+
+- Version : `0.93.37.4-dev` -> `0.93.37.5-dev` (4e chiffre, correctif). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 755/755 verts. Le geste de glisser lui-meme reste hors de portee de ce bac a sable (injection souris refusee) - **cette fois, contrairement aux 2 passes precedentes, le correctif s'appuie sur une preuve directe issue d'une trace reelle fournie par l'utilisateur**, pas sur une relecture de documentation seule. A confirmer par l'utilisateur en conditions reelles (favoris ET barre d'outils). Pas d'installeur reconstruit a ce stade (pas redemande) - a faire une fois le glisser confirme fonctionnel.
+
+
+## 2026-08-14 (suite 5) - Le correctif panneau ne suffit toujours pas : alternative clic droit "Déplacer avant/après" (0.93.38.0-dev)
+
+- L'utilisateur a confirme avoir bien reteste avec `run-winui.cmd` (donc le correctif 0.93.37.5-dev etait actif) et le glisser des favoris echoue TOUJOURS - 4e echec de la meme fonction. Cote barre d'outils, un seul module se laisse deplacer, pas les autres (ex. le bloqueur de pub) - anomalie non expliquee, potentiellement distincte du bug de capture deja corrige. Demande explicite de l'utilisateur : *"trouve une solution... pourquoi pas au moins comme ça [un clic droit sur le favori pour le deplacer], ça évitera les fausses manipulations"*.
+
+- **Decision** : plutot que de retenter un 5e correctif sur le glisser lui-meme (dont la fiabilite reste incertaine malgre 3 diagnostics serieux successifs), implementation immediate de l'alternative proposee par l'utilisateur pour les FAVORIS - deterministe, base sur un simple clic, donc totalement insensible au bug de capture de pointeur qui touchait le glisser :
+  - `BookmarkAdjacentMoveMath.cs` (nouveau, isole de tout type WinUI, meme principe que `HorizontalDragReorderMath.cs`) : logique pure `ComputeTarget(orderedSiblingIds, movedId, moveForward)` qui calcule le "beforeId" cible pour deplacer un favori d'UN cran (avant = juste devant le frere precedent ; apres = juste apres le frere suivant, ou en dernier si ce frere suivant etait deja le dernier).
+  - `BookmarkStore.MoveNodeAdjacent(movedId, moveForward)` (Models/Bookmarks.cs) : delegue le calcul a `BookmarkAdjacentMoveMath`, puis appelle `ReorderNode` (deja teste) pour l'ecriture reelle.
+  - `MainWindow.BookmarksFlyouts.cs` : 2 nouvelles entrees dans le menu contextuel de CHAQUE favori/dossier non-racine (barre du haut, barre du bas, gestionnaire de favoris, sous-menus de dossiers - un seul point de creation partage, `CreateBookmarkContextFlyout`) : "Déplacer avant" / "Déplacer après", desactivees (pas masquees, pour garder une position stable dans le menu) quand le favori est deja a l'extremite correspondante (`BookmarkSiblingBoundaries`, basee sur `_allBookmarkNodes` deja en cache).
+  - Le glisser-depose existant N'A PAS ete retire : les 2 mecanismes cohabitent, le clic droit est un filet de securite fiable en attendant que la vraie cause du glisser soit comprise.
+
+- **Tests** : `BookmarkAdjacentMoveMathTests.cs` (nouveau, +7 tests comportementaux reels sur la logique pure - avant/apres, extremites des 2 cotes, id absent, liste a 1 element). `BookmarkBarRegressionTests.cs` : 2 nouveaux tests (delegation vers `BookmarkAdjacentMoveMath`, presence des entrees de menu + branchement des clics). Total **764/764 verts**. Le test `LumoraConfigTests.Save_puis_Load_restent_confines_au_dossier_isole` a echoue UNE FOIS en lot complet puis passe seul - flakiness de parallelisation de `dotnet test` (dossier temp partage entre classes de test), sans lien avec cette passe, non retenu.
+
+- Version : `0.93.37.5-dev` -> `0.93.38.0-dev` (**3e chiffre**, pas le 4e - contrairement aux 4 passes precedentes sur ce sujet, ceci est un AJOUT de fonctionnalite, pas une correction du glisser existant, conformement a la regle de versionnement du projet). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- **Barre d'outils (modules) : anomalie non traitee cette passe**, faute de savoir avec certitude quel bouton precis pose probleme (retour utilisateur partiellement inintelligible, probablement de la dictee - "un site a connecter" ne correspond a aucun nom de bouton existant). Pas de correctif blind tente. A eclaircir : soit un nouveau `winui-runtime-trace.log` avec plusieurs boutons testes un par un, soit une description precise (nom du bouton au survol). Le meme filet de securite clic-droit pourrait s'appliquer a la barre d'outils si le glisser reste instable, mais ce serait un chantier plus lourd (16 boutons n'ont actuellement aucun menu contextuel dedie) - pas lance sans clarification prealable.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 764/764 verts. La nouvelle fonctionnalite clic-droit n'a PAS pu etre testee visuellement dans ce bac a sable (le clic droit lui-meme n'est pas simulable ici, meme limitation que d'habitude) - a confirmer par l'utilisateur. Pas d'installeur reconstruit (pas redemande).
+
+
+## 2026-08-14 (suite 6) - VRAIE cause du bug barre d'outils : zone de "drag" de la fenetre qui recouvrait ModulesQuickBar (0.93.38.1-dev)
+
+- L'utilisateur a fourni un nouveau `winui-runtime-trace.log` reel (essai de deplacer 5 boutons differents en mode edition : ConnectionsQuickAccessButton x5, ModulesQuickAccessButton, SplitViewButton x2). Motif systematique et sans exception sur les 7 tentatives :
+  ```
+  Seuil depasse, glissement demarre pour 'ConnectionsQuickAccessButton'
+  PointerCaptureLost (panneau), isDragging=True        <- ~5ms plus tard, a CHAQUE fois
+  ```
+  Capture perdue en quelques millisecondes, systematiquement, MEME apres l'avoir posee sur le panneau (correctif 0.93.37.5-dev) - preuve que ce N'ETAIT PAS le meme bug que celui des favoris (ButtonBase interne). Quelque chose AU-DESSUS du panneau volait la capture des que le mouvement etait detecte.
+
+- **Cause reelle trouvee** (lecture de `MainWindow.WindowChrome.cs`, `UpdateTitleBarDragRegion`) : la zone de "drag" de la fenetre (barre de titre personnalisee - permet de deplacer la fenetre en cliquant l'espace vide de la barre d'onglets) est definie via `_appWindow.TitleBar.SetDragRectangles(...)`, un mecanisme Win32/DWM NON-CLIENT, entierement independant du systeme d'evenements/capture WinUI. En layout "aplati" (theme Classique + onglets verticaux, `TopTabsRow.ActualHeight` tombe a 0 - deja documente dans le code), `NavigationRow` (qui contient `ModulesQuickBar`, la barre d'outils) demarre alors a Y=0, LA MEME rangee que cette zone de drag. Le code ne reservait la marge de securite (`_titleBarSafeRight`, ~138px) que pour `BrowserTabs` (barre d'onglets) - jamais pour `ModulesQuickBar`, dont les colonnes 14-19 (dans `NavigationToolbar`) vont jusqu'au bord droit reel, SANS aucune marge de reserve. Consequence : en layout aplati, les boutons les plus a droite de la barre d'outils tombaient DANS la zone de drag de Windows. Des qu'un glissement de bouton depassait le seuil de deplacement de fenetre PROPRE A WINDOWS (independant du notre, dans le meme ordre de grandeur - d'ou la coincidence des ~5ms), Windows capturait le pointeur au niveau OS pour deplacer la fenetre, ce qui revoque silencieusement TOUTE capture WinUI en cours, quel que soit l'element qui la detenait (bouton OU panneau) - d'ou l'echec malgre le correctif precedent.
+
+- **Pourquoi les favoris n'etaient pas concernes par cette cause precise** : la barre de favoris est bien plus bas dans la fenetre (sous `NavigationRow`), hors de portee de cette zone de drag meme en layout aplati (qui ne couvre que la hauteur de `NavigationRow`). Le glisser des favoris reste donc non-elucide avec certitude (l'alternative clic droit "Deplacer avant/apres" livree en 0.93.38.0-dev reste la solution fiable en attendant).
+
+- **Correctif** : `UpdateTitleBarDragRegion` calcule desormais aussi les bornes reelles de `ModulesQuickBar` (`TransformToVisual(RootShell)`) et clampe `dragLeft` pour ne jamais empieter dessus, SEULEMENT si elle chevauche verticalement la zone de drag (`modulesBounds.Top < rowHeight`) - sans effet en layout normal (zone de drag confinee a `TopTabsRow`, une autre rangee), actif uniquement en layout aplati ou la superposition se produisait reellement.
+
+- **Tests** : `TitleBarDragRegionRegressionTests.cs` (nouveau, verifie la presence du clamp par lecture de source - `MainWindow.WindowChrome.cs` depend de WinUI, pas testable en instanciation reelle, meme contrainte que les autres fichiers de ce type). Total **765/765 verts**.
+
+- Version : `0.93.38.0-dev` -> `0.93.38.1-dev` (4e chiffre, correctif d'un bug reel). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 765/765 verts. **Ce correctif s'appuie a nouveau sur une preuve directe (2e trace reelle fournie par l'utilisateur)**, avec cette fois une explication complete et coherente avec la geometrie du XAML (colonnes de `NavigationToolbar`, layout aplati documente dans le code lui-meme). A confirmer par l'utilisateur en conditions reelles - en particulier verifier si son theme/disposition (Classique + onglets verticaux ?) correspond bien au scenario "aplati" identifie. Pas d'installeur reconstruit a ce stade (pas redemande).
+
+
+## 2026-08-14 (suite 7) - 2e bug reel de la barre d'outils : boutons masques pollues le calcul de cible (0.93.38.2-dev)
+
+- L'utilisateur a montre une capture d'ecran (3 icones : Connexions, Modules, Vue partagee) et pose une question directe : *"pourquoi je ne peux que deplacer le dernier bloc"* (uniquement le plus a droite des 3 se laissait deplacer). Traite comme un bug etabli (capture d'ecran = preuve, voir [[ne-pas-douter-dun-bug-documente]]), diagnostic sans redemander de trace cette fois - lecture directe de `ToolbarCustomizationService.cs` et `MainWindow.ToolbarCustomization.cs`.
+
+- **Cause reelle trouvee** : `ApplyOrderToToolbar` (`ToolbarCustomizationService.cs`) ajoute TOUJOURS les 16 boutons a `ToolbarButtonsPanel.Children`, y compris les modules NON epingles (`Visibility="Collapsed"`, bascule via `ModulePinToggle_Click`) - seuls les boutons epingles sont visibles a l'ecran, mais tous restent presents dans la collection. Or `ToolbarButtonsPanel_PointerMoved` (`MainWindow.ToolbarCustomization.cs`) construisait la liste `items` pour `HorizontalDragReorderMath.FindTargetId` a partir de TOUS les enfants nommes, SANS filtrer par visibilite. Un bouton masque (largeur 0, position de transformation non significative puisqu'il ne participe pas au layout) pouvait donc etre choisi comme "voisin le plus proche" du pointeur - `OnDropped` reordonnait alors `_buttonOrder` par rapport a cette entree invisible : un changement REEL dans les donnees, mais SANS AUCUN EFFET VISIBLE parmi les icones affichees, donnant exactement l'impression "ca ne bouge pas". Le bouton le plus a droite (`SplitViewButton`, dernier de l'ordre par defaut) etait moins expose a ce probleme, d'ou l'observation "seul le dernier bloc bouge".
+
+- **Correctif** : filtre ajoute dans la construction de `items` - `el.Visibility == Visibility.Visible && el.ActualSize.X > 0` - ne considere plus que les boutons reellement affiches et mesures comme cibles possibles. Independant du bug de zone de drag de fenetre corrige juste avant (0.93.38.1-dev) : les deux causes coexistaient, chacune suffisant a elle seule a casser la reorganisation.
+
+- **Tests** : nouveau test `Cible_du_glisser_ignore_les_boutons_masques` dans `ToolbarCustomizationRegressionTests.cs`. Total **766/766 verts**.
+
+- Version : `0.93.38.1-dev` -> `0.93.38.2-dev` (4e chiffre, correctif). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 766/766 verts. Reponse donnee directement (bug identifie par lecture de code, capture d'ecran suffisante comme preuve - pas de nouvelle trace demandee). A confirmer par l'utilisateur en conditions reelles avec plusieurs modules epingles simultanement. Pas d'installeur reconstruit a ce stade (pas redemande) - 2 correctifs reels de la barre d'outils (zone de drag + boutons masques) doivent d'abord etre confirmes fonctionnels avant d'en construire un nouveau.
+
+
+## 2026-08-14 (suite 8) - 3e bug reel de la barre d'outils : reordonnancement en direct abandonne (0.93.38.3-dev)
+
+- Retour utilisateur direct, franc ("tu n'as rien resolu du tout... je suis toujours bloque au 3e bloc"), avec mise en garde explicite : si la barre d'outils n'est vraiment pas modulable, l'une des promesses du produit (interface personnalisable) ne tient pas - demande de trouver une solution ou de le dire clairement si ce n'est pas possible.
+
+- Plutot que redemander une 3e trace, remise en cause de l'architecture elle-meme : `ToolbarButtonsPanel_PointerMoved` appelait `_toolbarCustomization.OnDropped(...)` a CHAQUE mouvement reussi (reordonnancement "en direct", choix d'origine pour un retour visuel immediat) - et `OnDropped` declenche `ApplyOrderToToolbar()` qui fait `Children.Clear()` puis reconstruit TOUS les enfants du panneau. Ce panneau (`ToolbarButtonsPanel`) est le MEME qui detient la capture active du pointeur pendant le glissement (depuis le correctif 0.93.37.5-dev). Reconstruire l'arbre visuel d'un element PENDANT qu'il detient une capture active, potentiellement plusieurs fois par seconde durant un seul geste, est un terrain connu pour des pertes de capture en WinUI - explique bien le symptome observe : un glissement COURT (peu de cycles de reconstruction avant relachement, ex. bloc 1 vers 3) pouvait aboutir, un glissement LONG (plus de cycles, donc plus d'occasions d'echouer, ex. jusqu'au bloqueur de pub ou aux favoris, plus loin dans la liste) echouait presque toujours.
+
+- **Correctif** : abandon du reordonnancement EN DIRECT, aligne sur le meme principe deja utilise pour les favoris (`MainWindow.BookmarksDragDrop.cs`) - `PointerMoved` se contente desormais de MEMORISER la cible (`_toolbarPendingTargetId`) et d'appliquer une legere transparence (opacite 0.55) sur le bouton glisse comme seul retour visuel ; `Children.Clear()+rebuild` (via `OnDropped` -> `ApplyOrderToToolbar`) n'a lieu qu'UNE SEULE FOIS, a `PointerReleased`, une fois la capture plus necessaire pour le reste du geste. Sacrifice assume : les boutons ne se deplacent plus visuellement EN TEMPS REEL pendant le glissement (seulement au relachement) - meme compromis deja fait pour les favoris, pour la meme raison de fiabilite.
+
+- **Tests** : nouveau test `Reordonnancement_reel_differe_au_relachement_pas_en_direct` (verifie que `OnDropped` n'est plus appele dans `PointerMoved`, seulement dans `PointerReleased`). Total **767/767 verts**.
+
+- Version : `0.93.38.2-dev` -> `0.93.38.3-dev` (4e chiffre, correctif). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 767/767 verts. **3e correctif reel de la barre d'outils en une seule session**, cette fois architectural (pas un simple ajustement de calcul) - raisonnement solide (mutation de l'arbre visuel pendant une capture active = risque connu) mais PAS confirme par une trace montrant le mecanisme exact de la perte de capture dans ce cas precis (contrairement aux 2 correctifs precedents, bases sur des preuves directes). A traiter comme une hypothese serieuse, pas une certitude, tant que l'utilisateur n'a pas confirme en conditions reelles. Si ca echoue encore, la piste de tracage la plus utile serait de logger explicitement le moment ou `ApplyOrderToToolbar` s'executait (desormais un seul point dans le code, plus facile a isoler). Pas d'installeur reconstruit (pas redemande).
+
+
+## 2026-08-14 (suite 9) - 4e echec confirme par trace + retrait complet du glisser-depose de la barre d'outils (0.93.39.0-dev)
+
+- Nouvelle trace reelle fournie par l'utilisateur (LUMORA_TRACE_STARTUP=1) : le correctif "reordonnancement differe au relachement" (0.93.38.3-dev) N'A PAS RESOLU le probleme. La capture se perd toujours (`PointerCaptureLost (panneau), isDragging=True`), cette fois avec un delai de 0,6 a 1,8 seconde (tres different des ~5ms d'avant le correctif de zone de drag de fenetre) - motif compatible avec le delai d'affichage automatique d'une infobulle Windows (~1s), et les boutons concernes ont bien un `ToolTipService.ToolTip` configure. 4e cause potentielle, jamais confirmee ni corrigee.
+
+- Ce 4e echec, combine aux 3 correctifs reels deja trouves (zone de drag de fenetre, boutons masques, capture perdue meme differee), a convaincu l'utilisateur : *"tu peux supprimer le clic droit... de toute facon il ne sert a rien puisque le glisser ne fonctionne pas"*. Discussion prealable (maquette HTML validee par l'utilisateur, voir artifact publie) sur l'alternative : liste avec Monter/Descendre, integree au menu Modules (epingler/desepingler) plutot qu'un clic droit separe - argumentaire complet donne a l'utilisateur avant le Go (menu deja connu vs clic droit peu decouvrable pour le public vise, meme intention "a quoi ressemble ma barre" que l'epinglage). Precision explicite de l'utilisateur, bien comprise et respectee : un module DESEPINGLE doit disparaitre de la liste de reordonnancement, pas seulement de la barre.
+
+- **Retrait complet, pas juste le clic droit** (portee confirmee avec l'utilisateur avant le Go) :
+  - `MainWindow.xaml` : `ToolbarEditModeOverlay` (bandeau mode edition) supprime entierement ; `ContextFlyout` (clic droit "Reorganiser...") retire de `ModulesQuickBar`.
+  - `MainWindow.ToolbarCustomization.cs` : reecrit entierement - plus aucun code de pointeur/capture/seuil. Remplace par la construction dynamique de la section "Ordre dans la barre" (`RefreshModulesReorderSection`, `CreateModuleReorderRow`) dans `ModulesQuickAccessFlyout` (le menu Modules existant), avec boutons Monter/Descendre par ligne.
+  - `ToolbarCustomizationService.cs` : `EnterEditMode`/`ExitEditMode`/`IsInEditMode`/`OnDragStarted`/`CanDropAt`/`OnDropped` supprimes. Nouvelle methode `MoveButtonAdjacent(buttonId, moveForward)` (deplace d'UN cran, sauvegarde immediatement, pas de mode a quitter) et `GetVisibleButtonOrder()` (ne renvoie que les boutons `Visibility.Visible` - meme filtre deja applique au defunt calcul de cible du glisser, necessaire ici aussi pour que "reordonner" et "afficher dans la liste" utilisent la meme notion de "ce qui est reellement dans la barre").
+  - `BookmarkAdjacentMoveMath.cs` renomme en `AdjacentMoveMath.cs` (ainsi que ses tests) : la logique de calcul "avant/apres d'un cran" est generique (liste ordonnee de string + id + direction), reutilisee telle quelle pour la barre d'outils - pas de duplication, meme raisonnement deja applique aux favoris.
+  - `MainWindow.UsageMode.cs` : `UpdateModulesPinUi()` appelle desormais `RefreshModulesReorderSection()` a la fin - un module epingle/desepingle apparait/disparait immediatement de la liste de reordonnancement, sans fermer/rouvrir le menu.
+
+- **Verification reelle en conditions quasi-reelles** (lancement isole + pilotage UIA, pas juste build+tests) : assistant premier lancement passe, ouverture du menu Modules confirmee (dump UIA complet : "Ordre dans la barre", les 3 modules toujours visibles avec Monter/Descendre, la liste d'epinglage des 11 modules optionnels en dessous - structure conforme a la maquette validee). Clic reel (UIA InvokePattern) sur "Descendre" verifie efficace : la position ECRAN REELLE des boutons de la barre a bien change (verifie 2 fois, dans les 2 sens) - **le reordonnancement fonctionne reellement**, pas juste en theorie.
+  - **Bug trouve et corrige pendant cette verification** : le clic sur Monter/Descendre fermait le menu Modules a chaque fois (mauvaise UX, meme si la donnee changeait bien). Corrige en differant `RefreshModulesReorderSection()` via `DispatcherQueue.TryEnqueue(...)` plutot qu'un appel synchrone dans le gestionnaire de clic (meme reflexe que pour l'ancien glisser).
+  - **Point non tranche avec certitude** : apres ce correctif, le menu semble ENCORE se fermer a chaque clic Monter/Descendre lors des tests via UI Automation (`InvokePattern.Invoke()`) - MAIS un test de comparaison montre qu'un `ToggleButton` invoque via `TogglePattern.Toggle()` (les cases d'epinglage existantes) NE ferme PAS le menu, alors qu'un `Button` invoque via `InvokePattern.Invoke()` (le mien, ET meme un bouton "temoin" hors de la liste reconstruite) le ferme systematiquement. Cette difference systematique entre les 2 patterns UIA, plutot qu'un lien avec le contenu du gestionnaire de clic, pointe vers un **artefact de l'automatisation UIA plutot qu'un vrai bug de clic reel** (meme categorie de limitation deja rencontree plusieurs fois cette session : geste souris/clic droit non simulables fidelement dans ce bac a sable). Pas confirme ni infirme avec certitude - a verifier par l'utilisateur en conditions reelles.
+
+- **Tests** : `ToolbarCustomizationRegressionTests.cs` entierement reecrit (l'historique des 4 echecs du glisser n'a plus besoin d'etre teste en detail, seul le fait qu'aucun vestige ne subsiste compte). Nouveaux tests sur `MoveButtonAdjacent`, `GetVisibleButtonOrder`, la construction de la liste, les boutons Monter/Descendre. Total **765/765 verts**.
+
+- Version : `0.93.38.3-dev` -> `0.93.39.0-dev` (**3e chiffre** : ajout net d'une fonctionnalite - remplacement complet du glisser par un mecanisme au clic - pas une simple correction). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- **A demander a l'utilisateur au prochain retour** : confirmer si le menu Modules reste bien ouvert entre 2 clics Monter/Descendre consecutifs en usage reel (souris), pour trancher l'hypothese "artefact UIA" ci-dessus. Si le menu se ferme reellement a chaque clic en usage reel, ce sera une gene d'usage (pas un echec fonctionnel - le reordonnancement marche) a corriger dans une passe suivante. Pas d'installeur reconstruit a ce stade (pas redemande).
+
+
+## 2026-08-14 (suite 10) - Portee etendue a toute la barre + fenetre dediee (0.93.40.0-dev)
+
+- Retour utilisateur apres verification reelle : *"les seuls modules que je peux deplacer, c'est les 3 derniers. Tu fais quoi du bouton des favoris du coffre et de tout le reste ? Ca compte."* Diagnostic confirme : le mecanisme de reordonnancement livre en 0.93.39.0-dev ne couvrait QUE les 16 boutons de `ModulesQuickBar` - les 6 boutons du groupe fixe (Ajouter aux favoris, Incognito, Confidentialite du site/bouclier, Identifiants de ce site/coffre, Historique, Telechargements), a des `Grid.Column` fixes dans `NavigationToolbar`, etaient entierement hors de portee. L'utilisateur a aussi anticipe un probleme d'usage : etendre la liste a tout ca la rendrait trop longue pour le petit menu Modules, et a demande une refonte visuelle - "je pense qu'il faut voir la chose differemment... revoir la chose graphiquement... la fenetre tu peux la faire un petit peu plus jolie".
+
+- **2 maquettes HTML montrees et validees avant tout code** (voir artifacts publies dans la conversation) : 1re maquette (mini-liste dans le menu Modules, seulement les modules) rejetee pour cause de portee insuffisante ; 2e maquette (fenetre dediee plus grande, groupee en 2 sections "Toujours dans la barre" / "Modules epingles", degrade d'identite en accent) validee ("go"). Question ouverte posee avant le Go et tranchee par l'utilisateur : le point d'entree reste un lien dans le menu Modules existant (pas de nouveau clic droit), qui ouvre desormais cette fenetre dediee au lieu d'une petite liste integree.
+
+- **Implementation** :
+  - `MainWindow.xaml` : les 6 boutons fixes deplaces de leurs `Grid.Column` (6 a 11 de `NavigationToolbar`) vers `ToolbarButtonsPanel` (fonctionnellement inchanges - memes Click/Flyout/Style, seule leur position est desormais pilotee par l'ordre sauvegarde). Nouvelle fenetre `ToolbarReorganizeOverlay` (overlay modal, fond attenue `#CC090D14`, carte centree 460px, barre d'accent reutilisant `NovaIdentityMarkBrush` - pas de degrade code en dur, coherent avec la regle "theme pilote par Mode d'usage"). Mini-liste "Ordre dans la barre" retiree du menu Modules, remplacee par un simple bouton "Reorganiser toute la barre..." qui ouvre cette fenetre.
+  - `ToolbarCustomizationService.cs` : `GetDefaultButtonOrder()` etendu aux 6 nouveaux boutons (en tete, ordre visuel identique a l'ancien Grid.Column). Aucun autre changement de logique (`MoveButtonAdjacent`/`GetVisibleButtonOrder` deja generiques, fonctionnent sans modification sur la liste elargie).
+  - `MainWindow.ToolbarCustomization.cs` : reecrit - catalogue de labels/glyphes etendu a 22 boutons ; nouvelle logique de regroupement (`OptionalPinnedButtonIds`, les 11 modules pilotes par epinglage) separant "Toujours dans la barre" (tout le visible qui N'EST PAS dans cette liste) de "Modules epingles" (le sous-ensemble optionnel) ; construction dynamique des 2 sections (`RefreshToolbarReorganizeSections`) ; meme precaution de rafraichissement DIFFERE (`DispatcherQueue.TryEnqueue`) que la version precedente.
+  - `MainWindow.UsageMode.cs` : `UpdateModulesPinUi()` rafraichit la fenetre de reorganisation SI elle est deja ouverte (evite de la construire pour rien a chaque bascule d'epinglage si elle est fermee).
+  - Glyphes Segoe MDL2 (nouveau) : Ajouter aux favoris E735 (etoile, deja utilisee sur le bouton), Incognito E890 (approximation - pas de glyphe "masque" exact dans MDL2, l'icone reelle du bouton est un trace vectoriel main), Bouclier EA18, Coffre E72E, Historique E81C, Telechargements E896 - repris des glyphes deja utilises sur chaque bouton reel.
+
+- **Verification reelle complete** (lancement isole + pilotage UIA, comme d'habitude cette session) : assistant premier lancement passe, menu Modules ouvert, clic reel sur "Reorganiser toute la barre..." confirme (dump UIA complet) - la fenetre affiche exactement les 9 elements attendus dans "Toujours dans la barre" (favoris, incognito, bouclier, coffre, historique, telechargements, Modules epingles, Connexions, Vue partagee) et "Aucun module epingle pour le moment" dans la 2e section (correct, rien d'epingle par defaut). 2 clics reels (UIA InvokePattern) sur "Descendre Ajouter aux favoris" verifies : **la fenetre est restee ouverte entre les 2 clics** (contrairement au comportement observe sur la version precedente - soit le correctif de rafraichissement differe suffit desormais, soit c'etait bien un artefact d'automatisation comme suppose), ET la position ECRAN REELLE du bouton "Ajouter aux favoris" a bien recule de 2 crans (verifie apres fermeture via "Terminer", position X croissante conforme au nouvel ordre attendu).
+
+- **Tests** : `ToolbarCustomizationRegressionTests.cs` mis a jour - nouveau test verifiant que les 6 boutons sont bien declares a l'interieur de `ToolbarButtonsPanel` (plus a un Grid.Column fixe) et presents dans le service/la map de boutons ; tests de la fenetre dediee (2 sections, lien d'ouverture) remplacent ceux de l'ancienne mini-liste. Total **766/766 verts**.
+
+- Version : `0.93.39.0-dev` -> `0.93.40.0-dev` (**3e chiffre** : extension de portee + nouvelle interface, pas une simple correction). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 766/766 verts (1 echec de parallelisation de `dotnet test` du a une variable d'environnement `LUMORA_PROFILE_DIR` laissee active par une session de verification precedente dans ce meme terminal - nettoye, non lie a ce travail). Pas d'installeur reconstruit a ce stade (pas redemande) - confirmation utilisateur souhaitable avant, notamment sur le point encore incertain de la fermeture de fenetre au clic (voir note precedente).
+
+
+## 2026-08-14 (suite 11) - Vide visuel dans la barre : colonnes mortes retirees (0.93.40.1-dev)
+
+- Retour utilisateur avec capture d'ecran : *"il y a un vide"* a gauche du groupe d'icones. Confirme comme bug etabli (capture = preuve) plutot que remis en doute.
+
+- **Cause reelle** : en deplacant les 6 boutons fixes (favoris/incognito/bouclier/coffre/historique/telechargements) de leurs `Grid.Column` vers `ToolbarButtonsPanel` (passe precedente), les 6 `ColumnDefinition` qu'ils occupaient dans `NavigationToolbar` (colonnes 6 a 11) sont restees dans le XAML, desormais sans aucun contenu. Un `Grid` n'annule PAS son `ColumnSpacing` entre des colonnes vides - meme sans bouton, les 6 colonnes continuaient a reserver leur espacement (`ColumnSpacing="6"`), creant un vide d'environ 5x6=30px la ou les boutons se trouvaient avant, juste avant le debut du groupe d'icones restant.
+
+- **Correctif** : les 6 `ColumnDefinition` devenues inutiles supprimees du XAML. Les elements suivants renumerotes en consequence (-6, colonnes contigues donc plus de trou) : le fond decoratif `NavigationToolbarToolsShell` (Grid.Column reste "6" par coincidence du decalage, mais ColumnSpan reduit de 12 a 6 pour refleter uniquement la portion survivante de sa couverture d'origine - Accueil, CompactMode, et le debut de ModulesQuickBar, comme avant le retrait) ; le bouton "Accueil" cache (12->6) ; `CompactModeButton` cache (13->7) ; `ModulesQuickBar` (14->8, ColumnSpan inchange a 6). Rien d'autre dans le code ne referencait ces indices de colonnes en dur (verifie par recherche complete avant de toucher au XAML).
+
+- **Verification reelle** : lancement isole, mesure des positions ecran REELLES (BoundingRectangle UIA, pas une capture d'ecran - une tentative de capture plein ecran a accidentellement montre le bureau/une autre fenetre au lieu de l'app dans cet environnement, abandonnee au profit des rectangles UIA deja fiables tout au long de cette session). Ecart mesure entre le bouton "Ouvrir l'adresse" (barre d'adresse) et le premier bouton du groupe ("Ajouter aux favoris") : 27px, coherent avec l'espacement normal observe entre les autres icones du groupe (7-8px + marges) - le vide de plusieurs dizaines de pixels signale par l'utilisateur a disparu.
+
+- **Tests** : suite existante non affectee dans sa logique (changement XAML pur, pas de nouveau comportement testable au-dela de ce qui l'etait deja) - 766/766 toujours verts, aucune modification necessaire.
+
+- Version : `0.93.40.0-dev` -> `0.93.40.1-dev` (4e chiffre, correctif). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 766/766 verts. Pas d'installeur reconstruit a ce stade (pas redemande).
+
+
+## 2026-08-14 (suite 12) - Refonte visuelle du menu Modules, alignee sur l'identite Lumora (0.93.41.0-dev)
+
+- Retour utilisateur avec capture d'ecran, confirmant le correctif du vide precedent : le menu d'epinglage des modules est *"completement en desaccord avec la charte graphique"*. Maquette HTML montree avant tout code (voir artifact publie) : accent en degrade, puces d'icones cadrees, bascule d'epinglage transformee en interrupteur (au lieu d'un rond terne sans etat clair), hierarchie entre les 2 boutons du bas. Validee ("Tu peux y aller").
+
+- **`NovaModulePinButtonStyle` refondu en interrupteur reel** (ControlTemplate complet sur le `ToggleButton` existant, pas un nouveau controle) : piste (rail sombre + pastille) qui bascule en degrade `NovaIdentityMarkBrush` avec une coche accentuee quand epingle, via `VisualStateManager` sur les etats `Checked`/`Unchecked` deja integres au controle - aucun changement de la logique C# (`IsChecked`, `ModulePinToggle_Click`, `UpdatePinToggle`). **Style partage** : s'applique automatiquement aussi aux boutons "Panel" du gestionnaire de modules complet, coherence gratuite.
+  - `MainWindow.xaml` (`ModulesQuickAccessFlyout`) : bandeau d'accent en degrade en tete, en-tete restructure (eyebrow "MODULES" + titre + description, meme gabarit que `ToolbarReorganizeOverlay`), chaque ligne de module reçoit une puce d'icone cadree (fond + bordure, comme les lignes de la fenetre de reorganisation) au lieu d'une icone nue, "Reorganiser toute la barre…" mis en avant (`AccentButtonStyle`, c'est l'action la plus utile ici) et "Gerer les modules" laisse en retrait (`NovaCompactButtonStyle`, deja discret).
+
+- **Verification reelle** (lancement isole + pilotage UIA) : structure du menu confirmee intacte (11 modules + les 2 boutons de pied de page, tous les libelles corrects). Bascule d'un interrupteur testee via `TogglePattern` : etat `Off` avant, bascule effectuee, et **le bouton "Mode lecture" correspondant est bien apparu dans la vraie barre d'outils juste apres** - confirme que le changement visuel n'a rien casse fonctionnellement. Capture d'ecran plein ecran tentee pour verification visuelle des couleurs, mais a retourne le contenu d'une AUTRE fenetre (cet environnement de travail) au lieu de l'app - abandonnee au profit des rectangles UIA, deja fiables tout au long de cette session ; la fidelite exacte des couleurs/degrades reste donc a confirmer par l'utilisateur en conditions reelles, pas verifiee par capture cette fois.
+
+- **Tests** : suite existante non affectee dans sa logique (changement XAML/Style pur, `Tag`/`Click`/noms x:Name inchanges) - 766/766 toujours verts, aucune modification necessaire.
+
+- Version : `0.93.40.1-dev` -> `0.93.41.0-dev` (**3e chiffre** : refonte visuelle notable, pas une simple correction). Mis a jour dans `MainWindow.xaml.cs`, `AGENTS.md`, `scripts/build-installer.ps1`, `scripts/build-clean-test-artifact.ps1`, test renomme dans `Lumora.Tests/UsageModeVisualIdentityTests.cs`.
+
+- Verification : build MSBuild -> 0 avertissement, 0 erreur. `dotnet test` -> 766/766 verts. Pas d'installeur reconstruit a ce stade (pas redemande).
+

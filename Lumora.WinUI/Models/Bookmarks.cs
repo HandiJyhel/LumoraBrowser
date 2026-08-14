@@ -280,6 +280,92 @@ public sealed class BookmarkStore
         return updated;
     }
 
+    // Deplacement direct dans la barre de favoris (2026-08-13) : meme
+    // comportement que Chrome/Edge, aucun mode dedie a activer - on glisse une
+    // icone ou un dossier et on le depose au bon endroit. Portee volontairement
+    // limitee a un reordonnancement ENTRE FRERES DU MEME PARENT pour cette
+    // passe (deposer DANS un dossier, avec ouverture automatique au survol,
+    // est laisse pour plus tard - voir MEMORY.md). movedId se place juste
+    // avant beforeId ; si beforeId est vide/absent, movedId part en dernier.
+    // Reassigne des Position sequentielles a TOUS les freres (pas seulement
+    // aux deux nodes concernes) pour eliminer d'eventuels trous/doublons
+    // hérités d'anciens imports plutot que de les faire perdurer.
+    public bool ReorderNode(string movedId, string? beforeId)
+    {
+        var nodes = AllNodes();
+        var moved = nodes.FirstOrDefault(node => node.Id == movedId);
+        if (moved is null || moved.IsRoot)
+        {
+            return false;
+        }
+
+        BookmarkNode? before = null;
+        if (!string.IsNullOrEmpty(beforeId))
+        {
+            before = nodes.FirstOrDefault(node => node.Id == beforeId);
+            if (before is null || before.Id == moved.Id || !before.ParentId.Equals(moved.ParentId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        var siblings = nodes
+            .Where(node => node.ParentId.Equals(moved.ParentId, StringComparison.Ordinal) && node.Id != moved.Id)
+            .OrderBy(node => node.Position)
+            .ToList();
+        var insertIndex = before is null ? siblings.Count : siblings.FindIndex(node => node.Id == before.Id);
+        siblings.Insert(insertIndex, moved);
+
+        var newPositions = new Dictionary<string, uint>(StringComparer.Ordinal);
+        for (var i = 0; i < siblings.Count; i++)
+        {
+            newPositions[siblings[i].Id] = (uint)i;
+        }
+
+        var changed = false;
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            if (newPositions.TryGetValue(nodes[i].Id, out var position) && nodes[i].Position != position)
+            {
+                nodes[i] = nodes[i] with { Position = position };
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            WriteNodes(nodes);
+        }
+
+        return true;
+    }
+
+    // Alternative au glisser (2026-08-14, demande explicite utilisateur apres
+    // plusieurs echecs reels du glisser-deposer malgre 3 correctifs bases sur
+    // de la documentation officielle puis une trace reelle - voir MEMORY.md) :
+    // deplace un favori/dossier d'UN cran parmi ses freres via un simple clic
+    // (menu contextuel), sans dependre d'un geste souris. Le calcul de la
+    // cible est isole dans AdjacentMoveMath (pur, teste directement -
+    // voir ce fichier) ; ReorderNode (deja teste) fait le travail reel.
+    public bool MoveNodeAdjacent(string movedId, bool moveForward)
+    {
+        var nodes = AllNodes();
+        var moved = nodes.FirstOrDefault(node => node.Id == movedId);
+        if (moved is null || moved.IsRoot)
+        {
+            return false;
+        }
+
+        var orderedIds = nodes
+            .Where(node => node.ParentId.Equals(moved.ParentId, StringComparison.Ordinal))
+            .OrderBy(node => node.Position)
+            .Select(node => node.Id)
+            .ToList();
+
+        var (canMove, beforeId) = AdjacentMoveMath.ComputeTarget(orderedIds, movedId, moveForward);
+        return canMove && ReorderNode(movedId, beforeId);
+    }
+
     public void RemoveNode(string id)
     {
         if (id is ToolbarRootId or OtherRootId)

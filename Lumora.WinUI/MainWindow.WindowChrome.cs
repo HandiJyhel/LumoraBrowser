@@ -243,6 +243,33 @@ public sealed partial class MainWindow : Window
                 dragRight = Math.Max(dragLeft, windowWidth - _titleBarSafeRight);
             }
 
+            // Exclusion de ModulesQuickBar (2026-08-14, bug reel confirme par
+            // trace de diagnostic - voir MEMORY.md) : en layout aplati
+            // (theme Classique + onglets verticaux, TopTabsRow.ActualHeight=0),
+            // NavigationRow demarre a Y=0, la MEME rangee que cette zone de
+            // drag - et ModulesQuickBar (barre d'outils, colonnes 14-19 de
+            // NavigationToolbar, jusqu'au bord droit reel) tombait alors
+            // DANS la reserve _titleBarSafeRight. Consequence observee :
+            // Windows captait le pointeur pour deplacer la fenetre des qu'un
+            // glissement de bouton depassait quelques pixels (le seuil de
+            // deplacement de fenetre de Windows, independant du notre),
+            // rendant tout glisser/reorganisation de la barre d'outils
+            // impossible - PointerCaptureLost se declenchait silencieusement
+            // en quelques millisecondes a chaque tentative, meme avec la
+            // capture posee sur le panneau (correctif precedent). Inoffensif
+            // en layout normal (la zone de drag reste dans TopTabsRow, une
+            // autre rangee que ModulesQuickBar) : le calcul ci-dessous ne
+            // clampe que si les deux zones se chevauchent reellement.
+            if (ModulesQuickBar.ActualWidth > 0 && ModulesQuickBar.ActualHeight > 0)
+            {
+                var modulesBounds = ModulesQuickBar.TransformToVisual(RootShell)
+                    .TransformBounds(new Windows.Foundation.Rect(0, 0, ModulesQuickBar.ActualWidth, ModulesQuickBar.ActualHeight));
+                if (modulesBounds.Top < rowHeight)
+                {
+                    dragLeft = Math.Max(dragLeft, modulesBounds.Right);
+                }
+            }
+
             if (dragRight - dragLeft < 8) return;
 
             var rect = new RectInt32

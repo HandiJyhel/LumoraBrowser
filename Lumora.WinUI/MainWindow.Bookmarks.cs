@@ -768,6 +768,30 @@ public sealed partial class MainWindow
             button.Click += BookmarkBarButton_Click;
         }
 
+        // Glisser-deposer direct (2026-08-13, voir MainWindow.BookmarksDragDrop.cs
+        // pour toute la logique - suivi manuel du pointeur depuis le 2026-08-14,
+        // CanDrag/DragStarting ne fonctionnant pas sur un Button) : jamais sur
+        // les 2 dossiers racine (Barre des favoris / Autres favoris), qui ne
+        // sont pas des freres reordonnables.
+        // AddHandler(handledEventsToo: true), PAS une simple souscription +=
+        // (2026-08-14, 2e correctif sur ce meme mecanisme) : confirme par la
+        // documentation officielle Microsoft que ButtonBase intercepte deja
+        // PointerPressed en interne pour son propre Click, une souscription
+        // normale ne recoit jamais l'evenement - voir MEMORY.md.
+        // SEUL PointerPressed est cable ici (2026-08-14, 3e correctif) : la
+        // trace de diagnostic reelle a prouve que capturer le pointeur SUR LE
+        // BOUTON perdait la capture en plein glissement (Button gere aussi sa
+        // propre capture en interne pour son etat visuel Pressed/Click, et la
+        // relache des que le pointeur sort de ses limites - ce qui arrive tres
+        // tot dans un glissement). PointerMoved/Released/CaptureLost sont
+        // desormais cables UNE SEULE FOIS sur les panneaux (BookmarksBarPanel
+        // et BookmarksBottomBarPanel, ni l'un ni l'autre n'est un Button) dans
+        // le constructeur - voir MainWindow.BookmarksDragDrop.cs.
+        if (!node.IsRoot)
+        {
+            button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(BookmarkBarButton_PointerPressed), true);
+        }
+
         return button;
     }
 
@@ -897,6 +921,15 @@ public sealed partial class MainWindow
 
     private void BookmarkBarButton_Click(object sender, RoutedEventArgs e)
     {
+        // Un clic qui suit immediatement un vrai glissement (voir
+        // MainWindow.BookmarksDragDrop.cs) ne doit pas aussi ouvrir le favori
+        // qu'on vient de deplacer.
+        if (_bookmarkSuppressNextClick)
+        {
+            _bookmarkSuppressNextClick = false;
+            return;
+        }
+
         if (sender is not Button button || button.Tag is not BookmarkNode node)
         {
             return;

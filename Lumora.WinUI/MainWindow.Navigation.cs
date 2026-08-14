@@ -21,7 +21,28 @@ public sealed partial class MainWindow
     // ── Onglets ───────────────────────────────────────────────────────────────
 
     private void BrowserTabs_AddTabButtonClick(TabView sender, object args) =>
-        AddTab("Nouvel onglet", "lumora://accueil", select: true);
+        AddNewBlankTab();
+
+    // Partagé par le bouton "+" (BrowserTabs_AddTabButtonClick) et le menu
+    // "Nouvel onglet" (NewTabMenu_Click, MainWindow.xaml.cs) : un seul point
+    // de decision pour ne pas dupliquer la logique de positionnement.
+    //
+    // En mode vertical, le nouvel onglet atterrit desormais juste APRES
+    // l'onglet actif plutot qu'en toute fin de liste (retour utilisateur
+    // 2026-08-13 : sur une longue liste verticale, l'onglet fraichement
+    // ouvert se retrouvait loin de celui d'ou on venait). Reutilise
+    // PlaceTabAfter (MainWindow.TabGroups.cs), deja eprouve pour "Dupliquer
+    // l'onglet" - meme mecanisme, pas une nouvelle logique de reordonnancement.
+    // Mode horizontal inchange (comportement existant : fin de liste).
+    private void AddNewBlankTab()
+    {
+        var previousActive = CurrentTab();
+        var newTab = AddTab("Nouvel onglet", "lumora://accueil", select: true);
+        if (_verticalTabsEnabled && previousActive is not null)
+        {
+            PlaceTabAfter(newTab, previousActive);
+        }
+    }
 
     private void BrowserTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -600,6 +621,14 @@ public sealed partial class MainWindow
             if (isActive)
             {
                 OfferAutoFill(address);
+                // Complement a l'offre "rester connecte" branchee sur la capture
+                // d'identifiants (voir CredentialService_CredentialCaptured) : couvre
+                // les connexions dont le POST n'est jamais capture (flux JS
+                // multi-etapes, ex. Google) mais dont un champ mot de passe a bien
+                // ete vu peu avant. Hors mode invite : aucune offre n'a de sens sans
+                // profil a qui l'associer.
+                if (!_isGuestMode && sender.CoreWebView2 is { } coreForSessionKeep)
+                    _ = MaybeOfferSessionKeepFromRecentLoginAsync(coreForSessionKeep, address);
             }
             _ = ApplySiteComfortAsync(sender, address);
             _ = ApplyReadingGuideAsync(sender);

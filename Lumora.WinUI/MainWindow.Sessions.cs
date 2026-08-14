@@ -16,7 +16,20 @@ public sealed partial class MainWindow
     // lieu au DÉMARRAGE et non à la fermeture : garantie même après un crash ou
     // un arrêt brutal du PC. Le coffre, hors du dossier WebView2, n'est pas touché.
 
-    private bool _sessionsPurgedThisLaunch;
+    // STATIC (process-wide), pas par instance : avant l'ajout de "Nouvelle
+    // fenêtre" (MainWindow.NewWindow.cs, 2026-08-13), il n'existait jamais
+    // plus d'un MainWindow par process (Incognito/Invité/Apps web tournent
+    // TOUJOURS dans un process séparé), donc un champ par instance suffisait
+    // de facto à "une seule purge par vrai lancement". "Nouvelle fenêtre"
+    // crée un DEUXIÈME MainWindow dans le MÊME process : avec un champ par
+    // instance, cette 2e fenêtre se croyait à un "nouveau démarrage" et
+    // repurgeait les cookies non approuvés de la 1ère fenêtre - c'était très
+    // exactement le bug de reconnexion à chaque nouvelle fenêtre remonté par
+    // l'utilisateur le 2026-08-13 (Google, notamment), pas un défaut de
+    // partage du profil WebView2 (celui-là fonctionnait déjà correctement).
+    // Vérifié en conditions réelles : cookie posé par la fenêtre 1 identique
+    // dans la fenêtre 2 seulement après ce passage en static.
+    private static bool _sessionsPurgedThisLaunch;
 
     // Regroupement des cookies par domaine racine (auth.micromania.fr et
     // www.micromania.fr → micromania.fr) via la Public Suffix List officielle.
@@ -275,6 +288,76 @@ public sealed partial class MainWindow
     // ── Proposition « Rester connecté ? » au login détecté ────────────────────
 
     private string? _pendingSessionKeepRoot;
+
+    // Complement a la capture d'identifiants (qui exige un POST classique
+    // application/x-www-form-urlencoded, voir CredentialCaptured) : certains
+    // flux de connexion modernes (Google, notamment - signale par l'utilisateur
+    // le 2026-08-13, reconnexion forcee apres fermeture complete malgre la
+    // demande "rester connecte") sont en plusieurs etapes pilotees en JS et ne
+    // declenchent jamais cette capture, meme si un champ mot de passe a bien
+    // ete vu (CredentialService_PageStateChanged -> RecordPasswordFieldSighting).
+    // Cle = domaine racine, valeur = horodatage UTC du dernier apercu. Purge
+    // opportuniste dans RecordPasswordFieldSighting plutot qu'un timer dedie -
+    // le nombre de domaines distincts reste minuscule sur une session reelle.
+    private readonly Dictionary<string, DateTime> _recentPasswordFieldSightings = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan SessionKeepLoginSightingWindow = TimeSpan.FromMinutes(3);
+
+    private void RecordPasswordFieldSighting(string origin)
+    {
+        var root = RootDomainOf(origin);
+        var cutoff = DateTime.UtcNow - SessionKeepLoginSightingWindow;
+        foreach (var stale in _recentPasswordFieldSightings
+                     .Where(kv => kv.Value < cutoff)
+                     .Select(kv => kv.Key)
+                     .ToList())
+        {
+            _recentPasswordFieldSightings.Remove(stale);
+        }
+        _recentPasswordFieldSightings[root] = DateTime.UtcNow;
+    }
+
+    // Appelee a chaque navigation reussie de l'onglet actif (BrowserView_
+    // NavigationCompleted) : si ce domaine (ou un domaine de la meme famille,
+    // ex. accounts.google.com -> google.com -> youtube.com) a recemment montre
+    // un champ mot de passe ET porte desormais au moins un cookie, c'est le
+    // signe fiable qu'une connexion vient d'aboutir - meme sans avoir jamais vu
+    // passer le mot de passe lui-meme. Ne consomme l'apercu (et ne propose)
+    // qu'une fois des cookies reellement presents : une redirection
+    // intermediaire sans cookie ne doit pas faire perdre le signal avant la
+    // fin reelle du flux.
+    private async Task MaybeOfferSessionKeepFromRecentLoginAsync(CoreWebView2 core, string address)
+    {
+        if (_recentPasswordFieldSightings.Count == 0) return;
+
+        var root = RootDomainOf(address);
+        var candidates = new[] { root }.Concat(SessionDomainFamilies.SiblingsOf(root));
+        string? matched = null;
+        foreach (var candidate in candidates)
+        {
+            if (_recentPasswordFieldSightings.TryGetValue(candidate, out var seenAt) &&
+                DateTime.UtcNow - seenAt <= SessionKeepLoginSightingWindow)
+            {
+                matched = candidate;
+                break;
+            }
+        }
+        if (matched is null) return;
+
+        List<CoreWebView2Cookie> cookies;
+        try
+        {
+            cookies = (await core.CookieManager.GetCookiesAsync(address)).ToList();
+        }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"MaybeOfferSessionKeepFromRecentLoginAsync: lecture cookies impossible : {ex.GetType().Name}");
+            return;
+        }
+        if (cookies.Count == 0) return; // pas encore de session : la redirection continue peut-etre
+
+        _recentPasswordFieldSightings.Remove(matched);
+        MaybeOfferSessionKeep(address);
+    }
 
     private void MaybeOfferSessionKeep(string origin)
     {

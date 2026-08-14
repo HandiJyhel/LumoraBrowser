@@ -86,4 +86,65 @@ public sealed class ProfileRegistryTests : IDisposable
 
         Assert.True(custom.IsActive);
     }
+
+    // 2026-08-14 : incident reel corrige (voir MEMORY.md) - Discover scannait
+    // TOUJOURS le vrai %LOCALAPPDATA%\Lumora\profiles de la machine, meme sous
+    // LUMORA_PROFILE_DIR, exposant les vrais profils de l'utilisateur dans un
+    // lancement de verification/invite cense en etre isole. Verifie que seul
+    // le profil du dossier isole lui-meme est retourne, jamais les vrais.
+    [Fact]
+    public void Discover_sous_isolation_ne_retourne_que_le_profil_isole_lui_meme()
+    {
+        var previous = Environment.GetEnvironmentVariable(LumoraProfilePaths.ProfileDirectoryEnvironmentVariable);
+        var isolatedDir = Path.Combine(_root, "isolated-active-profile");
+
+        try
+        {
+            Environment.SetEnvironmentVariable(LumoraProfilePaths.ProfileDirectoryEnvironmentVariable, isolatedDir);
+
+            var isolatedPaths = LumoraProfilePaths.FromDirectory(isolatedDir);
+            UserProfile.Create("Test", "mot-de-passe-isole", pin: null).Save(isolatedPaths.ProfileFile);
+
+            // Un "vrai" profil ailleurs (simule le reste de la machine, HORS
+            // du dossier isole) ne doit jamais apparaitre dans la decouverte.
+            var elsewhereDir = Path.Combine(_root, "profil-reel-hors-isolation");
+            var elsewherePaths = LumoraProfilePaths.FromDirectory(elsewhereDir);
+            UserProfile.Create("VraiUtilisateur", "mot-de-passe-reel", pin: null).Save(elsewherePaths.ProfileFile);
+
+            var entries = LumoraProfileRegistry.Discover(new LumoraConfig());
+
+            var entry = Assert.Single(entries);
+            Assert.Equal("Test", entry.Name);
+            Assert.True(entry.IsActive);
+            Assert.DoesNotContain(entries, e => e.Name == "VraiUtilisateur");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(LumoraProfilePaths.ProfileDirectoryEnvironmentVariable, previous);
+        }
+    }
+
+    [Fact]
+    public void CreateProfileId_sous_isolation_ne_boucle_pas_a_l_infini()
+    {
+        var previous = Environment.GetEnvironmentVariable(LumoraProfilePaths.ProfileDirectoryEnvironmentVariable);
+        var isolatedDir = Path.Combine(_root, "isolated-createid");
+
+        try
+        {
+            Environment.SetEnvironmentVariable(LumoraProfilePaths.ProfileDirectoryEnvironmentVariable, isolatedDir);
+            // ForProfileId(any) retourne le meme dossier isole a plat sous
+            // cette variable (meme convention que Default()) : meme si ce
+            // dossier existe deja, CreateProfileId ne doit pas boucler.
+            Directory.CreateDirectory(isolatedDir);
+
+            var id = LumoraProfileRegistry.CreateProfileId("Alice");
+
+            Assert.Equal("alice", id);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(LumoraProfilePaths.ProfileDirectoryEnvironmentVariable, previous);
+        }
+    }
 }

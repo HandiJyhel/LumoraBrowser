@@ -38,7 +38,7 @@ internal sealed class CredentialService
         _framesByCore[core] = new List<CoreWebView2Frame>();
         core.FrameCreated += Core_FrameCreated;
 
-        var script = await LoadScriptAsync("CredentialCaptureScript.js");
+        var script = await LoadCredentialCaptureScriptAsync();
         await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
         Lumora.WinUI.WinUiRuntimeTrace.Write($"CredentialService: script de capture attache (onglet {tabId})");
     }
@@ -109,7 +109,7 @@ internal sealed class CredentialService
     }
 
     // Remplissage multi-frames : la fonction __novaFillCredential (definie par
-    // CredentialCaptureScript.js dans CHAQUE frame) est appelee d'abord dans la
+    // CredentialCaptureOrchestrator.js dans CHAQUE frame) est appelee d'abord dans la
     // frame principale — qui couvre elle-meme ses iframes same-origin et ses
     // shadow roots — puis dans chaque iframe cross-origin suivie, jusqu'a ce que
     // tout soit rempli. Les resultats partiels s'agregent (ex. identifiant dans
@@ -235,7 +235,7 @@ internal sealed class CredentialService
 
     // Remplit le(s) champ(s) "nouveau mot de passe" (inscription/changement de
     // mot de passe) avec une valeur générée côté app — pas de capture Chromium.
-    // window.__novaFillNewPassword est défini par CredentialCaptureScript.js,
+    // window.__novaFillNewPassword est défini par CredentialCapturePasswordModule.js,
     // déjà attaché à ce moment (c'est lui qui a détecté le champ en premier lieu).
     public async Task<CredentialFillResult> FillGeneratedPasswordAsync(string generatedPassword)
     {
@@ -487,6 +487,33 @@ internal sealed class CredentialService
         valueNode.TryGetValue<bool>(out var value)
             ? value
             : null;
+
+    // Le script de capture est decoupe en modules a responsabilite unique
+    // (voir Lumora.WinUI/Credentials/CredentialCapture*.js) : Dom (utilitaires
+    // partages) -> Site (page/adresse) -> Password (tout ce qui touche au mot
+    // de passe) -> Username (tout ce qui touche a l'identifiant, ne peut lire
+    // l'etat de Password qu'via son API) -> Orchestrator (cablage des
+    // evenements, cablage seulement). WebView2 n'a qu'une seule entree
+    // (AddScriptToExecuteOnDocumentCreatedAsync prend UNE chaine) : on charge
+    // et concatene ces fichiers dans cet ordre de dependance avant injection.
+    private static readonly string[] CredentialCaptureModules =
+    {
+        "CredentialCaptureDom.js",
+        "CredentialCaptureSiteModule.js",
+        "CredentialCapturePasswordModule.js",
+        "CredentialCaptureUsernameModule.js",
+        "CredentialCaptureOrchestrator.js",
+    };
+
+    private static async Task<string> LoadCredentialCaptureScriptAsync()
+    {
+        var parts = new List<string>(CredentialCaptureModules.Length);
+        foreach (var module in CredentialCaptureModules)
+        {
+            parts.Add(await LoadScriptAsync(module));
+        }
+        return string.Join("\n;\n", parts);
+    }
 
     private static async Task<string> LoadScriptAsync(string fileName)
     {

@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.27.0-dev";
+    internal const string Version = "0.93.41.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -115,6 +115,11 @@ public sealed partial class MainWindow : Window
     // par le lanceur), il faut entrer en mode invite immediatement sans
     // montrer le picker de profil. Voir InitializeLoginOverlayAsync.
     private readonly bool _pendingGuestLaunch;
+    // Fenêtre d'où reprendre un déverrouillage déjà fait (mono-instance /
+    // "Nouvelle fenêtre" / détachement d'onglet, voir MainWindow.NewWindow.cs)
+    // au lieu de repasser par l'écran de connexion. Null pour toute fenêtre
+    // lancée normalement (App.xaml.cs).
+    private readonly MainWindow? _unlockSource;
     // Vrai tant que la page de demarrage (ApplyStartupPage, notamment la
     // restauration des onglets de la derniere session) n'a pas encore ete
     // appliquee. Trouve en usage reel le 2026-08-12 : ApplyStartupPage() etait
@@ -189,6 +194,7 @@ public sealed partial class MainWindow : Window
     private readonly PasswordManagerService _passwordManager;
     private readonly PasswordManagerInteractionService _passwordManagerInteraction;
     private readonly CredentialService _credentialService = new();
+    private ToolbarCustomizationService _toolbarCustomization = new();
     private (string Origin, string Username, string Password, string LoginUrl, string Label)? _pendingCredential;
     private IReadOnlyList<VaultCredential> _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
     private string? _pendingGeneratedPassword;
@@ -254,10 +260,11 @@ public sealed partial class MainWindow : Window
         Timeout = TimeSpan.FromSeconds(5)
     };
 
-    public MainWindow(bool startInGuestMode = false)
+    public MainWindow(bool startInGuestMode = false, MainWindow? unlockSource = null)
     {
         WinUiRuntimeTrace.Write("MainWindow constructor start");
         _pendingGuestLaunch = startInGuestMode;
+        _unlockSource = unlockSource;
         if (_pendingGuestLaunch)
         {
             GuestProcessLauncher.CleanupStaleSessionFolders();
@@ -281,6 +288,41 @@ public sealed partial class MainWindow : Window
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");
         Title = $"Lumora {Version}";
         UpdateAddressIdentityChrome(string.Empty);
+
+        // Initialiser le service de réorganisation de la barre d'outils
+        // (0.93.34.0-dev, mode édition accessible via clic droit sur la barre
+        // depuis 0.93.35.0-dev - l'appui long initial ne se déclenchait
+        // quasiment jamais sur un Button, retour utilisateur direct)
+        // 6 boutons ajoutes (2026-08-14, demande explicite utilisateur) :
+        // favoris/incognito/bouclier/coffre/historique/telechargements,
+        // deplaces depuis leurs colonnes fixes de NavigationToolbar vers
+        // ToolbarButtonsPanel pour devenir reordonnables comme les modules.
+        var toolbarButtonMap = new Dictionary<string, UIElement>
+        {
+            ["AddBookmarkButton"] = AddBookmarkButton,
+            ["IncognitoToolbarButton"] = IncognitoToolbarButton,
+            ["ShieldButton"] = ShieldButton,
+            ["VaultQuickAccessButton"] = VaultQuickAccessButton,
+            ["HistoryToolbarButton"] = HistoryToolbarButton,
+            ["DownloadsIndicatorButton"] = DownloadsIndicatorButton,
+            ["ReaderModeButton"] = ReaderModeButton,
+            ["NotesModuleButton"] = NotesModuleButton,
+            ["ReadAloudButton"] = ReadAloudButton,
+            ["DetachVideoPinnedButton"] = DetachVideoPinnedButton,
+            ["VideoDownloadButton"] = VideoDownloadButton,
+            ["TranslatePinnedButton"] = TranslatePinnedButton,
+            ["WebAppsPinnedButton"] = WebAppsPinnedButton,
+            ["SearchAssistButton"] = SearchAssistButton,
+            ["DictationPinnedButton"] = DictationPinnedButton,
+            ["RssModuleButton"] = RssModuleButton,
+            ["ReadingLensButton"] = ReadingLensButton,
+            ["ModulesQuickAccessButton"] = ModulesQuickAccessButton,
+            ["ConnectionsQuickAccessButton"] = ConnectionsQuickAccessButton,
+            ["ConsentIndicatorButton"] = ConsentIndicatorButton,
+            ["PopupRecoveryButton"] = PopupRecoveryButton,
+            ["SplitViewButton"] = SplitViewButton
+        };
+        _toolbarCustomization.Initialize(_uiSettings, _profile.UiSettingsFile, toolbarButtonMap, ToolbarButtonsPanel);
 
         // Glisser-deposer natif de la barre d'onglets horizontale (CanReorderTabs) :
         // WinUI reordonne directement TabItems (ObservableCollection), donc on
@@ -328,6 +370,11 @@ public sealed partial class MainWindow : Window
         // desabonner a la fermeture, sinon fuite de la fenetre + crash au prochain
         // verrouillage/veille Windows.
         Closed += (_, _) => UnhookSystemLockEvents();
+        // Mono-instance (App.xaml.cs, 2026-08-13) : cette fenetre reste
+        // candidate pour porter une relance redirigee (OpenNewWindowFromExternalActivation,
+        // MainWindow.NewWindow.cs) tant qu'elle est ouverte.
+        _liveInstances.Add(this);
+        Closed += (_, _) => _liveInstances.Remove(this);
         // Session invite : _profile.ProfileDir est le dossier ephemere pose par
         // GuestProcessLauncher (voir _pendingGuestLaunch/EnterGuestMode). Un vrai
         // profil ne doit JAMAIS voir son dossier supprime ici - garde explicite
@@ -362,6 +409,13 @@ public sealed partial class MainWindow : Window
         };
         incognitoWindowAccelerator.Invoked += IncognitoWindowAccelerator_Invoked;
         Content.KeyboardAccelerators.Add(incognitoWindowAccelerator);
+        var newWindowAccelerator = new KeyboardAccelerator
+        {
+            Key = VirtualKey.N,
+            Modifiers = VirtualKeyModifiers.Control
+        };
+        newWindowAccelerator.Invoked += NewWindowAccelerator_Invoked;
+        Content.KeyboardAccelerators.Add(newWindowAccelerator);
         var reopenTabAccelerator = new KeyboardAccelerator
         {
             Key = VirtualKey.T,
@@ -403,6 +457,11 @@ public sealed partial class MainWindow : Window
         InitPrivacyEngine();
 
         ReloadBookmarks();
+        // Cablage unique (pas par bouton, voir MainWindow.BookmarksDragDrop.cs
+        // et MEMORY.md 2026-08-14) : les panneaux BookmarksBarPanel/
+        // BookmarksBottomBarPanel existent des l'InitializeComponent et ne
+        // sont jamais recrees, contrairement aux boutons qu'ils contiennent.
+        WireBookmarkDragPanels();
         WinUiRuntimeTrace.Write("Bookmarks loaded");
         ReloadImportSources();
         WinUiRuntimeTrace.Write("Import sources loaded");
@@ -432,7 +491,18 @@ public sealed partial class MainWindow : Window
         ShowPanel(BrowserPanel, "Accueil Lumora");
         _suppressTabSave = false;
         WinUiRuntimeTrace.Write("MainWindow constructor end");
-        _ = InitializeLoginOverlayAsync();
+        // Fenêtre liée (Nouvelle fenêtre/mono-instance/détacher un onglet) :
+        // essaie de reprendre le déverrouillage déjà fait par _unlockSource
+        // AVANT de lancer le flux normal - les deux ne doivent jamais tourner
+        // en même temps (TryFastUnlockFrom, MainWindow.NewWindow.cs).
+        if (_unlockSource is not null && TryFastUnlockFrom(_unlockSource))
+        {
+            WinUiRuntimeTrace.Write("MainWindow fast-unlocked from sibling window");
+        }
+        else
+        {
+            _ = InitializeLoginOverlayAsync();
+        }
     }
 
     // view.Close() rend la main avant que le process moteur WebView2 sous-jacent
@@ -505,7 +575,7 @@ public sealed partial class MainWindow : Window
     }
 
     private void NewTabMenu_Click(object sender, RoutedEventArgs e) =>
-        AddTab("Nouvel onglet", "lumora://accueil", select: true);
+        AddNewBlankTab();
 
     private void HomeMenu_Click(object sender, RoutedEventArgs e)
     {

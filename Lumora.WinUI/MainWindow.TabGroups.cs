@@ -316,6 +316,9 @@ public sealed partial class MainWindow
             button.DragStarting += VerticalTabButton_DragStarting;
             button.DragOver += VerticalTabButton_DragOver;
             button.Drop += VerticalTabButton_Drop;
+            // Detachement en nouvelle fenetre par glisser hors du rail - voir
+            // MainWindow.TabDetach.cs.
+            button.DropCompleted += VerticalTabButton_DropCompleted;
             VerticalTabsPanelItems.Children.Add(button);
         }
     }
@@ -427,6 +430,19 @@ public sealed partial class MainWindow
         var copyAddressItem = new MenuFlyoutItem { Text = "Copier l'adresse", Tag = tab };
         copyAddressItem.Click += CopyTabAddress_Click;
         flyout.Items.Add(copyAddressItem);
+
+        // Alternative accessible au glisser-deposer hors fenetre (voir
+        // MainWindow.TabDetach.cs) - meme raisonnement que Monter/Descendre
+        // plus bas pour le glisser-deposer de reordonnancement. Desactive
+        // s'il n'y a qu'un seul onglet (rien a laisser derriere).
+        var detachItem = new MenuFlyoutItem
+        {
+            Text = "Déplacer vers une nouvelle fenêtre",
+            Tag = tab,
+            IsEnabled = _tabs.Count > 1
+        };
+        detachItem.Click += DetachTab_Click;
+        flyout.Items.Add(detachItem);
 
         flyout.Items.Add(new MenuFlyoutSeparator());
 

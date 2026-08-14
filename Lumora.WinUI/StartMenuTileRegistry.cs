@@ -67,6 +67,11 @@ public static class StartMenuTileRegistry
         new(StartMenuTileIds.Incognito, "Confidentialité", "Incognito", "Nouvelle fenêtre privée", "\uE890"),
         new(StartMenuTileIds.SiteControl, "Confidentialité", "Site actuel", "Centre de contrôle", "\uE774"),
 
+        // Session partagee avec la fenetre courante (2026-08-13, retour
+        // utilisateur : redemande de connexion Google a chaque nouvelle
+        // fenetre) - voir MainWindow.NewWindow.cs. Glyphe E8A7 (OpenInNewWindow),
+        // deja utilise pour ce meme point d'entree dans le menu Lumora classique.
+        new(StartMenuTileIds.NewWindow, "Navigation", "Nouvelle fenêtre", "Même session", "\uE8A7"),
         new(StartMenuTileIds.Favoris, "Navigation", "Favoris", "Enregistrés", "\uE735"),
         new(StartMenuTileIds.History, "Navigation", "Historique", "Recherche sémantique", "\uE81C"),
         new(StartMenuTileIds.Downloads, "Navigation", "Téléchargements", "Fichiers reçus", "\uE896"),

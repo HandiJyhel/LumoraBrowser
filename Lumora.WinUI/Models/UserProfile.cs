@@ -27,12 +27,29 @@ internal sealed record UserProfile
 
     public bool HasRecoveryKey => !string.IsNullOrWhiteSpace(RecoveryHash) && !string.IsNullOrWhiteSpace(RecoverySalt);
 
+    // Profil sans mot de passe (2026-08-13) : choix permanent pris a la
+    // creation (voir CreateProfileButton_Click/NoPasswordSwitch), jamais
+    // ajoutable ensuite - un utilisateur malveillant avec un acces bref a la
+    // session pourrait sinon poser SON propre mot de passe sur le profil de
+    // quelqu'un d'autre et l'en exclure. Consequences directes ailleurs dans
+    // le code : aucun ecran de connexion a l'ouverture (MainWindow.Profile.cs),
+    // aucune sauvegarde .lumorabackup possible (le mot de passe de compte sert
+    // aussi de cle de sauvegarde, voir MainWindow.SettingsStorage.cs), coffre
+    // laisse en mode DPAPI (jamais couple a un mot de passe qui n'existe pas).
+    public bool HasAccountPassword => !string.IsNullOrEmpty(PasswordHash) && !string.IsNullOrEmpty(PasswordSalt);
+
     // ── Fabrique ─────────────────────────────────────────────────────────────
 
-    public static UserProfile Create(string name, string password, string? pin)
+    // password null/vide = profil sans mot de passe (voir HasAccountPassword).
+    // Un PIN sans mot de passe de base n'a pas de sens (rien a raccourcir) :
+    // ignore silencieusement dans ce cas plutot que de lever une exception -
+    // l'appelant (NoPasswordSwitch_Toggled) garantit deja qu'aucun PIN n'est
+    // propose dans ce cas, mais mieux vaut que le modele reste coherent seul.
+    public static UserProfile Create(string name, string? password, string? pin)
     {
-        var (pwHash, pwSalt) = DeriveKey(password);
-        var hasPinLogin = pin is not null;
+        var hasPassword = !string.IsNullOrEmpty(password);
+        var (pwHash, pwSalt) = hasPassword ? DeriveKey(password!) : (string.Empty, string.Empty);
+        var hasPinLogin = hasPassword && pin is not null;
         var (pinHash, pinSalt) = hasPinLogin ? DeriveKey(pin!) : (string.Empty, string.Empty);
 
         return new UserProfile

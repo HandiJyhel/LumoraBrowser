@@ -598,17 +598,82 @@
                 <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
+            <!-- Refonte en interrupteur (2026-08-14, retour utilisateur avec
+                 capture d'ecran : le menu Modules "est completement en
+                 desaccord avec la charte graphique" - le rond terne
+                 n'indiquait aucun etat clair epingle/pas epingle). Meme
+                 ToggleButton, meme logique C# (IsChecked, ModulePinToggle_Click) -
+                 seul le gabarit visuel change, via VisualStateManager sur les
+                 etats Checked/Unchecked deja integres au controle. Piste
+                 (degrade + pastille) coherente avec ToolbarReorganizeOverlay
+                 deja livree. Style partage : s'applique aussi aux boutons
+                 "Panel" du gestionnaire de modules complet (meme coherence
+                 visuelle, aucun travail supplementaire necessaire). -->
             <Style x:Key="NovaModulePinButtonStyle" TargetType="ToggleButton">
-                <Setter Property="Width" Value="36" />
-                <Setter Property="Height" Value="36" />
-                <Setter Property="MinWidth" Value="36" />
+                <Setter Property="Width" Value="44" />
+                <Setter Property="Height" Value="24" />
                 <Setter Property="Padding" Value="0" />
-                <Setter Property="CornerRadius" Value="18" />
-                <Setter Property="Background" Value="{StaticResource NovaCompanionGlassBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource NovaCompanionStrokeBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="{StaticResource NovaTextMutedBrush}" />
+                <Setter Property="HorizontalAlignment" Value="Right" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Grid>
+                                <Border x:Name="PinTrack"
+                                        CornerRadius="12"
+                                        Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                                        BorderThickness="1" />
+                                <Border x:Name="PinKnob"
+                                        Width="18" Height="18"
+                                        CornerRadius="9"
+                                        Background="{StaticResource NovaTextMutedBrush}"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Margin="3,0,0,0">
+                                    <FontIcon x:Name="PinKnobGlyph"
+                                              Glyph="&#xE73E;"
+                                              FontFamily="Segoe MDL2 Assets"
+                                              FontSize="9"
+                                              Foreground="{StaticResource NovaPanelBackgroundBrush}"
+                                              Opacity="0"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                                </Border>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver" />
+                                        <VisualState x:Name="Pressed" />
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="PinTrack.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="CheckStates">
+                                        <VisualState x:Name="Checked">
+                                            <VisualState.Setters>
+                                                <Setter Target="PinTrack.Background" Value="{StaticResource NovaIdentityMarkBrush}" />
+                                                <Setter Target="PinTrack.BorderBrush" Value="Transparent" />
+                                                <Setter Target="PinKnob.HorizontalAlignment" Value="Right" />
+                                                <Setter Target="PinKnob.Margin" Value="0,0,3,0" />
+                                                <Setter Target="PinKnob.Background" Value="{StaticResource NovaPanelBackgroundBrush}" />
+                                                <Setter Target="PinKnobGlyph.Opacity" Value="1" />
+                                                <Setter Target="PinKnobGlyph.Foreground" Value="{StaticResource NovaAccentBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Unchecked" />
+                                        <VisualState x:Name="Indeterminate" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <Style x:Key="NovaCompactButtonStyle" TargetType="Button">
                 <Setter Property="Height" Value="32" />
@@ -1040,6 +1105,12 @@
                             <MenuFlyoutItem Text="Nouvel onglet" Click="NewTabMenu_Click">
                                 <MenuFlyoutItem.Icon><SymbolIcon Symbol="Add" Foreground="{StaticResource NovaTileFamilyToolsBrush}" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
+                            <!-- Nouvelle fenêtre (Ctrl+N) : partage la session de la fenêtre
+                                 courante (cookies/connexions), contrairement à Incognito juste
+                                 en dessous - voir MainWindow.NewWindow.cs. -->
+                            <MenuFlyoutItem Text="Nouvelle fenêtre" Click="NewWindowMenu_Click">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A7;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource NovaTileFamilyToolsBrush}" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Incognito" Click="IncognitoWindowMenu_Click">
                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" /></MenuFlyoutItem.Icon>
                             </MenuFlyoutItem>
@@ -1461,16 +1532,16 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <!-- Colonne 7 : Incognito (2026-08-09, deplace depuis le flyout
-                     "Mode et confort" de la barre du bas - demande explicite
-                     utilisateur, entre Favoris et Bloqueur de pub). -->
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
+                <!-- 6 colonnes retirees ici (2026-08-14) : portaient
+                     Favoris/Incognito/Bouclier/Coffre/Historique/Telechargements,
+                     deplaces vers ToolbarButtonsPanel (voir ModulesQuickBar
+                     plus bas) pour devenir reordonnables comme les modules.
+                     Un Grid n'annule pas ColumnSpacing entre des colonnes
+                     vides : les laisser aurait garde un vide visuel a cet
+                     endroit meme sans aucun contenu (bug reel signale par
+                     l'utilisateur, capture d'ecran a l'appui). Colonnes
+                     suivantes renumerotees -6 (etaient 12/13/14, sont
+                     maintenant 6/7/8 - Accueil/CompactMode/ModulesQuickBar). -->
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -1517,7 +1588,7 @@
                     IsHitTestVisible="False" />
             <Border x:Name="NavigationToolbarToolsShell"
                     Grid.Column="6"
-                    Grid.ColumnSpan="12"
+                    Grid.ColumnSpan="6"
                     Margin="6,2,8,2"
                     CornerRadius="18"
                     Background="{StaticResource NovaCompanionGlassBrush}"
@@ -1744,232 +1815,16 @@
                 <SymbolIcon Style="{StaticResource NovaChromeAccentSymbolIconStyle}" Symbol="Forward" />
             </Button>
 
-            <!-- Icone Incognito (colonne 7, entre Favoris et Bloqueur de pub -
-                 demande explicite utilisateur 2026-08-09, deplacee du flyout
-                 "Mode et confort" de la barre du bas : action de confidentialite,
-                 doit rester a un seul geste plutot qu'a 2 niveaux de profondeur.
-                 Meme gestionnaire que le menu Lumora et le Menu Demarrer
-                 (IncognitoWindowMenu_Click, MainWindow.Incognito.cs) - aucune
-                 nouvelle logique de lancement.
-                 Icone (2026-08-10, retour utilisateur "ca ressemble a rien") :
-                 le glyphe systeme generique E727 est remplace par la marque
-                 maison Incognito deja utilisee dans LumoraIncognitoWindow.xaml
-                 et IncognitoWelcomeHtml.cs (silhouette de masque a 2 yeux) -
-                 memes donnees de dessin, aucun nouveau graphisme invente.
-                 Couleur neutre (NovaChromeButtonForegroundBrush, comme les
-                 icones voisines Favoris/Bouclier) plutot que la teinte violette
-                 propre a la fenetre Incognito : ce bouton lance une fenetre a
-                 part, il n'est pas lui-meme "en session Incognito". -->
-            <Button x:Name="IncognitoToolbarButton"
-                    Grid.Column="7"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Incognito"
-                    ToolTipService.ToolTip="Incognito : session ephemere, IP masquee en option via Tor (Ctrl+Shift+N)"
-                    Click="IncognitoWindowMenu_Click">
-                <Viewbox Width="19" Height="11.1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Grid Width="48" Height="28">
-                        <Path Data="M24 1c-10 0-18.3 5.7-22 13 3.7 7.3 12 13 22 13s18.3-5.7 22-13c-3.7-7.3-12-13-22-13Z"
-                              Stroke="{StaticResource NovaChromeButtonForegroundBrush}" StrokeThickness="2.6" />
-                        <Ellipse Width="6.4" Height="6.4" Fill="{StaticResource NovaChromeButtonForegroundBrush}"
-                                 HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12.3,0,0,0" />
-                        <Ellipse Width="6.4" Height="6.4" Fill="{StaticResource NovaChromeButtonForegroundBrush}"
-                                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12.3,0" />
-                    </Grid>
-                </Viewbox>
-            </Button>
-
-            <!-- Bouton bouclier confidentialité (colonne 8, apres Favoris et
-                 Incognito - ordre initial demande le 2026-08-08 : Favoris,
-                 Bloqueur de pub, Coffre ; Incognito insere entre les deux le
-                 2026-08-09) -->
-            <Button x:Name="ShieldButton"
-                    Grid.Column="8"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Confidentialité du site"
-                    ToolTipService.ToolTip="Confidentialité">
-                <!-- Teinte rose (2026-08-10, chantier identite visuelle) : meme
-                     brush que la famille "Protection" du Menu Demarrer
-                     (NovaTileFamilyProtectionBrush) - juste l'icone, pas toute
-                     la capsule du bouton, pour rester discret dans la barre
-                     d'outils (zone dense, contrairement aux tuiles). -->
-                <Grid Width="22" Height="22">
-                    <FontIcon Foreground="{StaticResource NovaTileFamilyProtectionBrush}" Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                              HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    <Border x:Name="TelemetryActivityBadge"
-                            MinWidth="16"
-                            Height="16"
-                            Padding="3,0"
-                            CornerRadius="8"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Margin="0,-5,-7,0"
-                            Background="{StaticResource NovaCoolAccentBrush}"
-                            BorderBrush="{StaticResource NovaChromeSurfaceBrush}"
-                            BorderThickness="1"
-                            Visibility="Collapsed">
-                        <TextBlock x:Name="ShieldBlockedBadgeText"
-                                   Text="0"
-                                   FontSize="9"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource NovaTextOnAccentBrush}"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center" />
-                    </Border>
-                </Grid>
-                <Button.Flyout>
-                    <Flyout x:Name="ShieldFlyout"
-                            Opening="ShieldFlyout_Opening"
-                            Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="330" Spacing="12">
-                            <TextBlock x:Name="ShieldDomainText"
-                                       FontWeight="SemiBold"
-                                       FontSize="14"
-                                       TextWrapping="Wrap" />
-                            <TextBlock x:Name="ShieldBlockedCountText"
-                                       Opacity="0.65"
-                                       FontSize="12"
-                                       TextWrapping="Wrap" />
-                            <TextBlock x:Name="ShieldSiteSummaryText"
-                                       Opacity="0.65"
-                                       FontSize="12"
-                                       TextWrapping="Wrap" />
-                            <TextBlock x:Name="ShieldRecommendationText"
-                                       Opacity="0.82"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap" />
-                            <StackPanel x:Name="ShieldRecentBlocksPanel"
-                                        Spacing="4" />
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
-                            <ToggleSwitch x:Name="ShieldSiteExcludeToggle"
-                                          Header="Exclure ce site du bloqueur"
-                                          Toggled="ShieldSiteExcludeToggle_Toggled" />
-                            <Button x:Name="ShieldSiteCenterButton"
-                                    Content="Centre du site"
-                                    HorizontalAlignment="Stretch"
-                                    Click="ShieldSiteCenterButton_Click" />
-                            <HyperlinkButton Content="Paramètres de confidentialité"
-                                             Click="ShieldSettingsLink_Click"
-                                             HorizontalAlignment="Left"
-                                             Padding="0" />
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-
-            <!-- Étoile d'état : pleine et accentuée quand la page courante est
-                 déjà en favori, contour simple sinon. Rafraîchie à chaque
-                 navigation, changement d'onglet et modification des favoris.
-                 Colonne 6, premier du groupe Favoris/Incognito/Bloqueur de
-                 pub/Coffre (ordre initial demande le 2026-08-08, Incognito
-                 insere le 2026-08-09). -->
-            <!-- Flyout ajoute (2026-08-12, retour utilisateur) : meme schema que
-                 VaultQuickAccessButton - l'action principale (ajouter/modifier le
-                 favori de la page courante, dialogue PromptBookmarkEditorAsync
-                 inchange) reste au clic, avec en plus un lien "Gerer les favoris"
-                 pour atteindre le panneau complet sans repasser par le Menu
-                 Demarrer. -->
-            <Button Grid.Column="6" x:Name="AddBookmarkButton" Style="{StaticResource NovaBookmarkIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" AutomationProperties.Name="Ajouter aux favoris">
-                <FontIcon x:Name="BookmarkStarIcon" Style="{StaticResource NovaBookmarkFontIconStyle}" Glyph="&#xE735;" FontFamily="Segoe MDL2 Assets" FontSize="17" />
-                <Button.Flyout>
-                    <Flyout x:Name="AddBookmarkFlyout" Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="240" Spacing="10">
-                            <Button Content="Ajouter cette page aux favoris"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Click="AddBookmarkButton_Click" />
-                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
-                            <Button Content="Gérer les favoris"
-                                    Style="{StaticResource NovaCompactButtonStyle}"
-                                    HorizontalAlignment="Stretch"
-                                    Click="BookmarksMenu_Click" />
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-            <!-- Acces rapide aux identifiants du site courant, sans ouvrir tout le
-                 panneau coffre (meme esprit que les extensions de gestionnaire de
-                 mots de passe type Proton Pass). -->
-            <Button x:Name="VaultQuickAccessButton"
-                    Grid.Column="9"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    ToolTipService.ToolTip="Identifiants de ce site"
-                    AutomationProperties.Name="Identifiants de ce site">
-                <!-- Meme teinte rose "Protection" que ShieldButton et le Coffre
-                     du Menu Demarrer (2026-08-10). -->
-                <FontIcon Foreground="{StaticResource NovaTileFamilyProtectionBrush}" Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-                <Button.Flyout>
-                    <Flyout x:Name="VaultQuickAccessFlyout"
-                            Opening="VaultQuickAccessFlyout_Opening"
-                            Placement="BottomEdgeAlignedRight">
-                        <StackPanel x:Name="VaultQuickAccessPanel" Width="320" Spacing="10" />
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-            <!-- Historique (2026-08-10, "choses a revoir" - reponse explicite
-                 utilisateur : "un bouton qui me donne acces a l'historique,
-                 tout simplement") - meme groupe fixe, toujours visible, que
-                 Favoris/Incognito/Bloqueur de pub/Coffre. Reprend le meme
-                 point d'entree que HistoryMenu_Click (jusqu'ici accessible
-                 uniquement via Menu Demarrer > Navigation > Historique),
-                 aucune nouvelle logique. -->
-            <Button x:Name="HistoryToolbarButton"
-                    Grid.Column="10"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    ToolTipService.ToolTip="Historique"
-                    AutomationProperties.Name="Historique"
-                    Click="HistoryMenu_Click">
-                <FontIcon Glyph="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-            </Button>
-            <!-- Telechargements (2026-08-10, "choses a revoir" - demande
-                 explicite utilisateur) : deplace de ModulesQuickBar (modules
-                 epinglables/desepinglables, voir plus bas) vers ce groupe
-                 fixe - toujours visible desormais, plus jamais conditionne a
-                 _hasSessionDownload (RefreshDownloadsIndicator,
-                 MainWindow.DownloadsIndicator.cs). Flyout et badge inchanges,
-                 juste deplaces avec le bouton. -->
-            <Button x:Name="DownloadsIndicatorButton"
-                    Grid.Column="11"
-                    Style="{StaticResource NovaChromeIconButtonStyle}"
-                    AutomationProperties.Name="Telechargements"
-                    ToolTipService.ToolTip="Téléchargements">
-                <Grid Width="22" Height="22">
-                    <FontIcon Glyph="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                              HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    <Border x:Name="DownloadsIndicatorBadge"
-                            Background="{StaticResource NovaAccentBrush}"
-                            CornerRadius="7" MinWidth="14" Height="14"
-                            Padding="3,0"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="0,-6,-7,0"
-                            Visibility="Collapsed">
-                        <TextBlock x:Name="DownloadsIndicatorBadgeText"
-                                   Text="1" FontSize="9" FontWeight="SemiBold"
-                                   Foreground="{StaticResource NovaTextOnAccentBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                </Grid>
-                <Button.Flyout>
-                    <Flyout x:Name="DownloadsIndicatorFlyout"
-                            Opening="DownloadsIndicatorFlyout_Opening"
-                            Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="340" Spacing="10">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Téléchargements" FontWeight="SemiBold" FontSize="14" />
-                                <HyperlinkButton Grid.Column="1" Content="Tout voir" Padding="0"
-                                                 Click="DownloadsIndicatorSeeAllButton_Click" />
-                            </Grid>
-                            <StackPanel x:Name="DownloadsIndicatorPanel" Spacing="6" />
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-            <Button Grid.Column="12"
+            <!-- Favoris/Incognito/Bouclier/Coffre/Historique/Telechargements
+                 (2026-08-14) : deplaces dans ToolbarButtonsPanel (voir plus
+                 bas, groupe "Toujours dans la barre") - reordonnables au
+                 meme titre que les modules, demande explicite utilisateur
+                 apres la 2e maquette validee ("le bouton des favoris du
+                 coffre et de tout le reste, ca compte"). Plus de
+                 Grid.Column fixe pour ces 6 boutons : leur position est
+                 desormais pilotee par ToolbarCustomizationService, comme les
+                 16 boutons de modules deja reordonnables. Voir MEMORY.md. -->
+            <Button Grid.Column="6"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Accueil"
                     AutomationProperties.Name="Accueil"
@@ -1978,7 +1833,7 @@
                 <SymbolIcon Style="{StaticResource NovaChromeSymbolIconStyle}" Symbol="Home" />
             </Button>
             <Button x:Name="CompactModeButton"
-                    Grid.Column="13"
+                    Grid.Column="7"
                     Style="{StaticResource NovaChromeIconButtonStyle}"
                     ToolTipService.ToolTip="Interface compacte"
                     AutomationProperties.Name="Interface compacte"
@@ -1986,14 +1841,191 @@
                     Click="CompactModeButton_Click">
                 <SymbolIcon Style="{StaticResource NovaChromeSymbolIconStyle}" Symbol="FullScreen" />
             </Button>
-            <Border x:Name="ModulesQuickBar"
-                    Grid.Column="14"
+            <Grid x:Name="ModulesQuickBar"
+                    Grid.Column="8"
                     Grid.ColumnSpan="6"
-                    Padding="0"
-                    BorderThickness="0"
                     Background="Transparent"
                     VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="5">
+                <!-- Clic droit "Réorganiser la barre d'outils…" retiré
+                     (2026-08-14, demande explicite utilisateur : "ça ne sert
+                     à rien puisque le glisser ne fonctionne pas") en même
+                     temps que tout le glisser-déposer qu'il ouvrait. Le
+                     réordonnancement se fait désormais par clic (Monter/
+                     Descendre) directement dans ModulesQuickAccessFlyout,
+                     le menu où l'utilisateur épingle déjà ses modules - voir
+                     MainWindow.ToolbarCustomization.cs et MEMORY.md. -->
+                <StackPanel x:Name="ToolbarButtonsPanel" Orientation="Horizontal" Spacing="5" Padding="0">
+                    <!-- Favoris/Incognito/Bouclier/Coffre/Historique/Telechargements
+                         (2026-08-14) : deplaces ici depuis leurs colonnes fixes de
+                         NavigationToolbar - reordonnables au meme titre que les
+                         modules ci-dessous (ToolbarCustomizationService), demande
+                         explicite utilisateur ("le bouton des favoris du coffre et
+                         de tout le reste, ca compte"). Fonctionnellement inchanges
+                         (memes Click/Flyout/Style), seule leur position est
+                         desormais pilotee par l'ordre sauvegarde plutot qu'un
+                         Grid.Column fixe. Voir MEMORY.md. -->
+                    <Button x:Name="AddBookmarkButton" Style="{StaticResource NovaBookmarkIconButtonStyle}" ToolTipService.ToolTip="Ajouter aux favoris" AutomationProperties.Name="Ajouter aux favoris">
+                        <FontIcon x:Name="BookmarkStarIcon" Style="{StaticResource NovaBookmarkFontIconStyle}" Glyph="&#xE735;" FontFamily="Segoe MDL2 Assets" FontSize="17" />
+                        <Button.Flyout>
+                            <Flyout x:Name="AddBookmarkFlyout" Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="240" Spacing="10">
+                                    <Button Content="Ajouter cette page aux favoris"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
+                                            Click="AddBookmarkButton_Click" />
+                                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                    <Button Content="Gérer les favoris"
+                                            Style="{StaticResource NovaCompactButtonStyle}"
+                                            HorizontalAlignment="Stretch"
+                                            Click="BookmarksMenu_Click" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button x:Name="IncognitoToolbarButton"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
+                            AutomationProperties.Name="Incognito"
+                            ToolTipService.ToolTip="Incognito : session ephemere, IP masquee en option via Tor (Ctrl+Shift+N)"
+                            Click="IncognitoWindowMenu_Click">
+                        <Viewbox Width="19" Height="11.1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Width="48" Height="28">
+                                <Path Data="M24 1c-10 0-18.3 5.7-22 13 3.7 7.3 12 13 22 13s18.3-5.7 22-13c-3.7-7.3-12-13-22-13Z"
+                                      Stroke="{StaticResource NovaChromeButtonForegroundBrush}" StrokeThickness="2.6" />
+                                <Ellipse Width="6.4" Height="6.4" Fill="{StaticResource NovaChromeButtonForegroundBrush}"
+                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12.3,0,0,0" />
+                                <Ellipse Width="6.4" Height="6.4" Fill="{StaticResource NovaChromeButtonForegroundBrush}"
+                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12.3,0" />
+                            </Grid>
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="ShieldButton"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
+                            AutomationProperties.Name="Confidentialité du site"
+                            ToolTipService.ToolTip="Confidentialité">
+                        <Grid Width="22" Height="22">
+                            <FontIcon Foreground="{StaticResource NovaTileFamilyProtectionBrush}" Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Border x:Name="TelemetryActivityBadge"
+                                    MinWidth="16"
+                                    Height="16"
+                                    Padding="3,0"
+                                    CornerRadius="8"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,-5,-7,0"
+                                    Background="{StaticResource NovaCoolAccentBrush}"
+                                    BorderBrush="{StaticResource NovaChromeSurfaceBrush}"
+                                    BorderThickness="1"
+                                    Visibility="Collapsed">
+                                <TextBlock x:Name="ShieldBlockedBadgeText"
+                                           Text="0"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource NovaTextOnAccentBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                        <Button.Flyout>
+                            <Flyout x:Name="ShieldFlyout"
+                                    Opening="ShieldFlyout_Opening"
+                                    Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="330" Spacing="12">
+                                    <TextBlock x:Name="ShieldDomainText"
+                                               FontWeight="SemiBold"
+                                               FontSize="14"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock x:Name="ShieldBlockedCountText"
+                                               Opacity="0.65"
+                                               FontSize="12"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock x:Name="ShieldSiteSummaryText"
+                                               Opacity="0.65"
+                                               FontSize="12"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock x:Name="ShieldRecommendationText"
+                                               Opacity="0.82"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap" />
+                                    <StackPanel x:Name="ShieldRecentBlocksPanel"
+                                                Spacing="4" />
+                                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                    <ToggleSwitch x:Name="ShieldSiteExcludeToggle"
+                                                  Header="Exclure ce site du bloqueur"
+                                                  Toggled="ShieldSiteExcludeToggle_Toggled" />
+                                    <Button x:Name="ShieldSiteCenterButton"
+                                            Content="Centre du site"
+                                            HorizontalAlignment="Stretch"
+                                            Click="ShieldSiteCenterButton_Click" />
+                                    <HyperlinkButton Content="Paramètres de confidentialité"
+                                                     Click="ShieldSettingsLink_Click"
+                                                     HorizontalAlignment="Left"
+                                                     Padding="0" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button x:Name="VaultQuickAccessButton"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
+                            ToolTipService.ToolTip="Identifiants de ce site"
+                            AutomationProperties.Name="Identifiants de ce site">
+                        <FontIcon Foreground="{StaticResource NovaTileFamilyProtectionBrush}" Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                        <Button.Flyout>
+                            <Flyout x:Name="VaultQuickAccessFlyout"
+                                    Opening="VaultQuickAccessFlyout_Opening"
+                                    Placement="BottomEdgeAlignedRight">
+                                <StackPanel x:Name="VaultQuickAccessPanel" Width="320" Spacing="10" />
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button x:Name="HistoryToolbarButton"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
+                            ToolTipService.ToolTip="Historique"
+                            AutomationProperties.Name="Historique"
+                            Click="HistoryMenu_Click">
+                        <FontIcon Glyph="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                    </Button>
+                    <Button x:Name="DownloadsIndicatorButton"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
+                            AutomationProperties.Name="Telechargements"
+                            ToolTipService.ToolTip="Téléchargements">
+                        <Grid Width="22" Height="22">
+                            <FontIcon Glyph="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Border x:Name="DownloadsIndicatorBadge"
+                                    Background="{StaticResource NovaAccentBrush}"
+                                    CornerRadius="7" MinWidth="14" Height="14"
+                                    Padding="3,0"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Margin="0,-6,-7,0"
+                                    Visibility="Collapsed">
+                                <TextBlock x:Name="DownloadsIndicatorBadgeText"
+                                           Text="1" FontSize="9" FontWeight="SemiBold"
+                                           Foreground="{StaticResource NovaTextOnAccentBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                        <Button.Flyout>
+                            <Flyout x:Name="DownloadsIndicatorFlyout"
+                                    Opening="DownloadsIndicatorFlyout_Opening"
+                                    Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="340" Spacing="10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Téléchargements" FontWeight="SemiBold" FontSize="14" />
+                                        <HyperlinkButton Grid.Column="1" Content="Tout voir" Padding="0"
+                                                         Click="DownloadsIndicatorSeeAllButton_Click" />
+                                    </Grid>
+                                    <StackPanel x:Name="DownloadsIndicatorPanel" Spacing="6" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <!-- Modules epinglables (2026-08-08, 2e session) : regroupes
                          AVANT le bouton puzzle, pas apres - meme principe que Chrome
                          (icones d'extensions epinglees a gauche de l'icone puzzle,
@@ -2227,154 +2259,228 @@
                              contenu/Modules au Menu Demarrer (NovaTileFamilyToolsBrush). -->
                         <FontIcon Style="{StaticResource NovaModuleFontIconStyle}" Foreground="{StaticResource NovaTileFamilyToolsBrush}" Glyph="&#xE8A9;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
                         <Button.Flyout>
+                            <!-- Refonte visuelle (2026-08-14, retour utilisateur avec capture
+                                 d'ecran : "completement en desaccord avec la charte graphique").
+                                 Meme couleurs/gabarits que ToolbarReorganizeOverlay deja livree :
+                                 liseret d'accent en degrade, puces d'icones cadrees (au lieu
+                                 d'icones nues), interrupteurs d'epinglage (NovaModulePinButtonStyle,
+                                 refondu au meme endroit) au lieu du rond terne, hierarchie claire
+                                 entre les 2 boutons du bas. -->
                             <Flyout x:Name="ModulesQuickAccessFlyout" Placement="BottomEdgeAlignedRight">
-                                <StackPanel Width="320" Spacing="10">
-                                    <TextBlock Text="Modules" FontWeight="SemiBold" FontSize="14" />
-                                    <TextBlock Text="Choisissez ce qui reste visible dans la barre d'outils."
-                                               Opacity="0.68" FontSize="12" TextWrapping="Wrap" />
-                                    <StackPanel Spacing="4">
-                                        <Grid ColumnSpacing="10">
+                                <StackPanel Width="320" Spacing="0">
+                                    <Border Height="3" Margin="-16,-16,-16,14" CornerRadius="0"
+                                            Background="{StaticResource NovaIdentityMarkBrush}" />
+                                    <StackPanel Spacing="4" Margin="0,0,0,12">
+                                        <TextBlock Text="MODULES" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource NovaAccentBrush}" CharacterSpacing="60" />
+                                        <TextBlock Text="Modules épinglés" FontWeight="SemiBold" FontSize="15" />
+                                        <TextBlock Text="Choisis ce qui reste visible dans la barre d'outils."
+                                                   Opacity="0.68" FontSize="12" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="2">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Mode lecture" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickReaderPinToggleButton" Grid.Column="2" Tag="reader" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Mode lecture" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickReaderPinToggleButton" Grid.Column="2" Tag="reader" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Notes et annotations" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickNotesPinToggleButton" Grid.Column="2" Tag="notes" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Notes et annotations" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickNotesPinToggleButton" Grid.Column="2" Tag="notes" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Lecture à voix haute" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickReadAloudPinToggleButton" Grid.Column="2" Tag="readAloud" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Lecture à voix haute" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickReadAloudPinToggleButton" Grid.Column="2" Tag="readAloud" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Détacher la vidéo" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickDetachVideoPinToggleButton" Grid.Column="2" Tag="detachVideo" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Détacher la vidéo" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickDetachVideoPinToggleButton" Grid.Column="2" Tag="detachVideo" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Télécharger la vidéo" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickVideoDownloadPinToggleButton" Grid.Column="2" Tag="videoDownload" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Télécharger la vidéo" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickVideoDownloadPinToggleButton" Grid.Column="2" Tag="videoDownload" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Recherche assistée" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickSearchAssistPinToggleButton" Grid.Column="2" Tag="searchAssist" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Recherche assistée" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickSearchAssistPinToggleButton" Grid.Column="2" Tag="searchAssist" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Traduction locale" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickTranslatePinToggleButton" Grid.Column="2" Tag="translate" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Traduction locale" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickTranslatePinToggleButton" Grid.Column="2" Tag="translate" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Applications web" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickWebAppsPinToggleButton" Grid.Column="2" Tag="webApps" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Applications web" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickWebAppsPinToggleButton" Grid.Column="2" Tag="webApps" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Dictée vocale" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickDictationPinToggleButton" Grid.Column="2" Tag="dictation" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Dictée vocale" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickDictationPinToggleButton" Grid.Column="2" Tag="dictation" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <!-- Flux RSS et Loupe de lecture (2026-08-09) : integres au systeme
                                              de modules epinglables, voir commentaires XAML sur RssModuleButton/
                                              ReadingLensButton (groupe epinglable, plus haut dans ce fichier). -->
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Flux RSS" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickRssPinToggleButton" Grid.Column="2" Tag="rss" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Flux RSS" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickRssPinToggleButton" Grid.Column="2" Tag="rss" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <FontIcon Grid.Column="0" Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="Loupe de lecture" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="QuickReadingLensPinToggleButton" Grid.Column="2" Tag="readingLens" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                                <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                            </ToggleButton>
+                                            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="9"
+                                                    Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                                    BorderBrush="{StaticResource NovaChromeStrokeBrush}" BorderThickness="1">
+                                                <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="Loupe de lecture" VerticalAlignment="Center" FontSize="13" />
+                                            <ToggleButton x:Name="QuickReadingLensPinToggleButton" Grid.Column="2" Tag="readingLens" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                     </StackPanel>
-                                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                                    <!-- Reorganiser TOUTE la barre (2026-08-14) : lien vers la fenetre
+                                         dediee ToolbarReorganizeOverlay - portee etendue a favoris/
+                                         coffre/bouclier/telechargements/historique/incognito en plus
+                                         des modules, demande explicite utilisateur. Mis en avant
+                                         (AccentButtonStyle) : c'est l'action la plus utile de ce menu,
+                                         "Gerer les modules" reste en second plan. -->
+                                    <Border Height="1" Margin="0,12,0,10" Background="{StaticResource NovaChromeStrokeSoftBrush}" />
+                                    <Button Content="Réorganiser toute la barre…"
+                                            Click="ToolbarReorganizeMenuLink_Click"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            HorizontalAlignment="Stretch"
+                                            Margin="0,0,0,8" />
                                     <Button Content="Gérer les modules"
                                             Click="ModulesMenu_Click"
                                             Style="{StaticResource NovaCompactButtonStyle}"
                                             HorizontalAlignment="Stretch" />
                                 </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <!-- Bouton "Connexions" (0.93.33.0-dev, demande explicite de
+                         l'utilisateur : reste connecte + voir la liste des sites
+                         concernes, sans passer par Reglages > Vie privee > Hygiene
+                         de session). Meme patron que VaultQuickAccessButton juste
+                         au-dessus (Button + Flyout rempli a l'ouverture, apercu +
+                         lien vers le panneau complet "Sites connectes" deja
+                         existant) - pas un simple interrupteur : le vrai contenu
+                         utile est la LISTE des sites (TrustedSessionSites), pas un
+                         oui/non global. Icone dessinee en vecteur : pas de glyphe
+                         cle/trousseau disponible dans "Segoe MDL2 Assets" (la
+                         police utilisee partout ailleurs dans cette barre), meme
+                         principe que ModulesButtonMark (Menu Lumora) plus haut. -->
+                    <Button x:Name="ConnectionsQuickAccessButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            AutomationProperties.Name="Connexions persistantes"
+                            ToolTipService.ToolTip="Connexions persistantes">
+                        <Path Width="16" Height="16" Stretch="Uniform"
+                              Fill="{StaticResource NovaModuleButtonForegroundBrush}"
+                              Data="F1 M11,6 A5,5 0 1 1 1,6 A5,5 0 1 1 11,6 Z M8.3,6 A2.3,2.3 0 1 1 3.7,6 A2.3,2.3 0 1 1 8.3,6 Z M11,5 L19,5 L19,7 L11,7 Z M14,7 L15.6,7 L15.6,10 L14,10 Z M17,7 L18.6,7 L18.6,9 L17,9 Z" />
+                        <Button.Flyout>
+                            <Flyout x:Name="ConnectionsQuickAccessFlyout"
+                                    Opening="ConnectionsQuickAccessFlyout_Opening"
+                                    Placement="BottomEdgeAlignedRight">
+                                <StackPanel x:Name="ConnectionsQuickAccessPanel" Width="300" Spacing="10" />
                             </Flyout>
                         </Button.Flyout>
                     </Button>
@@ -2498,7 +2604,7 @@
                         </Grid>
                     </Button>
                 </StackPanel>
-            </Border>
+            </Grid>
         </Grid>
         </Border>
 
@@ -2774,22 +2880,34 @@
                     </InfoBar.ActionButton>
                 </InfoBar>
 
-                <!-- Barre de proposition d'enregistrement d'identifiants -->
+                <!-- Barre de proposition d'enregistrement d'identifiants : identifiant et
+                     mot de passe modifiables AVANT l'enregistrement. La detection reste une
+                     heuristique (l'identifiant surtout, voir CredentialCaptureUsernameModule.js) ;
+                     l'utilisateur doit pouvoir corriger ici, au moment ou c'est facile,
+                     plutot que de le decouvrir plus tard dans le coffre. -->
                 <Border x:Name="CredentialSaveBar" Grid.Row="1" Visibility="Collapsed"
                         Background="{StaticResource NovaInfoSurfaceBrush}"
                         BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeBrush}"
-                        Padding="10,6">
-                    <Grid ColumnSpacing="8">
+                        Padding="10,8">
+                    <Grid ColumnSpacing="8" RowSpacing="6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <SymbolIcon Grid.Column="0" Symbol="Permissions" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="CredentialSaveText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        <Button x:Name="CredentialSaveAccept" Grid.Column="2" Content="Enregistrer" Click="CredentialSaveAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
-                        <Button x:Name="CredentialSaveDismiss" Grid.Column="3" Content="Ignorer" Click="CredentialSaveDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <SymbolIcon Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Symbol="Permissions" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CredentialSaveText" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <TextBox x:Name="CredentialSaveUsernameBox" PlaceholderText="Identifiant" MinWidth="180" FontSize="12"/>
+                            <PasswordBox x:Name="CredentialSavePasswordBox" PlaceholderText="Mot de passe" PasswordRevealMode="Peek" MinWidth="140" FontSize="12"/>
+                        </StackPanel>
+                        <Button x:Name="CredentialSaveAccept" Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" VerticalAlignment="Center" Content="Enregistrer" Click="CredentialSaveAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="CredentialSaveDismiss" Grid.Row="0" Grid.RowSpan="2" Grid.Column="3" VerticalAlignment="Center" Content="Ignorer" Click="CredentialSaveDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
 
@@ -4176,6 +4294,18 @@
                                                       Click="OpenPersonalizationFromProfileButton_Click"
                                                       Padding="0" FontSize="12" />
                                     <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+                                    <!-- Profil sans mot de passe (2026-08-13) : choix permanent pris a la
+                                         creation, aucune porte derobee pour en ajouter un ensuite - voir
+                                         MEMORY.md pour le raisonnement (risque de detournement si n'importe
+                                         qui pouvait poser un mot de passe sur un profil deja ouvert). Ce
+                                         bandeau + le masquage des boutons juste en dessous sont les deux
+                                         faces de la meme regle, pilotes ensemble par RefreshProfileSettings. -->
+                                    <InfoBar x:Name="ProfileNoPasswordNotice"
+                                             Severity="Warning"
+                                             IsClosable="False"
+                                             Title="Profil sans mot de passe"
+                                             Message="Ce profil est ouvert a quiconque utilise cette session Windows, et ne peut pas faire l'objet d'une sauvegarde complete. Ce choix a ete fait a la creation et ne peut pas etre change - un nouveau profil avec mot de passe serait necessaire."
+                                             Visibility="Collapsed" />
                                     <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                             Click="ChangeProfileNameButton_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -4183,14 +4313,14 @@
                                             <TextBlock Text="Changer le nom" />
                                         </StackPanel>
                                     </Button>
-                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    <Button x:Name="ChangeProfilePasswordButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                             Click="ChangeProfilePasswordButton_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <SymbolIcon Symbol="Permissions" />
                                             <TextBlock Text="Changer le mot de passe" />
                                         </StackPanel>
                                     </Button>
-                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    <Button x:Name="CreateRecoveryKeyButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                             Click="CreateRecoveryKeyButton_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
@@ -7084,10 +7214,21 @@
                                        FontSize="13" Margin="0,0,0,6" />
                             <TextBox x:Name="ProfileNameBox" Header="Prénom ou pseudo"
                                      PlaceholderText="Jean" MaxLength="32" />
-                            <PasswordBox x:Name="CreatePasswordBox" Header="Mot de passe (min. 8 caractères)"
-                                         PlaceholderText="••••••••" />
+                            <PasswordBox x:Name="CreatePasswordBox" Header="Mot de passe (min. 12 caractères + 1 spécial)"
+                                         PlaceholderText="••••••••••••" />
                             <PasswordBox x:Name="ConfirmPasswordBox" Header="Confirmer le mot de passe"
                                          PlaceholderText="••••••••" />
+                            <!-- Profil sans mot de passe (2026-08-13) : choix permanent, assume par
+                                 l'utilisateur des la creation - aucun moyen d'en ajouter un plus tard
+                                 (voir MEMORY.md, risque de detournement si n'importe qui pouvait poser
+                                 un mot de passe sur un profil deja ouvert). Coupe aussi le PIN (rien a
+                                 raccourcir sans mot de passe de base) et la cle de recuperation (rien a
+                                 recuperer). -->
+                            <ToggleSwitch x:Name="NoPasswordSwitch" Header="Ne pas définir de mot de passe"
+                                          Toggled="NoPasswordSwitch_Toggled" Margin="0,4,0,0" />
+                            <InfoBar x:Name="NoPasswordWarningBar" IsClosable="False"
+                                     Severity="Warning" Visibility="Collapsed"
+                                     Message="Ce profil restera ouvert à quiconque utilise cette session Windows, et ne pourra jamais faire l'objet d'une sauvegarde complète. Ce choix est définitif : impossible d'ajouter un mot de passe plus tard sur ce profil." />
                             <ToggleSwitch x:Name="EnablePinSwitch" Header="Connexion rapide par PIN"
                                           Toggled="EnablePinSwitch_Toggled" Margin="0,4,0,0" />
                             <PasswordBox x:Name="PinSetupBox" Header="Code PIN (6 chiffres)"
@@ -7222,6 +7363,123 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                 </Border>
             </ScrollViewer>
         </Grid>
+
+        <!-- Fenetre de reorganisation de la barre d'outils (2026-08-14,
+             2e passe le meme jour) : remplace la petite liste integree au
+             menu Modules - devenue trop longue une fois etendue a TOUTE la
+             barre (favoris, coffre, bouclier, telechargements, historique,
+             incognito, pas seulement les modules), demande explicite
+             utilisateur. Overlay modal (fond attenue, pas opaque comme
+             LoginOverlay - le reste de la fenetre reste vaguement visible
+             derriere), carte centree avec barre d'accent en degrade,
+             2 sections construites dynamiquement en code
+             (RefreshToolbarReorganizeSections, MainWindow.
+             ToolbarCustomization.cs) : "Toujours dans la barre" (tout ce qui
+             est visible sans epinglage) et "Modules epingles" (le
+             sous-ensemble optionnel). Canvas.ZIndex="85" : sous les ecrans
+             modaux (Login=90, Wizard=95, Welcome=99), au-dessus du reste. -->
+        <Grid x:Name="ToolbarReorganizeOverlay" Grid.RowSpan="7" Visibility="Collapsed"
+              Canvas.ZIndex="85"
+              Background="#CC090D14">
+            <ScrollViewer HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
+                <Border Width="460"
+                        Background="{StaticResource NovaPanelBackgroundBrush}"
+                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                        BorderThickness="1"
+                        CornerRadius="16"
+                        Translation="0,0,32">
+                    <Border.Shadow>
+                        <ThemeShadow />
+                    </Border.Shadow>
+                    <StackPanel>
+                        <!-- Reutilise NovaIdentityMarkBrush (deja defini, deja tenu a
+                             jour avec le theme/Mode d'usage actif par
+                             SetIdentityGradient - MainWindow.SettingsTheme.cs) plutot
+                             qu'un degrade code en dur : voir la note du projet sur le
+                             theme pilote par Mode d'usage, aucun "or fixe". -->
+                        <Border Height="3" CornerRadius="16,16,0,0"
+                                Background="{StaticResource NovaIdentityMarkBrush}" />
+
+                        <StackPanel Padding="24,22,24,16" Spacing="6"
+                                    BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}"
+                                    BorderThickness="0,0,0,1">
+                            <TextBlock Text="BARRE D'OUTILS" FontSize="10.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource NovaAccentBrush}"
+                                       CharacterSpacing="60" />
+                            <TextBlock Text="Réorganiser la barre" FontSize="19" FontWeight="SemiBold" />
+                            <TextBlock Text="Monte ou descends n'importe quel élément pour changer sa place. Les modules non épinglés n'apparaissent pas ici."
+                                       FontSize="12.5" Opacity="0.68" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ScrollViewer MaxHeight="420" Padding="4,6,4,6">
+                            <StackPanel Spacing="4">
+                                <StackPanel Padding="14,10,14,6" Spacing="6">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="TOUJOURS DANS LA BARRE" FontSize="11" FontWeight="Bold"
+                                                   Opacity="0.72" CharacterSpacing="40" />
+                                        <TextBlock x:Name="ToolbarReorganizeAlwaysCount" Grid.Column="1"
+                                                   FontSize="11" Opacity="0.5" />
+                                    </Grid>
+                                    <StackPanel x:Name="ToolbarReorganizeAlwaysSection" Spacing="3" />
+                                </StackPanel>
+
+                                <Border Height="1" Margin="14,4"
+                                        Background="{StaticResource NovaChromeStrokeSoftBrush}" />
+
+                                <StackPanel Padding="14,6,14,10" Spacing="6">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="MODULES ÉPINGLÉS" FontSize="11" FontWeight="Bold"
+                                                   Opacity="0.72" CharacterSpacing="40" />
+                                        <TextBlock x:Name="ToolbarReorganizeModulesCount" Grid.Column="1"
+                                                   FontSize="11" Opacity="0.5" />
+                                    </Grid>
+                                    <StackPanel x:Name="ToolbarReorganizeModulesSection" Spacing="3" />
+                                    <Border x:Name="ToolbarReorganizeModulesEmptyHint"
+                                            Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                            BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                                            BorderThickness="1" CornerRadius="11"
+                                            Padding="12,10" Visibility="Collapsed">
+                                        <TextBlock Text="Aucun module épinglé pour le moment. Épingle-en depuis le menu Modules pour les faire apparaître ici."
+                                                   FontSize="11.5" Opacity="0.65" TextWrapping="Wrap" />
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <Grid Padding="16,12" Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                              CornerRadius="0,0,16,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Navigation, barre d'adresse et boutons système ne sont pas concernés."
+                                       FontSize="10.5" Opacity="0.5" VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Margin="0,0,10,0" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <Button Content="Réinitialiser" Click="ToolbarReorganizeResetButton_Click" />
+                                <Button Content="Terminer" Style="{StaticResource AccentButtonStyle}"
+                                        Click="ToolbarReorganizeDoneButton_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Bandeau "Mode edition" de la barre d'outils RETIRE (2026-08-14,
+             demande explicite utilisateur) en meme temps que tout le
+             glisser-depose : remplace par Monter/Descendre directement dans
+             ModulesQuickAccessFlyout (menu Modules, epingler/desepingler) -
+             voir MainWindow.ToolbarCustomization.cs et MEMORY.md. -->
 
         <!-- Wizard premier lancement (visible une seule fois apres creation de compte).
              ZIndex="95" : doit rester au-dessus de LoginOverlay (90), affiche juste
@@ -7481,6 +7739,10 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                     <DoubleAnimation Storyboard.TargetName="WelcomeHalo4" Storyboard.TargetProperty="Opacity" From="0.55" To="1" Duration="0:00:02.6" />
                     <DoubleAnimation Storyboard.TargetName="WelcomeRing4" Storyboard.TargetProperty="Opacity" From="0.35" To="0.85" Duration="0:00:02.6" />
                 </Storyboard>
+                <Storyboard x:Key="Welcome5Pulse" RepeatBehavior="Forever" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetName="WelcomeHalo5" Storyboard.TargetProperty="Opacity" From="0.55" To="1" Duration="0:00:02.6" />
+                    <DoubleAnimation Storyboard.TargetName="WelcomeRing5" Storyboard.TargetProperty="Opacity" From="0.35" To="0.85" Duration="0:00:02.6" />
+                </Storyboard>
             </Grid.Resources>
 
             <!-- Fond ambiant : deux lueurs larges qui respirent lentement,
@@ -7656,26 +7918,59 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
+
+                            <!-- Slide 5 : Plusieurs fenetres, une seule session (2026-08-13) + explication
+                                 des connexions persistantes par defaut (2026-08-13, question utilisateur
+                                 sur la reconnexion Google forcee apres fermeture complete de l'appli ->
+                                 texte revu le meme jour quand la purge au demarrage est repassee en
+                                 option desactivee par defaut, "trop compliqué pour un utilisateur de
+                                 base" - ne plus decrire l'ancien comportement). -->
+                            <StackPanel x:Name="WelcomeStep5" Spacing="14" HorizontalAlignment="Center" Visibility="Collapsed">
+                                <StackPanel.RenderTransform>
+                                    <TranslateTransform />
+                                </StackPanel.RenderTransform>
+                                <Grid Width="96" Height="96" Margin="0,4,0,4">
+                                    <Ellipse x:Name="WelcomeHalo5" Fill="{StaticResource NovaChromeHaloWarmGlowBrush}" />
+                                    <Ellipse x:Name="WelcomeRing5" Width="76" Height="76"
+                                             Stroke="{StaticResource NovaAccentBrush}" StrokeThickness="1.4" Opacity="0.6"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <Border Width="64" Height="64" CornerRadius="32"
+                                            Background="{StaticResource NovaIdentityMarkBrush}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="White" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="CONNEXIONS" FontSize="12" FontWeight="SemiBold" CharacterSpacing="60"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource NovaAccentBrush}" />
+                                <TextBlock FontSize="24" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
+                                    <Run Text="Toujours " /><Run Text="connecté" Foreground="{StaticResource NovaAccentBrush}" /><Run Text=", sans y repenser" />
+                                </TextBlock>
+                                <TextBlock Text="Vos connexions restent actives d'une fermeture à l'autre, comme sur n'importe quel navigateur. Vous préférez tout effacer à chaque démarrage ? C'est une option dans Vie privée et sécurité."
+                                           TextWrapping="Wrap" TextAlignment="Center" Width="340"
+                                           FontSize="14" Opacity="0.72" />
+                            </StackPanel>
                         </Grid>
 
                         <!-- Points de progression : rail de 5 pastilles fixes + une "pilule"
                              mobile qui glisse d'une position a l'autre (Canvas.Left anime en
                              code-behind) au lieu de sauter d'un bloc - retour utilisateur :
                              "on ne la voit pas se deplacer". -->
-                        <Canvas Width="84" Height="8" HorizontalAlignment="Center" Margin="0,24,0,18">
+                        <Canvas Width="100" Height="8" HorizontalAlignment="Center" Margin="0,24,0,18">
                             <Rectangle Canvas.Left="6" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="22" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="38" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="54" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="70" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
+                            <Rectangle Canvas.Left="86" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle x:Name="WelcomeStepCursor" Canvas.Left="0" Width="20" Height="8" RadiusX="4" RadiusY="4"
                                        Fill="{StaticResource NovaAccentBrush}" />
                         </Canvas>
                         <!-- Texte equivalent pour le lecteur d'ecran (le rail de pastilles ne
                              porte aucune information a lui seul) -->
-                        <TextBlock x:Name="WelcomeStepIndicator" Text="1 / 5"
+                        <TextBlock x:Name="WelcomeStepIndicator" Text="1 / 6"
                                    HorizontalAlignment="Center" Opacity="0.001" FontSize="1"
-                                   AutomationProperties.Name="Étape 1 sur 5" />
+                                   AutomationProperties.Name="Étape 1 sur 6" />
 
                         <!-- Separateur -->
                         <Border Height="1"

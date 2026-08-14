@@ -236,6 +236,7 @@ public sealed partial class MainWindow
         StartMenuTileIds.Downloads => () => DownloadsMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.WebApps => () => WebAppsMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.Incognito => () => IncognitoWindowMenu_Click(this, new RoutedEventArgs()),
+        StartMenuTileIds.NewWindow => () => NewWindowMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.ReopenTab => () => ReopenTabMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.TabGroups => () => SavedTabGroupsMenu_Click(this, new RoutedEventArgs()),
         StartMenuTileIds.SiteControl => () => SiteControlMenu_Click(this, new RoutedEventArgs()),

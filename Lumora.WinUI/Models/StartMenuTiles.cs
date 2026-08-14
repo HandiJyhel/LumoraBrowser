@@ -19,6 +19,7 @@ public static class StartMenuTileIds
     public const string Downloads = "downloads";
     public const string WebApps = "webApps";
     public const string Incognito = "incognito";
+    public const string NewWindow = "newWindow";
     public const string ReopenTab = "reopenTab";
     public const string TabGroups = "tabGroups";
     public const string SiteControl = "siteControl";

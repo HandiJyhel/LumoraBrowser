@@ -10,8 +10,16 @@ Add-Type -AssemblyName System.Drawing
 $resolvedOutput = Join-Path (Get-Location) $OutputDir
 New-Item -ItemType Directory -Force -Path $resolvedOutput | Out-Null
 
+# Signe Lumora "goutte + etincelle renforcee" (variante C retenue le 2026-08-12,
+# suite au constat que l'ancienne etincelle fine disparaissait des 48px sur le
+# Bureau reel - voir MEMORY.md). Dessine en unites logiques 0-256 (memes
+# coordonnees que le comparatif SVG valide avec l'utilisateur), mis a l'echelle
+# par S() pour chaque taille cible. Formes PLEINES (pas de traits fins) :
+# contrairement a l'ancien signe "globe/soleil" (tourbillon de traits, cf.
+# docs/APP_ICON_LEGIBILITY_FIX_0_48_2.md), un remplissage plein reste net en
+# le rasterisant nativement a chaque taille, sans variante simplifiee separee.
 function New-IconBitmap {
-    param([int]$Size, [bool]$Simplified = $false)
+    param([int]$Size)
 
     $bitmap = New-Object System.Drawing.Bitmap($Size, $Size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
@@ -20,151 +28,51 @@ function New-IconBitmap {
     $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
     $graphics.Clear([System.Drawing.Color]::Transparent)
 
-    $scale = $Size / 1024.0
+    $scale = $Size / 256.0
     function S([double]$value) { return [single]($value * $scale) }
+    function P([double]$x, [double]$y) { return New-Object System.Drawing.PointF((S $x), (S $y)) }
 
-    # Les traits fins mis à l'échelle linéairement deviennent une tache floue en
-    # dessous d'environ 64px. Le rendu simplifié garde donc seulement le soleil
-    # central et les deux arcs "internet" les plus lisibles.
-    $strokeScale = if ($Simplified) { ($Size * 3.0) / 1024.0 } else { $scale }
-    function Sw([double]$value) { return [single]($value * $strokeScale) }
+    # ── Goutte ────────────────────────────────────────────────────────────
+    $dropletPath = New-Object System.Drawing.Drawing2D.GraphicsPath
+    $dropletPath.AddBezier((P 128 26), (P 128 26), (P 208 128), (P 208 168))
+    $dropletRect = New-Object System.Drawing.RectangleF((S 48), (S 88), (S 160), (S 160))
+    $dropletPath.AddArc($dropletRect, 0, 180)
+    $dropletPath.AddBezier((P 48 168), (P 48 128), (P 128 26), (P 128 26))
+    $dropletPath.CloseFigure()
 
-    $rect = New-Object System.Drawing.RectangleF((S 72), (S 72), (S 880), (S 880))
-    $radius = S 190
-    $path = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $path.AddArc($rect.X, $rect.Y, $radius, $radius, 180, 90)
-    $path.AddArc($rect.Right - $radius, $rect.Y, $radius, $radius, 270, 90)
-    $path.AddArc($rect.Right - $radius, $rect.Bottom - $radius, $radius, $radius, 0, 90)
-    $path.AddArc($rect.X, $rect.Bottom - $radius, $radius, $radius, 90, 90)
-    $path.CloseFigure()
-
-    $tileBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
-        $rect,
-        [System.Drawing.Color]::FromArgb(255, 12, 24, 34),
-        [System.Drawing.Color]::FromArgb(255, 19, 55, 51),
-        [System.Drawing.Drawing2D.LinearGradientMode]::ForwardDiagonal
+    $gradRect = New-Object System.Drawing.RectangleF((S 40), (S 20), (S 176), (S 220))
+    $dropletBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+        $gradRect,
+        [System.Drawing.Color]::FromArgb(255, 247, 162, 79),
+        [System.Drawing.Color]::FromArgb(255, 79, 179, 166),
+        35.0
     )
-    $graphics.FillPath($tileBrush, $path)
-
-    if (-not $Simplified) {
-        $glowPath = New-Object System.Drawing.Drawing2D.GraphicsPath
-        $glowPath.AddEllipse((S 176), (S 132), (S 640), (S 640))
-        $glowBrush = New-Object System.Drawing.Drawing2D.PathGradientBrush($glowPath)
-        $glowBrush.CenterPoint = New-Object System.Drawing.PointF((S 494), (S 430))
-        $glowBrush.CenterColor = [System.Drawing.Color]::FromArgb(95, 255, 219, 92)
-        $glowBrush.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 255, 219, 92))
-        $graphics.FillPath($glowBrush, $glowPath)
-        $glowBrush.Dispose()
-        $glowPath.Dispose()
-
-        $coolGlowPath = New-Object System.Drawing.Drawing2D.GraphicsPath
-        $coolGlowPath.AddEllipse((S 250), (S 284), (S 610), (S 560))
-        $coolGlowBrush = New-Object System.Drawing.Drawing2D.PathGradientBrush($coolGlowPath)
-        $coolGlowBrush.CenterPoint = New-Object System.Drawing.PointF((S 620), (S 590))
-        $coolGlowBrush.CenterColor = [System.Drawing.Color]::FromArgb(72, 88, 219, 211)
-        $coolGlowBrush.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 88, 219, 211))
-        $graphics.FillPath($coolGlowBrush, $coolGlowPath)
-        $coolGlowBrush.Dispose()
-        $coolGlowPath.Dispose()
-    }
-
-    if (-not $Simplified) {
-        $borderPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(218, 225, 249, 240), (S 12))
-        $graphics.DrawPath($borderPen, $path)
-        $innerPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(70, 255, 211, 87), (S 5))
-        $innerRect = New-Object System.Drawing.RectangleF((S 96), (S 96), (S 832), (S 832))
-        $graphics.DrawArc($innerPen, $innerRect, 202, 122)
-        $innerPen.Dispose()
-    }
-
-    $globeRect = New-Object System.Drawing.RectangleF((S 236), (S 238), (S 552), (S 552))
-    $shadowPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(52, 0, 0, 0), (Sw 94))
-    $shadowPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $shadowPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $graphics.DrawArc($shadowPen, $globeRect, 156, 242)
-    $shadowPen.Dispose()
-
-    $cyanPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 67, 219, 209), (Sw 68))
-    $cyanPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $cyanPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $cyanPen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
-    $graphics.DrawArc($cyanPen, $globeRect, 204, 236)
-
-    $warmPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 255, 188, 64), (Sw 48))
-    $warmPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $warmPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $warmPen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
-    $graphics.DrawArc($warmPen, $globeRect, 304, 124)
-
-    $whitePen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(255, 235, 255, 251), (Sw 40))
-    $whitePen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $whitePen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-    $whitePen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
-    $graphics.DrawArc($whitePen, $globeRect, 54, 146)
-
-    if (-not $Simplified) {
-        $meridianPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(150, 235, 255, 251), (S 21))
-        $meridianPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $meridianPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $graphics.DrawArc($meridianPen, (S 344), (S 236), (S 336), (S 552), 108, 232)
-        $graphics.DrawArc($meridianPen, (S 236), (S 394), (S 552), (S 236), 12, 157)
-        $meridianPen.Dispose()
-
-        $routePen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(212, 118, 232, 224), (S 18))
-        $routePen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $routePen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $graphics.DrawBezier($routePen, (S 310), (S 612), (S 466), (S 700), (S 642), (S 681), (S 744), (S 552))
-        $routePen.Dispose()
-    }
-
-    $sunSize = if ($Simplified) { Sw 180 } else { S 172 }
-    $sunX = (S 512) - ($sunSize / 2.0)
-    $sunY = (S 508) - ($sunSize / 2.0)
-    $sunRect = New-Object System.Drawing.RectangleF($sunX, $sunY, $sunSize, $sunSize)
-    $sunGlowMargin = S 42
-    $sunGlowSize = S 84
-    $sunGlowX = $sunRect.X - $sunGlowMargin
-    $sunGlowY = $sunRect.Y - $sunGlowMargin
-    $sunGlowWidth = $sunRect.Width + $sunGlowSize
-    $sunGlowHeight = $sunRect.Height + $sunGlowSize
-    $sunGlowRect = New-Object System.Drawing.RectangleF($sunGlowX, $sunGlowY, $sunGlowWidth, $sunGlowHeight)
-    $sunGlowPath = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $sunGlowPath.AddEllipse($sunGlowRect)
-    $sunGlowBrush = New-Object System.Drawing.Drawing2D.PathGradientBrush($sunGlowPath)
-    $sunGlowBrush.CenterColor = [System.Drawing.Color]::FromArgb(145, 255, 206, 76)
-    $sunGlowBrush.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 255, 206, 76))
-    $graphics.FillPath($sunGlowBrush, $sunGlowPath)
-    $sunGlowBrush.Dispose()
-    $sunGlowPath.Dispose()
-
-    $sunBrush = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
-        $sunRect,
-        [System.Drawing.Color]::FromArgb(255, 255, 230, 110),
-        [System.Drawing.Color]::FromArgb(255, 255, 132, 51),
-        [System.Drawing.Drawing2D.LinearGradientMode]::ForwardDiagonal
+    $blend = New-Object System.Drawing.Drawing2D.ColorBlend(3)
+    $blend.Colors = @(
+        [System.Drawing.Color]::FromArgb(255, 247, 162, 79),
+        [System.Drawing.Color]::FromArgb(255, 224, 138, 92),
+        [System.Drawing.Color]::FromArgb(255, 79, 179, 166)
     )
-    $graphics.FillEllipse($sunBrush, $sunRect)
+    $blend.Positions = @(0.0, 0.55, 1.0)
+    $dropletBrush.InterpolationColors = $blend
+    $graphics.FillPath($dropletBrush, $dropletPath)
 
-    if (-not $Simplified) {
-        $sunCore = New-Object System.Drawing.RectangleF((S 484), (S 454), (S 82), (S 82))
-        $coreBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(205, 255, 247, 185))
-        $graphics.FillEllipse($coreBrush, $sunCore)
-        $coreBrush.Dispose()
-    }
+    # ── Etincelle (renforcee : ~1.8x plus grande et plus epaisse que le
+    #    detail d'origine, pour rester lisible une fois reduite a 32-48px) ──
+    $sparkPath = New-Object System.Drawing.Drawing2D.GraphicsPath
+    $sparkPath.AddBezier((P 128 66), (P 134 106), (P 148 120), (P 190 128))
+    $sparkPath.AddBezier((P 190 128), (P 148 136), (P 134 150), (P 128 190))
+    $sparkPath.AddBezier((P 128 190), (P 122 150), (P 108 136), (P 66 128))
+    $sparkPath.AddBezier((P 66 128), (P 108 120), (P 122 106), (P 128 66))
+    $sparkPath.CloseFigure()
 
-    if (-not $Simplified) {
-        $endpointRect = New-Object System.Drawing.RectangleF((S 736), (S 536), (S 70), (S 70))
-        $endpointBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 105, 232, 224))
-        $graphics.FillEllipse($endpointBrush, $endpointRect)
-        $endpointBrush.Dispose()
-    }
+    $sparkBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
+    $graphics.FillPath($sparkBrush, $sparkPath)
 
-    $whitePen.Dispose()
-    $warmPen.Dispose()
-    $cyanPen.Dispose()
-    $sunBrush.Dispose()
-    $tileBrush.Dispose()
-    $path.Dispose()
+    $sparkBrush.Dispose()
+    $sparkPath.Dispose()
+    $dropletBrush.Dispose()
+    $dropletPath.Dispose()
     $graphics.Dispose()
     return $bitmap
 }
@@ -237,13 +145,12 @@ $source = New-IconBitmap -Size 1024
 Save-Png -Bitmap $source -Path $sourcePath
 $source.Dispose()
 
-$sizes = @(256, 128, 64, 48, 32, 24, 16)
-# En dessous de 64px, le dessin détaillé devient une tache floue (barre des tâches,
-# barre de titre, Alt+Tab) : rendu simplifié pour ces tailles.
-$simplifiedMaxSize = 48
+# Meme jeu de tailles que l'ico actuellement embarque (verifie octet par
+# octet avant cette refonte) : 16/20/24/32/40/48/64/256.
+$sizes = @(256, 64, 48, 40, 32, 24, 20, 16)
 $pngImages = New-Object System.Collections.Generic.List[byte[]]
 foreach ($size in $sizes) {
-    $bitmap = New-IconBitmap -Size $size -Simplified:($size -le $simplifiedMaxSize)
+    $bitmap = New-IconBitmap -Size $size
     $memory = New-Object System.IO.MemoryStream
     $bitmap.Save($memory, [System.Drawing.Imaging.ImageFormat]::Png)
     $pngImages.Add($memory.ToArray())

@@ -14,7 +14,7 @@ namespace Lumora.WinUI;
 // la version "premier lancement" a deja ete vue.
 public sealed partial class MainWindow
 {
-    private const int WelcomeSlideCount = 5;
+    private const int WelcomeSlideCount = 6;
     private const double WelcomeSlideDistance = 48;
     private const double WelcomeCursorStep = 16;
     private const double WelcomeTransitionMs = 260;
@@ -25,10 +25,10 @@ public sealed partial class MainWindow
 
     private static readonly string[] WelcomePulseKeys =
     {
-        "Welcome0Pulse", "Welcome1Pulse", "Welcome2Pulse", "Welcome3Pulse", "Welcome4Pulse",
+        "Welcome0Pulse", "Welcome1Pulse", "Welcome2Pulse", "Welcome3Pulse", "Welcome4Pulse", "Welcome5Pulse",
     };
 
-    private StackPanel[] WelcomeSteps => new[] { WelcomeStep0, WelcomeStep1, WelcomeStep2, WelcomeStep3, WelcomeStep4 };
+    private StackPanel[] WelcomeSteps => new[] { WelcomeStep0, WelcomeStep1, WelcomeStep2, WelcomeStep3, WelcomeStep4, WelcomeStep5 };
 
     private TranslateTransform[] WelcomeStepTransforms => new[]
     {
@@ -37,6 +37,7 @@ public sealed partial class MainWindow
         (TranslateTransform)WelcomeStep2.RenderTransform,
         (TranslateTransform)WelcomeStep3.RenderTransform,
         (TranslateTransform)WelcomeStep4.RenderTransform,
+        (TranslateTransform)WelcomeStep5.RenderTransform,
     };
 
     // isReplay=false : premier lancement reel, la fin des slides enchaine sur

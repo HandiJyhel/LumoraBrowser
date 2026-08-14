@@ -691,9 +691,15 @@ internal sealed class InstallerForm : Form
         RunIcacls(fixedRuntimeDir, "*S-1-15-2-1:(OI)(CI)(RX)");
     }
 
+    // icacls /T imprime une ligne par fichier traite (FixedRuntime en contient
+    // des milliers) : rediriger stdout/stderr SANS les lire en continu remplit
+    // le tampon du pipe, bloque icacls en ecriture, et WaitForExit() n'aboutit
+    // jamais (constate en reel : installation figee indefiniment sur cette
+    // etape). Drainer les deux flux de facon asynchrone pendant l'attente,
+    // comme le documente Microsoft pour Process.WaitForExit avec redirection.
     private static void RunIcacls(string path, string grantArgument)
     {
-        var process = Process.Start(new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = "icacls.exe",
             Arguments = $"\"{path}\" /grant {grantArgument} /T /C",
@@ -701,18 +707,31 @@ internal sealed class InstallerForm : Form
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true
-        });
+        };
 
-        if (process is null)
+        var errorOutput = new System.Text.StringBuilder();
+        using var process = new Process { StartInfo = startInfo };
+        process.OutputDataReceived += (_, _) => { };
+        process.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is not null)
+            {
+                errorOutput.AppendLine(e.Data);
+            }
+        };
+
+        if (!process.Start())
         {
             throw new InvalidOperationException("Impossible de lancer icacls pour autoriser le moteur WebView2.");
         }
 
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
         process.WaitForExit();
+
         if (process.ExitCode != 0)
         {
-            var error = process.StandardError.ReadToEnd();
-            throw new InvalidOperationException($"icacls a échoué (code {process.ExitCode}) sur {path} : {error}");
+            throw new InvalidOperationException($"icacls a échoué (code {process.ExitCode}) sur {path} : {errorOutput}");
         }
     }
 

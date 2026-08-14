@@ -18,6 +18,32 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow
 {
+    // Regle renforcee (2026-08-13, remplace "8 caracteres, aucune complexite") :
+    // le mot de passe de compte sert desormais aussi de cle de chiffrement pour
+    // les sauvegardes .lumorabackup (reutilise tel quel, voir
+    // MainWindow.SettingsStorage.cs) - 8 caracteres sans contrainte etait
+    // insuffisant pour proteger un fichier qui peut contenir TOUS les mots de
+    // passe/cartes de l'utilisateur. Utilisee aux 3 points de creation/
+    // changement de mot de passe (creation de compte, changement volontaire,
+    // reinitialisation par cle de recuperation).
+    private static bool IsAccountPasswordStrongEnough(string password, out string error)
+    {
+        if (password.Length < 12)
+        {
+            error = "Le mot de passe doit faire au moins 12 caractères.";
+            return false;
+        }
+
+        if (!password.Any(c => !char.IsLetterOrDigit(c)))
+        {
+            error = "Le mot de passe doit contenir au moins un caractère spécial.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
+    }
+
     // ── Système de profil ────────────────────────────────────────────────────
 
     private async Task InitializeLoginOverlayAsync()
@@ -62,6 +88,13 @@ public sealed partial class MainWindow
                 return;
             }
             ShowLoginPanel("create");
+        }
+        else if (!_userProfile.HasAccountPassword)
+        {
+            // Profil sans mot de passe (2026-08-13) : aucun ecran de connexion a
+            // l'ouverture, entree directe - voir UserProfile.HasAccountPassword.
+            DismissLoginOverlay();
+            return;
         }
         else
         {
@@ -224,6 +257,14 @@ public sealed partial class MainWindow
             return;
         }
 
+        // Profil sans mot de passe (2026-08-13) : aucun ecran de connexion,
+        // entree directe - voir UserProfile.HasAccountPassword.
+        if (!_userProfile.HasAccountPassword)
+        {
+            DismissLoginOverlay();
+            return;
+        }
+
         LoginWelcomeText.Text = $"Bonjour, {_userProfile.Name}";
         PinWelcomeText.Text = $"Bonjour, {_userProfile.Name}";
         ShowPinButton.Visibility = _userProfile.HasPinLogin ? Visibility.Visible : Visibility.Collapsed;
@@ -272,6 +313,7 @@ public sealed partial class MainWindow
         _pendingProfileId = null;
         _profileCreationTarget = null;
         ProfileNameBox.Text = string.Empty;
+        NoPasswordSwitch.IsOn = false; // remet aussi les champs mot de passe/PIN visibles (Toggled)
         CreatePasswordBox.Password = string.Empty;
         ConfirmPasswordBox.Password = string.Empty;
         EnablePinSwitch.IsOn = false;
@@ -415,6 +457,15 @@ public sealed partial class MainWindow
         _ = MigrateAndClearBrowserPasswordsAsync();
         if (!_isGuestMode && !_uiSettings.SetupWizardCompleted)
             ShowSetupWizard();
+
+        // Signal "cette fenetre a ses onglets prets" (restauration de session
+        // comprise) - utilise par MainWindow.TabDetach.cs pour savoir quand
+        // ajouter l'onglet detache sans risquer un doublon avec
+        // ApplyStartupPage. Voir DetachTabToNewWindow. IsBrowserReady est la
+        // version "etat" (utile quand ce point est deja passe au moment ou
+        // l'appelant regarde, pas seulement pour un abonnement futur).
+        IsBrowserReady = true;
+        BrowserReady?.Invoke();
     }
 
     private void InitSessionTimer()
@@ -468,6 +519,12 @@ public sealed partial class MainWindow
     private void LockSessionNow(string statusMessage)
     {
         if (_isGuestMode || _userProfile is null) return;
+        // Profil sans mot de passe (2026-08-13) : rien a verrouiller, il n'y a
+        // aucun moyen de re-deverrouiller sans mot de passe - "sans mot de
+        // passe, le navigateur devient un navigateur presque banal" (mots de
+        // l'utilisateur). L'inactivite/la veille/le verrouillage Windows ne
+        // font donc rien pour ce profil, voir UserProfile.HasAccountPassword.
+        if (!_userProfile.HasAccountPassword) return;
         if (LoginOverlay.Visibility == Visibility.Visible) return; // deja verrouille
 
         // Verrouillage réel : on purge la clé du coffre de la mémoire, pas seulement
@@ -557,14 +614,27 @@ public sealed partial class MainWindow
         {
             ProfileNameDisplay.Text = "Aucun profil configuré.";
             ProfilePinSwitch.IsEnabled = false;
+            ProfileNoPasswordNotice.Visibility = Visibility.Collapsed;
+            ChangeProfilePasswordButton.Visibility = Visibility.Visible;
+            CreateRecoveryKeyButton.Visibility = Visibility.Visible;
         }
         else
         {
             ProfileNameDisplay.Text = $"Connecté en tant que : {_userProfile.Name}\nDossier : {_profile.ProfileDir}";
-            ProfilePinSwitch.IsEnabled = true;
+            ProfilePinSwitch.IsEnabled = _userProfile.HasAccountPassword;
             _suppressUiSettingsSave = true;
             ProfilePinSwitch.IsOn = _userProfile.HasPinLogin;
             _suppressUiSettingsSave = false;
+
+            // Profil sans mot de passe (2026-08-13) : choix permanent, voir
+            // UserProfile.HasAccountPassword - "Changer le mot de passe" et
+            // "Nouvelle clé de récupération" n'ont plus de sens (rien à
+            // changer/récupérer), masqués plutôt que menant à une impasse.
+            var hasPassword = _userProfile.HasAccountPassword;
+            ProfileNoPasswordNotice.IsOpen = !hasPassword;
+            ProfileNoPasswordNotice.Visibility = hasPassword ? Visibility.Collapsed : Visibility.Visible;
+            ChangeProfilePasswordButton.Visibility = hasPassword ? Visibility.Visible : Visibility.Collapsed;
+            CreateRecoveryKeyButton.Visibility = hasPassword ? Visibility.Visible : Visibility.Collapsed;
         }
         RefreshAvatarUi();
 
@@ -792,6 +862,14 @@ public sealed partial class MainWindow
             return null;
         }
 
+        // Profil cible sans mot de passe (2026-08-13) : aucune preuve possible
+        // a demander, ce profil a deja assume qu'il reste ouvert a quiconque
+        // utilise cette session Windows - voir UserProfile.HasAccountPassword.
+        if (!targetProfile.HasAccountPassword)
+        {
+            return targetProfile;
+        }
+
         var passwordBox = new PasswordBox { PlaceholderText = "Mot de passe", MinWidth = 300 };
         var dialog = new ContentDialog
         {
@@ -913,6 +991,31 @@ public sealed partial class MainWindow
         ConfirmPinBox.Visibility = show;
     }
 
+    // Profil sans mot de passe (2026-08-13) : masque le mot de passe ET le PIN
+    // (rien a raccourcir sans mot de passe de base) des que le choix est fait,
+    // affiche l'avertissement. Choix permanent - voir CreateProfileButton_Click
+    // et MEMORY.md pour le raisonnement complet.
+    private void NoPasswordSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        var noPassword = NoPasswordSwitch.IsOn;
+        var passwordFieldsVisibility = noPassword ? Visibility.Collapsed : Visibility.Visible;
+
+        CreatePasswordBox.Visibility = passwordFieldsVisibility;
+        CreatePasswordBox.Password = string.Empty;
+        ConfirmPasswordBox.Visibility = passwordFieldsVisibility;
+        ConfirmPasswordBox.Password = string.Empty;
+
+        EnablePinSwitch.Visibility = passwordFieldsVisibility;
+        EnablePinSwitch.IsOn = false;
+        PinSetupBox.Visibility = Visibility.Collapsed;
+        PinSetupBox.Password = string.Empty;
+        ConfirmPinBox.Visibility = Visibility.Collapsed;
+        ConfirmPinBox.Password = string.Empty;
+
+        NoPasswordWarningBar.IsOpen = noPassword;
+        NoPasswordWarningBar.Visibility = noPassword ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     // "Continuer sans profil" ne peut plus se faire a chaud dans ce process :
     // WEBVIEW2_USER_DATA_FOLDER est deja fige sur le dossier du profil "par
     // defaut" depuis le tout debut du process (voir WebView2Bootstrap.ConfigureOnce
@@ -983,35 +1086,51 @@ public sealed partial class MainWindow
     private async void CreateProfileButton_Click(object sender, RoutedEventArgs e)
     {
         var name = ProfileNameBox.Text.Trim();
-        var pw   = CreatePasswordBox.Password;
-        var pw2  = ConfirmPasswordBox.Password;
 
         if (string.IsNullOrWhiteSpace(name))
         { LoginStatusText.Text = "Veuillez entrer un prénom ou pseudo."; return; }
 
-        if (pw.Length < 8)
-        { LoginStatusText.Text = "Le mot de passe doit faire au moins 8 caractères."; return; }
-
-        if (pw != pw2)
-        { LoginStatusText.Text = "Les mots de passe ne correspondent pas."; return; }
-
-        string? pin = null;
-        if (EnablePinSwitch.IsOn)
+        // Profil sans mot de passe (2026-08-13) : choix permanent, voir
+        // MEMORY.md - aucune verification de force, aucun PIN (rien a
+        // raccourcir sans mot de passe de base), aucune cle de recuperation
+        // (rien a recuperer). NoPasswordSwitch_Toggled garantit deja que les
+        // champs mot de passe/PIN sont vides et masques dans ce cas.
+        if (NoPasswordSwitch.IsOn)
         {
-            var pinVal  = PinSetupBox.Password;
-            var pinConf = ConfirmPinBox.Password;
-            if (pinVal.Length != 6 || !pinVal.All(char.IsDigit))
-            { LoginStatusText.Text = "Le code PIN doit contenir exactement 6 chiffres."; return; }
-            if (pinVal != pinConf)
-            { LoginStatusText.Text = "Les codes PIN ne correspondent pas."; return; }
-            pin = pinVal;
+            _pendingUserProfile = UserProfile.Create(name, null, null);
+            _pendingProfilePassword = null;
+            _pendingProfilePin = null;
+            _pendingRecoveryKey = null;
         }
+        else
+        {
+            var pw  = CreatePasswordBox.Password;
+            var pw2 = ConfirmPasswordBox.Password;
 
-        var recoveryKey = UserProfile.GenerateRecoveryKey();
-        _pendingUserProfile = await Task.Run(() => UserProfile.Create(name, pw, pin).WithRecoveryKey(recoveryKey));
-        _pendingProfilePassword = pw;
-        _pendingProfilePin = pin;
-        _pendingRecoveryKey = recoveryKey;
+            if (!IsAccountPasswordStrongEnough(pw, out var pwError))
+            { LoginStatusText.Text = pwError; return; }
+
+            if (pw != pw2)
+            { LoginStatusText.Text = "Les mots de passe ne correspondent pas."; return; }
+
+            string? pin = null;
+            if (EnablePinSwitch.IsOn)
+            {
+                var pinVal  = PinSetupBox.Password;
+                var pinConf = ConfirmPinBox.Password;
+                if (pinVal.Length != 6 || !pinVal.All(char.IsDigit))
+                { LoginStatusText.Text = "Le code PIN doit contenir exactement 6 chiffres."; return; }
+                if (pinVal != pinConf)
+                { LoginStatusText.Text = "Les codes PIN ne correspondent pas."; return; }
+                pin = pinVal;
+            }
+
+            var recoveryKey = UserProfile.GenerateRecoveryKey();
+            _pendingUserProfile = await Task.Run(() => UserProfile.Create(name, pw, pin).WithRecoveryKey(recoveryKey));
+            _pendingProfilePassword = pw;
+            _pendingProfilePin = pin;
+            _pendingRecoveryKey = recoveryKey;
+        }
         // Trouve en usage reel le 2026-07-22 : le tout premier profil crevait la
         // convention en gardant l'identifiant sentinelle "default" quel que soit
         // le prenom saisi, alors que tout profil suivant recevait deja un
@@ -1265,7 +1384,7 @@ public sealed partial class MainWindow
         var newBox = new PasswordBox
         {
             Header = "Nouveau mot de passe",
-            PlaceholderText = "Minimum 8 caractères",
+            PlaceholderText = "Minimum 12 caractères + 1 caractère spécial",
             MinWidth = 320
         };
         var confirmBox = new PasswordBox
@@ -1293,9 +1412,9 @@ public sealed partial class MainWindow
             LoginStatusText.Text = "Clé de récupération incorrecte.";
             return;
         }
-        if (newBox.Password.Length < 8)
+        if (!IsAccountPasswordStrongEnough(newBox.Password, out var recoveryPwError))
         {
-            LoginStatusText.Text = "Le nouveau mot de passe doit faire au moins 8 caractères.";
+            LoginStatusText.Text = recoveryPwError;
             return;
         }
         if (newBox.Password != confirmBox.Password)
@@ -1463,6 +1582,9 @@ public sealed partial class MainWindow
     private async void ChangeProfilePasswordButton_Click(object sender, RoutedEventArgs e)
     {
         if (_userProfile is null) return;
+        // Defense en profondeur : le bouton est deja masque pour un profil sans
+        // mot de passe (RefreshProfileSettings), rien a changer ici de toute facon.
+        if (!_userProfile.HasAccountPassword) return;
 
         var dialog = new ContentDialog
         {
@@ -1473,7 +1595,7 @@ public sealed partial class MainWindow
         };
         var panel = new StackPanel { Spacing = 10 };
         var oldBox  = new PasswordBox { PlaceholderText = "Mot de passe actuel", MinWidth = 260 };
-        var newBox  = new PasswordBox { PlaceholderText = "Nouveau mot de passe (min. 8 car.)", MinWidth = 260 };
+        var newBox  = new PasswordBox { PlaceholderText = "Nouveau mot de passe (min. 12 car. + spécial)", MinWidth = 260 };
         var confBox = new PasswordBox { PlaceholderText = "Confirmer", MinWidth = 260 };
         panel.Children.Add(oldBox);
         panel.Children.Add(newBox);
@@ -1483,8 +1605,8 @@ public sealed partial class MainWindow
 
         if (!await Task.Run(() => _userProfile.VerifyPassword(oldBox.Password)))
         { StatusText.Text = "Mot de passe actuel incorrect."; return; }
-        if (newBox.Password.Length < 8)
-        { StatusText.Text = "Le nouveau mot de passe doit faire au moins 8 caractères."; return; }
+        if (!IsAccountPasswordStrongEnough(newBox.Password, out var changePwError))
+        { StatusText.Text = changePwError; return; }
         if (newBox.Password != confBox.Password)
         { StatusText.Text = "Les mots de passe ne correspondent pas."; return; }
 
@@ -1519,6 +1641,10 @@ public sealed partial class MainWindow
     private async void CreateRecoveryKeyButton_Click(object sender, RoutedEventArgs e)
     {
         if (_userProfile is null) return;
+        // Defense en profondeur : le bouton est deja masque pour un profil sans
+        // mot de passe (RefreshProfileSettings) - une cle de recuperation sert
+        // a reinitialiser un mot de passe, rien a recuperer sans mot de passe.
+        if (!_userProfile.HasAccountPassword) return;
         if (!await RequireVaultAccessAsync())
         {
             StatusText.Text = "Clé de récupération non créée : accès au coffre refusé.";

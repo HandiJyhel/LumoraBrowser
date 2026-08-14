@@ -32,6 +32,42 @@ public sealed partial class MainWindow
         };
     }
 
+    // Utilise par les entrees "Déplacer avant"/"Déplacer après" du menu
+    // contextuel (2026-08-14) pour desactiver l'entree qui ne ferait rien
+    // (deja premier/dernier parmi ses freres) plutot que de la laisser
+    // cliquable sans effet.
+    private (bool IsFirst, bool IsLast) BookmarkSiblingBoundaries(BookmarkNode node)
+    {
+        var siblings = _allBookmarkNodes
+            .Where(n => n.ParentId.Equals(node.ParentId, StringComparison.Ordinal))
+            .OrderBy(n => n.Position)
+            .ToList();
+        var index = siblings.FindIndex(n => n.Id == node.Id);
+        if (index < 0)
+        {
+            return (true, true);
+        }
+        return (index == 0, index == siblings.Count - 1);
+    }
+
+    private void BookmarkContextMoveBefore_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: BookmarkNode node }) return;
+        if (_bookmarks.MoveNodeAdjacent(node.Id, moveForward: false))
+        {
+            ReloadBookmarks();
+        }
+    }
+
+    private void BookmarkContextMoveAfter_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: BookmarkNode node }) return;
+        if (_bookmarks.MoveNodeAdjacent(node.Id, moveForward: true))
+        {
+            ReloadBookmarks();
+        }
+    }
+
     private MenuFlyout CreateBookmarkFolderFlyout(BookmarkNode folder)
     {
         var flyout = new MenuFlyout { Placement = FlyoutPlacementMode.Bottom };
@@ -77,6 +113,40 @@ public sealed partial class MainWindow
 
         if (!node.IsRoot)
         {
+            flyout.Items.Add(new MenuFlyoutSeparator());
+
+            // Alternative au glisser (2026-08-14, demande explicite
+            // utilisateur : "un clic droit sur le favori que je veux
+            // d\u00E9placer... \u00E7a \u00E9vitera les fausses manipulations" - apres 3
+            // correctifs reels du glisser-depose bases sur documentation puis
+            // trace, celui-ci echouait encore chez l'utilisateur en
+            // conditions reelles). Deplace d'UN cran parmi les freres du meme
+            // parent (BookmarkStore.MoveNodeAdjacent, reutilise ReorderNode
+            // deja teste) - fiable car base sur un simple clic, aucun geste
+            // souris a interpreter. Desactive aux extremites plutot que
+            // masque : garde une position stable dans le menu.
+            var (isFirst, isLast) = BookmarkSiblingBoundaries(node);
+
+            var moveBeforeItem = new MenuFlyoutItem
+            {
+                Text = "D\u00E9placer avant",
+                Tag = node,
+                Icon = CreateMenuGlyphIcon("\uE76B"),
+                IsEnabled = !isFirst
+            };
+            moveBeforeItem.Click += BookmarkContextMoveBefore_Click;
+            flyout.Items.Add(moveBeforeItem);
+
+            var moveAfterItem = new MenuFlyoutItem
+            {
+                Text = "D\u00E9placer apr\u00E8s",
+                Tag = node,
+                Icon = CreateMenuGlyphIcon("\uE76C"),
+                IsEnabled = !isLast
+            };
+            moveAfterItem.Click += BookmarkContextMoveAfter_Click;
+            flyout.Items.Add(moveAfterItem);
+
             flyout.Items.Add(new MenuFlyoutSeparator());
 
             var renameItem = new MenuFlyoutItem

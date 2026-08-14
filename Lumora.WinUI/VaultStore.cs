@@ -98,6 +98,27 @@ internal sealed class VaultStore
         return _credentials.ToList();
     }
 
+    // Reconstruction complete depuis une sauvegarde .lumorabackup (2026-08-13) :
+    // remplace credentials/cartes directement, Id/Totp/Label/dates preserves a
+    // l'identique - contrairement a Upsert()/UpsertCard(), penses pour des
+    // mises a jour incrementales au quotidien, pas une restauration en bloc.
+    // Le coffre cible reste dans le mode ou il se trouvait deja (DPAPI par
+    // defaut pour un profil neuf, cas du premier lancement) : aucune
+    // reactivation du mode "mot de passe maitre" n'est forcee ici.
+    // Retourne false sans rien modifier si le coffre CIBLE est deja en mode
+    // "mot de passe maitre" et verrouille (cas d'un import DANS un profil
+    // existant, pas le scenario principal de premier lancement) - Save()
+    // n'ecrirait alors rien de nouveau silencieusement (branche aes256 sans
+    // _unlockedKey), mieux vaut le signaler a l'appelant que de faire semblant.
+    public bool RestoreFromBackup(List<VaultCredential> credentials, List<VaultPaymentCard> cards)
+    {
+        if (_header.Mode == "aes256" && _unlockedKey is null) return false;
+        _credentials = credentials;
+        _cards = cards;
+        Save();
+        return true;
+    }
+
     // ── Portefeuille (cartes de paiement) ────────────────────────────────────
 
     public List<VaultPaymentCard> ListCards()
@@ -235,6 +256,27 @@ internal sealed class VaultStore
         Save();
     }
 
+    // Modifie le mot de passe enregistré d'un compte (filet de sécurité si la
+    // capture automatique s'est trompée, ex. un champ révélé pris pour un
+    // identifiant a fini par écraser le mot de passe) — identifiant et reste
+    // des métadonnées inchangés.
+    public void SetPasswordById(string id, string password)
+    {
+        if (IsLocked) return;
+        var idx = _credentials.FindIndex(c => c.Id == id);
+        if (idx < 0) return;
+
+        var old = _credentials[idx];
+        _credentials[idx] = new VaultCredential
+        {
+            Id = old.Id, Origin = old.Origin, Username = old.Username, Password = password ?? string.Empty,
+            Label = old.Label, LoginUrl = old.LoginUrl,
+            CreatedAt = old.CreatedAt, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            TotpSecret = old.TotpSecret, TotpDigits = old.TotpDigits, TotpPeriod = old.TotpPeriod
+        };
+        Save();
+    }
+
     private void SetLabelAt(int idx, string label)
     {
         var old = _credentials[idx];
@@ -316,6 +358,20 @@ internal sealed class VaultStore
         if (!HasMasterPassword || _header.Salt is null) return false;
         var salt = Convert.FromBase64String(_header.Salt);
         var key  = DeriveKey(password, salt, _header);
+        return UnlockWithKey(key);
+    }
+
+    // Déverrouille directement avec une clé déjà dérivée (pas de mot de
+    // passe, pas de re-dérivation Argon2id) - utilisé UNIQUEMENT pour
+    // partager le déverrouillage déjà fait d'une fenêtre Lumora avec une
+    // autre fenêtre du MÊME process (MainWindow.NewWindow.cs, "Nouvelle
+    // fenêtre"/mono-instance, 2026-08-13) : la clé ne quitte jamais la
+    // mémoire du process, jamais écrite sur disque, jamais transmise entre
+    // processus différents. Retourne false si la clé ne correspond pas au
+    // coffre (mêmes vérifications que Unlock : le déchiffrement échoue).
+    public bool UnlockWithKey(byte[] key)
+    {
+        if (!HasMasterPassword || _header.Salt is null) return false;
         if (!TryDecrypt(_header.Data ?? string.Empty, key, _header.DataCipher, AadVaultData, out List<VaultCredential> creds)) return false;
         _unlockedKey  = key;
         _credentials  = creds;
@@ -327,6 +383,11 @@ internal sealed class VaultStore
         EnsureCredentialIds();
         return true;
     }
+
+    // Copie défensive de la clé courante (jamais la référence interne, pour
+    // qu'un ZeroMemory dans CE store - voir Lock() - n'efface pas aussi la
+    // clé déjà transmise à une fenêtre sœur). Null si verrouillé.
+    public byte[]? UnlockedKeySnapshot => _unlockedKey is null ? null : (byte[])_unlockedKey.Clone();
 
     // Décrypte le blob du portefeuille avec la clé du coffre. Un blob de cartes
     // illisible ne doit pas empêcher l'ouverture des identifiants : on trace et

@@ -76,10 +76,7 @@ internal sealed class LumoraProfilePaths
 
     public static LumoraProfilePaths Default()
     {
-        var environmentProfileDir =
-            Environment.GetEnvironmentVariable(ProfileDirectoryEnvironmentVariable)
-            ?? Environment.GetEnvironmentVariable(LegacyNovaProfileDirectoryEnvironmentVariable)
-            ?? Environment.GetEnvironmentVariable(LegacyPulseProfileDirectoryEnvironmentVariable);
+        var environmentProfileDir = EnvironmentProfileDirOverride();
         if (!string.IsNullOrWhiteSpace(environmentProfileDir))
         {
             return FromDirectory(Path.GetFullPath(environmentProfileDir));
@@ -95,11 +92,42 @@ internal sealed class LumoraProfilePaths
         return ForProfileId(config.ActiveProfileId);
     }
 
+    // 2026-08-13 : LUMORA_PROFILE_DIR isolait deja le lancement (Default(),
+    // GuestProcessLauncher --guest) mais PAS la creation d'un nouveau profil
+    // au chemin par defaut ("Ou stocker votre profil ?" sans dossier
+    // personnalise choisi, voir ProfileLocationContinueButton_Click) - un
+    // profil de verification cree ainsi atterrissait reellement dans le vrai
+    // %LOCALAPPDATA%\Lumora\profiles a cote des profils reels de
+    // l'utilisateur, au lieu de rester confine au dossier de test. Incident
+    // reel trouve en verifiant (voir MEMORY.md), corrige ici a la racine :
+    // meme convention que Default() (le dossier isole EST le profil, a plat,
+    // pas une racine a sous-dossiers par id) - profileId est donc ignore sous
+    // isolation, un seul profil existe conceptuellement dans un sandbox de
+    // test. CreateProfileId et Discover (Profiles.cs) sont adaptes en
+    // consequence via HasIsolatedProfileDirOverride pour rester coherents
+    // avec cette meme convention. Sans effet sur l'usage normal (aucun
+    // utilisateur reel n'a cette variable positionnee).
     public static LumoraProfilePaths ForProfileId(string? profileId)
     {
+        var environmentProfileDir = EnvironmentProfileDirOverride();
+        if (!string.IsNullOrWhiteSpace(environmentProfileDir))
+        {
+            return FromDirectory(Path.GetFullPath(environmentProfileDir));
+        }
+
         var safeId = NormalizeProfileId(profileId);
         return new LumoraProfilePaths(Path.Combine(ProfilesRoot(), safeId));
     }
+
+    // Utilise par CreateProfileId/Discover (Profiles.cs) pour appliquer la
+    // meme convention "profil unique a plat" que Default()/ForProfileId.
+    public static bool HasIsolatedProfileDirOverride() =>
+        !string.IsNullOrWhiteSpace(EnvironmentProfileDirOverride());
+
+    private static string? EnvironmentProfileDirOverride() =>
+        Environment.GetEnvironmentVariable(ProfileDirectoryEnvironmentVariable)
+        ?? Environment.GetEnvironmentVariable(LegacyNovaProfileDirectoryEnvironmentVariable)
+        ?? Environment.GetEnvironmentVariable(LegacyPulseProfileDirectoryEnvironmentVariable);
 
     public static LumoraProfilePaths FromDirectory(string profileDir) =>
         new(profileDir);

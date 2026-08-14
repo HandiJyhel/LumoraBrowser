@@ -18,7 +18,7 @@ internal sealed class UiSettings
     // sinon JsonSerializer.Deserialize<UiSettings> peut lever une exception
     // qui remonte au catch-all de Load() et reinitialise TOUS les reglages a
     // Default(), pas seulement la propriete concernee.
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
     public bool BookmarksBarVisible { get; set; } = true;
@@ -248,8 +248,19 @@ internal sealed class UiSettings
     public List<SitePermissionRule> SitePermissions { get; set; } = new();
     public List<SiteComfortRule> SiteComfortRules { get; set; } = new();
     // Sessions éphémères : au démarrage, purge des cookies de la session précédente,
-    // sauf pour les domaines racines listés comme sites de confiance.
-    public bool SessionPurgeEnabled { get; set; } = true;
+    // sauf pour les domaines racines listés comme sites de confiance. Défaut
+    // basculé à false le 2026-08-13 (retour utilisateur : "trop compliqué, trop
+    // long" pour un utilisateur de base) - les sessions restent connectées par
+    // défaut, comme n'importe quel navigateur classique, conformément à
+    // l'exigence fondatrice du projet (AGENTS.md : "sans forcer l'utilisateur à
+    // se reconnecter inutilement"). La purge au démarrage devient une option de
+    // confidentialité explicite (Réglages > Vie privée > Hygiène de session),
+    // pour qui la veut vraiment - le scénario qu'elle protège (quelqu'un
+    // d'autre reprend la machine après fermeture de Lumora) reste couvert par
+    // Incognito et par le verrouillage auto du coffre, qui ne dépendent pas de
+    // ce réglage. Voir MigrationSteps[1] : les profils déjà enregistrés avec
+    // l'ancien défaut (true) sont basculés à false une seule fois au chargement.
+    public bool SessionPurgeEnabled { get; set; } = false;
     public List<string> TrustedSessionSites { get; set; } = new();
     // Vrai dès qu'une purge réelle a été expliquée une première fois à l'utilisateur
     // (InfoBar affichée une seule fois, jamais republiée automatiquement ensuite).
@@ -257,6 +268,13 @@ internal sealed class UiSettings
     // Domaines racines pour lesquels l'utilisateur a refusé la proposition « Rester
     // connecté ? » au login : on ne le lui repropose plus à chaque connexion.
     public List<string> SessionKeepDeclinedSites { get; set; } = new();
+    // Réorganisation personnalisée de la barre d'outils (0.93.34.0-dev) : ordre
+    // des boutons selon les préférences de l'utilisateur (drag-drop en mode édition).
+    // Clés = x:Name des boutons (ex: "ReaderModeButton"). Absent ou vide = ordre par défaut.
+    public List<string> ToolbarButtonOrder { get; set; } = new();
+    // Positions des séparateurs visuels dans la section des modules (indice après lequel ajouter un séparateur).
+    // Absent ou vide = pas de séparateur personnalisé (ordre linéaire simple).
+    public List<int> ToolbarSeparatorPositions { get; set; } = new();
 
     public static UiSettings Default() => new();
 
@@ -312,12 +330,29 @@ internal sealed class UiSettings
     }
 
     // Cle N = etape qui migre une version N vers N+1, appliquee sur le JSON
-    // brut AVANT la deserialisation typee. Vide aujourd'hui (version 1 = la
-    // version de reference qui introduit ce mecanisme). Pour une future
-    // propriete renommee, ajouter par exemple :
+    // brut AVANT la deserialisation typee. Version 1 = la version de reference
+    // qui introduit ce mecanisme (aucune etape). Pour une future propriete
+    // renommee, ajouter par exemple :
     // [1] = root => { if (root.Remove("AncienNom", out var v)) root["NouveauNom"] = v; },
     private static readonly IReadOnlyDictionary<int, Action<JsonObject>> MigrationSteps =
-        new Dictionary<int, Action<JsonObject>>();
+        new Dictionary<int, Action<JsonObject>>
+        {
+            // v1 -> v2 (2026-08-13) : SessionPurgeEnabled bascule de true a false
+            // par defaut (voir commentaire sur la propriete). Un profil deja
+            // enregistre AVANT ce changement porte forcement "true" en clair dans
+            // son JSON (Save() serialise toutes les proprietes) - impossible de
+            // distinguer ce true "herite de l'ancien defaut" d'un true choisi
+            // expressement une fois deja ecrit sur disque. Logiciel non publie,
+            // aucune base d'utilisateurs dont un choix explicite serait a
+            // preserver : tout true herite est traite comme l'ancien defaut et
+            // bascule. Un profil qui a explicitement mis false n'est pas touche
+            // (deja la valeur cible).
+            [1] = root =>
+            {
+                if ((bool?)root["SessionPurgeEnabled"] == true)
+                    root["SessionPurgeEnabled"] = false;
+            },
+        };
 
     // Applique en sequence chaque etape necessaire entre fromVersion et
     // toVersion. internal (pas private) pour permettre aux tests de verifier

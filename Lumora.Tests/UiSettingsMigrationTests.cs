@@ -267,4 +267,50 @@ public class UiSettingsMigrationTests
 
         Assert.Equal("dense", loaded.UiDensity);
     }
+
+    // SessionPurgeEnabled bascule de true a false par defaut (2026-08-13,
+    // retour utilisateur : "trop compliqué, trop long" pour un utilisateur de
+    // base) - les sessions restent connectees par defaut desormais, la purge
+    // au demarrage devient une option explicite. Meme principe de
+    // verrouillage que UiDensity plus haut.
+    [Fact]
+    public void UiSettings_Default_a_pour_SessionPurgeEnabled_false()
+    {
+        Assert.False(UiSettings.Default().SessionPurgeEnabled);
+    }
+
+    [Fact]
+    public void SessionPurgeEnabled_true_herite_dun_profil_pre_migration_bascule_a_false()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        // Simule un profil enregistre avant ce changement : SchemaVersion 1,
+        // SessionPurgeEnabled explicitement true (l'ancien defaut - Save()
+        // serialise toutes les proprietes, jamais seulement celles modifiees).
+        LumoraFile.WriteAllText(path, """{ "SchemaVersion": 1, "SessionPurgeEnabled": true, "SearchEngine": "duckduckgo" }""");
+
+        var loaded = UiSettings.Load(path);
+
+        Assert.False(loaded.SessionPurgeEnabled);
+        Assert.Equal(UiSettings.CurrentSchemaVersion, loaded.SchemaVersion);
+        Assert.Equal("duckduckgo", loaded.SearchEngine);
+    }
+
+    [Fact]
+    public void SessionPurgeEnabled_reactive_explicitement_survit_a_un_nouvel_aller_retour()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var original = UiSettings.Default();
+        // L'utilisateur active volontairement la purge (deja a la version de
+        // schema courante en enregistrant) : ce choix ne doit plus jamais
+        // etre re-bascule par la migration v1->v2 (elle ne s'applique qu'aux
+        // fichiers encore a l'ancienne version de schema).
+        original.SessionPurgeEnabled = true;
+
+        original.Save(path);
+        var loaded = UiSettings.Load(path);
+
+        Assert.True(loaded.SessionPurgeEnabled);
+    }
 }

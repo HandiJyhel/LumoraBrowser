@@ -157,6 +157,9 @@ internal sealed class PasswordManagerService
     public void SetUsernameById(string id, string username) =>
         _vault.SetUsernameById(id, username);
 
+    public void SetPasswordById(string id, string password) =>
+        _vault.SetPasswordById(id, password);
+
     // secret vide/null = supprime le TOTP de cet identifiant.
     public void SetTotpById(string id, string? secret, int digits = 6, int period = 30) =>
         _vault.SetTotpById(id, secret, digits, period);

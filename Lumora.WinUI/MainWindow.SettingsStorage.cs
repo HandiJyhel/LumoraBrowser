@@ -74,12 +74,35 @@ public sealed partial class MainWindow
         }
     }
 
+    // Le mot de passe de la sauvegarde EST le mot de passe du compte (2026-08-13,
+    // idee de l'utilisateur : "a partir du moment ou tu crees un fichier
+    // sauvegarde... on va te demander le mot de passe de cette application").
+    // Plus de mot de passe dedie invente au moment de l'export - un mot de
+    // passe utilise une fois tous les 6 mois a bien plus de chances d'etre
+    // oublie que celui utilise au quotidien. Rendu possible sans regression de
+    // securite par le renforcement de la regle du mot de passe de compte a 12
+    // caracteres + 1 special (IsAccountPasswordStrongEnough, MainWindow.Profile.cs).
     private async void ExportBackupButton_Click(object sender, RoutedEventArgs e)
     {
         if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
+        if (_userProfile is null) { StatusText.Text = "Profil introuvable."; return; }
 
-        var password = await PromptBackupPasswordAsync("Exporter une sauvegarde", confirm: true);
+        // Profil sans mot de passe (2026-08-13, choix permanent pris a la
+        // creation) : aucun mot de passe a reutiliser comme cle de sauvegarde,
+        // sauvegarde impossible pour ce profil - voir UserProfile.HasAccountPassword.
+        if (!_userProfile.HasAccountPassword)
+        {
+            StatusText.Text = "Ce profil n'a pas de mot de passe : aucune sauvegarde possible pour lui.";
+            return;
+        }
+
+        var password = await PromptAccountPasswordAsync(
+            "Confirmer votre mot de passe",
+            "Entrez le mot de passe de votre compte Lumora pour créer la sauvegarde.");
         if (password is null) return;
+
+        if (!await Task.Run(() => _userProfile.VerifyPassword(password)))
+        { StatusText.Text = "Mot de passe incorrect."; return; }
 
         var picker = new FileSavePicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
@@ -91,10 +114,14 @@ public sealed partial class MainWindow
 
         try
         {
-            var result = LumoraBackup.Export(file.Path, password, _profile);
-            StatusText.Text = result.VaultSkippedNotPortable
-                ? "Sauvegarde exportée. Coffre non inclus : définissez un mot de passe maître dans le coffre pour qu'il devienne portable."
+            var result = LumoraBackup.Export(file.Path, password, _profile, _vault);
+            StatusText.Text = result.CredentialCount > 0
+                ? $"Sauvegarde exportée avec succès ({result.CredentialCount} mot(s) de passe inclus)."
                 : "Sauvegarde exportée avec succès.";
+        }
+        catch (VaultLockedForBackupException ex)
+        {
+            StatusText.Text = ex.Message;
         }
         catch (Exception ex)
         {
@@ -116,6 +143,10 @@ public sealed partial class MainWindow
     // (MainWindow.SetupWizard.cs). Renvoie true si l'import a reussi ; met a
     // jour StatusText en cas d'echec/annulation, laisse l'appelant gerer la
     // suite en cas de succes (les deux appelants ont un apres-import different).
+    // Le mot de passe demande est celui du COMPTE associe a la sauvegarde
+    // (voir ExportBackupButton_Click) : tenter de dechiffrer avec ce mot de
+    // passe EST la verification (pas de profil local a comparer au moment du
+    // tout premier lancement) - succes du dechiffrement = bon mot de passe.
     private async Task<bool> RunImportBackupFlowAsync()
     {
         if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return false; }
@@ -129,12 +160,14 @@ public sealed partial class MainWindow
         var file = await picker.PickSingleFileAsync();
         if (file is null) return false;
 
-        var password = await PromptBackupPasswordAsync("Importer une sauvegarde", confirm: false);
+        var password = await PromptAccountPasswordAsync(
+            "Importer une sauvegarde",
+            "Entrez le mot de passe du compte associé à cette sauvegarde.");
         if (password is null) return false;
 
         try
         {
-            LumoraBackup.Import(file.Path, password, _profile);
+            LumoraBackup.Import(file.Path, password, _profile, _vault);
             ReloadBookmarks();
             return true;
         }
@@ -168,26 +201,23 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task<string?> PromptBackupPasswordAsync(string title, bool confirm)
+    // Champ unique (2026-08-13) : la sauvegarde n'utilise plus un mot de passe
+    // dedie invente au moment de l'export, mais le mot de passe du compte -
+    // plus besoin de le "confirmer" par une double saisie, il existe deja
+    // (voir ExportBackupButton_Click/RunImportBackupFlowAsync pour ce que
+    // chaque appelant fait ensuite de la valeur saisie).
+    private async Task<string?> PromptAccountPasswordAsync(string title, string message)
     {
         var panel = new StackPanel { Spacing = 8 };
-        var pwBox = new PasswordBox { PlaceholderText = "Mot de passe de la sauvegarde", MinWidth = 280 };
-        panel.Children.Add(pwBox);
-
-        PasswordBox? pwBox2 = null;
-        if (confirm)
+        panel.Children.Add(new TextBlock
         {
-            var hint = new TextBlock
-            {
-                Text = "Conservez ce mot de passe : il sera nécessaire pour restaurer vos données.",
-                TextWrapping = TextWrapping.Wrap,
-                Opacity = 0.7,
-                FontSize = 12
-            };
-            panel.Children.Add(hint);
-            pwBox2 = new PasswordBox { PlaceholderText = "Confirmer le mot de passe", MinWidth = 280 };
-            panel.Children.Add(pwBox2);
-        }
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.7,
+            FontSize = 12
+        });
+        var pwBox = new PasswordBox { PlaceholderText = "Mot de passe de votre compte", MinWidth = 280 };
+        panel.Children.Add(pwBox);
 
         var dialog = new ContentDialog
         {
@@ -201,13 +231,7 @@ public sealed partial class MainWindow
 
         var result = await dialog.ShowAsync();
         if (result != ContentDialogResult.Primary) return null;
-        if (string.IsNullOrEmpty(pwBox.Password)) return null;
-        if (pwBox2 is not null && pwBox.Password != pwBox2.Password)
-        {
-            StatusText.Text = "Les mots de passe ne correspondent pas.";
-            return null;
-        }
-        return pwBox.Password;
+        return string.IsNullOrEmpty(pwBox.Password) ? null : pwBox.Password;
     }
 
 }

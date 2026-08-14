@@ -1,9 +1,22 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Konscious.Security.Cryptography;
 
 namespace Lumora.WinUI;
+
+// Leve a l'export si le coffre est en mode "mot de passe maitre" (aes256) et
+// verrouille (mot de passe pas encore entre cette session) : l'export est
+// bloque plutot que de continuer silencieusement sans le coffre - retour
+// utilisateur explicite du 2026-08-13 ("j'aurais tout perdu... c'est pas
+// logique" a propos d'un coffre absent d'une sauvegarde presentee comme
+// complete), voir MEMORY.md.
+public sealed class VaultLockedForBackupException : Exception
+{
+    public VaultLockedForBackupException()
+        : base("Le coffre est verrouillé. Déverrouillez-le avant de créer une sauvegarde.") { }
+}
 
 // Format .lumorabackup :
 //   [0-6]   Magic "NOVABAK"
@@ -17,16 +30,22 @@ namespace Lumora.WinUI;
 // Le zip contient tout ce qui fait le profil, décrypté du DPAPI machine
 // (fichiers .lumora) au moment de l'export : navigation, groupes d'onglets,
 // web apps + icônes, favicons, flux RSS, clés d'accès, avatar, paramètres.
-// Le coffre (mots de passe/cartes) n'est inclus que s'il est en mode "mot de
-// passe maître" (portable) : un coffre resté en mode DPAPI ne se
-// déchiffrerait pas sur une autre machine, voir VaultStore.IsPortable.
+// Le coffre (mots de passe/cartes) est TOUJOURS inclus (2026-08-13, retour
+// utilisateur : un coffre absent d'une sauvegarde "complète" est une
+// catastrophe silencieuse pour l'utilisateur qui la découvre après avoir
+// formaté). Son propre chiffrement (DPAPI ou mot de passe maître) est retiré
+// à l'export - la protection vient désormais uniquement de l'enveloppe
+// .lumorabackup elle-même (Argon2id + AES-256-GCM ci-dessus), exactement
+// comme pour les favoris/notes/etc. juste au-dessus. Un coffre en mode "mot
+// de passe maître" encore verrouillé au moment de l'export bloque l'export
+// entier (VaultLockedForBackupException) plutôt que de continuer sans lui.
 
 internal static class LumoraBackup
 {
-    // Vault* : reflete ce qui a ete decide au moment de l'export, pour que
-    // l'appelant (bouton "Exporter") puisse informer l'utilisateur si le
-    // coffre n'a pas pu etre inclus.
-    public readonly record struct ExportResult(bool VaultIncluded, bool VaultSkippedNotPortable);
+    // CredentialCount/CardCount : nombre d'éléments du coffre effectivement
+    // inclus, pour que l'appelant (bouton "Exporter") puisse confirmer à
+    // l'utilisateur que "oui, vos mots de passe sont bien dans ce fichier".
+    public readonly record struct ExportResult(int CredentialCount, int CardCount);
 
     private static readonly byte[] Magic = "NOVABAK"u8.ToArray();
     private const byte FormatVersion = 0x02;
@@ -43,10 +62,13 @@ internal static class LumoraBackup
     private const int Argon2Iterations = 3;
     private const int Argon2Parallelism = 4;
 
-    public static ExportResult Export(string destPath, string password, LumoraProfilePaths profile)
+    public static ExportResult Export(string destPath, string password, LumoraProfilePaths profile, VaultStore vault)
     {
-        var vaultIncluded = false;
-        var vaultSkippedNotPortable = false;
+        if (vault.IsLocked)
+            throw new VaultLockedForBackupException();
+
+        var credentials = vault.ListCredentials();
+        var cards = vault.ListCards();
 
         using var zipStream = new MemoryStream();
         using (var zip = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
@@ -79,18 +101,11 @@ internal static class LumoraBackup
             if (avatarPath is not null)
                 WriteBinaryEntry(zip, "avatar" + Path.GetExtension(avatarPath), File.ReadAllBytes(avatarPath));
 
-            if (File.Exists(profile.VaultFile))
-            {
-                if (VaultStore.IsPortable(profile.VaultFile))
-                {
-                    WriteEntry(zip, "vault.lumora", File.ReadAllText(profile.VaultFile, Encoding.UTF8));
-                    vaultIncluded = true;
-                }
-                else
-                {
-                    vaultSkippedNotPortable = true;
-                }
-            }
+            // Coffre : contenu déchiffré (voir commentaire d'en-tête du fichier),
+            // protégé uniquement par l'enveloppe .lumorabackup à partir d'ici -
+            // même traitement que bookmarks.txt/notes.txt/etc. juste au-dessus.
+            WriteEntry(zip, "vault-credentials.json", JsonSerializer.Serialize(credentials));
+            WriteEntry(zip, "vault-cards.json", JsonSerializer.Serialize(cards));
         }
 
         var salt  = RandomNumberGenerator.GetBytes(SaltSize);
@@ -111,10 +126,10 @@ internal static class LumoraBackup
         file.Write(tag);
         file.Write(cipher);
 
-        return new ExportResult(vaultIncluded, vaultSkippedNotPortable);
+        return new ExportResult(credentials.Count, cards.Count);
     }
 
-    public static void Import(string srcPath, string password, LumoraProfilePaths profile)
+    public static void Import(string srcPath, string password, LumoraProfilePaths profile, VaultStore vault)
     {
         using var file = new BinaryReader(File.OpenRead(srcPath));
 
@@ -186,13 +201,41 @@ internal static class LumoraBackup
                 avatarStream.CopyTo(destStream);
             }
 
-            var vaultEntry = zip.GetEntry("vault.lumora");
-            if (vaultEntry is not null)
+            var credentialsEntry = zip.GetEntry("vault-credentials.json");
+            if (credentialsEntry is not null)
             {
-                using var reader = new StreamReader(vaultEntry.Open(), Encoding.UTF8);
-                var dir = Path.GetDirectoryName(profile.VaultFile);
-                if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
-                File.WriteAllText(profile.VaultFile, reader.ReadToEnd(), Encoding.UTF8);
+                // Format actuel (2026-08-13) : credentials/cartes en clair,
+                // reconstruits dans le coffre cible via RestoreFromBackup (mode
+                // DPAPI ambient d'un profil neuf le plus souvent - voir son
+                // commentaire d'en-tete pour le cas d'un import dans un profil
+                // deja existant et verrouille).
+                using var credReader = new StreamReader(credentialsEntry.Open(), Encoding.UTF8);
+                var credentials = JsonSerializer.Deserialize<List<VaultCredential>>(credReader.ReadToEnd()) ?? new();
+
+                var cards = new List<VaultPaymentCard>();
+                var cardsEntry = zip.GetEntry("vault-cards.json");
+                if (cardsEntry is not null)
+                {
+                    using var cardsReader = new StreamReader(cardsEntry.Open(), Encoding.UTF8);
+                    cards = JsonSerializer.Deserialize<List<VaultPaymentCard>>(cardsReader.ReadToEnd()) ?? new();
+                }
+
+                vault.RestoreFromBackup(credentials, cards);
+            }
+            else
+            {
+                // Repli de compatibilite : sauvegardes creees avant ce format
+                // (jusqu'a 0.93.35.0-dev), qui ne contenaient le coffre que s'il
+                // etait deja en mode "mot de passe maitre" a l'export. Copie
+                // brute historique, inchangee.
+                var legacyVaultEntry = zip.GetEntry("vault.lumora");
+                if (legacyVaultEntry is not null)
+                {
+                    using var reader = new StreamReader(legacyVaultEntry.Open(), Encoding.UTF8);
+                    var dir = Path.GetDirectoryName(profile.VaultFile);
+                    if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
+                    File.WriteAllText(profile.VaultFile, reader.ReadToEnd(), Encoding.UTF8);
+                }
             }
         }
         catch (InvalidDataException)

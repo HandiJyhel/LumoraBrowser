@@ -76,8 +76,31 @@ internal static class LumoraProfileRegistry
     public static List<LumoraProfileEntry> Discover(LumoraConfig config, string? activeProfileDir = null)
     {
         var entries = new List<LumoraProfileEntry>();
-        var activeId = LumoraProfilePaths.NormalizeProfileId(config.ActiveProfileId);
         activeProfileDir ??= ResolveActiveProfileDir(config);
+
+        // Sous LUMORA_PROFILE_DIR (2026-08-14, incident reel corrige - voir
+        // MEMORY.md) : un seul profil existe conceptuellement, celui du
+        // dossier isole lui-meme (meme convention que Default()/ForProfileId)
+        // - ne JAMAIS scanner le vrai %LOCALAPPDATA%\Lumora\profiles de la
+        // machine, qui exposerait/melangerait les vrais profils de
+        // l'utilisateur dans un lancement de verification/invite cense en
+        // etre totalement isole.
+        if (LumoraProfilePaths.HasIsolatedProfileDirOverride())
+        {
+            if (!string.IsNullOrWhiteSpace(activeProfileDir))
+            {
+                var isolatedPaths = LumoraProfilePaths.FromDirectory(activeProfileDir);
+                var isolatedProfile = UserProfile.Load(isolatedPaths.ProfileFile, isolatedPaths.LegacyProfileFile);
+                if (isolatedProfile is not null)
+                {
+                    entries.Add(new LumoraProfileEntry(
+                        "default", isolatedProfile.Name, isolatedPaths.ProfileDir, true, false));
+                }
+            }
+            return entries;
+        }
+
+        var activeId = LumoraProfilePaths.NormalizeProfileId(config.ActiveProfileId);
 
         if (!string.IsNullOrWhiteSpace(config.CustomProfilePath) && Directory.Exists(config.CustomProfilePath))
         {
@@ -161,6 +184,14 @@ internal static class LumoraProfileRegistry
         var baseId = LumoraProfilePaths.NormalizeProfileId(RemoveDiacritics(name));
         if (baseId == "default")
             baseId = "profil";
+
+        // Sous LUMORA_PROFILE_DIR, ForProfileId(id) retourne le meme dossier a
+        // plat quel que soit id (voir son commentaire) : la boucle d'unicite
+        // ci-dessous ferait comparer le meme chemin a l'infini. Un seul profil
+        // existe conceptuellement dans un sandbox de test, aucune collision a
+        // eviter - l'id de base suffit.
+        if (LumoraProfilePaths.HasIsolatedProfileDirOverride())
+            return baseId;
 
         var candidate = baseId;
         var index = 2;

@@ -70,4 +70,39 @@ public class UserProfileTests
         Assert.True(profile.VerifyRecoveryKey("nova abcd 1234"));   // casse/espaces ignorés
         Assert.False(profile.VerifyRecoveryKey("NOVA-0000-0000"));
     }
+
+    // 2026-08-13 : profil sans mot de passe, choix permanent pris a la
+    // creation (voir MEMORY.md - risque de detournement si n'importe qui
+    // pouvait poser un mot de passe sur un profil deja ouvert plus tard).
+    [Fact]
+    public void Create_sans_mot_de_passe_expose_HasAccountPassword_a_false()
+    {
+        var profile = UserProfile.Create("Alice", password: null, pin: null);
+
+        Assert.False(profile.HasAccountPassword);
+        Assert.Empty(profile.PasswordHash);
+        Assert.Empty(profile.PasswordSalt);
+        Assert.False(profile.VerifyPassword(string.Empty));
+        Assert.False(profile.VerifyPassword("nimportequoi"));
+    }
+
+    // Un PIN sans mot de passe de base n'a pas de sens (rien a raccourcir) :
+    // ignore silencieusement, meme si un appelant fournit quand meme une
+    // valeur - le modele reste coherent seul, pas seulement grace a l'UI.
+    [Fact]
+    public void Create_sans_mot_de_passe_ignore_un_pin_fourni_quand_meme()
+    {
+        var profile = UserProfile.Create("Alice", password: null, pin: "123456");
+
+        Assert.False(profile.HasAccountPassword);
+        Assert.False(profile.HasPinLogin);
+        Assert.False(profile.VerifyPin("123456"));
+    }
+
+    [Fact]
+    public void Profil_avec_mot_de_passe_expose_HasAccountPassword_a_true()
+    {
+        var profile = UserProfile.Create("Alice", "mot-de-passe-fort", pin: null);
+        Assert.True(profile.HasAccountPassword);
+    }
 }

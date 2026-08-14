@@ -595,6 +595,16 @@ public sealed partial class MainWindow : Window
         UpdatePinToggle(QuickDictationPinToggleButton, "dictation");
         UpdatePinToggle(QuickRssPinToggleButton, "rss");
         UpdatePinToggle(QuickReadingLensPinToggleButton, "readingLens");
+
+        // Un module qui vient d'etre epingle/desepingle doit immediatement
+        // apparaitre/disparaitre de la fenetre de reorganisation SI elle est
+        // deja ouverte (2026-08-14, voir MainWindow.ToolbarCustomization.cs) -
+        // rien a faire si elle est fermee, pas besoin de la construire pour
+        // rien a chaque bascule d'epinglage.
+        if (ToolbarReorganizeOverlay.Visibility == Visibility.Visible)
+        {
+            RefreshToolbarReorganizeSections();
+        }
     }
 
     private static string UsageModeLabel(string usageMode) =>

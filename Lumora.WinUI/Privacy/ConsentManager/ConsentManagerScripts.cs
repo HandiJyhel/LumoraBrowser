@@ -209,7 +209,7 @@ internal static class ConsentManagerScripts
         // Cookiebot recent, certaines configs OneTrust - encapsulent leur bannière
         // dans un Web Component, invisible pour un simple document.querySelectorAll).
         // Même pattern que collectFillRoots/queryAllDeep du remplissage de mots de
-        // passe (CredentialCaptureScript.js). Plafonné (60 racines) pour rester
+        // passe (CredentialCaptureDom.js). Plafonné (60 racines) pour rester
         // dans le même ordre de coût que le repli "page entière" déjà existant
         // (passe 3 plus bas), pas une nouvelle classe de coût.
         function collectRoots() {
