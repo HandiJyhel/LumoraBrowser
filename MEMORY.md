@@ -23213,9 +23213,14 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   demande vu le doute reel sur la nature du changement - nouvel assistant/nouvelles pages,
   pas juste une correction) dans les 4 memes fichiers + test de coherence (renomme
   `..._0_93_54_0`).
-- **Reste a faire** : generer l'installeur complet via le vrai pipeline
-  (`build-clean-test-artifact.ps1` puis `build-installer.ps1`, Go explicite requis, jamais
-  execute automatiquement) une fois que l'utilisateur veut le tester. Discute aussi mais
-  PAS decide/code : mode portable (dossier autonome, pas de trace registre) et signature de
-  code (SignPath Foundation, gratuit mais exige un depot deja public - voir memoire de
-  session `gamme-applications-confidentialite-sans-pub`).
+- **Installeur complet genere le meme jour, Go explicite** :
+  `artifacts/installer/LumoraSetup-0.93.54.0-dev-win-x64.exe` (build propre self-contained
+  via `build-clean-test-artifact.ps1` puis `build-installer.ps1`), SHA256
+  `81e0c46b7dbd8ac89666672c2f7e66c9a93383aa04b73256650262fd77ee560f`. **Jamais execute par
+  moi** (regle "installeur jamais auto") - a tester par l'utilisateur. Anciens installateurs
+  (`0.93.37.2-dev`, `0.93.44.0-dev`, `0.93.52.0-dev`) volontairement **conserves** dans
+  `artifacts/installer/`, a supprimer seulement sur demande explicite une fois le nouveau
+  valide.
+- **Reste a faire** : Discute mais PAS decide/code : mode portable (dossier autonome, pas de
+  trace registre) et signature de code (SignPath Foundation, gratuit mais exige un depot deja
+  public - voir memoire de session `gamme-applications-confidentialite-sans-pub`).
