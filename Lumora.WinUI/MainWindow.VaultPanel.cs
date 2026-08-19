@@ -872,10 +872,12 @@ public sealed partial class MainWindow
         var passkeyActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
 
         var manageBtn = new Button { Content = "Gérer dans Windows" };
+        ApplyNovaControlAccessibility(manageBtn, "Gérer cette clé d'accès dans les paramètres Windows");
         manageBtn.Click += async (_, _) => await OpenWindowsPasskeysSettingsAsync();
         passkeyActions.Children.Add(manageBtn);
 
         var forgetBtn = new Button { Content = "Oublier localement" };
+        ApplyNovaControlAccessibility(forgetBtn, "Oublier cette clé d'accès localement (elle reste active dans Windows)");
         forgetBtn.Click += (_, _) =>
         {
             DeletePasskeyEntry(entry);
@@ -929,7 +931,21 @@ public sealed partial class MainWindow
             var file = await picker.PickSingleFileAsync();
             if (file is null) return;
 
-            var decoded = await QrCodeReader.TryDecodeFileAsync(file);
+            string? decoded;
+            try
+            {
+                decoded = await QrCodeReader.TryDecodeFileAsync(file);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Distinct de "aucun QR trouvé" : le fichier lui-même est inaccessible
+                // (verrouillé par un autre programme, permissions) - message trompeur
+                // avant ce correctif (bug réel trouvé en audit le 2026-08-19).
+                scanStatus.Text = "Fichier image inaccessible (verrouillé ou permissions insuffisantes).";
+                scanStatus.Visibility = Visibility.Visible;
+                return;
+            }
+
             if (decoded is null || TotpService.ParseSecretInput(decoded) is null)
             {
                 scanStatus.Text = "Aucun QR code TOTP reconnu dans cette image.";

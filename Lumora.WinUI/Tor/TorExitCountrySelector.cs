@@ -62,19 +62,26 @@ internal static class TorExitCountrySelector
             return (false, "Authentification du contrôle Tor indisponible.");
         }
 
+        // Timeout local (voir meme correctif dans TorProcessManager.RequestNewCircuitAsync,
+        // audit du 2026-08-19) : sans lui, un tor.exe qui cesse de repondre laisserait
+        // le bouton "Sortie : ..." desactive indefiniment.
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+        var linkedToken = timeoutCts.Token;
+
         try
         {
             using var client = new TcpClient();
-            await client.ConnectAsync(IPAddress.Loopback, tor.ControlPort, cancellationToken);
+            await client.ConnectAsync(IPAddress.Loopback, tor.ControlPort, linkedToken);
             await using var stream = client.GetStream();
             using var writer = new StreamWriter(stream, Encoding.ASCII) { AutoFlush = true, NewLine = "\r\n" };
             using var reader = new StreamReader(stream, Encoding.ASCII);
 
-            var cookieBytes = await File.ReadAllBytesAsync(cookiePath, cancellationToken);
+            var cookieBytes = await File.ReadAllBytesAsync(cookiePath, linkedToken);
             var cookieHex = Convert.ToHexString(cookieBytes);
 
             await writer.WriteLineAsync($"AUTHENTICATE {cookieHex}");
-            var authResponse = await reader.ReadLineAsync(cancellationToken);
+            var authResponse = await reader.ReadLineAsync(linkedToken);
             if (authResponse is null || !authResponse.StartsWith("250", StringComparison.Ordinal))
             {
                 return (false, "Authentification aupres du controle Tor refusee.");
@@ -87,13 +94,17 @@ internal static class TorExitCountrySelector
                 : $"SETCONF ExitNodes=\"{{{countryCode}}}\"";
 
             await writer.WriteLineAsync(configCommand);
-            var configResponse = await reader.ReadLineAsync(cancellationToken);
+            var configResponse = await reader.ReadLineAsync(linkedToken);
             if (configResponse is null || !configResponse.StartsWith("250", StringComparison.Ordinal))
             {
                 return (false, "Le moteur Tor a refusé le changement de pays de sortie.");
             }
 
             await writer.WriteLineAsync("QUIT");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return (false, "Le contrôle Tor ne répond pas (délai dépassé).");
         }
         catch (Exception ex)
         {
@@ -103,6 +114,19 @@ internal static class TorExitCountrySelector
         // Le nouveau reglage ExitNodes ne s'applique qu'aux prochains
         // circuits : sans ce SIGNAL NEWNYM, les onglets garderaient leur
         // circuit (et donc leur pays) actuel jusqu'a fermeture naturelle.
-        return await tor.RequestNewCircuitAsync(cancellationToken);
+        // NEWNYM partage son cooldown avec le bouton "Nouveau circuit"
+        // (TorProcessManager) et peut donc echouer independamment du
+        // SETCONF/RESETCONF ci-dessus, qui lui a deja reellement pris effet
+        // sur le process Tor a ce stade. Bug reel du 2026-08-19 : faire
+        // dependre le succes global de ApplyAsync du seul NEWNYM faisait que
+        // l'appelant (IncognitoExitCountryOption_Checked) recochait l'ancien
+        // pays alors que la config Tor avait deja change - le menu mentait
+        // sur le pays reellement actif. Le changement de pays est desormais
+        // TOUJOURS rapporte comme reussi une fois le SETCONF/RESETCONF
+        // accepte, meme si le nouveau circuit est differe par le cooldown.
+        var (circuitRenewed, circuitMessage) = await tor.RequestNewCircuitAsync(cancellationToken);
+        return circuitRenewed
+            ? (true, circuitMessage)
+            : (true, $"Pays de sortie changé (nouveau circuit différé : {circuitMessage})");
     }
 }

@@ -656,8 +656,18 @@ public sealed partial class MainWindow
         ProfileManagementRestrictedPanel.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;
         ProfileDangerZonePanel.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;
         ProfileGuestRestrictedNotice.IsOpen = _isGuestMode;
+        // L'onglet "Aperçu" affiche un inventaire de données réelles
+        // (RefreshAccountDashboard, ci-dessus) qui ne fait rien en mode invité
+        // (return anticipé sur _isGuestMode) : le garder visible affichait des
+        // compteurs à zéro trompeurs au lieu d'être masqué comme le reste des
+        // blocs sensibles de cet écran (bug réel trouvé en audit le 2026-08-19).
+        AccountTabOverview.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;
         if (_isGuestMode)
         {
+            AccountTabOverviewContent.Visibility = Visibility.Collapsed;
+            AccountTabSecurity.IsChecked = true;
+            AccountTabSecurityContent.Visibility = Visibility.Visible;
+            AccountTabBackupContent.Visibility = Visibility.Collapsed;
             ProfileManagementPanel.Children.Clear();
             return;
         }
@@ -1965,7 +1975,14 @@ public sealed partial class MainWindow
             try { tab.View?.Close(); } catch { }
         }
 
-        var deleted = RetryDelete.TryDeleteDirectory(_profile.ProfileDir, maxAttempts: 15, delayMs: 200, out var deleteError);
+        // Sur le thread de pool (pas le thread UI) : jusqu'a 15x200ms=3s de
+        // Thread.Sleep bloquant si le dossier reste verrouille (WebView2 garde
+        // ses fichiers quelques instants apres fermeture) - la fenetre gelait
+        // entierement pendant ce temps avant ce correctif (bug reel trouve en
+        // audit le 2026-08-19), contrairement aux 2 autres appelants de ce
+        // meme mecanisme qui s'executent deja fenetre deja fermee/invisible.
+        Exception? deleteError = null;
+        var deleted = await Task.Run(() => RetryDelete.TryDeleteDirectory(_profile.ProfileDir, maxAttempts: 15, delayMs: 200, out deleteError));
         WinUiRuntimeTrace.Write($"ResetProfileButton: RetryDelete.TryDeleteDirectory -> {deleted}" + (deleteError is null ? "" : $" (derniere erreur : {deleteError.GetType().Name}: {deleteError.Message})"));
         if (!deleted)
         {

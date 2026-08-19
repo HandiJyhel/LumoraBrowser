@@ -232,7 +232,14 @@ public sealed partial class MainWindow
         RenderOpenPanelsTaskbar();
         if (OpenPanelsTaskbarPanel.Children.Count > 0)
         {
-            (OpenPanelsTaskbarPanel.Children[0] as Control)?.Focus(FocusState.Programmatic);
+            // CreateOpenPanelsTaskbarItem renvoie un Grid (Panel), pas un Control : le
+            // cast direct `as Control` renvoyait toujours null et le focus ne se
+            // reportait jamais nulle part en silence (bug réel trouvé en audit le
+            // 2026-08-19). Le vrai bouton focusable est le 1er enfant du Grid
+            // (activateButton, voir CreateOpenPanelsTaskbarItem).
+            var container = OpenPanelsTaskbarPanel.Children[0] as Grid;
+            var activateButton = container is { Children.Count: > 0 } ? container.Children[0] : null;
+            (activateButton as Control)?.Focus(FocusState.Programmatic);
         }
         else
         {

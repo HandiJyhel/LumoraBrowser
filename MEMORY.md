@@ -23064,3 +23064,72 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   domaines restants si temps disponible (Tor, tableau de bord, lecteur QR, theme - fonctions
   tres recentes 0.93.52.0), refonte de l'ecran de bienvenue (maquette a montrer avant de coder),
   puis nouvel installeur complet une fois tout stabilise.
+
+## 2026-08-19 (suite) — Audit des fonctions tres recentes (0.93.52.0), 12 correctifs -> 0.93.52.3-dev
+
+- Poursuite du meme audit par risque, cette fois sur les 4 fonctions ajoutees le jour meme dans
+  le commit `84413ff` (jamais encore auditees) : tableau de bord de compte, barre des taches des
+  panneaux ouverts, selecteur de pays de sortie Tor, lecteur QR - plus chrome de fenetre/boutons/
+  passkeys/sauvegarde. 3 agents en parallele, lecture seule d'abord, 13 points trouves (6 moyens,
+  7 mineurs), tous montres a l'utilisateur avant correction (Go "tout corriger" donne).
+- **12 corrigés** (build + tests + verification reelle) :
+  1. Selecteur de pays de sortie Tor pouvait se desynchroniser de la config reelle (cooldown
+     NEWNYM partage avec "Nouveau circuit" faisait echouer `ApplyAsync` alors que le
+     SETCONF/RESETCONF avait deja reellement pris effet) - `TorExitCountrySelector.ApplyAsync`
+     rapporte desormais le succes des que la config est acceptee, independamment du sort du
+     NEWNYM.
+  2. "Reinitialiser ce profil" gelait l'UI jusqu'a ~3s (suppression de dossier verrouille faite de
+     facon synchrone sur le thread UI) - enveloppe dans `Task.Run`.
+  3. Tableau de bord "Apercu" jamais rafraichi en revenant sur l'onglet Profil des parametres
+     (seulement au login/changement de nom/export de sauvegarde) - `SettingsNav_Click` appelle
+     desormais `RefreshProfileSettings()` (qui rafraichit deja le dashboard) pour `section ==
+     "profile"`.
+  4. Fermer un panneau en arriere-plan dans la barre des taches ne restaurait jamais le focus
+     (`CreateOpenPanelsTaskbarItem` renvoie un `Grid`, le cast `as Control` renvoyait toujours
+     `null`) - cible desormais le vrai bouton (1er enfant du Grid).
+  5. Onglet "Apercu" visible en mode invite avec des compteurs a zero trompeurs (le dashboard est
+     un no-op en mode invite mais rien ne masquait l'onglet) - masque desormais comme le reste des
+     blocs sensibles de l'ecran Profil, redirige vers l'onglet Securite.
+  6. Bouton "Agrandir" ne redevenait jamais "Restaurer" (nom accessible + tooltip jamais mis a
+     jour apres maximisation) - **verifie en reel** : Agrandir -> clic -> Restaurer -> clic ->
+     Agrandir, confirme par UIA.
+  7. Message d'erreur trompeur si le fichier QR est illisible (I/O) au lieu d'invalide/absent -
+     `QrCodeReader.TryDecodeFileAsync` laisse desormais propager IOException/
+     UnauthorizedAccessException plutot que de les avaler dans le meme message que "aucun QR".
+  8. Debordement arithmetique theorique sur une image demesuree (`4 * width * height` en `int`) -
+     calcul en `long` + rejet explicite au-dela de 64 megapixels.
+  9. Pas de timeout sur le control port Tor (un `tor.exe` qui cesse de repondre bloquerait
+     indefiniment) - timeout de 5s ajoute dans `TorProcessManager.RequestNewCircuitAsync` ET
+     `TorExitCountrySelector.ApplyAsync`.
+  10. Incoherence de fuseau horaire dans `AccountDashboardFormatter.FormatRelativeAge`
+      (`now.Date` non converti melange a `at.LocalDateTime.Date` converti) - les deux cotes
+      utilisent desormais `.LocalDateTime.Date`.
+  11. Course TOCTOU sur `ComputeBackupScopeSizeBytes` (fichier disparu entre `File.Exists` et
+      `.Length`) - factorise dans `TryGetFileLength`, capture IOException/UnauthorizedAccessException.
+  12. Boutons passkey de la fiche Coffre sans nom accessible explicite - `ApplyNovaControlAccessibility`
+      ajoute par coherence avec le reste du fichier.
+  - **1 volontairement pas fait** : ajouter des tests pour `QrCodeReader` (mineur #13) - le
+    projet de tests (`Lumora.Tests.csproj`) compile explicitement SANS dependance WinRT
+    (`Windows.Storage`/`Windows.Graphics.Imaging`) pour rester utilisable partout en `dotnet test`
+    (commentaire d'en-tete du csproj) ; `QrCodeReader` en depend directement. Changer le TFM du
+    projet de tests pour le permettre serait une decision structurante distincte, pas prise sans
+    Go explicite.
+- **Incident methode (sans consequence, corrige avant impact)** : la premiere tentative de
+  verification reelle de ce lot a tourne sur l'exe de `artifacts/tmp/winui-run/.../current/`, qui
+  datait de 18h36 (AVANT tous les correctifs de la session, y compris le lot precedent) - `dotnet
+  build-winui.ps1` compile vers `artifacts/tmp/winui-build/` mais ne rafraichit PAS `current/`
+  (piege deja documente, voir `dotnet-build-cassee-utiliser-msbuild-vs2026` dans la memoire de
+  session). Detecte par comparaison d'horodatage avant de tirer une fausse conclusion, corrige en
+  utilisant `run-winui.ps1` (qui build+copie+lance) au lieu d'un `build-winui.ps1` isole. La toute
+  premiere verification de cette session (vue divisee, mode invite, lot des 7 premiers correctifs)
+  a donc ete faite par erreur sur un exe non a jour - **refaite avec succes** sur le bon exe une
+  fois le probleme trouve (bouton Agrandir/Restaurer confirme en reel dessus, vue divisee
+  re-invoquee sans plantage). Le script `run-winui.ps1 -ProfileDir` ajoute plus tot dans cette
+  meme session aurait directement evite l'erreur si utilise depuis le debut.
+- Build MSBuild -> 0 erreur, 0 avertissement. `dotnet test` -> 832/832 verts (inchange, aucun
+  nouveau test dans ce lot).
+- Version `0.93.52.2-dev` -> `0.93.52.3-dev` (micro-correction, 4e chiffre - 12 corrections de
+  bugs, aucun ajout de fonctionnalite) dans les 4 memes fichiers + test de coherence (renomme
+  `..._0_93_52_3`).
+- **Reste a faire** : ecran de bienvenue (maquette a montrer avant de coder), puis nouvel
+  installeur complet une fois tout stabilise et confirme par l'utilisateur en usage reel.

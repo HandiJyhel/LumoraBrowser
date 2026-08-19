@@ -216,26 +216,35 @@ internal sealed class TorProcessManager : IDisposable
             return (false, "Authentification du contrôle Tor indisponible.");
         }
 
+        // Timeout local (le control port est un process local, une reponse met
+        // normalement quelques ms) : sans lui, un tor.exe qui cesse de repondre
+        // apres AUTHENTICATE bloquerait cet appel indefiniment - le bouton
+        // "Nouveau circuit" resterait desactive pour toujours (bug potentiel
+        // trouve en audit le 2026-08-19, jamais observe en usage normal).
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+        var linkedToken = timeoutCts.Token;
+
         try
         {
             using var client = new TcpClient();
-            await client.ConnectAsync(IPAddress.Loopback, ControlPort, cancellationToken);
+            await client.ConnectAsync(IPAddress.Loopback, ControlPort, linkedToken);
             await using var stream = client.GetStream();
             using var writer = new StreamWriter(stream, Encoding.ASCII) { AutoFlush = true, NewLine = "\r\n" };
             using var reader = new StreamReader(stream, Encoding.ASCII);
 
-            var cookieBytes = await File.ReadAllBytesAsync(_cookieAuthPath, cancellationToken);
+            var cookieBytes = await File.ReadAllBytesAsync(_cookieAuthPath, linkedToken);
             var cookieHex = Convert.ToHexString(cookieBytes);
 
             await writer.WriteLineAsync($"AUTHENTICATE {cookieHex}");
-            var authResponse = await reader.ReadLineAsync(cancellationToken);
+            var authResponse = await reader.ReadLineAsync(linkedToken);
             if (authResponse is null || !authResponse.StartsWith("250", StringComparison.Ordinal))
             {
                 return (false, "Authentification aupres du controle Tor refusee.");
             }
 
             await writer.WriteLineAsync("SIGNAL NEWNYM");
-            var signalResponse = await reader.ReadLineAsync(cancellationToken);
+            var signalResponse = await reader.ReadLineAsync(linkedToken);
             if (signalResponse is null || !signalResponse.StartsWith("250", StringComparison.Ordinal))
             {
                 return (false, "Le moteur Tor a refuse la demande de nouveau circuit.");
@@ -244,6 +253,10 @@ internal sealed class TorProcessManager : IDisposable
             await writer.WriteLineAsync("QUIT");
             _lastNewCircuitUtc = DateTime.UtcNow;
             return (true, "Nouveau circuit Tor demande.");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return (false, "Le contrôle Tor ne répond pas (délai dépassé).");
         }
         catch (Exception ex)
         {

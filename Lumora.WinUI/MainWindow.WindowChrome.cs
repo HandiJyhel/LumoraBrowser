@@ -264,6 +264,21 @@ public sealed partial class MainWindow : Window
                 presenter.Maximize();
             }
         }
+        UpdateMaximizeButtonAccessibleState();
+    }
+
+    // Sans cet appel, le nom accessible/l'infobulle restaient figés sur
+    // "Agrandir" en permanence : un lecteur d'écran annonçait la mauvaise
+    // action après une maximisation (bug réel trouvé en audit le
+    // 2026-08-19). Appelé au clic (retour immédiat) ET depuis AppWindow_Changed
+    // (MainWindow.Settings.cs) pour suivre aussi un changement d'état survenu
+    // autrement (double-clic sur la barre de titre, raccourci Windows...).
+    private void UpdateMaximizeButtonAccessibleState()
+    {
+        var isMaximized = _appWindow?.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+        var label = isMaximized ? "Restaurer" : "Agrandir";
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(WindowMaximizeButton, label);
+        ToolTipService.SetToolTip(WindowMaximizeButton, label);
     }
 
     private void WindowCloseButton_Click(object sender, RoutedEventArgs e) => Close();

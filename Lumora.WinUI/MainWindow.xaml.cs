@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.52.2-dev";
+    internal const string Version = "0.93.52.3-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -656,6 +656,13 @@ public sealed partial class MainWindow : Window
 
         if (section == "appearance") RefreshWallpaperUi();
         if (section == "vault") RefreshVaultSettingsUi();
+        // Sans cet appel, le tableau de bord "Aperçu" (favoris/historique/mots
+        // de passe/...) restait figé aux valeurs du login pour toute la
+        // session : RefreshAccountDashboard n'était appelée qu'au login, au
+        // changement de nom ou après un export de sauvegarde, jamais en
+        // revenant simplement sur cet onglet (bug réel trouvé en audit le
+        // 2026-08-19).
+        if (section == "profile") RefreshProfileSettings();
 
         SettingsSectionOverview.Visibility = section == "overview" ? Visibility.Visible : Visibility.Collapsed;
         SettingsSectionNavigation.Visibility = section == "navigation" ? Visibility.Visible : Visibility.Collapsed;

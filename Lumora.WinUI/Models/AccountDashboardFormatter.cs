@@ -36,7 +36,12 @@ internal static class AccountDashboardFormatter
     // besoin de l'heure exacte, contrairement a HistoryTimeFormatter).
     public static string FormatRelativeAge(DateTimeOffset at, DateTimeOffset now)
     {
-        var days = (int)(now.Date - at.LocalDateTime.Date).TotalDays;
+        // Les deux cotes converties en heure locale (jamais un melange
+        // now.Date/at.LocalDateTime.Date) : sur une machine dont le fuseau
+        // systeme decale la date (ex. UTC+12/+13), un DateTimeOffset non deja
+        // local passe en "now" aurait pu decaler le calcul de +/-1 jour
+        // (suspicion trouvee en audit le 2026-08-19).
+        var days = (int)(now.LocalDateTime.Date - at.LocalDateTime.Date).TotalDays;
         if (days <= 0) return "aujourd'hui";
         if (days == 1) return "hier";
         if (days < 7) return $"il y a {days} jours";

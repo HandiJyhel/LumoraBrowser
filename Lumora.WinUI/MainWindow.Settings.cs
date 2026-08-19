@@ -455,6 +455,8 @@ public sealed partial class MainWindow
         ApplyTitleBarSafeArea();
         if (args.DidSizeChange)
             EnforceMinWindowWidth();
+        if (args.DidPresenterChange)
+            UpdateMaximizeButtonAccessibleState();
     }
 
     private void EnforceMinWindowWidth()

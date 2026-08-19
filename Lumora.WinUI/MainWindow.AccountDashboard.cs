@@ -79,6 +79,12 @@ public sealed partial class MainWindow
     {
         long total = 0;
 
+        // TryGetFileLength (pas File.Exists + .Length separes) : entre le test
+        // d'existence et la lecture de la taille, un fichier peut disparaitre
+        // (suppression concurrente, RetryDelete...) et lever une
+        // FileNotFoundException non rattrapee - course TOCTOU trouvee en audit
+        // le 2026-08-19. Un fichier disparu compte pour 0, jamais un plantage
+        // de l'ouverture de l'onglet "Aperçu".
         foreach (var file in new[]
         {
             profile.BookmarksFile, profile.HistoryFile, profile.NotesFile, profile.AnnotationsFile,
@@ -87,18 +93,38 @@ public sealed partial class MainWindow
             profile.RssFeedsFile, profile.ProfileFile, profile.VaultFile
         })
         {
-            if (File.Exists(file)) total += new FileInfo(file).Length;
+            total += TryGetFileLength(file);
         }
 
         foreach (var dir in new[] { profile.FaviconsDir, profile.WebAppIconsDir })
         {
             if (!Directory.Exists(dir)) continue;
-            foreach (var f in Directory.GetFiles(dir)) total += new FileInfo(f).Length;
+            IEnumerable<string> files;
+            try { files = Directory.GetFiles(dir); }
+            catch (IOException) { continue; }
+            catch (UnauthorizedAccessException) { continue; }
+            foreach (var f in files) total += TryGetFileLength(f);
         }
 
         var avatarPath = ProfileAvatarResolver.Find(profile.ProfileDir);
-        if (avatarPath is not null && File.Exists(avatarPath)) total += new FileInfo(avatarPath).Length;
+        if (avatarPath is not null) total += TryGetFileLength(avatarPath);
 
         return total;
+    }
+
+    private static long TryGetFileLength(string path)
+    {
+        try
+        {
+            return File.Exists(path) ? new FileInfo(path).Length : 0;
+        }
+        catch (IOException)
+        {
+            return 0;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return 0;
+        }
     }
 }
