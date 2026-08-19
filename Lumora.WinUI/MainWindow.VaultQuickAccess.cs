@@ -158,10 +158,12 @@ public sealed partial class MainWindow
         // Code TOTP : instantané au moment de l'ouverture du popup, pas de
         // rafraîchissement live ici (le volet de détail du coffre complet
         // s'en charge) — suffisant pour un accès rapide "copier et coller".
-        if (!string.IsNullOrWhiteSpace(cred.TotpSecret))
+        // Masqué si la fonction est désactivée dans Paramètres > Coffre
+        // (0.93.48), sans jamais toucher au secret déjà enregistré.
+        if (_uiSettings.VaultTotpFeatureEnabled && !string.IsNullOrWhiteSpace(cred.TotpSecret))
         {
             var totpRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            var code = TotpService.GenerateCode(cred.TotpSecret, DateTimeOffset.UtcNow, cred.TotpDigits, cred.TotpPeriod);
+            var code = TotpService.GenerateCode(cred.TotpSecret, DateTimeOffset.UtcNow, cred.TotpDigits, cred.TotpPeriod, TotpService.ParseAlgorithmName(cred.TotpAlgorithm));
             var codeText = new TextBlock
             {
                 Text = code,
@@ -176,6 +178,39 @@ public sealed partial class MainWindow
             totpRow.Children.Add(codeText);
             totpRow.Children.Add(copyTotpBtn);
             body.Children.Add(totpRow);
+        }
+
+        // Clé d'accès du site : statut si déjà créée, sinon un raccourci vers la
+        // page de connexion pour en créer une (Lumora ne peut pas en générer une
+        // hors contexte — voir MainWindow.Passkeys.cs). Même logique que la
+        // fiche complète du Coffre. Masqué si la fonction est désactivée dans
+        // Paramètres > Coffre (0.93.48), sans toucher au journal déjà enregistré.
+        if (_uiSettings.VaultPasskeyFeatureEnabled)
+        {
+            var passkeyRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            if (PasskeyForOrigin(cred.Origin) is not null)
+            {
+                passkeyRow.Children.Add(new TextBlock
+                {
+                    Text = "Clé d'accès déjà créée pour ce site",
+                    Opacity = 0.6,
+                    FontSize = AccessibilitySecondaryFontSize(),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap
+                });
+            }
+            else
+            {
+                var createPasskeyBtn = new Button { Content = BuildIconTextContent(BuildScanFrameIcon(14), "Créer une clé d'accès"), FontSize = AccessibilitySecondaryFontSize(), Padding = new Thickness(8, 4, 8, 4) };
+                ApplyNovaControlAccessibility(createPasskeyBtn, $"Créer une clé d'accès pour {PasswordManagerService.DisplayName(cred)}");
+                createPasskeyBtn.Click += (_, _) =>
+                {
+                    VaultQuickAccessFlyout.Hide();
+                    OpenVaultLoginPage(cred);
+                };
+                passkeyRow.Children.Add(createPasskeyBtn);
+            }
+            body.Children.Add(passkeyRow);
         }
 
         return new Border

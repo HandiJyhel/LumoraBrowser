@@ -32,6 +32,10 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.*" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" PrivateAssets="all" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <!-- Lecture de QR code (ajout d'un TOTP par webcam) : managé pur, aucun
+         runtime natif — volontairement PAS OpenCvSharp4/modèles WeChat (trop
+         lourd pour l'installeur, voir MEMORY.md "Coffre V4"). -->
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,6 +49,11 @@
     <Content Include="Assets\LumoraApp.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraLogoMark.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraIncognito.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Icone du fichier de sauvegarde .lum (session "Compte et ouverture",
+         2026-08-14, chantier 3) - generee par scripts/generate-lum-icon.ps1,
+         associee a l'extension par l'installateur (Program.cs.template). -->
+    <Content Include="Assets\LumoraLum.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\LumoraLum.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- Public Suffix List (Mozilla, licence MPL 2.0) — https://publicsuffix.org -->
     <EmbeddedResource Include="Credentials\public_suffix_list.dat" />
   </ItemGroup>

@@ -88,6 +88,25 @@ public sealed partial class MainWindow
         }
     }
 
+    // "J'ai deja un profil sur ce disque" (session "Compte et ouverture",
+    // 2026-08-14) : a la difference de l'import ci-dessus (qui COPIE des
+    // donnees dans le profil vierge tout juste cree via
+    // ProfileLocationContinueButton_Click), ceci repointe simplement l'app
+    // vers un dossier de profil deja complet ailleurs sur le disque - meme
+    // mecanisme que ChangeFolderButton_Click/ProfileLocationContinueButton_Click
+    // (config.CustomProfilePath). Rien n'est copie, deplace ni supprime : le
+    // profil vierge cree a l'etape precedente reste intact sur le disque, et
+    // reapparaitra simplement comme profil non-actif au prochain demarrage
+    // (LumoraProfileRegistry.Discover scanne tout ProfilesRoot()) - c'est le
+    // choix le plus sur trouve pour cette fonctionnalite : aucune suppression/
+    // quarantaine automatique a faire reposer sur une hypothese ("ce profil
+    // vient forcement d'etre cree") qui ne tient plus si l'assistant est
+    // rouvert pour un profil existant n'ayant jamais fini le wizard.
+    // Coeur partage avec CreateProfileFindExistingButton_Click (icone sur l'ecran
+    // "Bienvenue", MainWindow.Profile.cs) - voir AdoptExistingProfileFolderAsync.
+    private async void WizardExistingProfileButton_Click(object sender, RoutedEventArgs e) =>
+        await AdoptExistingProfileFolderAsync(mentionBlankProfileLeftIntact: true);
+
     private async Task FinishWizardAfterImportAsync()
     {
         // ui-settings.lumora vient d'etre remplace par celui de la sauvegarde :

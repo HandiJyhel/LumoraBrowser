@@ -34,6 +34,11 @@ internal sealed class TorProcessManager : IDisposable
     public int SocksPort { get; private set; } = DefaultSocksPort;
     public int ControlPort { get; private set; } = DefaultControlPort;
 
+    // Expose en lecture seule pour TorExitCountrySelector (fichier separe) :
+    // il a besoin d'authentifier son propre dialogue avec le control port
+    // (SETCONF ExitNodes) avant de rendre la main a RequestNewCircuitAsync.
+    public string? CookieAuthPath => _cookieAuthPath;
+
     public event Action<TorEngineState, string>? StateChanged;
 
     public static string ExpectedDirectory(LumoraProfilePaths profile) =>

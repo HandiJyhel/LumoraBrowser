@@ -323,10 +323,16 @@ public sealed class UsageModeVisualIdentityTests
         Assert.DoesNotContain("ModeCompanionButton", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ModeCompanionFlyout", xaml, StringComparison.Ordinal);
 
-        // Le profil a ete deplace en en-tete du menu Demarrer (0.93.5.0-dev,
-        // "comme un vrai menu demarrer Windows") : il ne doit plus etre dans
-        // la barre de statut basse.
-        Assert.DoesNotContain("ProfileStatusButton", statusBarSection, StringComparison.Ordinal);
+        // Le profil vit en en-tete du menu Demarrer, dans ModulesFlyoutRoot
+        // (0.93.5.0-dev, "comme un vrai menu demarrer Windows"). Depuis le
+        // 2026-08-18 (demande explicite utilisateur : un seul lanceur "Menu
+        // Lumora", deplace en bas a gauche comme un vrai bouton Demarrer),
+        // ModulesButton et tout son Flyout (donc ProfileStatusButton avec)
+        // ont rejoint StatusBarRow - "ProfileStatusButton" apparait desormais
+        // DANS statusBarSection, mais toujours une seule fois dans tout le
+        // fichier (jamais duplique ailleurs).
+        Assert.Contains("ProfileStatusButton", statusBarSection, StringComparison.Ordinal);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(xaml, "x:Name=\"ProfileStatusButton\""));
     }
 
     [Fact]
@@ -364,17 +370,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_93_41_0()
+    public void Version_projet_est_alignee_sur_0_93_52_0()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.93.41.0-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.93.41.0-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.93.41.0-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.93.41.0-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.52.0-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.93.52.0-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.93.52.0-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.52.0-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

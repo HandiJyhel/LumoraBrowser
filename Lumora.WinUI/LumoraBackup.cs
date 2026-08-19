@@ -18,7 +18,11 @@ public sealed class VaultLockedForBackupException : Exception
         : base("Le coffre est verrouillé. Déverrouillez-le avant de créer une sauvegarde.") { }
 }
 
-// Format .lumorabackup :
+// Format de sauvegarde Lumora (extension .lum depuis le 2026-08-14, session
+// "Compte et ouverture" ; .lumorabackup/.novabackup restent acceptes en
+// import pour les sauvegardes deja existantes - voir MainWindow.SettingsStorage.cs).
+// Le format binaire ci-dessous est totalement indifferent au nom du fichier,
+// seul le magic "NOVABAK" suivant est verifie a la lecture :
 //   [0-6]   Magic "NOVABAK"
 //   [7]     Version
 //   [8-23]  Salt (16 octets)
@@ -29,7 +33,10 @@ public sealed class VaultLockedForBackupException : Exception
 //
 // Le zip contient tout ce qui fait le profil, décrypté du DPAPI machine
 // (fichiers .lumora) au moment de l'export : navigation, groupes d'onglets,
-// web apps + icônes, favicons, flux RSS, clés d'accès, avatar, paramètres.
+// web apps + icônes, favicons, flux RSS, clés d'accès, avatar, paramètres,
+// ET le compte (nom + hash de mot de passe/PIN/clé de récupération, fichier
+// profile.lumora - inclus depuis le 2026-08-15, voir TryReadAccountFile plus
+// bas : un bug d'entropie DPAPI le faisait échouer silencieusement avant).
 // Le coffre (mots de passe/cartes) est TOUJOURS inclus (2026-08-13, retour
 // utilisateur : un coffre absent d'une sauvegarde "complète" est une
 // catastrophe silencieuse pour l'utilisateur qui la découvre après avoir
@@ -93,7 +100,13 @@ internal static class LumoraBackup
             WriteDirectoryEntries(zip, profile.FaviconsDir, "navigation/favicons");
             WriteDirectoryEntries(zip, profile.WebAppIconsDir, "navigation/webapp-icons");
 
-            var profileContent = LumoraFile.TryReadAllText(profile.ProfileFile);
+            // profile.lumora (identite du compte : nom + hash de mot de passe) n'est
+            // PAS chiffre comme les autres fichiers du profil (LumoraFile, entropie
+            // "Lumora.WinUI.v1") mais directement par UserProfile.Save (DPAPI brut,
+            // SANS entropie) - lire avec LumoraFile ici echouait silencieusement
+            // (TryReadAllText avale l'exception), donc le compte n'a jamais ete
+            // inclus dans AUCUNE sauvegarde jusqu'ici (bug trouve le 2026-08-15).
+            var profileContent = TryReadAccountFile(profile.ProfileFile);
             if (profileContent is not null)
                 WriteEntry(zip, "profile.txt", profileContent);
 
@@ -183,7 +196,7 @@ internal static class LumoraBackup
             if (profileEntry is not null)
             {
                 using var reader = new StreamReader(profileEntry.Open(), Encoding.UTF8);
-                LumoraFile.WriteAllText(profile.ProfileFile, reader.ReadToEnd());
+                WriteAccountFile(profile.ProfileFile, reader.ReadToEnd());
             }
 
             var avatarEntry = zip.Entries.FirstOrDefault(entry =>
@@ -273,6 +286,32 @@ internal static class LumoraBackup
         using (var cs = new CryptoStream(new MemoryStream(encrypted), decryptor, CryptoStreamMode.Read))
             cs.CopyTo(buf);
         return buf.ToArray();
+    }
+
+    // profile.lumora suit le chiffrement de UserProfile.Save/Load (DPAPI CurrentUser,
+    // entropie null) - volontairement DIFFERENT de LumoraFile (entropie
+    // "Lumora.WinUI.v1") utilise par tous les autres fichiers du profil. Ne pas
+    // fusionner avec LumoraFile.TryReadAllText/WriteAllText : ce serait re-casser
+    // ce meme bug dans l'autre sens.
+    private static string? TryReadAccountFile(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return null;
+            var cipher = File.ReadAllBytes(path);
+            var plain  = ProtectedData.Unprotect(cipher, null, DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(plain);
+        }
+        catch { return null; }
+    }
+
+    private static void WriteAccountFile(string path, string content)
+    {
+        var plain  = Encoding.UTF8.GetBytes(content);
+        var cipher = ProtectedData.Protect(plain, null, DataProtectionScope.CurrentUser);
+        var dir    = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
+        File.WriteAllBytes(path, cipher);
     }
 
     private static byte[] DeriveKey(string password, byte[] salt)

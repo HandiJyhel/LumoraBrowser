@@ -27,6 +27,34 @@ public class UiSettingsMigrationTests
         Assert.Equal(UiSettings.CurrentSchemaVersion, settings.SchemaVersion);
     }
 
+    // Fonctions optionnelles du Coffre (0.93.48) : activées par défaut pour ne
+    // rien changer au comportement existant tant que personne n'a rien
+    // désactivé explicitement dans Paramètres > Coffre.
+    [Fact]
+    public void Default_active_les_sections_totp_et_passkey_du_coffre()
+    {
+        var settings = UiSettings.Default();
+
+        Assert.True(settings.VaultTotpFeatureEnabled);
+        Assert.True(settings.VaultPasskeyFeatureEnabled);
+    }
+
+    [Fact]
+    public void Save_puis_Load_preserve_la_desactivation_des_sections_du_coffre()
+    {
+        var dir = CreateTempDir();
+        var path = Path.Combine(dir, "ui-settings.lumora");
+        var original = UiSettings.Default();
+        original.VaultTotpFeatureEnabled = false;
+        original.VaultPasskeyFeatureEnabled = false;
+        original.Save(path);
+
+        var reloaded = UiSettings.Load(path);
+
+        Assert.False(reloaded.VaultTotpFeatureEnabled);
+        Assert.False(reloaded.VaultPasskeyFeatureEnabled);
+    }
+
     [Fact]
     public void Save_puis_Load_preserve_les_valeurs_et_la_version_de_schema()
     {

@@ -232,6 +232,19 @@ internal sealed class UiSettings
     ];
     public List<string> PinnedStartMenuTileIds { get; set; } = [.. DefaultPinnedStartMenuTileIds];
     public List<StartMenuTileUsage> StartMenuTileUsage { get; set; } = [];
+    // Visibilité des sections TOTP / Passkey dans le Coffre (0.93.48, retour
+    // utilisateur : quelqu'un qui utilise déjà une autre appli de 2FA/passkeys
+    // n'a pas à se coltiner ces sections dans chaque fiche). Activées par
+    // défaut (comportement inchangé pour tout le monde). Changer l'un ou
+    // l'autre redemande le mot de passe/PIN du profil, comme l'ouverture du
+    // Coffre (voir VaultTotpFeatureToggle_Toggled/VaultPasskeyFeatureToggle_Toggled,
+    // MainWindow.VaultAccess.cs) - jamais un simple interrupteur muet.
+    // Désactiver ne supprime jamais rien du fichier du coffre : réactiver fait
+    // tout réapparaître à l'identique, y compris sur les fiches qui avaient
+    // déjà des données au moment de la désactivation.
+    public bool VaultTotpFeatureEnabled { get; set; } = true;
+    public bool VaultPasskeyFeatureEnabled { get; set; } = true;
+
     // Préférences du générateur de mots de passe du coffre, partagées entre le
     // dialogue "Nouvel identifiant" et la barre de suggestion automatique.
     public int VaultGeneratorLength { get; set; } = 20;
@@ -275,6 +288,13 @@ internal sealed class UiSettings
     // Positions des séparateurs visuels dans la section des modules (indice après lequel ajouter un séparateur).
     // Absent ou vide = pas de séparateur personnalisé (ordre linéaire simple).
     public List<int> ToolbarSeparatorPositions { get; set; } = new();
+    // Tableau de bord "Mon compte" (0.93.45.0-dev) : date de la derniere
+    // sauvegarde .lum reussie avec CE compte (Unix seconds, 0 = jamais) et
+    // nom du fichier produit - affiches dans Parametres > Profils locaux,
+    // ecrits par ExportBackupButton_Click (MainWindow.SettingsStorage.cs)
+    // juste apres un LumoraBackup.Export reussi.
+    public long LastBackupAtUnix { get; set; }
+    public string LastBackupFileName { get; set; } = string.Empty;
 
     public static UiSettings Default() => new();
 

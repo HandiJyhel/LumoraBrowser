@@ -4,8 +4,9 @@ using Xunit;
 
 namespace Lumora.Tests;
 
-// Vérifie le round-trip de la sauvegarde chiffrée (.lumorabackup v2 : Argon2id + AES-GCM)
-// et le rejet d'un mauvais mot de passe.
+// Vérifie le round-trip de la sauvegarde chiffrée (.lum, v2 : Argon2id + AES-GCM ;
+// .lumorabackup/.novabackup restent acceptés en import) et le rejet d'un mauvais
+// mot de passe.
 public sealed class LumoraBackupTests : IDisposable
 {
     private readonly string _root =
@@ -25,12 +26,46 @@ public sealed class LumoraBackupTests : IDisposable
         LumoraFile.WriteAllText(source.BookmarksFile, "signet\tperso\thttps://exemple.fr");
         var sourceVault = new VaultStore(source.VaultFile);
 
-        var backupFile = Path.Combine(_root, "sauvegarde.lumorabackup");
+        // .lum : extension par defaut depuis le 2026-08-14 (session "Compte et
+        // ouverture") - voir Export_puis_Import_fonctionnent_quelle_que_soit_l_extension_du_fichier
+        // pour la preuve que .lumorabackup/.novabackup restent tout aussi valides.
+        var backupFile = Path.Combine(_root, "sauvegarde.lum");
         LumoraBackup.Export(backupFile, "phrase-secrete", source, sourceVault);
         Assert.True(File.Exists(backupFile));
 
         var targetDir = Path.Combine(_root, "cible");
         var target = LumoraProfilePaths.FromDirectory(targetDir);
+        var targetVault = new VaultStore(target.VaultFile);
+        LumoraBackup.Import(backupFile, "phrase-secrete", target, targetVault);
+
+        Assert.Equal(
+            LumoraFile.ReadAllText(source.BookmarksFile),
+            LumoraFile.ReadAllText(target.BookmarksFile));
+    }
+
+    // Le format binaire (magic "NOVABAK" + version) est totalement indifferent
+    // au nom du fichier : verifie explicitement que le nouveau nom par defaut
+    // (.lum) et les deux noms historiques (.lumorabackup, .novabackup) round-trip
+    // tous les trois a l'identique - c'est la garantie de retrocompatibilite
+    // promise pour ce chantier (aucune sauvegarde existante ne doit devenir
+    // illisible).
+    [Theory]
+    [InlineData(".lum")]
+    [InlineData(".lumorabackup")]
+    [InlineData(".novabackup")]
+    public void Export_puis_Import_fonctionnent_quelle_que_soit_l_extension_du_fichier(string extension)
+    {
+        var sourceDir = Path.Combine(_root, "source-ext" + extension.Replace(".", ""));
+        var source = LumoraProfilePaths.FromDirectory(sourceDir);
+        Directory.CreateDirectory(source.NavigationDir);
+        LumoraFile.WriteAllText(source.BookmarksFile, "signet\tperso\thttps://exemple.fr");
+        var sourceVault = new VaultStore(source.VaultFile);
+
+        var backupFile = Path.Combine(_root, "sauvegarde-ext" + extension);
+        LumoraBackup.Export(backupFile, "phrase-secrete", source, sourceVault);
+        Assert.True(File.Exists(backupFile));
+
+        var target = LumoraProfilePaths.FromDirectory(Path.Combine(_root, "cible-ext" + extension.Replace(".", "")));
         var targetVault = new VaultStore(target.VaultFile);
         LumoraBackup.Import(backupFile, "phrase-secrete", target, targetVault);
 
@@ -171,6 +206,40 @@ public sealed class LumoraBackupTests : IDisposable
         Assert.Throws<VaultLockedForBackupException>(
             () => LumoraBackup.Export(backupFile, "phrase-secrete", source, vault));
         Assert.False(File.Exists(backupFile));
+    }
+
+    // 2026-08-15 : profile.lumora (nom + mot de passe de connexion) est chiffre
+    // DIFFEREMMENT du reste du profil (UserProfile.Save = DPAPI sans entropie,
+    // vs LumoraFile = DPAPI + entropie "Lumora.WinUI.v1") - un round-trip
+    // Export/Import doit restituer un compte qui se reconnecte avec le MEME
+    // mot de passe, pas seulement un fichier profile.lumora present sur le
+    // disque cible. Couvre le bug reel signale par l'utilisateur (compte
+    // absent d'une sauvegarde par ailleurs complete).
+    [Fact]
+    public void Export_puis_Import_restitue_le_compte_avec_le_meme_mot_de_passe()
+    {
+        var sourceDir = Path.Combine(_root, "source8");
+        var source = LumoraProfilePaths.FromDirectory(sourceDir);
+        Directory.CreateDirectory(source.NavigationDir);
+
+        var account = UserProfile.Create("Alice", "mot-de-passe-du-compte!", "123456")
+            .WithRecoveryKey("NOVA-ABCDEF-123456-GHIJKL");
+        account.Save(source.ProfileFile);
+        var sourceVault = new VaultStore(source.VaultFile);
+
+        var backupFile = Path.Combine(_root, "sauvegarde8.lumorabackup");
+        LumoraBackup.Export(backupFile, "phrase-secrete", source, sourceVault);
+
+        var target = LumoraProfilePaths.FromDirectory(Path.Combine(_root, "cible8"));
+        var targetVault = new VaultStore(target.VaultFile);
+        LumoraBackup.Import(backupFile, "phrase-secrete", target, targetVault);
+
+        var restored = UserProfile.Load(target.ProfileFile, target.LegacyProfileFile);
+        Assert.NotNull(restored);
+        Assert.Equal("Alice", restored!.Name);
+        Assert.True(restored.VerifyPassword("mot-de-passe-du-compte!"));
+        Assert.True(restored.VerifyPin("123456"));
+        Assert.True(restored.VerifyRecoveryKey("NOVA-ABCDEF-123456-GHIJKL"));
     }
 
     // Cartes de paiement : meme traitement que les identifiants, verifie

@@ -22,6 +22,16 @@ public sealed class GuestModeProfileLockdownTests
             "ProfileManagementRestrictedPanel.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;",
             code, StringComparison.Ordinal);
         Assert.Contains("ProfileGuestRestrictedNotice.IsOpen = _isGuestMode;", code, StringComparison.Ordinal);
+
+        // 0.93.45.0-dev (tableau de bord "Mon compte") : la Zone dangereuse est
+        // sortie de ProfileManagementRestrictedPanel pour rester visible peu
+        // importe l'onglet Aperçu/Sécurité/Sauvegarde/Autres profils ouvert -
+        // doit garder EXACTEMENT le meme verrou mode invite, dans un panneau
+        // desormais distinct (ProfileDangerZonePanel), pas relache au passage.
+        Assert.Contains("x:Name=\"ProfileDangerZonePanel\"", xaml, StringComparison.Ordinal);
+        Assert.Contains(
+            "ProfileDangerZonePanel.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;",
+            code, StringComparison.Ordinal);
     }
 
     [Fact]

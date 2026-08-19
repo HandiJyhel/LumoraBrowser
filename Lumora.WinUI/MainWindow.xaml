@@ -195,6 +195,21 @@
                 <GradientStop Color="#FFE6AA48" Offset="0.56" />
                 <GradientStop Color="#FFFF7F35" Offset="1" />
             </LinearGradientBrush>
+            <!-- Gabarits de bouton "Doux moderne" (2026-08-18, remplace l'ombre
+                 nette decalee + liseret clair en tete d'aujourd'hui meme -
+                 retour utilisateur apres usage reel : "vraiment dégueu"). Meme
+                 principe que la maquette artifact validee : fond + fine
+                 bordure au repos (aucun relief), un simple voile clair qui
+                 se superpose au survol/appui (comme MenuFlyoutItemBackground
+                 PointerOver ailleurs dans ce fichier) plutot qu'une vraie
+                 ombre portee - ThemeShadow existe (voir
+                 NavigationToolbarCapsule) mais son cout de composition sur
+                 des dizaines de boutons repetes (listes, tuiles du menu
+                 Demarrer) n'est pas justifie ici. Cles INCHANGEES
+                 (NovaRaisedIconButtonTemplate/NovaRaisedBookmarkBarButtonTemplate)
+                 pour que tous les styles qui les referencent (NovaButtonStyle,
+                 NovaCompactButtonStyle, NovaChromeIconButtonStyle...) recoivent
+                 le nouveau rendu sans etre touches un par un. -->
             <ControlTemplate x:Key="NovaRaisedIconButtonTemplate" TargetType="Button">
                 <Grid>
                     <VisualStateManager.VisualStateGroups>
@@ -202,43 +217,32 @@
                             <VisualState x:Name="Normal" />
                             <VisualState x:Name="PointerOver">
                                 <VisualState.Setters>
-                                    <Setter Target="ShadowLayer.Opacity" Value="0.92" />
-                                    <Setter Target="TopGloss.Opacity" Value="1" />
+                                    <Setter Target="HoverOverlay.Opacity" Value="1" />
                                 </VisualState.Setters>
                             </VisualState>
                             <VisualState x:Name="Pressed">
                                 <VisualState.Setters>
-                                    <Setter Target="ShadowLayer.Opacity" Value="0.16" />
-                                    <Setter Target="SurfaceBorder.Margin" Value="0,1,0,-1" />
-                                    <Setter Target="TopGloss.Opacity" Value="0.28" />
+                                    <Setter Target="HoverOverlay.Opacity" Value="0.55" />
+                                    <Setter Target="SurfaceBorder.Opacity" Value="0.88" />
                                 </VisualState.Setters>
                             </VisualState>
                             <VisualState x:Name="Disabled">
                                 <VisualState.Setters>
                                     <Setter Target="SurfaceBorder.Opacity" Value="0.44" />
-                                    <Setter Target="ShadowLayer.Opacity" Value="0.10" />
                                 </VisualState.Setters>
                             </VisualState>
                         </VisualStateGroup>
                     </VisualStateManager.VisualStateGroups>
-                    <Border x:Name="ShadowLayer"
-                            Margin="0,3,0,0"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Background="{StaticResource NovaChromeButtonShadowBrush}"
-                            Opacity="0.85" />
                     <Border x:Name="SurfaceBorder"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}">
                         <Grid>
-                            <Border x:Name="TopGloss"
-                                    Height="10"
-                                    Margin="1,1,1,0"
-                                    CornerRadius="{TemplateBinding CornerRadius}"
-                                    VerticalAlignment="Top"
+                            <Border x:Name="HoverOverlay"
                                     Background="{StaticResource NovaChromeButtonHighlightBrush}"
-                                    Opacity="0.92" />
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Opacity="0" />
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Content="{TemplateBinding Content}"
@@ -254,43 +258,32 @@
                             <VisualState x:Name="Normal" />
                             <VisualState x:Name="PointerOver">
                                 <VisualState.Setters>
-                                    <Setter Target="ShadowLayer.Opacity" Value="0.78" />
-                                    <Setter Target="TopGloss.Opacity" Value="0.94" />
+                                    <Setter Target="HoverOverlay.Opacity" Value="1" />
                                 </VisualState.Setters>
                             </VisualState>
                             <VisualState x:Name="Pressed">
                                 <VisualState.Setters>
-                                    <Setter Target="ShadowLayer.Opacity" Value="0.14" />
-                                    <Setter Target="SurfaceBorder.Margin" Value="0,1,0,-1" />
-                                    <Setter Target="TopGloss.Opacity" Value="0.20" />
+                                    <Setter Target="HoverOverlay.Opacity" Value="0.55" />
+                                    <Setter Target="SurfaceBorder.Opacity" Value="0.88" />
                                 </VisualState.Setters>
                             </VisualState>
                             <VisualState x:Name="Disabled">
                                 <VisualState.Setters>
                                     <Setter Target="SurfaceBorder.Opacity" Value="0.42" />
-                                    <Setter Target="ShadowLayer.Opacity" Value="0.08" />
                                 </VisualState.Setters>
                             </VisualState>
                         </VisualStateGroup>
                     </VisualStateManager.VisualStateGroups>
-                    <Border x:Name="ShadowLayer"
-                            Margin="0,2,0,0"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Background="{StaticResource NovaChromeButtonShadowBrush}"
-                            Opacity="0.56" />
                     <Border x:Name="SurfaceBorder"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}">
                         <Grid>
-                            <Border x:Name="TopGloss"
-                                    Height="9"
-                                    Margin="1,1,1,0"
-                                    CornerRadius="{TemplateBinding CornerRadius}"
-                                    VerticalAlignment="Top"
+                            <Border x:Name="HoverOverlay"
                                     Background="{StaticResource NovaChromeButtonHighlightBrush}"
-                                    Opacity="0.66" />
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Opacity="0" />
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               Margin="{TemplateBinding Padding}"
@@ -328,6 +321,191 @@
                 <Setter Property="Background" Value="{StaticResource NovaBookmarkButtonBackgroundBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaBookmarkButtonBorderBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource NovaBookmarkButtonForegroundBrush}" />
+            </Style>
+            <!-- Style de bouton generique unique de l'application (2026-08-18,
+                 homogeneisation demandee par l'utilisateur : "on va pas faire
+                 comme Windows qui a des jolis trucs et des moches trucs").
+                 Reutilise le meme relief (ombre nette + liseret clair,
+                 NovaChromeButtonShadowBrush/HighlightBrush) et le meme
+                 template que les boutons de la barre de favoris
+                 (NovaRaisedBookmarkBarButtonTemplate, deja theme/mode-aware
+                 puisque ces brushes sont pilotees par ApplyUsageModeChrome/
+                 ApplyAccessibilitySettings) plutot que d'en inventer un
+                 nouveau. Destine a remplacer tout <Button> sans Style
+                 explicite dans les panneaux (Favoris, Coffre, Portefeuille,
+                 Sessions...) et a etendre NovaCompactButtonStyle
+                 (BasedOn plus bas) pour les boutons deja references par ce
+                 dernier partout ailleurs. -->
+            <Style x:Key="NovaButtonStyle" TargetType="Button">
+                <Setter Property="Padding" Value="14,8" />
+                <Setter Property="MinHeight" Value="34" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Background" Value="{StaticResource NovaChromeButtonBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaChromeButtonBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource NovaChromeButtonForegroundBrush}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Template" Value="{StaticResource NovaRaisedBookmarkBarButtonTemplate}" />
+            </Style>
+            <!-- Action principale d'un panneau (une seule par ecran en general :
+                 "Nouvelle note", "Ajouter une carte"...) - memes brushes
+                 d'accent que le reste de l'app (AccentFillColorDefaultBrush,
+                 deja pilote par mode/theme dans ApplySharedAppBrushes),
+                 remplace l'usage ad hoc du AccentButtonStyle systeme (plat,
+                 sans relief) sur ces boutons-la. -->
+            <Style x:Key="NovaButtonPrimaryStyle" TargetType="Button" BasedOn="{StaticResource NovaButtonStyle}">
+                <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+            </Style>
+            <!-- Action destructive/irreversible d'un panneau ("Vider",
+                 "Supprimer ce flux", "Tout oublier maintenant"...) - meme
+                 convention chip translucide+liseret que
+                 NovaChromeAccentIconButtonStyle, teinte danger
+                 (NovaDangerBrush/NovaDangerSurfaceBrush) au lieu de l'accent. -->
+            <Style x:Key="NovaButtonDangerStyle" TargetType="Button" BasedOn="{StaticResource NovaButtonStyle}">
+                <Setter Property="Background" Value="{ThemeResource NovaDangerSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource NovaDangerBrush}" />
+            </Style>
+            <!-- Boutons systeme (reduire/agrandir/fermer) en petits points groupes
+                 "a la Apple" (2026-08-18, demande explicite utilisateur), en
+                 remplacement des boutons de legende natifs Windows. La zone
+                 cliquable reste large (28px) pour l'accessibilite (AAA >= 24px,
+                 chantier accessibilite en cours) - seul le POINT visuel a
+                 l'interieur est petit, pas la cible de clic. Le point change de
+                 couleur au survol (WindowCloseButton en rouge danger, les deux
+                 autres en accent) pour rester lisible sans imiter le rouge/jaune/
+                 vert macOS (qui n'a pas de sens dans la palette Lumora). -->
+            <Style x:Key="NovaCaptionDotButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="28" />
+                <Setter Property="Height" Value="28" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid Background="{TemplateBinding Background}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="Dot.Fill" Value="{StaticResource NovaChromeButtonAccentBorderBrush}" />
+                                                <Setter Target="Dot.Width" Value="12" />
+                                                <Setter Target="Dot.Height" Value="12" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="Dot.Opacity" Value="0.6" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Ellipse x:Name="Dot" Width="10" Height="10"
+                                         Fill="{StaticResource NovaTextMutedBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="NovaCaptionDotCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaCaptionDotButtonStyle}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid Background="{TemplateBinding Background}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="Dot.Fill" Value="{ThemeResource NovaDangerBrush}" />
+                                                <Setter Target="Dot.Width" Value="12" />
+                                                <Setter Target="Dot.Height" Value="12" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="Dot.Opacity" Value="0.6" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Ellipse x:Name="Dot" Width="10" Height="10"
+                                         Fill="{StaticResource NovaTextMutedBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!-- Icones disquette/dossier de l'ecran "Bienvenue" (session "Compte et
+                 ouverture", 2026-08-14) : liseré fin au degrade NovaIdentityMarkBrush
+                 (meme degrade que la barre de progression juste en dessous), retenu
+                 par l'utilisateur en Artifact apres 4 pistes comparees. Anneau +
+                 pastille interieure (pas de BorderBrush degrade directement sur le
+                 Border, WinUI ne degrade pas les bordures proprement) : Border exterieur
+                 rempli du degrade, Border interieur en retrait de 1px avec le fond de
+                 bouton habituel - le degrade ne reste visible qu'en fin liseré. -->
+            <Style x:Key="NovaIdentityRingIconButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinWidth" Value="32" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Background" Value="{StaticResource NovaIdentityMarkBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource NovaChromeButtonForegroundBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="InnerCore.Background" Value="{StaticResource NovaChromeButtonHighlightBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="OuterRing.Opacity" Value="0.72" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="OuterRing.Opacity" Value="0.35" />
+                                                <Setter Target="Icon.Opacity" Value="0.5" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Border x:Name="OuterRing" Background="{TemplateBinding Background}" CornerRadius="10" />
+                                <Border x:Name="InnerCore" Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                                        CornerRadius="9" Margin="1">
+                                    <ContentPresenter x:Name="Icon"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                      Content="{TemplateBinding Content}"
+                                                      Foreground="{TemplateBinding Foreground}" />
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <Style x:Key="NovaChromeSymbolIconStyle" TargetType="SymbolIcon">
                 <Setter Property="Foreground" Value="{StaticResource NovaChromeButtonForegroundBrush}" />
@@ -587,6 +765,14 @@
                 <Setter Property="Background" Value="{StaticResource NovaCompanionGlassBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaCompanionStrokeBrush}" />
             </Style>
+            <!-- Barre des taches (2026-08-18) : forme identique aux pilules
+                 Mode/Compagnon/Accessibilite, mais Background/BorderBrush sont
+                 fixes par code-behind selon l'etat premier-plan/arriere-plan
+                 (MainWindow.OpenPanelsTaskbar.cs) plutot que par une couleur
+                 d'accent fixe - un module ouvert n'a pas de couleur propre. -->
+            <Style x:Key="NovaTaskbarItemButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaFooterPillButtonStyle}">
+                <Setter Property="BorderThickness" Value="0" />
+            </Style>
             <Style x:Key="NovaModuleFlyoutActionStyle" TargetType="Button">
                 <Setter Property="MinHeight" Value="46" />
                 <Setter Property="Padding" Value="0" />
@@ -675,16 +861,36 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+            <!-- Homogeneisation 2026-08-18 : ce style etait jusqu'ici uniquement
+                 dimensionnel (hauteur/marges/rayon), sans aucune couleur Nova ni
+                 relief - les ~45 boutons qui le referencent (bandeaux "Ignorer"/
+                 "Non merci", actions de Parametres, Historique, Telechargements...)
+                 rendaient donc avec le chrome WinUI par defaut. Ajout des memes
+                 brushes + template que NovaButtonStyle pour que tous ces boutons
+                 deviennent Nova + relief d'un seul coup, sans avoir a toucher
+                 chacun de leurs usages. -->
             <Style x:Key="NovaCompactButtonStyle" TargetType="Button">
                 <Setter Property="Height" Value="32" />
                 <Setter Property="MinHeight" Value="32" />
                 <Setter Property="Padding" Value="10,0" />
                 <Setter Property="CornerRadius" Value="7" />
                 <Setter Property="FontSize" Value="12" />
+                <Setter Property="Background" Value="{StaticResource NovaChromeButtonBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource NovaChromeButtonBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource NovaChromeButtonForegroundBrush}" />
                 <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
                 <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
                 <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Template" Value="{StaticResource NovaRaisedBookmarkBarButtonTemplate}" />
+            </Style>
+            <!-- Variante destructive de NovaCompactButtonStyle (memes dimensions
+                 compactes, teinte danger) - "Vider l'historique", "Effacer" les
+                 telechargements... -->
+            <Style x:Key="NovaCompactButtonDangerStyle" TargetType="Button" BasedOn="{StaticResource NovaCompactButtonStyle}">
+                <Setter Property="Background" Value="{ThemeResource NovaDangerSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource NovaDangerBrush}" />
             </Style>
             <Style x:Key="NovaModeColorSwatchButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="34" />
@@ -868,6 +1074,7 @@
                                     <primitives:TabViewListView Grid.Column="1" HorizontalAlignment="Stretch" x:Name="TabListView" Padding="{TemplateBinding Padding}" CanReorderItems="{TemplateBinding CanReorderTabs}" CanDragItems="{TemplateBinding CanDragTabs}" AllowDrop="{TemplateBinding AllowDropTabs}" ItemsSource="{TemplateBinding TabItemsSource}" ItemTemplate="{TemplateBinding TabItemTemplate}" ItemTemplateSelector="{TemplateBinding TabItemTemplateSelector}" />
                                     <Border Visibility="{Binding IsAddTabButtonVisible, RelativeSource={RelativeSource TemplatedParent}}" Grid.Column="2" Padding="3,0,0,0" VerticalAlignment="Center">
                                         <Button x:Name="AddButton" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                Style="{StaticResource NovaButtonStyle}"
                                                 Width="32" Height="24" Padding="0" CornerRadius="6"
                                                 Background="{StaticResource NovaChromeButtonBackgroundBrush}"
                                                 BorderThickness="0"
@@ -1264,254 +1471,39 @@
                 Background="{StaticResource NovaIdentityMarkBrush}"
                 Opacity="0.95" />
 
-        <!-- Bouton menu Demarrer : point d'ancrage a gauche, hors de la
-             capsule de la barre d'outils, comme le bouton Windows/Ubuntu
-             ne se mele jamais aux autres icones de la barre des taches. -->
-        <Button x:Name="ModulesButton"
-                Grid.Row="2"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Width="40" Height="40"
-                Margin="18,0,0,0"
-                Style="{StaticResource NovaChromeIconButtonStyle}"
-                AutomationProperties.Name="Menu Lumora"
-                ToolTipService.ToolTip="Menu Lumora — modules, favoris, paramètres">
-            <!-- Vraie marque Lumora (2026-08-10, retour utilisateur : l'ancien
-                 tracé abstrait ne ressemblait a rien par rapport aux autres
-                 icones, ET c'etait une marque differente de celle deja
-                 utilisee sur la page d'accueil - LumoraLogoMark.png, la
-                 goutte dégradée avec l'étoile, deja l'identite reelle de
-                 l'app (NewTabHome.cs, LumoraLogoDataUri()). Reprise telle
-                 quelle plutot que reinventee, pour que Demarrer et l'accueil
-                 montrent enfin la meme marque. -->
-            <!-- PNG remplace par un trace vectoriel (2026-08-12, retour
-                 utilisateur : bords crenelés visibles sur ce bouton, seul endroit
-                 de la barre d'outils avec une image bitmap au lieu d'une icone
-                 nette). Meme geometrie/degrade que le mark de LoginOverlay
-                 (MainWindow.xaml, plus bas) - repris tel quel, pas redessine. -->
-            <Path x:Name="ModulesButtonMark" Width="22" Height="22" Stretch="Uniform"
-                  Fill="{StaticResource NovaIdentityMarkBrush}"
-                  Data="M32,10 C41,20 46,30 46,38 A14,14 0 1 1 18,38 C18,30 23,20 32,10 Z M35,15 L38,21.5 L45,24 L38,26.5 L35,33 L32,26.5 L25,24 L32,21.5 Z" />
-            <Button.Flyout>
-                <Flyout x:Name="ModulesFlyout" Placement="BottomEdgeAlignedLeft" FlyoutPresenterStyle="{StaticResource StartMenuFlyoutPresenterStyle}" Opening="ModulesFlyout_Opening">
-                    <StackPanel x:Name="ModulesFlyoutRoot" Width="640" Spacing="0">
-
-                        <!-- En-tete profil (0.93.5.0-dev, deplace depuis la barre de statut basse) :
-                             photo + nom en tete du menu, comme un vrai menu demarrer Windows - clic
-                             ouvre le meme ProfileStatusFlyout qu'avant (deplace avec lui, aucune
-                             nouvelle logique de profil). -->
-                        <Button x:Name="ProfileStatusButton"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
-                                Padding="10,10"
-                                Margin="0,0,0,12"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                CornerRadius="12"
-                                ToolTipService.ToolTip="Ouvrir le menu profil"
-                                AutomationProperties.Name="Profil Lumora"
-                                Click="ProfileStatusButton_Click">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <Ellipse x:Name="ProfileStatusAvatar" Width="38" Height="38" Visibility="Collapsed">
-                                    <Ellipse.Fill>
-                                        <ImageBrush x:Name="ProfileStatusAvatarBrush" Stretch="UniformToFill" />
-                                    </Ellipse.Fill>
-                                </Ellipse>
-                                <TextBlock x:Name="ProfileStatusText" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Opacity="0.92" />
-                            </StackPanel>
-                            <Button.Flyout>
-                                <Flyout x:Name="ProfileStatusFlyout" Placement="TopEdgeAlignedRight">
-                                    <StackPanel Width="340" Spacing="12">
-                                        <Border Style="{StaticResource NovaFlyoutHeroCardStyle}">
-                                            <StackPanel Spacing="2">
-                                                <TextBlock x:Name="ProfileFlyoutTitleText"
-                                                           Text="Profil Lumora"
-                                                           FontWeight="SemiBold"
-                                                           FontSize="18"
-                                                           Foreground="{StaticResource NovaBrandChipForegroundBrush}" />
-                                                <TextBlock x:Name="ProfileFlyoutSubtitleText"
-                                                           Text="Gérez l'utilisateur local, les profils et les réglages de cette session."
-                                                           TextWrapping="Wrap"
-                                                           FontSize="12"
-                                                           Opacity="0.82"
-                                                           Foreground="{StaticResource NovaBrandChipMutedBrush}" />
-                                            </StackPanel>
-                                        </Border>
-                                        <Border Style="{StaticResource NovaFlyoutSectionCardStyle}">
-                                            <StackPanel Spacing="4">
-                                                <TextBlock x:Name="ProfileFlyoutCurrentUserText"
-                                                           Text="Aucun profil actif"
-                                                           FontWeight="SemiBold" />
-                                                <TextBlock x:Name="ProfileFlyoutCurrentStateText"
-                                                           Text="Créer ou choisir un profil local pour garder vos données."
-                                                           TextWrapping="Wrap"
-                                                           FontSize="12"
-                                                           Opacity="0.68" />
-                                            </StackPanel>
-                                        </Border>
-                                        <Button x:Name="ProfileFlyoutSettingsButton"
-                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
-                                                Click="ProfileFlyoutSettingsButton_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <FontIcon Glyph="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock Text="Paramètres utilisateur" FontWeight="SemiBold" />
-                                                    <TextBlock Text="Ouvrir les réglages du profil local, du PIN et des autres comptes." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button x:Name="ProfileFlyoutSwitchButton"
-                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
-                                                Click="ProfileFlyoutSwitchButton_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <FontIcon Glyph="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock Text="Changer d'utilisateur" FontWeight="SemiBold" />
-                                                    <TextBlock Text="Afficher le choix des profils locaux sur cet ordinateur." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button x:Name="ProfileFlyoutCreateButton"
-                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
-                                                Click="ProfileFlyoutCreateButton_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock Text="Créer un utilisateur" FontWeight="SemiBold" />
-                                                    <TextBlock Text="Ajouter un nouveau profil Lumora sur cet appareil." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Flyout>
-                            </Button.Flyout>
-                        </Button>
-
-                        <!-- En-tete : mark + recherche en direct (filtre la grille sur place,
-                             StartMenuSearchBox_TextChanged - ne delegue plus a la palette
-                             de commande separee) + fermeture -->
-                        <Grid ColumnSpacing="10" Margin="0,0,0,14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <!-- Trace corrige (2026-08-12) : cet en-tete gardait encore
-                                 l'ancien symbole "carre a coin coupe", jamais mis a jour
-                                 quand le bouton Demarrer juste en dehors de ce volet est
-                                 passe a la goutte le 10/08 - les deux montraient donc 2
-                                 marques differentes a un clic d'intervalle. Meme trace que
-                                 ModulesButtonMark/LoginOverlay desormais. -->
-                            <Path Grid.Column="0" Width="24" Height="24" Stretch="Uniform"
-                                  Fill="{StaticResource NovaIdentityMarkBrush}"
-                                  Data="M32,10 C41,20 46,30 46,38 A14,14 0 1 1 18,38 C18,30 23,20 32,10 Z M35,15 L38,21.5 L45,24 L38,26.5 L35,33 L32,26.5 L25,24 L32,21.5 Z" />
-                            <TextBox Grid.Column="1" x:Name="StartMenuSearchBox"
-                                     Style="{StaticResource NovaCommandPaletteSearchBoxStyle}"
-                                     PlaceholderText="Rechercher un module, un favori, un site..."
-                                     TextChanged="StartMenuSearchBox_TextChanged"
-                                     AutomationProperties.Name="Rechercher un module, un favori, un site" />
-                            <Button Grid.Column="2" Style="{StaticResource NovaChromeIconButtonStyle}"
-                                    ToolTipService.ToolTip="Fermer" AutomationProperties.Name="Fermer le menu" Click="ModulesFlyoutCloseButton_Click">
-                                <SymbolIcon Symbol="Cancel" />
-                            </Button>
-                        </Grid>
-
-                        <!-- Rail de categories (gauche) + volet detail (droite) : refonte
-                             maitre/detail 0.93.5.0-dev (a la Windows 7, Panneau de configuration
-                             en vue categories), demande explicite de l'utilisateur pour remplacer
-                             l'ancien bascule Epingles-par-defaut/Toutes-les-applications qui
-                             obligeait a naviguer entre deux ecrans. "Epingles" est desormais une
-                             categorie comme les autres, toujours en tete du rail, selectionnee par
-                             defaut a l'ouverture (ModulesFlyout_Opening) - comme un vrai menu
-                             demarrer (Windows/GNOME), on y revient a chaque ouverture. -->
-                        <Grid x:Name="StartMenuRailAndDetail" ColumnSpacing="14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="232" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <ListView x:Name="StartMenuCategoryList"
-                                      Grid.Column="0"
-                                      SelectionMode="Single"
-                                      ItemTemplate="{StaticResource StartMenuCategoryTemplate}"
-                                      SelectionChanged="StartMenuCategoryList_SelectionChanged"
-                                      AutomationProperties.Name="Catégories du menu Démarrer">
-                                <!-- Categorie active mise en avant (2026-08-08, "vraiment tres beau") :
-                                     cles de ressource standard reprises par le ControlTemplate par
-                                     defaut de ListViewItem (Windows App SDK) - pas de retemplating
-                                     complet, juste les couleurs de l'etat selectionne, sur les memes
-                                     brushes "accent" deja correctes en tout theme et en Contraste
-                                     renforce (consolidation du meme jour, MainWindow.SettingsTheme.cs). -->
-                                <ListView.Resources>
-                                    <StaticResource x:Key="ListViewItemBackgroundSelected" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
-                                    <StaticResource x:Key="ListViewItemBackgroundSelectedPointerOver" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
-                                    <StaticResource x:Key="ListViewItemForegroundSelected" ResourceKey="NovaChromeButtonAccentForegroundBrush" />
-                                </ListView.Resources>
-                            </ListView>
-
-                            <Border Grid.Column="1" Width="1" HorizontalAlignment="Left"
-                                    Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
-
-                            <!-- x:Name pose ici expres (correctif molette defensif, meme motif que
-                                 SettingsPanel_RootWheelDiagnostics/MainWindow.xaml.cs:489-566) : ce
-                                 flyout bascule maintenant entre 2 contenus (rail+detail / recherche),
-                                 le meme genre de changement dynamique qui avait fait "s'arreter" la
-                                 molette sur Parametres apres un moment. -->
-                            <ScrollViewer x:Name="StartMenuDetailScrollViewer" Grid.Column="1" Margin="14,0,0,0"
-                                          MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel Spacing="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon x:Name="StartMenuDetailTitleIcon" FontFamily="Segoe MDL2 Assets" FontSize="12" Opacity="0.7" />
-                                        <TextBlock x:Name="StartMenuDetailTitleText" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="13" />
-                                    </StackPanel>
-
-                                    <!-- Tuiles epinglees (clic droit / appui long sur n'importe quelle
-                                         tuile -> Epingler/Desepingler, dans n'importe quelle categorie) :
-                                         visible uniquement quand la categorie Epingles est selectionnee. -->
-                                    <StackPanel x:Name="StartMenuPinnedSection" Spacing="8">
-                                        <ItemsRepeater x:Name="StartMenuPinnedRow" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}" />
-                                        <TextBlock x:Name="StartMenuPinnedEmptyText"
-                                                   Text="Aucune tuile épinglée. Clic droit sur une tuile, dans n'importe quelle catégorie, pour l'ajouter ici."
-                                                   Style="{StaticResource NovaPanelDescriptionStyle}"
-                                                   TextWrapping="Wrap"
-                                                   Visibility="Collapsed" />
-                                    </StackPanel>
-
-                                    <!-- Tuiles de la categorie selectionnee (source unique
-                                         StartMenuTileRegistry.All) : visible pour toute categorie autre
-                                         qu'Epingles. -->
-                                    <ItemsRepeater x:Name="StartMenuDetailList" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}" />
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Grid>
-
-                        <!-- Recherche en direct : liste plate triee par score (meme forme
-                             que ScoreCommandPaletteItem), visible uniquement pendant une
-                             recherche active - remplace le rail+detail ci-dessus le temps
-                             de la recherche (StartMenuRailAndDetail.Visibility=Collapsed). -->
-                        <ScrollViewer x:Name="StartMenuFilteredScrollViewer" MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel Spacing="12" Width="600">
-                                <ItemsRepeater x:Name="StartMenuFilteredList"
-                                              Visibility="Collapsed"
-                                              ItemTemplate="{StaticResource StartMenuActionTileTemplate}">
-                                    <ItemsRepeater.Layout>
-                                        <UniformGridLayout Orientation="Horizontal" MaximumRowsOrColumns="2" MinItemWidth="278" MinItemHeight="46" />
-                                    </ItemsRepeater.Layout>
-                                </ItemsRepeater>
-                                <TextBlock x:Name="StartMenuNoResultsText"
-                                           Text="Aucun résultat"
-                                           Style="{StaticResource NovaPanelDescriptionStyle}"
-                                           Visibility="Collapsed" />
-                            </StackPanel>
-                        </ScrollViewer>
-                    </StackPanel>
-                </Flyout>
-            </Button.Flyout>
-        </Button>
+        <!-- Boutons systeme (reduire/agrandir/fermer) en petits points groupes
+             "a la Apple" (2026-08-18, demande explicite utilisateur), a la
+             place des boutons de legende natifs Windows - voir
+             ApplyCustomCaptionButtons (MainWindow.WindowChrome.cs) pour le
+             cablage InputNonClientPointerSource qui empeche les boutons
+             natifs de se redessiner par-dessus. -->
+        <StackPanel x:Name="WindowCaptionButtons"
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,10,12,0">
+            <Button x:Name="WindowMinimizeButton"
+                    Style="{StaticResource NovaCaptionDotButtonStyle}"
+                    AutomationProperties.Name="Réduire"
+                    ToolTipService.ToolTip="Réduire"
+                    Click="WindowMinimizeButton_Click" />
+            <Button x:Name="WindowMaximizeButton"
+                    Style="{StaticResource NovaCaptionDotButtonStyle}"
+                    AutomationProperties.Name="Agrandir"
+                    ToolTipService.ToolTip="Agrandir"
+                    Click="WindowMaximizeButton_Click" />
+            <Button x:Name="WindowCloseButton"
+                    Style="{StaticResource NovaCaptionDotCloseButtonStyle}"
+                    AutomationProperties.Name="Fermer"
+                    ToolTipService.ToolTip="Fermer"
+                    Click="WindowCloseButton_Click" />
+        </StackPanel>
 
         <Border x:Name="NavigationToolbarCapsule"
                 Grid.Row="2"
-                Margin="66,6,14,6"
+                Margin="14,6,14,6"
                 CornerRadius="22"
                 Background="{StaticResource NovaFloatingGlassBrush}"
                 BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}"
@@ -1870,7 +1862,7 @@
                             <Flyout x:Name="AddBookmarkFlyout" Placement="BottomEdgeAlignedRight">
                                 <StackPanel Width="240" Spacing="10">
                                     <Button Content="Ajouter cette page aux favoris"
-                                            Style="{StaticResource AccentButtonStyle}"
+                                            Style="{StaticResource NovaButtonPrimaryStyle}"
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Center"
                                             Click="AddBookmarkButton_Click" />
@@ -1957,6 +1949,7 @@
                                                   Toggled="ShieldSiteExcludeToggle_Toggled" />
                                     <Button x:Name="ShieldSiteCenterButton"
                                             Content="Centre du site"
+                                            Style="{StaticResource NovaButtonStyle}"
                                             HorizontalAlignment="Stretch"
                                             Click="ShieldSiteCenterButton_Click" />
                                     <HyperlinkButton Content="Paramètres de confidentialité"
@@ -2072,7 +2065,7 @@
                                     <TextBlock Text="Lecture à voix haute" FontWeight="SemiBold" FontSize="13" />
                                     <TextBlock x:Name="ReadAloudStatusText" TextWrapping="Wrap" FontSize="12" Opacity="0.78" Text="Prêt." />
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button x:Name="ReadAloudPlayPauseButton" Content="Lire la page" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12" Click="ReadAloudPlayPauseButton_Click" />
+                                        <Button x:Name="ReadAloudPlayPauseButton" Content="Lire la page" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12" Click="ReadAloudPlayPauseButton_Click" />
                                         <Button Content="Arrêter" Style="{StaticResource NovaCompactButtonStyle}" Click="ReadAloudStopButton_Click" />
                                     </StackPanel>
                                 </StackPanel>
@@ -2129,14 +2122,14 @@
                                                  Visibility="Collapsed" />
                                     <Button x:Name="VideoDownloadInstallEngineButton"
                                             Content="Installer le moteur yt-dlp (open source)"
-                                            Style="{StaticResource AccentButtonStyle}"
+                                            Style="{StaticResource NovaButtonPrimaryStyle}"
                                             HorizontalAlignment="Stretch"
                                             Visibility="Collapsed"
                                             Click="VideoDownloadInstallEngine_Click" />
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Button x:Name="VideoDownloadStartButton"
                                                 Content="Télécharger"
-                                                Style="{StaticResource AccentButtonStyle}"
+                                                Style="{StaticResource NovaButtonPrimaryStyle}"
                                                 Click="VideoDownloadStartButton_Click" />
                                         <Button Content="Téléchargements"
                                                 Click="DownloadsMenu_Click"
@@ -2174,7 +2167,7 @@
                                     <TextBlock Text="Requête précisée" FontWeight="SemiBold" FontSize="13" />
                                     <TextBlock x:Name="SearchAssistSuggestionText" TextWrapping="Wrap" FontSize="13" />
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button x:Name="SearchAssistUseButton" Content="Utiliser" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12" Click="SearchAssistUseButton_Click" />
+                                        <Button x:Name="SearchAssistUseButton" Content="Utiliser" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12" Click="SearchAssistUseButton_Click" />
                                         <Button Content="Ignorer" Style="{StaticResource NovaCompactButtonStyle}" Click="SearchAssistIgnoreButton_Click" />
                                     </StackPanel>
                                 </StackPanel>
@@ -2446,7 +2439,7 @@
                                     <Border Height="1" Margin="0,12,0,10" Background="{StaticResource NovaChromeStrokeSoftBrush}" />
                                     <Button Content="Réorganiser toute la barre…"
                                             Click="ToolbarReorganizeMenuLink_Click"
-                                            Style="{StaticResource AccentButtonStyle}"
+                                            Style="{StaticResource NovaButtonPrimaryStyle}"
                                             HorizontalAlignment="Stretch"
                                             Margin="0,0,0,8" />
                                     <Button Content="Gérer les modules"
@@ -2553,6 +2546,7 @@
                                     <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
                                     <Button x:Name="PopupRecoveryAlwaysAllowButton"
                                             Content="Toujours autoriser les popups de ce site"
+                                            Style="{StaticResource NovaButtonStyle}"
                                             HorizontalAlignment="Stretch"
                                             Click="PopupRecoveryAlwaysAllowButton_Click" />
                                 </StackPanel>
@@ -2752,6 +2746,7 @@
                          MainWindow.Settings.cs. -->
                     <StackPanel x:Name="VerticalTabsActionsPanel" Orientation="Horizontal" Spacing="6">
                         <Button x:Name="VerticalTabsNewTabButton"
+                                Style="{StaticResource NovaButtonStyle}"
                                 HorizontalAlignment="Stretch"
                                 ToolTipService.ToolTip="Nouvel onglet"
                                 AutomationProperties.Name="Nouvel onglet"
@@ -2768,6 +2763,7 @@
                              clic droit du rail (WorkspaceLayoutSurface_RightTapped). -->
                         <Button
                             x:Name="VerticalTabsMuteAllButton"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
                             Width="34"
                             AutomationProperties.Name="Couper le son de tous les onglets"
                             ToolTipService.ToolTip="Couper/rétablir le son de tous les onglets"
@@ -2776,6 +2772,7 @@
                         </Button>
                         <Button
                             x:Name="VerticalTabsCompactButton"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
                             Width="34"
                             AutomationProperties.Name="Reduire ou agrandir les onglets verticaux"
                             ToolTipService.ToolTip="Reduire/agrandir les onglets verticaux"
@@ -2876,7 +2873,7 @@
                          Message="Les sites que vous n'avez pas marqués comme sites de confiance repartent à zéro à chaque démarrage de Lumora."
                          Closed="SessionPurgeInfoBar_Closed">
                     <InfoBar.ActionButton>
-                        <Button Content="Gérer les sites connectés" Click="SessionsManageLink_Click" />
+                        <Button Content="Gérer les sites connectés" Style="{StaticResource NovaButtonStyle}" Click="SessionsManageLink_Click" />
                     </InfoBar.ActionButton>
                 </InfoBar>
 
@@ -2906,7 +2903,7 @@
                             <TextBox x:Name="CredentialSaveUsernameBox" PlaceholderText="Identifiant" MinWidth="180" FontSize="12"/>
                             <PasswordBox x:Name="CredentialSavePasswordBox" PlaceholderText="Mot de passe" PasswordRevealMode="Peek" MinWidth="140" FontSize="12"/>
                         </StackPanel>
-                        <Button x:Name="CredentialSaveAccept" Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" VerticalAlignment="Center" Content="Enregistrer" Click="CredentialSaveAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="CredentialSaveAccept" Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" VerticalAlignment="Center" Content="Enregistrer" Click="CredentialSaveAccept_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="CredentialSaveDismiss" Grid.Row="0" Grid.RowSpan="2" Grid.Column="3" VerticalAlignment="Center" Content="Ignorer" Click="CredentialSaveDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
@@ -2925,9 +2922,9 @@
                         </Grid.ColumnDefinitions>
                         <SymbolIcon Grid.Column="0" Symbol="Contact" VerticalAlignment="Center"/>
                         <TextBlock x:Name="AutoFillText" Grid.Column="1" VerticalAlignment="Center"/>
-                        <Button x:Name="AutoFillAccept" Grid.Column="2" Content="Remplir" Click="AutoFillAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="AutoFillAccept" Grid.Column="2" Content="Remplir" Click="AutoFillAccept_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <!-- Visible uniquement quand plusieurs comptes existent pour ce site (ex. 2 comptes Google) -->
-                        <Button x:Name="AutoFillChooseButton" Grid.Column="2" Content="Choisir un compte" Visibility="Collapsed" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12">
+                        <Button x:Name="AutoFillChooseButton" Grid.Column="2" Content="Choisir un compte" Visibility="Collapsed" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12">
                             <Button.Flyout>
                                 <MenuFlyout x:Name="AutoFillAccountsFlyout" Placement="Bottom"/>
                             </Button.Flyout>
@@ -2952,7 +2949,7 @@
                         </Grid.ColumnDefinitions>
                         <FontIcon Grid.Column="0" Glyph="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
                         <TextBlock x:Name="WalletFillText" Grid.Column="1" VerticalAlignment="Center" Text="Page de paiement détectée — remplir avec une carte du portefeuille ?"/>
-                        <Button x:Name="WalletFillAccept" Grid.Column="2" Content="Remplir" Click="WalletFillAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="WalletFillAccept" Grid.Column="2" Content="Remplir" Click="WalletFillAccept_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="WalletFillDismiss" Grid.Column="3" Content="Ignorer" Click="WalletFillDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
@@ -2972,7 +2969,7 @@
                         </Grid.ColumnDefinitions>
                         <SymbolIcon Grid.Column="0" Symbol="Keyboard" VerticalAlignment="Center"/>
                         <TextBlock x:Name="SessionKeepText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        <Button x:Name="SessionKeepAccept" Grid.Column="2" Content="Conserver la session" Click="SessionKeepAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SessionKeepAccept" Grid.Column="2" Content="Conserver la session" Click="SessionKeepAccept_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="SessionKeepDismiss" Grid.Column="3" Content="Non merci" Click="SessionKeepDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
@@ -2996,7 +2993,7 @@
                             <TextBlock Text="Utiliser un mot de passe fort généré ?" TextWrapping="Wrap"/>
                             <TextBlock x:Name="SuggestPasswordValueText" FontFamily="Consolas" FontSize="12" Opacity="0.85" TextWrapping="Wrap"/>
                         </StackPanel>
-                        <Button x:Name="SuggestPasswordAccept" Grid.Column="2" Content="Utiliser" Click="SuggestPasswordAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SuggestPasswordAccept" Grid.Column="2" Content="Utiliser" Click="SuggestPasswordAccept_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="SuggestPasswordRegenerate" Grid.Column="3" Content="Régénérer" Click="SuggestPasswordRegenerate_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                         <Button x:Name="SuggestPasswordDismiss" Grid.Column="4" Content="Ignorer" Click="SuggestPasswordDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
@@ -3019,7 +3016,7 @@
                         <FontIcon Grid.Column="0" Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
                         <TextBlock x:Name="TranslateText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"
                                    Text="Cette page semble être en anglais. La traduire en français ?"/>
-                        <Button x:Name="TranslateAccept" Grid.Column="2" Content="Traduire" Click="TranslateAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="TranslateAccept" Grid.Column="2" Content="Traduire" Click="TranslateAccept_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="TranslateDismiss" Grid.Column="3" Content="Non merci" Click="TranslateDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
@@ -3039,7 +3036,7 @@
                         </Grid.ColumnDefinitions>
                         <FontIcon Grid.Column="0" Glyph="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
                         <TextBlock x:Name="SaveGroupText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        <Button x:Name="SaveGroupAccept" Grid.Column="2" Content="Garder ce groupe" Click="SaveGroupAccept_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SaveGroupAccept" Grid.Column="2" Content="Garder ce groupe" Click="SaveGroupAccept_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="SaveGroupDismiss" Grid.Column="3" Content="Non" Click="SaveGroupDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
@@ -3063,7 +3060,7 @@
                         <FontIcon Grid.Column="0" Glyph="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
                         <TextBlock x:Name="SiteNotFoundText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         <Button x:Name="SiteNotFoundTrySuggestion" Grid.Column="2" Visibility="Collapsed" Click="SiteNotFoundTrySuggestion_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
-                        <Button x:Name="SiteNotFoundSearch" Grid.Column="3" Content="Rechercher ce site sur le web" Click="SiteNotFoundSearch_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SiteNotFoundSearch" Grid.Column="3" Content="Rechercher ce site sur le web" Click="SiteNotFoundSearch_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="SiteNotFoundDismiss" Grid.Column="4" Content="Fermer" Click="SiteNotFoundDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
@@ -3085,7 +3082,7 @@
                         </Grid.ColumnDefinitions>
                         <FontIcon Grid.Column="0" Glyph="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
                         <TextBlock x:Name="SiteMovedText" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        <Button x:Name="SiteMovedUpdate" Grid.Column="2" Content="Mettre a jour" Click="SiteMovedUpdate_Click" Style="{StaticResource AccentButtonStyle}" Padding="10,2" FontSize="12"/>
+                        <Button x:Name="SiteMovedUpdate" Grid.Column="2" Content="Mettre a jour" Click="SiteMovedUpdate_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
                         <Button x:Name="SiteMovedDismiss" Grid.Column="3" Content="Non merci" Click="SiteMovedDismiss_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                     </Grid>
                 </Border>
@@ -3167,32 +3164,32 @@
                              (NovaDangerBrush, meme convention semantique que la pastille
                              de robustesse du Coffre juste a cote dans cette meme session)
                              car c'est la seule action irreversible sur TOUS les favoris. -->
-                        <Button Grid.Column="1" Click="NewBookmarkFolderButton_Click">
+                        <Button Grid.Column="1" Style="{StaticResource NovaButtonStyle}" Click="NewBookmarkFolderButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="NewFolder" />
                                 <TextBlock Text="Nouveau dossier" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="2" Click="RenameBookmarkButton_Click">
+                        <Button Grid.Column="2" Style="{StaticResource NovaButtonStyle}" Click="RenameBookmarkButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="Rename" />
                                 <TextBlock Text="Renommer" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="3" Margin="12,0,0,0" Click="SelectAllBookmarksButton_Click">
+                        <Button Grid.Column="3" Margin="12,0,0,0" Style="{StaticResource NovaButtonStyle}" Click="SelectAllBookmarksButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="SelectAll" />
                                 <TextBlock Text="Tout sélectionner" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="4" Click="DeleteBookmarkButton_Click">
+                        <Button Grid.Column="4" Style="{StaticResource NovaButtonStyle}" Click="DeleteBookmarkButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="Delete" />
                                 <TextBlock Text="Supprimer sélection" />
                             </StackPanel>
                         </Button>
                         <Button Grid.Column="5" Margin="12,0,0,0"
-                                Foreground="{StaticResource NovaDangerBrush}"
+                                Style="{StaticResource NovaButtonDangerStyle}"
                                 ToolTipService.ToolTip="Supprime TOUS les favoris, pas seulement ce dossier"
                                 Click="ClearBookmarksButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -3200,13 +3197,13 @@
                                 <TextBlock Text="Vider" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="6" Margin="12,0,0,0" Click="ImportMenu_Click">
+                        <Button Grid.Column="6" Margin="12,0,0,0" Style="{StaticResource NovaButtonStyle}" Click="ImportMenu_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="Import" />
                                 <TextBlock Text="Importer" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="7" Click="ExportHtmlButton_Click">
+                        <Button Grid.Column="7" Style="{StaticResource NovaButtonStyle}" Click="ExportHtmlButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="Save" />
                                 <TextBlock Text="Exporter" />
@@ -3278,13 +3275,13 @@
                     <ListView x:Name="ImportSourcesList" MaxHeight="260" SelectionChanged="ImportSourcesList_SelectionChanged" />
                     <TextBlock x:Name="ImportComparisonText" TextWrapping="Wrap" Opacity="0.72" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Fusionner le navigateur sélectionné" Click="ImportBrowserButton_Click" />
-                        <Button Content="Remplacer par le navigateur sélectionné" Click="ReplaceBrowserButton_Click" />
+                        <Button Content="Fusionner le navigateur sélectionné" Style="{StaticResource NovaButtonPrimaryStyle}" Click="ImportBrowserButton_Click" />
+                        <Button Content="Remplacer par le navigateur sélectionné" Style="{StaticResource NovaButtonStyle}" Click="ReplaceBrowserButton_Click" />
                     </StackPanel>
                     <TextBlock Text="Fichier HTML" FontWeight="SemiBold" Margin="0,8,0,0" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Importer un fichier HTML" Click="ImportHtmlButton_Click" />
-                        <Button Content="Exporter en HTML" Click="ExportHtmlButton_Click" />
+                        <Button Content="Importer un fichier HTML" Style="{StaticResource NovaButtonStyle}" Click="ImportHtmlButton_Click" />
+                        <Button Content="Exporter en HTML" Style="{StaticResource NovaButtonStyle}" Click="ExportHtmlButton_Click" />
                     </StackPanel>
                 </StackPanel>
             </Grid>
@@ -4226,13 +4223,13 @@
                             <TextBlock Text="Le mot de passe du coffre se change depuis Profil."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Click="VaultMenu_Click">
+                                <Button Style="{StaticResource NovaButtonStyle}" Click="VaultMenu_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <SymbolIcon Symbol="Permissions" />
                                         <TextBlock Text="Ouvrir les mots de passe" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="ImportPasswordsMenu_Click">
+                                <Button Style="{StaticResource NovaButtonStyle}" Click="ImportPasswordsMenu_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <SymbolIcon Symbol="Import" />
                                         <TextBlock Text="Importer un CSV" />
@@ -4241,10 +4238,28 @@
                             </StackPanel>
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
                                     Margin="0,8,0,0" />
+                            <!-- Fonctions optionnelles du Coffre (0.93.48) : pour qui utilise déjà une
+                                 autre appli de 2FA/passkeys et ne veut pas de ces sections dans chaque
+                                 fiche. Changer l'un ou l'autre redemande le mot de passe/PIN (voir
+                                 VaultTotpFeatureToggle_Toggled/VaultPasskeyFeatureToggle_Toggled,
+                                 MainWindow.VaultAccess.cs) - jamais appliqué sans confirmation. -->
+                            <TextBlock Text="Fonctions du Coffre" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                       Text="Désactiver une section la masque partout (fiche détaillée, accès rapide) sans rien supprimer : réactiver la fait réapparaître à l'identique." />
+                            <ToggleSwitch x:Name="VaultTotpFeatureToggle"
+                                          Header="Authentification à deux facteurs (TOTP)"
+                                          OnContent="Activée" OffContent="Désactivée"
+                                          Toggled="VaultTotpFeatureToggle_Toggled" />
+                            <ToggleSwitch x:Name="VaultPasskeyFeatureToggle"
+                                          Header="Clés d'accès (Passkeys)"
+                                          OnContent="Activées" OffContent="Désactivées"
+                                          Toggled="VaultPasskeyFeatureToggle_Toggled" />
+                            <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                                    Margin="0,8,0,0" />
                             <TextBlock Text="Portefeuille" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
                                        Text="Cartes stockées dans le même coffre. Remplissage uniquement sur clic explicite ; CVV jamais enregistré." />
-                            <Button Click="WalletMenu_Click" HorizontalAlignment="Left">
+                            <Button Style="{StaticResource NovaButtonStyle}" Click="WalletMenu_Click" HorizontalAlignment="Left">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
                                     <TextBlock Text="Ouvrir le portefeuille" />
@@ -4262,7 +4277,10 @@
                         <StackPanel x:Name="SettingsSectionProfile" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Profils locaux" Style="{StaticResource NovaPanelPageTitleStyle}" />
 
-                            <!-- Mon profil -->
+                            <!-- Mon profil : identite seule desormais (session "Recuperation",
+                                 2026-08-15) - les actions de securite qui vivaient ici ont demenage
+                                 dans l'onglet "Securite" plus bas (maquette validee par
+                                 l'utilisateur, 4 iterations - voir MEMORY.md). -->
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="12">
                                     <Grid ColumnSpacing="12">
@@ -4293,12 +4311,11 @@
                                     <HyperlinkButton Content="Modifier l'avatar dans Personnalisation"
                                                       Click="OpenPersonalizationFromProfileButton_Click"
                                                       Padding="0" FontSize="12" />
-                                    <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
                                     <!-- Profil sans mot de passe (2026-08-13) : choix permanent pris a la
                                          creation, aucune porte derobee pour en ajouter un ensuite - voir
                                          MEMORY.md pour le raisonnement (risque de detournement si n'importe
                                          qui pouvait poser un mot de passe sur un profil deja ouvert). Ce
-                                         bandeau + le masquage des boutons juste en dessous sont les deux
+                                         bandeau + le masquage des tuiles de l'onglet Securite sont les deux
                                          faces de la meme regle, pilotes ensemble par RefreshProfileSettings. -->
                                     <InfoBar x:Name="ProfileNoPasswordNotice"
                                              Severity="Warning"
@@ -4306,79 +4323,246 @@
                                              Title="Profil sans mot de passe"
                                              Message="Ce profil est ouvert a quiconque utilise cette session Windows, et ne peut pas faire l'objet d'une sauvegarde complete. Ce choix a ete fait a la creation et ne peut pas etre change - un nouveau profil avec mot de passe serait necessaire."
                                              Visibility="Collapsed" />
-                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                            Click="ChangeProfileNameButton_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <SymbolIcon Symbol="Rename" />
-                                            <TextBlock Text="Changer le nom" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button x:Name="ChangeProfilePasswordButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                            Click="ChangeProfilePasswordButton_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <SymbolIcon Symbol="Permissions" />
-                                            <TextBlock Text="Changer le mot de passe" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button x:Name="CreateRecoveryKeyButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                            Click="CreateRecoveryKeyButton_Click">
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
-                                            <TextBlock Text="Nouvelle clé de récupération" />
-                                        </StackPanel>
-                                    </Button>
-                                    <ToggleSwitch x:Name="ProfilePinSwitch" Header="Code PIN rapide (6 chiffres)"
-                                                 Toggled="ProfilePinSwitch_Toggled" />
-                                    <ComboBox x:Name="SessionTimeoutCombo"
-                                              Header="Verrouillage automatique de la session"
-                                              HorizontalAlignment="Stretch"
-                                              SelectionChanged="SessionTimeoutCombo_SelectionChanged">
-                                        <ComboBoxItem Content="Jamais" Tag="0" />
-                                        <ComboBoxItem Content="10 minutes" Tag="10" />
-                                        <ComboBoxItem Content="1 heure" Tag="60" />
-                                        <ComboBoxItem Content="5 heures" Tag="300" />
-                                    </ComboBox>
                                 </StackPanel>
                             </Border>
 
-                            <!--
-                                Trouve en usage reel (mode invite) le 2026-07-22 : ce bloc expose le
-                                chemin reel de chaque profil en texte brut, propose d'ouvrir son
-                                dossier (coffre inclus) et de le mettre en quarantaine SANS mot de
-                                passe (juste retaper le nom, visible juste au-dessus) - et le bouton
-                                Reinitialiser plus bas supprime tout le dossier du profil actif SANS
-                                aucune verification, alors qu'en mode invite _profile pointe encore
-                                sur le vrai profil par defaut. Aucune de ces deux actions n'a de sens
-                                pour une session invite (aucun profil a soi a gerer) : le bloc entier
-                                est cache et remplace par ProfileGuestRestrictedNotice tant que
-                                _isGuestMode est vrai (voir RefreshProfileSettings).
-                            -->
-                            <StackPanel x:Name="ProfileManagementRestrictedPanel" Spacing="12">
-                                <!-- Autres profils -->
-                                <Border Style="{StaticResource NovaPanelCardStyle}">
-                                    <StackPanel Spacing="10">
-                                        <Grid ColumnSpacing="8">
+                            <!-- Onglets "Mon compte" (session "Recuperation", 2026-08-15, maquette
+                                 validee en 4 iterations - voir MEMORY.md) : remplace l'ancien
+                                 empilement de cartes qui s'enchainaient en scroll. Meme motif que
+                                 les sous-onglets de Confidentialite (NovaSubTabRadioButtonStyle,
+                                 PrivacySubNav_Click) - un seul contenu visible a la fois, bascule
+                                 par AccountTab_Click (MainWindow.AccountDashboard.cs). -->
+                            <StackPanel Spacing="0">
+                                <StackPanel Orientation="Horizontal" Spacing="2"
+                                            BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}">
+                                    <RadioButton x:Name="AccountTabOverview" Content="Aperçu" Tag="overview"
+                                                 GroupName="AccountTabs" IsChecked="True"
+                                                 Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccountTab_Click" />
+                                    <RadioButton x:Name="AccountTabSecurity" Content="Sécurité" Tag="security"
+                                                 GroupName="AccountTabs"
+                                                 Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccountTab_Click" />
+                                    <RadioButton x:Name="AccountTabBackup" Content="Sauvegarde et profils" Tag="backup"
+                                                 GroupName="AccountTabs"
+                                                 Style="{StaticResource NovaSubTabRadioButtonStyle}" Click="AccountTab_Click" />
+                                </StackPanel>
+
+                                <!-- Onglet Aperçu : "Vos données en un coup d'œil" - INCHANGE depuis
+                                     la 1re version (seul bloc que l'utilisateur a valide sans reserve),
+                                     calcule par RefreshAccountDashboard. -->
+                                <StackPanel x:Name="AccountTabOverviewContent" Spacing="12" Margin="0,14,0,0">
+                                    <Border Style="{StaticResource NovaPanelCardStyle}">
+                                        <StackPanel Spacing="10">
+                                            <TextBlock Text="Vos données en un coup d'œil" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                       Text="Ce qui est réellement stocké dans ce profil — le même périmètre que « Exporter une sauvegarde »." />
+                                            <Grid ColumnSpacing="1" RowSpacing="1" Background="{StaticResource NovaChromeStrokeSoftBrush}"
+                                                  BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}" BorderThickness="1" CornerRadius="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <StackPanel Grid.Row="0" Grid.Column="0" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE8D5;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryBookmarksCount" Text="0" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Favoris" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="0" Grid.Column="1" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryHistoryCount" Text="0" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Pages visitées" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="0" Grid.Column="2" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryCredentialsCount" Text="0" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Mots de passe" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="0" Grid.Column="3" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryCardsCount" Text="0" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Cartes bancaires" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="0" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryTabGroupsCount" Text="0" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Groupes d'onglets" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="1" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryWebAppsCount" Text="0" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Web apps" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="2" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryRssCount" Text="0" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Flux RSS suivis" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="3" Background="{StaticResource NovaChromeSurfaceAltBrush}" Padding="12,10" Spacing="4">
+                                                    <FontIcon Glyph="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="16" Opacity="0.7" />
+                                                    <TextBlock x:Name="AccountInventoryDataSizeText" Text="0 o" FontSize="18" FontWeight="Bold" />
+                                                    <TextBlock Text="Taille des données" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Onglet Sécurité : 3 tuiles colorées (une action = une couleur =
+                                     une famille deja existante ailleurs dans Lumora, ex. Menu
+                                     Demarrer) au lieu de la liste "tableau Excel" rejetee en v3.
+                                     PIN/verrouillage restent en interrupteurs juste en dessous : ce
+                                     sont de vrais reglages, pas des actions a "ouvrir" - une tuile
+                                     aurait ete trompeuse pour ceux-la. -->
+                                <StackPanel x:Name="AccountTabSecurityContent" Spacing="12" Margin="0,14,0,0" Visibility="Collapsed">
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Click="ChangeProfileNameButton_Click"
+                                                Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                                BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}"
+                                                CornerRadius="14" Padding="14,16" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left">
+                                            <StackPanel Spacing="12">
+                                                <Border Width="42" Height="42" CornerRadius="999" Background="{StaticResource NovaTileFamilyContentBrush}">
+                                                    <SymbolIcon Symbol="Rename" Foreground="#FF0B1017" />
+                                                </Border>
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Changer le nom" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Text="Ce que voient vos autres profils" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="ChangeProfilePasswordButton" Grid.Column="1" Click="ChangeProfilePasswordButton_Click"
+                                                Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                                BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}"
+                                                CornerRadius="14" Padding="14,16" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left">
+                                            <StackPanel Spacing="12">
+                                                <Border Width="42" Height="42" CornerRadius="999" Background="{StaticResource NovaTileFamilyProtectionBrush}">
+                                                    <SymbolIcon Symbol="Permissions" Foreground="#FF0B1017" />
+                                                </Border>
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Changer le mot de passe" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Text="Aussi la clé de vos sauvegardes" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="CreateRecoveryKeyButton" Grid.Column="2" Click="CreateRecoveryKeyButton_Click"
+                                                Background="{StaticResource NovaChromeSurfaceAltBrush}"
+                                                BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}"
+                                                CornerRadius="14" Padding="14,16" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left">
+                                            <StackPanel Spacing="12">
+                                                <Border Width="42" Height="42" CornerRadius="999" Background="{StaticResource NovaTileFamilyToolsBrush}">
+                                                    <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#FF0B1017" />
+                                                </Border>
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Nouvelle clé de récupération" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Text="Pour débloquer si vous oubliez tout" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                    <Border Style="{StaticResource NovaPanelCardStyle}">
+                                        <StackPanel Spacing="12">
+                                            <ToggleSwitch x:Name="ProfilePinSwitch" Header="Code PIN rapide (6 chiffres)"
+                                                         Toggled="ProfilePinSwitch_Toggled" />
+                                            <ComboBox x:Name="SessionTimeoutCombo"
+                                                      Header="Verrouillage automatique de la session"
+                                                      HorizontalAlignment="Stretch"
+                                                      SelectionChanged="SessionTimeoutCombo_SelectionChanged">
+                                                <ComboBoxItem Content="Jamais" Tag="0" />
+                                                <ComboBoxItem Content="10 minutes" Tag="10" />
+                                                <ComboBoxItem Content="1 heure" Tag="60" />
+                                                <ComboBoxItem Content="5 heures" Tag="300" />
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Onglet Sauvegarde et profils (session "Recuperation", fusion
+                                     demandee le 2026-08-15/16 : "sauvegarde et autre profil ainsi
+                                     que zone dangereuse... doivent etre dans la meme categorie" -
+                                     zone dangereuse gardee hors onglet, voir plus bas, cf. echange).
+                                     Sauvegarde : LastBackupAtUnix/LastBackupFileName (UiSettings)
+                                     ecrits par ExportBackupButton_Click des qu'un export reussit -
+                                     "Exporter maintenant" reutilise directement ce handler existant.
+                                     Autres profils : ProfileManagementRestrictedPanel (guest-hiding,
+                                     voir plus bas), logique inchangee. -->
+                                <StackPanel x:Name="AccountTabBackupContent" Spacing="12" Margin="0,14,0,0" Visibility="Collapsed">
+                                    <Border Style="{StaticResource NovaPanelCardStyle}">
+                                        <Grid ColumnSpacing="14">
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="2">
-                                                <TextBlock Text="Autres profils sur cet appareil" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                                <TextBlock Text="Profils détectés sur cet ordinateur, hors le tien." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="10"
+                                                    Background="{StaticResource NovaCoolAccentSoftBrush}" VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="18"
+                                                          Foreground="{StaticResource NovaCoolAccentBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock x:Name="AccountLastBackupHeadlineText" Text="Aucune sauvegarde effectuée avec ce compte"
+                                                           Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                                <TextBlock x:Name="AccountLastBackupDetailText"
+                                                           Text="Exportez une sauvegarde pour pouvoir tout récupérer, compte inclus, en cas de besoin."
+                                                           Style="{StaticResource NovaPanelDescriptionStyle}" />
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="Actualiser" Click="RefreshProfilesButton_Click" />
-                                            <Button Grid.Column="2" Content="Créer un profil"
-                                                    Style="{StaticResource AccentButtonStyle}"
-                                                    Click="CreateAnotherProfileFromSettingsButton_Click" />
+                                            <Button Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource NovaButtonPrimaryStyle}"
+                                                    Click="ExportBackupButton_Click">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <FontIcon Glyph="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                                    <TextBlock Text="Exporter maintenant" />
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
-                                        <StackPanel x:Name="ProfileManagementPanel" Spacing="8" />
-                                    </StackPanel>
-                                </Border>
+                                    </Border>
 
-                                <!-- Zone dangereuse : même traitement que "Vider" sur les Favoris
-                                     (0.93.23) - fond teinté, isolé du reste. Confirmation renforcée
-                                     par mot de passe dans ResetProfileButton_Click (MainWindow.Profile.cs). -->
+                                    <StackPanel x:Name="ProfileManagementRestrictedPanel" Spacing="12">
+                                        <Border Style="{StaticResource NovaPanelCardStyle}">
+                                            <StackPanel Spacing="10">
+                                                <Grid ColumnSpacing="8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Autres profils sur cet appareil" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                                        <TextBlock Text="Profils détectés sur cet ordinateur, hors le tien." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1" Content="Actualiser" Style="{StaticResource NovaButtonStyle}" Click="RefreshProfilesButton_Click" />
+                                                    <Button Grid.Column="2" Content="Créer un profil"
+                                                            Style="{StaticResource NovaButtonPrimaryStyle}"
+                                                            Click="CreateAnotherProfileFromSettingsButton_Click" />
+                                                </Grid>
+                                                <StackPanel x:Name="ProfileManagementPanel" Spacing="8" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Zone dangereuse : TOUJOURS visible, peu importe l'onglet ouvert
+                                 (demande explicite - trop serieux pour etre cache derriere un clic).
+                                 Meme traitement visuel que "Vider" sur les Favoris (0.93.23) - fond
+                                 teinte, isole du reste. Confirmation renforcee par mot de passe dans
+                                 ResetProfileButton_Click (MainWindow.Profile.cs). Masquee en mode
+                                 invite via ProfileDangerZonePanel (meme raison que
+                                 ProfileManagementRestrictedPanel ci-dessus : _profile pointe encore
+                                 sur le vrai profil par defaut en mode invite - voir
+                                 RefreshProfileSettings). -->
+                            <StackPanel x:Name="ProfileDangerZonePanel">
                                 <Border Background="{StaticResource NovaDangerSurfaceBrush}" CornerRadius="10" Padding="14,12">
                                     <StackPanel Spacing="6">
                                         <TextBlock Text="Zone dangereuse" FontWeight="SemiBold"
@@ -4386,7 +4570,7 @@
                                         <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
                                                    Text="Supprime définitivement toutes vos données : favoris, historique, onglets, paramètres, coffre et identifiants de connexion. Opération irréversible." />
                                         <Button Content="Réinitialiser ce profil..."
-                                                Foreground="{StaticResource NovaDangerBrush}"
+                                                Style="{StaticResource NovaButtonDangerStyle}"
                                                 HorizontalAlignment="Left"
                                                 Margin="0,4,0,0"
                                                 Click="ResetProfileButton_Click" />
@@ -4408,7 +4592,7 @@
                             <TextBox x:Name="StorageCurrentFolderText"
                                      IsReadOnly="True" TextWrapping="Wrap"
                                      Opacity="0.78" FontFamily="Consolas" FontSize="12" />
-                            <Button Content="Changer de dossier..." Click="ChangeFolderButton_Click" />
+                            <Button Content="Changer de dossier..." Style="{StaticResource NovaButtonStyle}" Click="ChangeFolderButton_Click" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
                                        Text="Les fichiers existants seront copiés vers le nouvel emplacement. Redémarrage nécessaire." />
 
@@ -4418,7 +4602,7 @@
                                      Severity="Warning"
                                      IsOpen="False">
                                 <InfoBar.ActionButton>
-                                    <Button Content="Fermer Lumora" Click="StorageRestartCloseButton_Click" />
+                                    <Button Content="Fermer Lumora" Style="{StaticResource NovaButtonStyle}" Click="StorageRestartCloseButton_Click" />
                                 </InfoBar.ActionButton>
                             </InfoBar>
 
@@ -4428,6 +4612,7 @@
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
                                        Text="Supprime cookies, sessions, cache et données des sites." />
                             <Button Content="Vider les données de navigation"
+                                    Style="{StaticResource NovaButtonDangerStyle}"
                                     Click="ClearBrowsingDataButton_Click" />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
@@ -4436,8 +4621,8 @@
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
                                        Text="Favoris, historique, onglets et paramètres dans un fichier chiffré. Le coffre reste lié au compte Windows." />
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Content="Exporter une sauvegarde..." Click="ExportBackupButton_Click" />
-                                <Button Content="Importer une sauvegarde..." Click="ImportBackupButton_Click" />
+                                <Button Content="Exporter une sauvegarde..." Style="{StaticResource NovaButtonStyle}" Click="ExportBackupButton_Click" />
+                                <Button Content="Importer une sauvegarde..." Style="{StaticResource NovaButtonStyle}" Click="ImportBackupButton_Click" />
                             </StackPanel>
 
                             <InfoBar x:Name="StorageImportBar"
@@ -4446,7 +4631,7 @@
                                      Severity="Success"
                                      IsOpen="False">
                                 <InfoBar.ActionButton>
-                                    <Button Content="Fermer Lumora" Click="StorageRestartCloseButton_Click" />
+                                    <Button Content="Fermer Lumora" Style="{StaticResource NovaButtonStyle}" Click="StorageRestartCloseButton_Click" />
                                 </InfoBar.ActionButton>
                             </InfoBar>
                         </StackPanel>
@@ -4505,6 +4690,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left">
                                 <Button x:Name="UpdatePrivacyListsButton"
                                         Content="Mettre à jour les listes maintenant"
+                                        Style="{StaticResource NovaButtonStyle}"
                                         Click="UpdatePrivacyListsButton_Click" />
                                 <TextBlock x:Name="PrivacyLastUpdateText"
                                            VerticalAlignment="Center"
@@ -4573,7 +4759,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="GeolocationLatitudeBox" Grid.Column="0" Header="Latitude" PlaceholderText="48.8566" />
                                 <TextBox x:Name="GeolocationLongitudeBox" Grid.Column="1" Header="Longitude" PlaceholderText="2.3522" />
-                                <Button Grid.Column="2" Content="Appliquer" VerticalAlignment="Bottom" Click="GeolocationSpoofApplyButton_Click" />
+                                <Button Grid.Column="2" Content="Appliquer" Style="{StaticResource NovaButtonStyle}" VerticalAlignment="Bottom" Click="GeolocationSpoofApplyButton_Click" />
                             </Grid>
 
                             <!-- Anti-fingerprinting -->
@@ -4654,6 +4840,7 @@
                                          PlaceholderText="exemple.com"
                                          Width="220" />
                                 <Button Content="Ajouter"
+                                        Style="{StaticResource NovaButtonStyle}"
                                         Click="PrivacyWhitelistAddButton_Click"
                                         VerticalAlignment="Bottom" />
                             </StackPanel>
@@ -4686,7 +4873,7 @@
                                 Grid.Column="2"
                                 Click="ApplySettingsChangesButton_Click"
                                 AutomationProperties.Name="Appliquer les changements"
-                                Style="{StaticResource AccentButtonStyle}">
+                                Style="{StaticResource NovaButtonPrimaryStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <SymbolIcon Symbol="Accept" />
                                 <TextBlock Text="Appliquer les changements" />
@@ -4798,7 +4985,7 @@
                                     </Border>
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Content="Modules Lumora" Click="ModulesMenu_Click" />
+                                    <Button Content="Modules Lumora" Style="{StaticResource NovaButtonStyle}" Click="ModulesMenu_Click" />
                                     <Button Content="Paramètres" Style="{StaticResource NovaCompactButtonStyle}" Click="SettingsMenu_Click" />
                                 </StackPanel>
                             </StackPanel>
@@ -5128,7 +5315,7 @@
                         <Button x:Name="ClearHistoryButton" Grid.Column="1"
                                 Content="Vider l'historique"
                                 Click="ClearHistoryButton_Click"
-                                Style="{StaticResource NovaCompactButtonStyle}"
+                                Style="{StaticResource NovaCompactButtonDangerStyle}"
                                 VerticalAlignment="Bottom" />
                     </Grid>
                 </Border>
@@ -5216,7 +5403,7 @@
                         <Button x:Name="ClearDownloadsButton" Grid.Column="1"
                                 Content="Effacer"
                                 VerticalAlignment="Bottom"
-                                Style="{StaticResource NovaCompactButtonStyle}"
+                                Style="{StaticResource NovaCompactButtonDangerStyle}"
                                 Click="ClearDownloadsButton_Click"
                                 ToolTipService.ToolTip="Effacer l'historique local des téléchargements" />
                     </Grid>
@@ -5271,7 +5458,7 @@
                                    Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
                     </StackPanel>
                     <Button Grid.Column="1" x:Name="NotesAddButton" VerticalAlignment="Bottom"
-                            Style="{StaticResource AccentButtonStyle}"
+                            Style="{StaticResource NovaButtonPrimaryStyle}"
                             AutomationProperties.Name="Nouvelle note"
                             Click="NotesAddButton_Click">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -5313,7 +5500,7 @@
                                        TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <Button Grid.Row="1" x:Name="AnnotationOpenPageButton"
-                                Style="{StaticResource AccentButtonStyle}"
+                                Style="{StaticResource NovaButtonPrimaryStyle}"
                                 AutomationProperties.Name="Reprendre la page en mode lecture"
                                 Click="AnnotationOpenPageButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -5326,6 +5513,7 @@
                         <Grid Grid.Row="3">
                             <TextBlock x:Name="AnnotationMetaText" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
                             <Button x:Name="AnnotationForgetPageButton" HorizontalAlignment="Right"
+                                    Style="{StaticResource NovaButtonStyle}"
                                     AutomationProperties.Name="Oublier toutes les annotations de cette page"
                                     Click="AnnotationForgetPageButton_Click">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -5351,6 +5539,7 @@
                                              AutomationProperties.Name="Ouvrir la page liee"
                                              Click="NoteLinkButton_Click" Visibility="Collapsed" />
                             <Button x:Name="NoteAttachPageButton"
+                                    Style="{StaticResource NovaButtonStyle}"
                                     ToolTipService.ToolTip="Rattacher cette note a la page web courante"
                                     AutomationProperties.Name="Rattacher a la page courante"
                                     Click="NoteAttachPageButton_Click">
@@ -5370,6 +5559,7 @@
                         <Grid Grid.Row="3">
                             <TextBlock x:Name="NoteMetaText" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
                             <Button x:Name="NoteDeleteButton" HorizontalAlignment="Right"
+                                    Style="{StaticResource NovaButtonDangerStyle}"
                                     AutomationProperties.Name="Supprimer la note"
                                     Click="NoteDeleteButton_Click">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -5408,7 +5598,7 @@
                                    Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
                     </StackPanel>
                     <Button Grid.Column="1" x:Name="RssAddButton" VerticalAlignment="Bottom"
-                            Style="{StaticResource AccentButtonStyle}"
+                            Style="{StaticResource NovaButtonPrimaryStyle}"
                             AutomationProperties.Name="Ajouter un flux RSS"
                             Click="RssAddButton_Click">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -5446,12 +5636,14 @@
                             <TextBlock x:Name="RssFeedTitleText" FontSize="18" FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                             <Button Grid.Column="1" x:Name="RssRefreshButton"
+                                    Style="{StaticResource NovaChromeIconButtonStyle}"
                                     AutomationProperties.Name="Actualiser ce flux"
                                     ToolTipService.ToolTip="Actualiser"
                                     Click="RssRefreshButton_Click">
                                 <SymbolIcon Symbol="Refresh" />
                             </Button>
                             <Button Grid.Column="2" x:Name="RssRemoveFeedButton" Margin="8,0,0,0"
+                                    Style="{StaticResource NovaButtonDangerStyle}"
                                     AutomationProperties.Name="Supprimer ce flux"
                                     ToolTipService.ToolTip="Ne plus suivre ce flux"
                                     Click="RssRemoveFeedButton_Click">
@@ -5498,6 +5690,7 @@
                          plus frequente) passe en bouton d'accent, meme convention
                          que NotesAddButton/WalletAddCardButton ailleurs dans l'app. -->
                     <Button Grid.Column="1" x:Name="VaultHealthButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            Style="{StaticResource NovaButtonStyle}"
                             ToolTipService.ToolTip="Bilan de santé : mots de passe réutilisés, faibles ou anciens (analyse 100% locale)"
                             AutomationProperties.Name="Bilan de sante des mots de passe"
                             Click="VaultHealthButton_Click">
@@ -5507,6 +5700,7 @@
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="2" x:Name="VaultMergeButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            Style="{StaticResource NovaButtonStyle}"
                             ToolTipService.ToolTip="Fusionner les doublons : même site, même identifiant et même mot de passe enregistrés plusieurs fois (www., sous-domaines...)"
                             AutomationProperties.Name="Fusionner les doublons du coffre"
                             Click="VaultMergeButton_Click">
@@ -5516,6 +5710,7 @@
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="3" x:Name="VaultImportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            Style="{StaticResource NovaButtonStyle}"
                             ToolTipService.ToolTip="Importer des mots de passe : fichier CSV ou navigateur installé (Chrome, Edge, Brave...)"
                             AutomationProperties.Name="Importer des mots de passe"
                             Click="VaultImportButton_Click">
@@ -5525,6 +5720,7 @@
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="4" x:Name="VaultExportButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            Style="{StaticResource NovaButtonStyle}"
                             ToolTipService.ToolTip="Exporter en clair vers un fichier CSV"
                             AutomationProperties.Name="Exporter les mots de passe"
                             Click="VaultExportButton_Click">
@@ -5534,13 +5730,14 @@
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="5" x:Name="VaultRefreshButton" Margin="0,0,8,0" VerticalAlignment="Bottom"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
                             ToolTipService.ToolTip="Actualiser"
                             AutomationProperties.Name="Actualiser le coffre"
                             Click="VaultRefreshButton_Click">
                         <SymbolIcon Symbol="Refresh" />
                     </Button>
                     <Button Grid.Column="6" x:Name="VaultAddButton" VerticalAlignment="Bottom"
-                            Style="{StaticResource AccentButtonStyle}"
+                            Style="{StaticResource NovaButtonPrimaryStyle}"
                             ToolTipService.ToolTip="Ajouter un identifiant"
                             AutomationProperties.Name="Ajouter un identifiant"
                             Click="VaultAddButton_Click">
@@ -5596,46 +5793,6 @@
                 </Grid>
             </Grid>
 
-            <!-- Panneau Clés d'accès (Passkeys) -->
-            <Grid x:Name="PasskeysPanel" Grid.Column="3" Padding="16" Visibility="Collapsed"
-                  AutomationProperties.Name="Clés d'accès"
-                  AutomationProperties.HelpText="Gérez vos clés d'accès locales et ouvrez les paramètres Windows dédiés.">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="Clés d'accès (Passkeys)" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock TextWrapping="Wrap" Opacity="0.68" Margin="0,4,0,0"
-                               Text="Connexion sans mot de passe via Windows Hello. Les clés sont chiffrées localement et ne quittent jamais votre appareil." />
-                </StackPanel>
-
-                <Border Grid.Row="1" Padding="16" CornerRadius="8" Margin="0,0,0,16"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Gestion complète via Windows" FontWeight="SemiBold" />
-                        <TextBlock TextWrapping="Wrap" Opacity="0.72" FontSize="13"
-                                   Text="Windows Hello stocke et sécurise vos clés d'accès. Lumora enregistre les sites où vous en créez ou utilisez une." />
-                        <Button x:Name="PasskeysWindowsSettingsButton"
-                                Click="PasskeysWindowsSettingsButton_Click"
-                                HorizontalAlignment="Left"
-                                AutomationProperties.Name="Ouvrir les paramètres Windows des clés d'accès">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE770;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
-                                <TextBlock Text="Paramètres Windows — Clés d'accès" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Border>
-
-                <ScrollViewer Grid.Row="2">
-                    <StackPanel x:Name="PasskeysPanelItems" Spacing="8" />
-                </ScrollViewer>
-            </Grid>
-
             <!-- Panneau Portefeuille (moyens de paiement locaux) -->
             <Grid x:Name="WalletPanel" Grid.Column="3" Padding="16" Visibility="Collapsed"
                   AutomationProperties.Name="Portefeuille"
@@ -5654,6 +5811,7 @@
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,16">
                     <Button x:Name="WalletAddCardButton"
+                            Style="{StaticResource NovaButtonPrimaryStyle}"
                             Click="WalletAddButton_Click"
                             AutomationProperties.Name="Ajouter une carte au portefeuille">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -5705,7 +5863,7 @@
                     <StackPanel Spacing="10">
                         <TextBlock Text="Actions essentielles" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Style="{StaticResource AccentButtonStyle}" Click="ModulesOpenCommandPalette_Click">
+                            <Button Style="{StaticResource NovaButtonPrimaryStyle}" Click="ModulesOpenCommandPalette_Click">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
                                     <TextBlock Text="Actions rapides" />
@@ -5906,6 +6064,7 @@
                     <TextBlock TextWrapping="Wrap" Opacity="0.68" MaxWidth="720" HorizontalAlignment="Left"
                                Text="Capture agrandie de la page pour mieux lire un texte minuscule ou déformé (par exemple un captcha visuel). Molette + Ctrl (ou pincer) pour zoomer, barres de défilement pour naviguer dans l'image. Rien n'est transmis : c'est une image locale, vous lisez et répondez vous-même." />
                     <Button x:Name="ReadingLensRefreshButton" Content="Actualiser la capture"
+                            Style="{StaticResource NovaButtonStyle}"
                             HorizontalAlignment="Left" Margin="0,4,0,0" Click="ReadingLensRefreshButton_Click" />
                 </StackPanel>
 
@@ -5944,7 +6103,7 @@
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,16">
                     <Button Click="InstallAppMenu_Click"
-                            Style="{StaticResource AccentButtonStyle}">
+                            Style="{StaticResource NovaButtonPrimaryStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
                             <TextBlock Text="Installer la page active" />
@@ -5990,7 +6149,7 @@
                         </Button>
                         <Button Grid.Column="2" x:Name="SiteControlReturnButton" VerticalAlignment="Bottom"
                                 Content="Retour au site"
-                                Style="{StaticResource AccentButtonStyle}"
+                                Style="{StaticResource NovaButtonPrimaryStyle}"
                                 Click="SiteControlReturnButton_Click" />
                     </Grid>
                 </Border>
@@ -6022,7 +6181,7 @@
                                     <Button x:Name="SiteControlEnableCompatibilityButton"
                                             Content="Autoriser le flux de connexion"
                                             HorizontalAlignment="Left"
-                                            Style="{StaticResource AccentButtonStyle}"
+                                            Style="{StaticResource NovaButtonPrimaryStyle}"
                                             Click="SiteControlEnableCompatibilityButton_Click" />
                                     <ToggleSwitch x:Name="SiteControlCompatibilityToggle"
                                                   Header="Mode compatibilite connexion"
@@ -6171,10 +6330,12 @@
                                    Text="Sites ayant une session active (cookies). Au démarrage, Lumora purge toutes les sessions sauf celles des sites de confiance. Le coffre de mots de passe n'est jamais concerné." />
                     </StackPanel>
                     <Button Grid.Column="1" x:Name="SessionsForgetAllButton" VerticalAlignment="Bottom"
+                            Style="{StaticResource NovaButtonDangerStyle}"
                             Content="Tout oublier maintenant"
                             ToolTipService.ToolTip="Supprime les cookies de tous les sites, sauf les sites de confiance"
                             Click="SessionsForgetAllButton_Click" />
                     <Button Grid.Column="2" x:Name="SessionsRefreshButton" VerticalAlignment="Bottom"
+                            Style="{StaticResource NovaChromeIconButtonStyle}"
                             ToolTipService.ToolTip="Actualiser"
                             AutomationProperties.Name="Actualiser les sessions"
                             Click="SessionsRefreshButton_Click">
@@ -6231,22 +6392,288 @@
             </Grid>
         </Grid>
 
-        <Grid x:Name="StatusBarRow" Grid.Row="6" Visibility="Collapsed" Background="{StaticResource NovaChromeSurfaceAltBrush}">
+        <Grid x:Name="StatusBarRow" Grid.Row="6" Visibility="Visible" Background="{StaticResource NovaChromeSurfaceAltBrush}">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock x:Name="StatusText" Grid.Column="0" Padding="10,4"
+
+        <!-- Lanceur "Menu Lumora" (2026-08-18, demande explicite utilisateur) :
+             deplace de la barre d'outils vers la barre du bas, comme un vrai
+             bouton Demarrer Windows/Ubuntu - seul point d'entree desormais.
+             Le menu s'ouvre vers le HAUT (Placement TopEdgeAlignedLeft plus
+             bas) puisqu'il n'y a plus de place en dessous. -->
+        <Button x:Name="ModulesButton"
+                Grid.Column="0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Width="36" Height="36"
+                Margin="8,0,0,0"
+                Style="{StaticResource NovaChromeIconButtonStyle}"
+                AutomationProperties.Name="Menu Lumora"
+                ToolTipService.ToolTip="Menu Lumora — modules, favoris, paramètres">
+            <!-- Vraie marque Lumora (2026-08-10, retour utilisateur : l'ancien
+                 tracé abstrait ne ressemblait a rien par rapport aux autres
+                 icones, ET c'etait une marque differente de celle deja
+                 utilisee sur la page d'accueil - LumoraLogoMark.png, la
+                 goutte dégradée avec l'étoile, deja l'identite reelle de
+                 l'app (NewTabHome.cs, LumoraLogoDataUri()). Reprise telle
+                 quelle plutot que reinventee, pour que Demarrer et l'accueil
+                 montrent enfin la meme marque. -->
+            <!-- PNG remplace par un trace vectoriel (2026-08-12, retour
+                 utilisateur : bords crenelés visibles sur ce bouton, seul endroit
+                 de la barre d'outils avec une image bitmap au lieu d'une icone
+                 nette). Meme geometrie/degrade que le mark de LoginOverlay
+                 (MainWindow.xaml, plus bas) - repris tel quel, pas redessine. -->
+            <Path x:Name="ModulesButtonMark" Width="22" Height="22" Stretch="Uniform"
+                  Fill="{StaticResource NovaIdentityMarkBrush}"
+                  Data="M32,10 C41,20 46,30 46,38 A14,14 0 1 1 18,38 C18,30 23,20 32,10 Z M35,15 L38,21.5 L45,24 L38,26.5 L35,33 L32,26.5 L25,24 L32,21.5 Z" />
+            <Button.Flyout>
+                <Flyout x:Name="ModulesFlyout" Placement="TopEdgeAlignedLeft" FlyoutPresenterStyle="{StaticResource StartMenuFlyoutPresenterStyle}" Opening="ModulesFlyout_Opening">
+                    <StackPanel x:Name="ModulesFlyoutRoot" Width="640" Spacing="0">
+
+                        <!-- En-tete profil (0.93.5.0-dev, deplace depuis la barre de statut basse) :
+                             photo + nom en tete du menu, comme un vrai menu demarrer Windows - clic
+                             ouvre le meme ProfileStatusFlyout qu'avant (deplace avec lui, aucune
+                             nouvelle logique de profil). -->
+                        <Button x:Name="ProfileStatusButton"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="10,10"
+                                Margin="0,0,0,12"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="12"
+                                ToolTipService.ToolTip="Ouvrir le menu profil"
+                                AutomationProperties.Name="Profil Lumora"
+                                Click="ProfileStatusButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <Ellipse x:Name="ProfileStatusAvatar" Width="38" Height="38" Visibility="Collapsed">
+                                    <Ellipse.Fill>
+                                        <ImageBrush x:Name="ProfileStatusAvatarBrush" Stretch="UniformToFill" />
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <TextBlock x:Name="ProfileStatusText" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Opacity="0.92" />
+                            </StackPanel>
+                            <Button.Flyout>
+                                <Flyout x:Name="ProfileStatusFlyout" Placement="TopEdgeAlignedRight">
+                                    <StackPanel Width="340" Spacing="12">
+                                        <Border Style="{StaticResource NovaFlyoutHeroCardStyle}">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock x:Name="ProfileFlyoutTitleText"
+                                                           Text="Profil Lumora"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="18"
+                                                           Foreground="{StaticResource NovaBrandChipForegroundBrush}" />
+                                                <TextBlock x:Name="ProfileFlyoutSubtitleText"
+                                                           Text="Gérez l'utilisateur local, les profils et les réglages de cette session."
+                                                           TextWrapping="Wrap"
+                                                           FontSize="12"
+                                                           Opacity="0.82"
+                                                           Foreground="{StaticResource NovaBrandChipMutedBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Style="{StaticResource NovaFlyoutSectionCardStyle}">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock x:Name="ProfileFlyoutCurrentUserText"
+                                                           Text="Aucun profil actif"
+                                                           FontWeight="SemiBold" />
+                                                <TextBlock x:Name="ProfileFlyoutCurrentStateText"
+                                                           Text="Créer ou choisir un profil local pour garder vos données."
+                                                           TextWrapping="Wrap"
+                                                           FontSize="12"
+                                                           Opacity="0.68" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Button x:Name="ProfileFlyoutSettingsButton"
+                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                                Click="ProfileFlyoutSettingsButton_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <FontIcon Glyph="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Paramètres utilisateur" FontWeight="SemiBold" />
+                                                    <TextBlock Text="Ouvrir les réglages du profil local, du PIN et des autres comptes." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="ProfileFlyoutSwitchButton"
+                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                                Click="ProfileFlyoutSwitchButton_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <FontIcon Glyph="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Changer d'utilisateur" FontWeight="SemiBold" />
+                                                    <TextBlock Text="Afficher le choix des profils locaux sur cet ordinateur." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="ProfileFlyoutCreateButton"
+                                                Style="{StaticResource NovaModuleFlyoutActionStyle}"
+                                                Click="ProfileFlyoutCreateButton_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <FontIcon Glyph="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Créer un utilisateur" FontWeight="SemiBold" />
+                                                    <TextBlock Text="Ajouter un nouveau profil Lumora sur cet appareil." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+
+                        <!-- En-tete : mark + recherche en direct (filtre la grille sur place,
+                             StartMenuSearchBox_TextChanged - ne delegue plus a la palette
+                             de commande separee) + fermeture -->
+                        <Grid ColumnSpacing="10" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <!-- Trace corrige (2026-08-12) : cet en-tete gardait encore
+                                 l'ancien symbole "carre a coin coupe", jamais mis a jour
+                                 quand le bouton Demarrer juste en dehors de ce volet est
+                                 passe a la goutte le 10/08 - les deux montraient donc 2
+                                 marques differentes a un clic d'intervalle. Meme trace que
+                                 ModulesButtonMark/LoginOverlay desormais. -->
+                            <Path Grid.Column="0" Width="24" Height="24" Stretch="Uniform"
+                                  Fill="{StaticResource NovaIdentityMarkBrush}"
+                                  Data="M32,10 C41,20 46,30 46,38 A14,14 0 1 1 18,38 C18,30 23,20 32,10 Z M35,15 L38,21.5 L45,24 L38,26.5 L35,33 L32,26.5 L25,24 L32,21.5 Z" />
+                            <TextBox Grid.Column="1" x:Name="StartMenuSearchBox"
+                                     Style="{StaticResource NovaCommandPaletteSearchBoxStyle}"
+                                     PlaceholderText="Rechercher un module, un favori, un site..."
+                                     TextChanged="StartMenuSearchBox_TextChanged"
+                                     AutomationProperties.Name="Rechercher un module, un favori, un site" />
+                            <Button Grid.Column="2" Style="{StaticResource NovaChromeIconButtonStyle}"
+                                    ToolTipService.ToolTip="Fermer" AutomationProperties.Name="Fermer le menu" Click="ModulesFlyoutCloseButton_Click">
+                                <SymbolIcon Symbol="Cancel" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Rail de categories (gauche) + volet detail (droite) : refonte
+                             maitre/detail 0.93.5.0-dev (a la Windows 7, Panneau de configuration
+                             en vue categories), demande explicite de l'utilisateur pour remplacer
+                             l'ancien bascule Epingles-par-defaut/Toutes-les-applications qui
+                             obligeait a naviguer entre deux ecrans. "Epingles" est desormais une
+                             categorie comme les autres, toujours en tete du rail, selectionnee par
+                             defaut a l'ouverture (ModulesFlyout_Opening) - comme un vrai menu
+                             demarrer (Windows/GNOME), on y revient a chaque ouverture. -->
+                        <Grid x:Name="StartMenuRailAndDetail" ColumnSpacing="14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="232" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <ListView x:Name="StartMenuCategoryList"
+                                      Grid.Column="0"
+                                      SelectionMode="Single"
+                                      ItemTemplate="{StaticResource StartMenuCategoryTemplate}"
+                                      SelectionChanged="StartMenuCategoryList_SelectionChanged"
+                                      AutomationProperties.Name="Catégories du menu Démarrer">
+                                <!-- Categorie active mise en avant (2026-08-08, "vraiment tres beau") :
+                                     cles de ressource standard reprises par le ControlTemplate par
+                                     defaut de ListViewItem (Windows App SDK) - pas de retemplating
+                                     complet, juste les couleurs de l'etat selectionne, sur les memes
+                                     brushes "accent" deja correctes en tout theme et en Contraste
+                                     renforce (consolidation du meme jour, MainWindow.SettingsTheme.cs). -->
+                                <ListView.Resources>
+                                    <StaticResource x:Key="ListViewItemBackgroundSelected" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
+                                    <StaticResource x:Key="ListViewItemBackgroundSelectedPointerOver" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
+                                    <StaticResource x:Key="ListViewItemForegroundSelected" ResourceKey="NovaChromeButtonAccentForegroundBrush" />
+                                </ListView.Resources>
+                            </ListView>
+
+                            <Border Grid.Column="1" Width="1" HorizontalAlignment="Left"
+                                    Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
+
+                            <!-- x:Name pose ici expres (correctif molette defensif, meme motif que
+                                 SettingsPanel_RootWheelDiagnostics/MainWindow.xaml.cs:489-566) : ce
+                                 flyout bascule maintenant entre 2 contenus (rail+detail / recherche),
+                                 le meme genre de changement dynamique qui avait fait "s'arreter" la
+                                 molette sur Parametres apres un moment. -->
+                            <ScrollViewer x:Name="StartMenuDetailScrollViewer" Grid.Column="1" Margin="14,0,0,0"
+                                          MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Spacing="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon x:Name="StartMenuDetailTitleIcon" FontFamily="Segoe MDL2 Assets" FontSize="12" Opacity="0.7" />
+                                        <TextBlock x:Name="StartMenuDetailTitleText" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="13" />
+                                    </StackPanel>
+
+                                    <!-- Tuiles epinglees (clic droit / appui long sur n'importe quelle
+                                         tuile -> Epingler/Desepingler, dans n'importe quelle categorie) :
+                                         visible uniquement quand la categorie Epingles est selectionnee. -->
+                                    <StackPanel x:Name="StartMenuPinnedSection" Spacing="8">
+                                        <ItemsRepeater x:Name="StartMenuPinnedRow" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}" />
+                                        <TextBlock x:Name="StartMenuPinnedEmptyText"
+                                                   Text="Aucune tuile épinglée. Clic droit sur une tuile, dans n'importe quelle catégorie, pour l'ajouter ici."
+                                                   Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                   TextWrapping="Wrap"
+                                                   Visibility="Collapsed" />
+                                    </StackPanel>
+
+                                    <!-- Tuiles de la categorie selectionnee (source unique
+                                         StartMenuTileRegistry.All) : visible pour toute categorie autre
+                                         qu'Epingles. -->
+                                    <ItemsRepeater x:Name="StartMenuDetailList" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+
+                        <!-- Recherche en direct : liste plate triee par score (meme forme
+                             que ScoreCommandPaletteItem), visible uniquement pendant une
+                             recherche active - remplace le rail+detail ci-dessus le temps
+                             de la recherche (StartMenuRailAndDetail.Visibility=Collapsed). -->
+                        <ScrollViewer x:Name="StartMenuFilteredScrollViewer" MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Spacing="12" Width="600">
+                                <ItemsRepeater x:Name="StartMenuFilteredList"
+                                              Visibility="Collapsed"
+                                              ItemTemplate="{StaticResource StartMenuActionTileTemplate}">
+                                    <ItemsRepeater.Layout>
+                                        <UniformGridLayout Orientation="Horizontal" MaximumRowsOrColumns="2" MinItemWidth="278" MinItemHeight="46" />
+                                    </ItemsRepeater.Layout>
+                                </ItemsRepeater>
+                                <TextBlock x:Name="StartMenuNoResultsText"
+                                           Text="Aucun résultat"
+                                           Style="{StaticResource NovaPanelDescriptionStyle}"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+        <Border Grid.Column="1" Width="1" Margin="6,10,6,10"
+                Background="{StaticResource NovaChromeStrokeSoftBrush}" />
+
+            <TextBlock x:Name="StatusText" Grid.Column="2" Padding="10,4"
                        Text="Lumora WinUI 3 initialise." Opacity="0.72"
                        FontSize="12"
                        AutomationProperties.Name="État Lumora"
                        AutomationProperties.HelpText="Annonce les changements importants de navigation, de sécurité et d'accessibilité."
                        AutomationProperties.LiveSetting="Polite"
                        TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-            <Button x:Name="BackToPageButton" Grid.Column="1" Visibility="Collapsed"
+            <!-- Barre des taches Lumora (2026-08-18) : un bouton par panneau
+                 "application" ouvert (Coffre, Favoris, Historique...), peuple
+                 dynamiquement en code-behind (MainWindow.OpenPanelsTaskbar.cs),
+                 meme approche que BookmarksBottomBarPanel/RenderBookmarksBar.
+                 Barre desormais TOUJOURS visible (2026-08-18, demande
+                 explicite : le lanceur Menu Lumora y vit en permanence,
+                 la barre ne peut donc plus disparaitre) - vide quand rien
+                 n'est ouvert, elle affiche alors juste le lanceur. -->
+            <StackPanel x:Name="OpenPanelsTaskbarPanel" Grid.Column="3"
+                        Orientation="Horizontal"
+                        Spacing="6"
+                        Margin="6,3,0,3"
+                        VerticalAlignment="Center" />
+            <Button x:Name="BackToPageButton" Grid.Column="4" Visibility="Collapsed"
                     Padding="9,1,9,1" Margin="0,2,0,2" FontSize="12"
-                    Style="{StaticResource AccentButtonStyle}"
+                    Style="{StaticResource NovaButtonPrimaryStyle}"
                     ToolTipService.ToolTip="Revenir a la page web en cours"
                     Click="BackToPageButton_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -6254,7 +6681,7 @@
                     <TextBlock Text="Retour au site" FontSize="12" />
                 </StackPanel>
             </Button>
-            <StackPanel Grid.Column="2"
+            <StackPanel Grid.Column="5"
                         Orientation="Horizontal"
                         Spacing="6"
                         Margin="6,3,8,3"
@@ -7069,10 +7496,11 @@
                             </ListBox>
                             <Button x:Name="ProfilePickerContinueButton"
                                     Content="Continuer avec ce profil"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     HorizontalAlignment="Stretch"
                                     Click="ProfilePickerContinueButton_Click" />
                             <Button Content="Créer un autre profil"
+                                    Style="{StaticResource NovaButtonStyle}"
                                     HorizontalAlignment="Stretch"
                                     Click="CreateAnotherProfileButton_Click" />
                             <!--
@@ -7085,6 +7513,7 @@
                                 active (profil ou invite) vers laquelle revenir.
                             -->
                             <Button x:Name="ProfilePickerCancelButton" Content="Annuler"
+                                    Style="{StaticResource NovaButtonStyle}"
                                     HorizontalAlignment="Stretch"
                                     Click="ProfilePickerCancelButton_Click"
                                     Visibility="Collapsed" />
@@ -7104,7 +7533,7 @@
                             <PasswordBox x:Name="LoginPasswordBox" PlaceholderText="Mot de passe"
                                          KeyDown="LoginPasswordBox_KeyDown" />
                             <Button x:Name="LoginButton" Content="Se connecter"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     HorizontalAlignment="Stretch" Click="LoginButton_Click" />
                             <HyperlinkButton Content="Mot de passe oublie ?"
                                              HorizontalAlignment="Center"
@@ -7197,6 +7626,30 @@
                              contrôle partagé, juste 3 Grid identiques avec l'étape courante
                              en surbrillance) pour situer où on en est. -->
                         <StackPanel x:Name="CreateProfilePanel" Spacing="10" Visibility="Collapsed">
+                            <!-- Icones disquette/dossier (session "Compte et ouverture", 2026-08-14,
+                                 maquette validee en Artifact) : memes actions que l'etape "Profil
+                                 existant ?" de l'assistant (WizardImportBackupButton/
+                                 WizardExistingProfileButton, MainWindow.SetupWizard.cs), mais visibles
+                                 des ce tout premier ecran plutot que 2 etapes plus loin. Discretes a
+                                 dessein (icone seule, pas de texte) pour ne pas concurrencer le
+                                 formulaire de creation - voir CreateProfileImportBackupButton_Click/
+                                 CreateProfileFindExistingButton_Click, MainWindow.Profile.cs. -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,0,0,2">
+                                <Button x:Name="CreateProfileImportBackupButton"
+                                        Style="{StaticResource NovaIdentityRingIconButtonStyle}"
+                                        AutomationProperties.Name="Importer une sauvegarde"
+                                        ToolTipService.ToolTip="Importer une sauvegarde (.lum)"
+                                        Click="CreateProfileImportBackupButton_Click">
+                                    <FontIcon Glyph="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                </Button>
+                                <Button x:Name="CreateProfileFindExistingButton"
+                                        Style="{StaticResource NovaIdentityRingIconButtonStyle}"
+                                        AutomationProperties.Name="Trouver un profil existant sur ce disque"
+                                        ToolTipService.ToolTip="Trouver un profil existant sur ce disque"
+                                        Click="CreateProfileFindExistingButton_Click">
+                                    <FontIcon Glyph="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                                </Button>
+                            </StackPanel>
                             <Grid ColumnSpacing="6" Margin="0,0,0,2">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -7239,7 +7692,7 @@
                                          Visibility="Collapsed" />
 
                             <Button x:Name="CreateProfileButton" Content="Créer mon profil"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     HorizontalAlignment="Stretch" Click="CreateProfileButton_Click"
                                     Margin="0,6,0,0" />
                             <!--
@@ -7254,6 +7707,7 @@
                                 profil n'est encore choisi cette session.
                             -->
                             <Button x:Name="CreateProfileCancelButton" Content="Annuler"
+                                    Style="{StaticResource NovaButtonStyle}"
                                     HorizontalAlignment="Stretch"
                                     Click="CreateProfileCancelButton_Click"
                                     Visibility="Collapsed" />
@@ -7314,12 +7768,13 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                                VerticalAlignment="Center"
                                                TextWrapping="Wrap" MaxWidth="200" />
                                     <Button x:Name="ChooseProfileLocationButton" Content="Changer"
+                                            Style="{StaticResource NovaButtonStyle}"
                                             Click="ChooseProfileLocationButton_Click" />
                                 </StackPanel>
                             </StackPanel>
 
                             <Button x:Name="ProfileLocationContinueButton" Content="Continuer"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     HorizontalAlignment="Stretch"
                                     Click="ProfileLocationContinueButton_Click"
                                     Margin="0,6,0,0" />
@@ -7345,10 +7800,11 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                             <TextBlock Text="Firefox : exportez d'abord vos favoris en HTML depuis Firefox (Signets › Afficher tous les signets › Importer et sauvegarder › Exporter en HTML), puis utilisez le bouton ci-dessous."
                                        TextWrapping="Wrap" Opacity="0.45" FontSize="11" />
                             <Button x:Name="MigrationImportButton" Content="Importer les favoris"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     HorizontalAlignment="Stretch"
                                     Click="MigrationImportButton_Click" />
                             <Button Content="Depuis un fichier HTML..."
+                                    Style="{StaticResource NovaButtonStyle}"
                                     HorizontalAlignment="Stretch"
                                     Click="MigrationImportHtmlButton_Click" />
                             <Border Height="1"
@@ -7465,8 +7921,8 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                        FontSize="10.5" Opacity="0.5" VerticalAlignment="Center" TextWrapping="Wrap"
                                        Margin="0,0,10,0" />
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <Button Content="Réinitialiser" Click="ToolbarReorganizeResetButton_Click" />
-                                <Button Content="Terminer" Style="{StaticResource AccentButtonStyle}"
+                                <Button Content="Réinitialiser" Style="{StaticResource NovaButtonStyle}" Click="ToolbarReorganizeResetButton_Click" />
+                                <Button Content="Terminer" Style="{StaticResource NovaButtonPrimaryStyle}"
                                         Click="ToolbarReorganizeDoneButton_Click" />
                             </StackPanel>
                         </Grid>
@@ -7535,13 +7991,22 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStep1" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Profil existant ?" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Si vous avez déjà utilisé Lumora, importez une sauvegarde (.lumorabackup) pour retrouver vos favoris, onglets, coffre et réglages."
+                            <TextBlock Text="Si vous avez déjà utilisé Lumora, importez une sauvegarde (.lum) pour retrouver vos favoris, onglets, coffre et réglages."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Button x:Name="WizardImportBackupButton" Content="Importer une sauvegarde..."
                                     HorizontalAlignment="Center"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     Click="WizardImportBackupButton_Click" />
+                            <!-- 3e option (session "Compte et ouverture", 2026-08-14) : distincte de
+                                 l'import ci-dessus, qui COPIE des donnees dans le profil vierge tout
+                                 juste cree. Celle-ci repointe Lumora vers un dossier de profil deja
+                                 complet ailleurs sur le disque (profil deplace, reinstallation...),
+                                 sans rien copier ni supprimer - voir WizardExistingProfileButton_Click. -->
+                            <Button x:Name="WizardExistingProfileButton" Content="J'ai déjà un profil sur ce disque..."
+                                    Style="{StaticResource NovaButtonStyle}"
+                                    HorizontalAlignment="Center"
+                                    Click="WizardExistingProfileButton_Click" />
                             <TextBlock Text="Sinon, cliquez sur Suivant pour créer un profil neuf."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="12" Opacity="0.55" Margin="0,4,0,0" />
@@ -7680,10 +8145,11 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Button x:Name="WizardPrevButton" Content="Précédent"
+                                    Style="{StaticResource NovaButtonStyle}"
                                     Grid.Column="0" IsEnabled="False"
                                     Click="WizardPrevButton_Click" />
                             <Button x:Name="WizardNextButton" Content="Suivant"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     Grid.Column="2"
                                     Click="WizardNextButton_Click" />
                         </Grid>
@@ -7985,10 +8451,11 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Button x:Name="WelcomePrevButton" Content="Précédent"
+                                    Style="{StaticResource NovaButtonStyle}"
                                     Grid.Column="0" IsEnabled="False"
                                     Click="WelcomePrevButton_Click" />
                             <Button x:Name="WelcomeNextButton" Content="Suivant"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
                                     Grid.Column="2"
                                     Click="WelcomeNextButton_Click" />
                         </Grid>

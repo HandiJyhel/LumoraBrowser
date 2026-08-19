@@ -15,6 +15,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
+using Microsoft.UI.Input;
 using Windows.Graphics;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -174,14 +175,98 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    // Reserve fixe (2026-08-18) : depuis le passage aux boutons systeme customs
+    // "points groupes" (WindowCaptionButtons, voir ApplyCustomCaptionButtons),
+    // TitleBar.RightInset ne reflete plus une reservation utile - la region
+    // Close/Maximize/Minimize est desormais reprise par nos propres boutons via
+    // InputNonClientPointerSource, pas par le systeme. Largeur connue à
+    // l'avance (3 boutons de 28px + 2 espacements de 4px + marges) plutot que
+    // deduite d'une API qui ne s'applique plus a notre cas.
     private void ApplyTitleBarSafeArea()
     {
-        var rightInset = _appWindow?.TitleBar.RightInset ?? 138;
-        var safeRight = Math.Max(120, rightInset + 12);
+        const double safeRight = 3 * 28 + 2 * 4 + 12 + 12;
         BrowserTabs.Margin = new Thickness(0, 0, safeRight, 0);
         _titleBarSafeRight = safeRight;
         UpdateTitleBarDragRegion();
     }
+
+    // Points systemes (reduire/agrandir/fermer) "a la Apple" (2026-08-18,
+    // demande explicite utilisateur) en remplacement des boutons de legende
+    // natifs Windows. Sans ceci, Windows continue de dessiner SES propres
+    // boutons de legende par-dessus/a cote des notres des que
+    // ExtendsContentIntoTitleBar est actif - reprendre les regions non-client
+    // Close/Maximize/Minimize sur les rectangles de NOS boutons est le seul
+    // moyen documente de faire disparaitre les boutons natifs (le systeme
+    // arrete de les dessiner la ou une region a ete reclamee) tout en gardant
+    // le comportement systeme attendu (curseur, Alt+F4, aperçu Snap Layouts
+    // au survol du bouton Agrandir). Appelee a chaque changement de taille
+    // (RootShell.SizeChanged) car les rectangles doivent suivre la position
+    // reelle des boutons (redimensionnement, changement de DPI/moniteur).
+    private void ApplyCustomCaptionButtons()
+    {
+        if (_appWindow is null) return;
+
+        try
+        {
+            var scale = Content?.XamlRoot?.RasterizationScale ?? 1.0;
+            if (scale <= 0) return;
+
+            RectInt32 ToPhysicalRect(FrameworkElement element)
+            {
+                if (element.ActualWidth <= 0 || element.ActualHeight <= 0)
+                {
+                    return new RectInt32(0, 0, 0, 0);
+                }
+
+                var bounds = element.TransformToVisual(RootShell)
+                    .TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
+                return new RectInt32(
+                    (int)Math.Round(bounds.X * scale),
+                    (int)Math.Round(bounds.Y * scale),
+                    (int)Math.Round(bounds.Width * scale),
+                    (int)Math.Round(bounds.Height * scale));
+            }
+
+            var closeRect = ToPhysicalRect(WindowCloseButton);
+            var maximizeRect = ToPhysicalRect(WindowMaximizeButton);
+            var minimizeRect = ToPhysicalRect(WindowMinimizeButton);
+            if (closeRect.Width <= 0 || maximizeRect.Width <= 0 || minimizeRect.Width <= 0) return;
+
+            var nonClientSource = InputNonClientPointerSource.GetForWindowId(_appWindow.Id);
+            nonClientSource.SetRegionRects(NonClientRegionKind.Close, new[] { closeRect });
+            nonClientSource.SetRegionRects(NonClientRegionKind.Maximize, new[] { maximizeRect });
+            nonClientSource.SetRegionRects(NonClientRegionKind.Minimize, new[] { minimizeRect });
+        }
+        catch (Exception error)
+        {
+            WinUiRuntimeTrace.Write($"Custom caption buttons setup skipped: {error.GetType().Name}");
+        }
+    }
+
+    private void WindowMinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_appWindow?.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.Minimize();
+        }
+    }
+
+    private void WindowMaximizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_appWindow?.Presenter is OverlappedPresenter presenter)
+        {
+            if (presenter.State == OverlappedPresenterState.Maximized)
+            {
+                presenter.Restore();
+            }
+            else
+            {
+                presenter.Maximize();
+            }
+        }
+    }
+
+    private void WindowCloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
     private double _titleBarSafeRight = 138;
 

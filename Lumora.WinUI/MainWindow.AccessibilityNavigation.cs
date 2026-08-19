@@ -225,7 +225,6 @@ public sealed partial class MainWindow
         if (SavedTabGroupsPanel.Visibility == Visibility.Visible) return SavedTabGroupsPanel;
         if (NotesPanel.Visibility == Visibility.Visible) return NotesPanel;
         if (VaultPanel.Visibility == Visibility.Visible) return VaultPanel;
-        if (PasskeysPanel.Visibility == Visibility.Visible) return PasskeysPanel;
         if (ModulesPanel.Visibility == Visibility.Visible) return ModulesPanel;
         if (SiteControlPanel.Visibility == Visibility.Visible) return SiteControlPanel;
         if (SessionsPanel.Visibility == Visibility.Visible) return SessionsPanel;

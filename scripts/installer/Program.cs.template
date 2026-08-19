@@ -55,6 +55,15 @@ internal sealed class InstallerForm : Form
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
 
+    // Notifie l'Explorateur qu'une association de type de fichier a change
+    // (icone .lum ci-dessous) : sans cet appel, l'icone ne se met a jour
+    // qu'apres une deconnexion/redemarrage - constat courant sous Windows
+    // pour toute modification de HKCU\Software\Classes.
+    [DllImport("shell32.dll")]
+    private static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
+    private const int ShcneAssocChanged = 0x08000000;
+    private const int ShcnfIdList = 0x0000;
+
     public InstallerForm()
     {
         Text = "Installation de Lumora Browser";
@@ -517,6 +526,7 @@ internal sealed class InstallerForm : Form
 
         var appExe = Path.Combine(appDir, "Lumora.WinUI.exe");
         var iconPath = Path.Combine(appDir, "Assets", "LumoraApp.ico");
+        var lumIconPath = Path.Combine(appDir, "Assets", "LumoraLum.ico");
         _installedAppExe = appExe;
 
         SetStatus("Nettoyage de l'ancien lanceur isolé...", 64);
@@ -551,6 +561,38 @@ internal sealed class InstallerForm : Form
         key?.SetValue("UninstallString", Quote(uninstallCmd));
         key?.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key?.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+
+        SetStatus("Association de l'icône des sauvegardes .lum...", 97);
+        RegisterLumFileIcon(lumIconPath);
+    }
+
+    // Icone dediee pour les fichiers de sauvegarde .lum (session "Compte et
+    // ouverture", 2026-08-14, chantier 3 - voir MEMORY.md). Uniquement HKCU
+    // (comme le reste de cet installateur, aucun privilege administrateur
+    // requis) et uniquement l'icone : aucune commande "ouvrir" n'est
+    // enregistree, ce chantier ne portait que sur la representation
+    // visuelle du fichier dans l'Explorateur, pas sur un comportement au
+    // double-clic (a discuter separement si voulu). Si l'icone dediee est
+    // absente du build (ancien artefact propre non regenere), l'association
+    // est simplement ignoree plutot que de faire echouer toute l'installation.
+    private static void RegisterLumFileIcon(string lumIconPath)
+    {
+        if (!File.Exists(lumIconPath)) return;
+
+        const string progId = "Lumora.LumBackup";
+        using (var extKey = Registry.CurrentUser.CreateSubKey(@"Software\Classes\.lum"))
+        {
+            extKey?.SetValue(string.Empty, progId);
+        }
+
+        using (var progIdKey = Registry.CurrentUser.CreateSubKey($@"Software\Classes\{progId}"))
+        {
+            progIdKey?.SetValue(string.Empty, "Sauvegarde Lumora");
+            using var iconKey = progIdKey?.CreateSubKey("DefaultIcon");
+            iconKey?.SetValue(string.Empty, $"{lumIconPath},0");
+        }
+
+        SHChangeNotify(ShcneAssocChanged, ShcnfIdList, IntPtr.Zero, IntPtr.Zero);
     }
 
     private static void WriteUninstaller(
@@ -570,9 +612,13 @@ internal sealed class InstallerForm : Form
             "$startMenuShortcut = " + PsQuote(startMenuShortcut),
             "$desktopShortcut = " + PsQuote(desktopShortcut),
             "$uninstallKey = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Lumora\"",
+            "$lumExtKey = \"HKCU:\\Software\\Classes\\.lum\"",
+            "$lumProgIdKey = \"HKCU:\\Software\\Classes\\Lumora.LumBackup\"",
             "Remove-Item -LiteralPath $startMenuShortcut -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $desktopShortcut -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $lumExtKey -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $lumProgIdKey -Recurse -Force -ErrorAction SilentlyContinue",
             "if ($RemoveProfile -and (Test-Path $profileDir)) { Remove-Item -LiteralPath $profileDir -Recurse -Force }",
             "if (Test-Path $installRoot) { Remove-Item -LiteralPath $installRoot -Recurse -Force }"
         });

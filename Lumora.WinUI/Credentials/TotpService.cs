@@ -2,6 +2,19 @@ using System.Security.Cryptography;
 
 namespace Lumora.WinUI.Credentials;
 
+// Algorithme de hachage HMAC utilisé pour dériver le code. SHA1 reste le choix
+// de la quasi-totalité des services (y compris ceux qui annoncent SHA256/512
+// dans leur URI otpauth mais l'ignorent en pratique côté validation) ; SHA256
+// et SHA512 existent pour les rares services qui les exigent réellement
+// (certains gestionnaires d'entreprise), lus depuis le paramètre "algorithm"
+// d'une URI otpauth:// ou d'un export de migration.
+internal enum OtpHashAlgorithm
+{
+    Sha1,
+    Sha256,
+    Sha512
+}
+
 // Compte TOTP prêt à l'emploi : secret normalisé (base32, majuscules, sans
 // espaces) + métadonnées optionnelles récupérées d'une URI otpauth://.
 internal sealed record TotpAccount(
@@ -9,14 +22,12 @@ internal sealed record TotpAccount(
     string Issuer = "",
     string AccountName = "",
     int Digits = TotpService.DefaultDigits,
-    int Period = TotpService.DefaultPeriod);
+    int Period = TotpService.DefaultPeriod,
+    OtpHashAlgorithm Algorithm = OtpHashAlgorithm.Sha1);
 
 // TOTP local (RFC 6238 / HOTP RFC 4226), compatible Google Authenticator et
 // équivalents : calcul purement local à partir d'un secret et de l'heure,
-// aucune donnée envoyée nulle part. Seul l'algorithme SHA-1 est implémenté
-// (c'est celui utilisé par la quasi-totalité des services, y compris ceux
-// qui annoncent SHA-256/512 dans leur URI otpauth mais l'ignorent en
-// pratique côté validation).
+// aucune donnée envoyée nulle part.
 internal static class TotpService
 {
     public const int DefaultDigits = 6;
@@ -24,7 +35,10 @@ internal static class TotpService
 
     private const string Base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-    public static string GenerateCode(string base32Secret, DateTimeOffset at, int digits = DefaultDigits, int period = DefaultPeriod)
+    public static string GenerateCode(
+        string base32Secret, DateTimeOffset at,
+        int digits = DefaultDigits, int period = DefaultPeriod,
+        OtpHashAlgorithm algorithm = OtpHashAlgorithm.Sha1)
     {
         var key = Base32Decode(base32Secret);
         var counter = at.ToUnixTimeSeconds() / period;
@@ -35,7 +49,12 @@ internal static class TotpService
             Array.Reverse(counterBytes);
         }
 
-        using var hmac = new HMACSHA1(key);
+        using HMAC hmac = algorithm switch
+        {
+            OtpHashAlgorithm.Sha256 => new HMACSHA256(key),
+            OtpHashAlgorithm.Sha512 => new HMACSHA512(key),
+            _ => new HMACSHA1(key)
+        };
         var hash = hmac.ComputeHash(counterBytes);
 
         var offset = hash[^1] & 0x0F;
@@ -75,9 +94,10 @@ internal static class TotpService
         }
     }
 
-    // Point d'entrée unique pour la saisie utilisateur : accepte soit un
-    // secret base32 collé tel quel, soit une URI otpauth:// complète (export
-    // de la plupart des applications d'authentification).
+    // Point d'entrée unique pour la saisie utilisateur : accepte un secret
+    // base32 collé tel quel, une URI otpauth:// complète (export standard
+    // d'un compte unique), ou le résultat d'un scan QR (même formats, texte
+    // brut décodé par ZXing.Net en amont).
     public static TotpAccount? ParseSecretInput(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -135,8 +155,9 @@ internal static class TotpService
 
         var digits = parameters.TryGetValue("digits", out var digitsRaw) && int.TryParse(digitsRaw, out var d) ? d : DefaultDigits;
         var period = parameters.TryGetValue("period", out var periodRaw) && int.TryParse(periodRaw, out var p) ? p : DefaultPeriod;
+        var algorithm = parameters.TryGetValue("algorithm", out var algoRaw) ? ParseAlgorithmName(algoRaw) : OtpHashAlgorithm.Sha1;
 
-        return new TotpAccount(secret, issuer.Trim(), accountName.Trim(), digits, period);
+        return new TotpAccount(secret, issuer.Trim(), accountName.Trim(), digits, period, algorithm);
     }
 
     private static Dictionary<string, string> ParseQuery(string query)
@@ -159,6 +180,25 @@ internal static class TotpService
 
     private static string NormalizeSecret(string raw) =>
         raw.Replace(" ", string.Empty).Replace("-", string.Empty).ToUpperInvariant();
+
+    // "SHA1"/"SHA256"/"SHA512" (et variantes "SHA-256") d'une URI otpauth ou
+    // d'un export de migration. Valeur absente ou non reconnue -> SHA1, le
+    // choix par défaut du standard et de la quasi-totalité des services.
+    public static OtpHashAlgorithm ParseAlgorithmName(string? name) => name?.Trim().ToUpperInvariant() switch
+    {
+        "SHA256" or "SHA-256" => OtpHashAlgorithm.Sha256,
+        "SHA512" or "SHA-512" => OtpHashAlgorithm.Sha512,
+        _ => OtpHashAlgorithm.Sha1
+    };
+
+    // Nom stable persisté dans VaultCredential.TotpAlgorithm (round-trip avec
+    // ParseAlgorithmName ci-dessus).
+    public static string AlgorithmName(OtpHashAlgorithm algorithm) => algorithm switch
+    {
+        OtpHashAlgorithm.Sha256 => "SHA256",
+        OtpHashAlgorithm.Sha512 => "SHA512",
+        _ => "SHA1"
+    };
 
     private static byte[] Base32Decode(string input)
     {

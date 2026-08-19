@@ -24,12 +24,7 @@ public sealed partial class MainWindow
     {
         if (_isGuestMode) { StatusText.Text = "Indisponible en mode invité."; return; }
 
-        var picker = new FolderPicker();
-        picker.SuggestedStartLocation = PickerLocationId.Desktop;
-        picker.FileTypeFilter.Add("*");
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
-
-        var folder = await picker.PickSingleFolderAsync();
+        var folder = await PickFolderAsync();
         if (folder is null) return;
 
         var newPath = folder.Path;
@@ -107,7 +102,14 @@ public sealed partial class MainWindow
         var picker = new FileSavePicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         picker.SuggestedFileName = $"lumora-backup-{DateTime.Now:yyyyMMdd-HHmm}";
-        picker.FileTypeChoices.Add("Sauvegarde Lumora", new List<string> { ".lumorabackup", ".novabackup" });
+        // .lum (session "Compte et ouverture", 2026-08-14) : nouvelle extension
+        // par defaut pour les exports, plus courte et propre a Lumora que
+        // ".lumorabackup". Le format binaire lui-meme (LumoraBackup.cs) est
+        // totalement indifferent au nom de fichier - seul ce picker change,
+        // aucune migration necessaire. .lumorabackup/.novabackup restent
+        // acceptes en IMPORT ci-dessous (RunImportBackupFlowAsync), aucune
+        // sauvegarde existante ne devient illisible.
+        picker.FileTypeChoices.Add("Sauvegarde Lumora", new List<string> { ".lum" });
 
         var file = await picker.PickSaveFileAsync();
         if (file is null) return;
@@ -118,6 +120,13 @@ public sealed partial class MainWindow
             StatusText.Text = result.CredentialCount > 0
                 ? $"Sauvegarde exportée avec succès ({result.CredentialCount} mot(s) de passe inclus)."
                 : "Sauvegarde exportée avec succès.";
+
+            // Tableau de bord "Mon compte" (0.93.45.0-dev) : trace la reussite
+            // pour affichage ("Derniere sauvegarde : ..."), voir UiSettings.
+            _uiSettings.LastBackupAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            _uiSettings.LastBackupFileName = file.Name;
+            _uiSettings.Save(_profile.UiSettingsFile);
+            RefreshAccountDashboard();
         }
         catch (VaultLockedForBackupException ex)
         {
@@ -154,6 +163,10 @@ public sealed partial class MainWindow
         var picker = new FileOpenPicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         picker.SuggestedStartLocation = PickerLocationId.Desktop;
+        // .lum en tete (nouveau format par defaut) + les deux extensions
+        // historiques toujours acceptees - voir le commentaire de
+        // ExportBackupButton_Click.
+        picker.FileTypeFilter.Add(".lum");
         picker.FileTypeFilter.Add(".lumorabackup");
         picker.FileTypeFilter.Add(".novabackup");
 

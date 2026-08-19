@@ -118,4 +118,75 @@ public sealed class TotpServiceTests
     {
         Assert.Null(TotpService.ParseSecretInput("otpauth://hotp/Exemple:alice?secret=" + Rfc6238Secret));
     }
+
+    // ── Multi-algorithme (SHA1/SHA256/SHA512) ───────────────────────────────
+
+    [Fact]
+    public void ParseSecretInput_sans_parametre_algorithm_vaut_SHA1_par_defaut()
+    {
+        var account = TotpService.ParseSecretInput($"otpauth://totp/Exemple:alice?secret={Rfc6238Secret}");
+        Assert.NotNull(account);
+        Assert.Equal(OtpHashAlgorithm.Sha1, account!.Algorithm);
+    }
+
+    // Le paramètre reste une chaîne (pas OtpHashAlgorithm, type "internal") :
+    // une méthode de test [Theory] doit être publique pour qu'xUnit la
+    // découvre, et une méthode publique ne peut pas exposer un type moins
+    // accessible dans sa signature (CS0051), même avec InternalsVisibleTo.
+    [Theory]
+    [InlineData("SHA1", "SHA1")]
+    [InlineData("sha256", "SHA256")]
+    [InlineData("SHA512", "SHA512")]
+    [InlineData("sha-256", "SHA256")]
+    [InlineData("md5", "SHA1")] // valeur non reconnue -> repli SHA1
+    public void ParseAlgorithmName_reconnait_les_variantes_usuelles(string raw, string expectedName)
+    {
+        Assert.Equal(expectedName, TotpService.AlgorithmName(TotpService.ParseAlgorithmName(raw)));
+    }
+
+    [Theory]
+    [InlineData("SHA1")]
+    [InlineData("SHA256")]
+    [InlineData("SHA512")]
+    public void AlgorithmName_puis_ParseAlgorithmName_font_un_aller_retour_stable(string name)
+    {
+        var algorithm = TotpService.ParseAlgorithmName(name);
+        Assert.Equal(name, TotpService.AlgorithmName(algorithm));
+        Assert.Equal(algorithm, TotpService.ParseAlgorithmName(TotpService.AlgorithmName(algorithm)));
+    }
+
+    [Fact]
+    public void ParseSecretInput_extrait_lalgorithme_dune_uri_otpauth()
+    {
+        var uri = $"otpauth://totp/Exemple:alice?secret={Rfc6238Secret}&algorithm=SHA256";
+        var account = TotpService.ParseSecretInput(uri);
+        Assert.NotNull(account);
+        Assert.Equal(OtpHashAlgorithm.Sha256, account!.Algorithm);
+    }
+
+    [Fact]
+    public void GenerateCode_avec_des_algorithmes_differents_donne_des_codes_differents()
+    {
+        var at = DateTimeOffset.FromUnixTimeSeconds(59);
+        var sha1 = TotpService.GenerateCode(Rfc6238Secret, at, digits: 8, algorithm: OtpHashAlgorithm.Sha1);
+        var sha256 = TotpService.GenerateCode(Rfc6238Secret, at, digits: 8, algorithm: OtpHashAlgorithm.Sha256);
+        var sha512 = TotpService.GenerateCode(Rfc6238Secret, at, digits: 8, algorithm: OtpHashAlgorithm.Sha512);
+
+        // Même secret/même instant : le SHA1 doit retomber sur le vecteur RFC
+        // 6238 déjà verrouillé plus haut, et les trois algorithmes doivent
+        // diverger entre eux (sinon le paramètre serait ignoré silencieusement).
+        Assert.Equal("94287082", sha1);
+        Assert.NotEqual(sha1, sha256);
+        Assert.NotEqual(sha1, sha512);
+        Assert.NotEqual(sha256, sha512);
+    }
+
+    [Fact]
+    public void GenerateCode_par_defaut_sans_algorithme_precise_reste_SHA1()
+    {
+        var at = DateTimeOffset.FromUnixTimeSeconds(59);
+        Assert.Equal(
+            TotpService.GenerateCode(Rfc6238Secret, at, digits: 8, algorithm: OtpHashAlgorithm.Sha1),
+            TotpService.GenerateCode(Rfc6238Secret, at, digits: 8));
+    }
 }

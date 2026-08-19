@@ -637,6 +637,7 @@ public sealed partial class MainWindow
             CreateRecoveryKeyButton.Visibility = hasPassword ? Visibility.Visible : Visibility.Collapsed;
         }
         RefreshAvatarUi();
+        RefreshAccountDashboard();
 
         // La gestion des utilisateurs locaux (chemins reels, ouverture de dossier,
         // quarantaine) et la reinitialisation de profil n'ont pas de sens pour une
@@ -644,8 +645,11 @@ public sealed partial class MainWindow
         // authentification (trouve en usage reel le 2026-07-22, voir commentaire
         // XAML de ProfileManagementRestrictedPanel) : bloc entier cache en mode
         // invite plutot que des gardes au cas par cas, plus sur et plus simple a
-        // verifier.
+        // verifier. ProfileDangerZonePanel (0.93.45.0-dev, deplace hors des onglets
+        // pour rester visible peu importe l'onglet ouvert) suit exactement la meme
+        // regle, pour la meme raison exacte.
         ProfileManagementRestrictedPanel.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;
+        ProfileDangerZonePanel.Visibility = _isGuestMode ? Visibility.Collapsed : Visibility.Visible;
         ProfileGuestRestrictedNotice.IsOpen = _isGuestMode;
         if (_isGuestMode)
         {
@@ -883,7 +887,12 @@ public sealed partial class MainWindow
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
 
-        var verified = await Task.Run(() => targetProfile.VerifyPassword(passwordBox.Password));
+        // Lire .Password sur le thread UI AVANT Task.Run : un PasswordBox (comme tout
+        // objet XAML) leve un COMException 0x8001010E (RPC_E_WRONG_THREAD) des qu'on
+        // accede a sa propriete depuis un thread de pool - trouve en conditions
+        // reelles le 2026-08-14 (session "Compte et ouverture"), voir MEMORY.md.
+        var enteredPassword = passwordBox.Password;
+        var verified = await Task.Run(() => targetProfile.VerifyPassword(enteredPassword));
         if (!verified)
         {
             StatusText.Text = "Mot de passe incorrect : profil inchangé.";
@@ -1081,6 +1090,84 @@ public sealed partial class MainWindow
         AddTab("Nouvel onglet", "lumora://accueil", select: true);
         _suppressTabSave = false;
         Title = $"Lumora {Version} — Mode invité";
+    }
+
+    // Icones disquette/dossier a cote du bandeau Lumora sur l'ecran "Bienvenue"
+    // (session "Compte et ouverture", 2026-08-14 - maquette validee par
+    // l'utilisateur en Artifact) : memes actions que l'etape "Profil existant ?"
+    // de l'assistant (MainWindow.SetupWizard.cs), mais accessibles DES ce tout
+    // premier ecran plutot que 2 etapes plus loin - l'utilisateur avait signale
+    // que devoir remplir un formulaire de creation avant qu'on lui propose de
+    // recuperer son profil etait a l'envers.
+    private async void CreateProfileImportBackupButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!await RunImportBackupFlowAsync()) return;
+
+        await ShowSimpleDialogAsync(
+            "Sauvegarde importée",
+            "Vos favoris, onglets, coffre et réglages ont été restaurés. Lumora va redémarrer pour appliquer la sauvegarde.",
+            closeButtonText: "OK");
+        RestartApp();
+    }
+
+    private async void CreateProfileFindExistingButton_Click(object sender, RoutedEventArgs e) =>
+        await AdoptExistingProfileFolderAsync(mentionBlankProfileLeftIntact: false);
+
+    // Selecteur de dossier natif Windows, meme reglages (Bureau, aucun filtre
+    // d'extension) partout ou Lumora demande "choisis un dossier" - factorise
+    // pour ne pas repeter ces 4 lignes de cablage a chaque appelant.
+    private async Task<StorageFolder?> PickFolderAsync()
+    {
+        var picker = new FolderPicker();
+        picker.SuggestedStartLocation = PickerLocationId.Desktop;
+        picker.FileTypeFilter.Add("*");
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        return await picker.PickSingleFolderAsync();
+    }
+
+    // Coeur partage entre ce bouton et WizardExistingProfileButton_Click
+    // (etape "Profil existant ?" de l'assistant, MainWindow.SetupWizard.cs) -
+    // memes verifications, meme mecanisme (config.CustomProfilePath + RestartApp,
+    // identique a ChangeFolderButton_Click/ProfileLocationContinueButton_Click) :
+    // rien n'est copie, deplace ni supprime.
+    private async Task AdoptExistingProfileFolderAsync(bool mentionBlankProfileLeftIntact)
+    {
+        if (_isGuestMode) { LoginStatusText.Text = "Indisponible en mode invité."; return; }
+
+        var folder = await PickFolderAsync();
+        if (folder is null) return;
+
+        if (SameProfileDirectory(folder.Path, _profile.ProfileDir))
+        {
+            LoginStatusText.Text = "C'est déjà le profil actuel.";
+            return;
+        }
+
+        var candidatePaths = LumoraProfilePaths.FromDirectory(folder.Path);
+        var candidate = UserProfile.Load(candidatePaths.ProfileFile, candidatePaths.LegacyProfileFile);
+        if (candidate is null)
+        {
+            LoginStatusText.Text = "Ce dossier ne contient pas de profil Lumora reconnaissable.";
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = $"Profil trouvé : {candidate.Name}",
+            Content = mentionBlankProfileLeftIntact
+                ? "Lumora va redémarrer sur ce profil. Le profil vierge que vous venez de créer reste inchangé sur le disque et restera accessible depuis le sélecteur de profils si besoin."
+                : "Lumora va redémarrer sur ce profil.",
+            PrimaryButtonText = "Utiliser ce profil",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+
+        var config = LumoraConfig.Load();
+        config.CustomProfilePath = folder.Path;
+        config.Save();
+        RestartApp();
     }
 
     private async void CreateProfileButton_Click(object sender, RoutedEventArgs e)
@@ -1321,11 +1408,7 @@ public sealed partial class MainWindow
 
     private async void ChooseProfileLocationButton_Click(object sender, RoutedEventArgs e)
     {
-        var picker = new FolderPicker();
-        picker.SuggestedStartLocation = PickerLocationId.Desktop;
-        picker.FileTypeFilter.Add("*");
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
-        var folder = await picker.PickSingleFolderAsync();
+        var folder = await PickFolderAsync();
         if (folder is null) return;
         _pendingProfileDir = folder.Path;
         ProfileLocationPathText.Text = folder.Path;
@@ -1603,26 +1686,32 @@ public sealed partial class MainWindow
         dialog.Content = panel;
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
 
-        if (!await Task.Run(() => _userProfile.VerifyPassword(oldBox.Password)))
+        // Lire .Password sur le thread UI AVANT tout Task.Run (meme raison qu'ailleurs
+        // dans ce fichier - COMException 0x8001010E sur un thread de pool, trouve en
+        // conditions reelles le 2026-08-14).
+        var oldPassword = oldBox.Password;
+        var newPassword = newBox.Password;
+
+        if (!await Task.Run(() => _userProfile.VerifyPassword(oldPassword)))
         { StatusText.Text = "Mot de passe actuel incorrect."; return; }
-        if (!IsAccountPasswordStrongEnough(newBox.Password, out var changePwError))
+        if (!IsAccountPasswordStrongEnough(newPassword, out var changePwError))
         { StatusText.Text = changePwError; return; }
-        if (newBox.Password != confBox.Password)
+        if (newPassword != confBox.Password)
         { StatusText.Text = "Les mots de passe ne correspondent pas."; return; }
 
-        _userProfile = await Task.Run(() => _userProfile.WithNewPassword(newBox.Password));
+        _userProfile = await Task.Run(() => _userProfile.WithNewPassword(newPassword));
         _userProfile.Save(_profile.ProfileFile);
 
         // Re-clé du coffre avec le nouveau mot de passe : on déverrouille d'abord avec
         // l'ancien (pour ne pas perdre les identifiants), puis on re-chiffre.
         if (_vault.HasMasterPassword)
         {
-            if (_vault.EnsureUnlockedWith(oldBox.Password))
-                _vault.SetMasterPassword(newBox.Password);
+            if (_vault.EnsureUnlockedWith(oldPassword))
+                _vault.SetMasterPassword(newPassword);
         }
         else
         {
-            _vault.EnsureUnlockedWith(newBox.Password);
+            _vault.EnsureUnlockedWith(newPassword);
         }
 
         // Le re-chiffrement du coffre a invalidé l'emballage PIN. Si un PIN existe, on le
@@ -1733,9 +1822,12 @@ public sealed partial class MainWindow
             if (pinBox.Password != confBox.Password)
             { StatusText.Text = "Les codes PIN ne correspondent pas."; _suppressUiSettingsSave = true; ProfilePinSwitch.IsOn = false; _suppressUiSettingsSave = false; return; }
 
-            _userProfile = await Task.Run(() => _userProfile.WithPin(pinBox.Password));
+            // Lire .Password sur le thread UI AVANT Task.Run (meme raison qu'ailleurs
+            // dans ce fichier - COMException 0x8001010E sur un thread de pool).
+            var pin = pinBox.Password;
+            _userProfile = await Task.Run(() => _userProfile.WithPin(pin));
             // Le PIN peut désormais ouvrir le coffre (si celui-ci est déverrouillé maintenant).
-            if (!_vault.IsLocked) _vault.EnablePinUnlock(pinBox.Password);
+            if (!_vault.IsLocked) _vault.EnablePinUnlock(pin);
         }
         else
         {
@@ -1786,20 +1878,79 @@ public sealed partial class MainWindow
             Content = panel,
             PrimaryButtonText = "Réinitialiser",
             CloseButtonText = "Annuler",
-            DefaultButton = ContentDialogButton.Close,
+            // LA vraie cause du symptome "le dialogue se ferme, rien ne se passe,
+            // aucun message" (2026-08-14, confirme par winui-runtime-trace.log :
+            // resultat=None a chaque tentative) : DefaultButton=Close faisait que
+            // taper le mot de passe puis appuyer sur Entree (reflexe naturel apres
+            // un champ de mot de passe) annulait SILENCIEUSEMENT le dialogue, exactement
+            // comme un clic sur "Annuler" - aucune suppression tentee, aucune
+            // verification de mot de passe meme faite, et rien ne le signalait.
+            // DefaultButton=None : Entree ne declenche plus aucun bouton (le
+            // dialogue reste ouvert, l'utilisateur voit qu'il doit cliquer) - reste
+            // aussi sur, puisqu'aucune touche seule ne peut plus declencher la
+            // suppression.
+            DefaultButton = ContentDialogButton.None,
             XamlRoot = Content.XamlRoot
         };
-        if (await dlg.ShowAsync() != ContentDialogResult.Primary) return;
-
-        if (!await Task.Run(() => _userProfile.VerifyPassword(passwordBox.Password)))
+        WinUiRuntimeTrace.Write("ResetProfileButton: dialogue de confirmation ouvert");
+        var confirmResult = await dlg.ShowAsync();
+        WinUiRuntimeTrace.Write($"ResetProfileButton: dialogue de confirmation ferme, resultat={confirmResult}");
+        if (confirmResult != ContentDialogResult.Primary)
         {
-            StatusText.Text = "Mot de passe incorrect : profil non réinitialisé.";
+            // Meme principe que le mot de passe incorrect plus bas : une annulation
+            // (bouton Annuler, Echap, ou clic hors du dialogue) doit rester visible,
+            // pas silencieuse.
+            if (confirmResult == ContentDialogResult.None)
+                StatusText.Text = "Réinitialisation annulée : profil inchangé.";
             return;
         }
 
-        // Supprimer tout le dossier de profil (navigation, vault, favicons, profile.nova)
-        if (Directory.Exists(_profile.ProfileDir))
-            Directory.Delete(_profile.ProfileDir, recursive: true);
+        // LA vraie cause du bug signale par l'utilisateur (2026-08-14) : lire
+        // passwordBox.Password DANS le lambda Task.Run levait un COMException
+        // 0x8001010E (RPC_E_WRONG_THREAD, confirme par winui-runtime-trace.log) -
+        // un objet XAML comme PasswordBox ne peut etre lu que sur le thread UI.
+        // L'exception partait donc en silence AVANT meme la comparaison du mot de
+        // passe, expliquant "rien ne se passe" quel que soit le mot de passe tape -
+        // le correctif WebView2/RetryDelete plus bas n'etait jamais atteint. Meme
+        // anti-motif trouve et corrige aux 4 autres endroits de ce fichier qui
+        // accedaient a .Password a l'interieur d'un Task.Run.
+        var enteredPassword = passwordBox.Password;
+        WinUiRuntimeTrace.Write($"ResetProfileButton: verification du mot de passe, longueur saisie={enteredPassword.Length}");
+        var passwordOk = await Task.Run(() => _userProfile.VerifyPassword(enteredPassword));
+        WinUiRuntimeTrace.Write($"ResetProfileButton: resultat VerifyPassword={passwordOk}");
+        if (!passwordOk)
+        {
+            // Retour utilisateur reel (2026-08-14, session "Compte et ouverture") :
+            // StatusText seul est trop facile a manquer sur une action aussi
+            // destructrice - un mot de passe refuse doit etre impossible a rater.
+            await ShowSimpleDialogAsync("Mot de passe incorrect", "Le profil n'a pas été réinitialisé.");
+            return;
+        }
+
+        // Fermer chaque WebView2 explicitement AVANT de supprimer : sans ca, le
+        // process moteur Chromium garde ses fichiers (Cache, LevelDB...) verrouilles
+        // et Directory.Delete echoue silencieusement - meme piege deja rencontre et
+        // corrige pour le dossier ephemere invite (voir le Closed du constructeur,
+        // DeleteGuestSessionDirectoryWithRetry). C'etait le bug reel derriere ce
+        // bouton : aucun message d'erreur, le dossier survivait, sans qu'on sache
+        // pourquoi - trouve en le testant en conditions reelles avec l'utilisateur.
+        WinUiRuntimeTrace.Write($"ResetProfileButton: mot de passe correct, fermeture de {_tabs.Count} onglet(s) puis suppression de {_profile.ProfileDir}");
+        foreach (var tab in _tabs)
+        {
+            try { tab.View?.Close(); } catch { }
+        }
+
+        var deleted = RetryDelete.TryDeleteDirectory(_profile.ProfileDir, maxAttempts: 15, delayMs: 200, out var deleteError);
+        WinUiRuntimeTrace.Write($"ResetProfileButton: RetryDelete.TryDeleteDirectory -> {deleted}" + (deleteError is null ? "" : $" (derniere erreur : {deleteError.GetType().Name}: {deleteError.Message})"));
+        if (!deleted)
+        {
+            await ShowSimpleDialogAsync(
+                "Réinitialisation impossible",
+                "Le dossier du profil est toujours utilisé par Lumora (mot de passe correct, mais la suppression a échoué). " +
+                "Fermez tous les onglets ouverts puis réessayez." +
+                (deleteError is null ? "" : $"\n\nDétail : {deleteError.Message}"));
+            return;
+        }
 
         // Remettre la configuration de profil dans un état local coherent.
         var cfg = LumoraConfig.Load();
@@ -1811,10 +1962,38 @@ public sealed partial class MainWindow
 
         cfg.CustomProfilePath = null;
         cfg.Save();
+        WinUiRuntimeTrace.Write("ResetProfileButton: suppression reussie, redemarrage de l'application");
+
+        // Retour utilisateur reel (2026-08-14, session "Compte et ouverture") : la
+        // reussite redemarrait l'app sans un mot, alors que les deux echecs (mot de
+        // passe incorrect, suppression impossible) avaient deja leur propre message -
+        // seul le cas qui compte le plus (ca a marche) restait muet. Bouton "OK" a
+        // valider explicitement, comme demande, avant le redemarrage.
+        await ShowSimpleDialogAsync(
+            "Profil réinitialisé",
+            "Votre profil a été supprimé. Lumora va redémarrer pour repartir de zéro.",
+            closeButtonText: "OK");
 
         var exe = Environment.ProcessPath;
         if (exe is not null)
             System.Diagnostics.Process.Start(exe);
         Application.Current.Exit();
+    }
+
+    // Meme logique de nouvelles tentatives que DeleteGuestSessionDirectoryWithRetry
+    // (MainWindow.xaml.cs), mais qui rapporte l'echec au lieu de l'avaler en
+    // silence : ce bouton a besoin de dire a l'utilisateur si la suppression a
+    // reellement eu lieu, contrairement au nettoyage best-effort d'un dossier
+    // invite ephemere.
+    private async Task ShowSimpleDialogAsync(string title, string message, string closeButtonText = "Fermer")
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
+            CloseButtonText = closeButtonText,
+            XamlRoot = Content.XamlRoot
+        };
+        await dialog.ShowAsync();
     }
 }

@@ -28,7 +28,10 @@ public sealed class AccountBackupPasswordTests
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
 
         Assert.Contains("if (!IsAccountPasswordStrongEnough(pw, out var pwError))", code, StringComparison.Ordinal);
-        Assert.Contains("if (!IsAccountPasswordStrongEnough(newBox.Password, out var changePwError))", code, StringComparison.Ordinal);
+        // newPassword (variable locale) et non plus newBox.Password directement depuis
+        // le 2026-08-14 : lire .Password sur le thread UI avant Task.Run, voir
+        // Aucun_Task_Run_ne_lit_Password_directement_sur_un_controle_XAML.
+        Assert.Contains("if (!IsAccountPasswordStrongEnough(newPassword, out var changePwError))", code, StringComparison.Ordinal);
         Assert.Contains("if (!IsAccountPasswordStrongEnough(newBox.Password, out var recoveryPwError))", code, StringComparison.Ordinal);
     }
 

@@ -53,6 +53,11 @@ public sealed partial class LumoraIncognitoWindow : Window
         Path.Combine(Path.GetTempPath(), "LumoraIncognito", Guid.NewGuid().ToString("N"));
     private string? _pendingStartUrl;
     private IncognitoTab? _currentTab;
+    // Pays de sortie Tor actuellement applique (null = Automatique). Jamais
+    // ecrit sur disque : reinitialise a null a chaque nouvelle fenetre
+    // Incognito, voir TorExitCountrySelector.
+    private string? _currentExitCountry;
+    private bool _suppressExitCountryHandler;
     private bool _suppressToggleHandler;
     private bool _torEngineInstallInProgress;
     private Microsoft.UI.Windowing.AppWindow? _appWindow;
@@ -113,7 +118,13 @@ public sealed partial class LumoraIncognitoWindow : Window
                     try { tab.View.Close(); } catch { }
                 }
             }
-            try { if (Directory.Exists(_sessionDataDir)) Directory.Delete(_sessionDataDir, recursive: true); } catch { }
+            // Meme piege que DeleteGuestSessionDirectoryWithRetry/ResetProfileButton_Click
+            // (MainWindow.xaml.cs/MainWindow.Profile.cs) : WebView2 garde ses fichiers
+            // (Cache, LevelDB...) verrouilles quelques instants apres la fermeture des
+            // vues ci-dessus - un Directory.Delete en une seule tentative echoue de facon
+            // fiable. Delegue au meme module partage (Storage/RetryDelete.cs).
+            try { RetryDelete.TryDeleteDirectory(_sessionDataDir, maxAttempts: 15, delayMs: 200, out _); }
+            catch { /* best-effort : ne jamais faire echouer la fermeture de fenetre pour ca */ }
 
             // MainWindow s'est fermee pour laisser la place a cette fenetre
             // (voir MainWindow.Incognito.cs) : si on quitte vraiment Incognito
@@ -286,6 +297,7 @@ public sealed partial class LumoraIncognitoWindow : Window
             SetTorSwitchSilently(true);
             IncognitoTorSwitch.IsEnabled = true;
             IncognitoNewCircuitButton.Visibility = Visibility.Visible;
+            IncognitoExitCountryButton.Visibility = Visibility.Visible;
         }
 
         ConfigureProcessWebView(_initialTorEnabled);
@@ -443,6 +455,93 @@ public sealed partial class LumoraIncognitoWindow : Window
 
         await Task.Delay(TorProcessManager.NewCircuitCooldown);
         IncognitoNewCircuitButton.IsEnabled = true;
+        if (success)
+        {
+            IncognitoTorStatusText.Text = "IP masquée : oui";
+        }
+        else if (IncognitoTorStatusText.Text == message)
+        {
+            IncognitoTorStatusText.Text = previousStatus;
+        }
+    }
+
+    // Peuple la liste des pays une seule fois (a la premiere ouverture du
+    // menu : IncognitoExitCountryList ne contient au depart que le
+    // RadioButton "Automatique" pose en XAML) a partir de
+    // TorExitCountrySelector.Options, seule source de verite pour la liste -
+    // jamais de duplication XAML/code qui pourrait diverger. Resynchronise
+    // ensuite la selection cochee sur _currentExitCountry a chaque ouverture,
+    // avec le handler suspendu pour ne pas redeclencher un changement de
+    // circuit juste en rouvrant le menu.
+    private void IncognitoExitCountryFlyout_Opening(object sender, object e)
+    {
+        if (IncognitoExitCountryList.Children.Count == 1)
+        {
+            foreach (var option in TorExitCountrySelector.Options)
+            {
+                var radio = new RadioButton
+                {
+                    Content = option.DisplayName,
+                    GroupName = "IncognitoExitCountry",
+                    Tag = option.Code,
+                };
+                radio.Checked += IncognitoExitCountryOption_Checked;
+                IncognitoExitCountryList.Children.Add(radio);
+            }
+        }
+
+        SyncExitCountrySelection();
+    }
+
+    private void SyncExitCountrySelection()
+    {
+        _suppressExitCountryHandler = true;
+        foreach (var radio in IncognitoExitCountryList.Children.OfType<RadioButton>())
+        {
+            radio.IsChecked = string.Equals(radio.Tag as string, _currentExitCountry, StringComparison.Ordinal);
+        }
+        _suppressExitCountryHandler = false;
+    }
+
+    // Meme logique honnete que IncognitoNewCircuitButton_Click ci-dessus
+    // (statut temporaire, cooldown NEWNYM partage via TorExitCountrySelector
+    // -> TorProcessManager.RequestNewCircuitAsync, rechargement de l'onglet
+    // courant). _suppressExitCountryHandler evite de redeclencher un
+    // changement quand SyncExitCountrySelection coche un RadioButton par
+    // programme plutot que par un vrai clic utilisateur.
+    private async void IncognitoExitCountryOption_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressExitCountryHandler) return;
+        if (sender is not RadioButton { Tag: var tagValue }) return;
+
+        var code = tagValue as string;
+        if (string.Equals(code, _currentExitCountry, StringComparison.Ordinal)) return;
+
+        IncognitoExitCountryButton.IsEnabled = false;
+        var previousStatus = IncognitoTorStatusText.Text;
+        IncognitoTorStatusText.Text = code is null
+            ? "Retour au choix automatique du pays de sortie..."
+            : "Changement de pays de sortie...";
+
+        var (success, message) = await TorExitCountrySelector.ApplyAsync(_tor, code);
+        IncognitoTorStatusText.Text = message;
+
+        if (success)
+        {
+            _currentExitCountry = code;
+            IncognitoExitCountryButton.Content = code is null ? "Sortie : Auto" : $"Sortie : {code}";
+            _currentTab?.View.CoreWebView2?.Reload();
+        }
+        else
+        {
+            // L'echec n'a pas change _currentExitCountry : ne jamais laisser
+            // le RadioButton coche (deja bascule par le clic avant que ce
+            // handler ne s'execute) mentir sur le pays reellement actif.
+            SyncExitCountrySelection();
+        }
+
+        await Task.Delay(TorProcessManager.NewCircuitCooldown);
+        IncognitoExitCountryButton.IsEnabled = true;
         if (success)
         {
             IncognitoTorStatusText.Text = "IP masquée : oui";

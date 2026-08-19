@@ -309,11 +309,6 @@ public sealed partial class MainWindow
             RefreshWebAppsPanel();
         }
 
-        if (PasskeysPanel.Visibility == Visibility.Visible)
-        {
-            RenderPasskeysPanel();
-        }
-
         if (WalletPanel.Visibility == Visibility.Visible)
         {
             RefreshWalletPanel();

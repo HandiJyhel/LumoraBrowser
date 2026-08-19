@@ -74,6 +74,15 @@ public sealed partial class MainWindow
                     RecordPasskeyCreated(pkOrigin);
                 else
                     RecordPasskeyUsed(pkOrigin);
+
+                // Détection automatique : si le Coffre est déjà ouvert (panneau
+                // affiché à côté de la page qui vient de créer/utiliser la
+                // clé), la fiche se met à jour toute seule — pas d'étape
+                // manuelle en plus pour l'utilisateur (voir schéma Coffre V4).
+                if (VaultPanel.Visibility == Visibility.Visible)
+                {
+                    RefreshVaultPanel();
+                }
                 return;
             }
 

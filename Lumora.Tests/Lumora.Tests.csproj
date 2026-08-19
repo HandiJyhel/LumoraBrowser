@@ -37,13 +37,16 @@
     <Compile Include="..\Lumora.WinUI\BuildAuthenticity.cs"               Link="Product\BuildAuthenticity.cs" />
     <Compile Include="..\Lumora.WinUI\BrandingText.cs"                    Link="Product\BrandingText.cs" />
     <Compile Include="..\Lumora.WinUI\Models\UserProfile.cs"             Link="Product\UserProfile.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\AccountDashboardFormatter.cs" Link="Product\AccountDashboardFormatter.cs" />
     <Compile Include="..\Lumora.WinUI\Models\ProfilePaths.cs"            Link="Product\ProfilePaths.cs" />
     <Compile Include="..\Lumora.WinUI\Models\UiSettings.cs"              Link="Product\UiSettings.cs" />
     <Compile Include="..\Lumora.WinUI\Models\StartMenuTiles.cs"          Link="Product\StartMenuTiles.cs" />
     <Compile Include="..\Lumora.WinUI\StartMenuTileRegistry.cs"          Link="Product\StartMenuTileRegistry.cs" />
+    <Compile Include="..\Lumora.WinUI\OpenPanelsTaskbar.cs"              Link="Product\OpenPanelsTaskbar.cs" />
     <Compile Include="..\Lumora.WinUI\Models\Profiles.cs"                Link="Product\Profiles.cs" />
     <Compile Include="..\Lumora.WinUI\LumoraConfig.cs"                    Link="Product\LumoraConfig.cs" />
     <Compile Include="..\Lumora.WinUI\Storage\LumoraFile.cs"              Link="Product\LumoraFile.cs" />
+    <Compile Include="..\Lumora.WinUI\Storage\RetryDelete.cs"             Link="Product\RetryDelete.cs" />
     <Compile Include="..\Lumora.WinUI\LumoraBackup.cs"                    Link="Product\LumoraBackup.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\FilterParser.cs" Link="Product\FilterParser.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\IPrivacyModule.cs" Link="Product\IPrivacyModule.cs" />
@@ -114,6 +117,7 @@
     <Compile Include="..\Lumora.WinUI\Tor\TorTrustedRelease.cs" Link="Product\TorTrustedRelease.cs" />
     <Compile Include="..\Lumora.WinUI\Tor\TorEngineState.cs" Link="Product\TorEngineState.cs" />
     <Compile Include="..\Lumora.WinUI\Tor\TorEngineProvider.cs" Link="Product\TorEngineProvider.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorExitCountrySelector.cs" Link="Product\TorExitCountrySelector.cs" />
     <EmbeddedResource Include="..\Lumora.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>
 

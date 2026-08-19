@@ -27,6 +27,38 @@ Les tests purs (`dotnet test Lumora.Tests`) sont l'affaire de CI, pas de verify.
   PIN). NE PAS cliquer « Continuer avec ce profil » : cliquer
   **« Continuer sans profil (mode invite) »** — navigateur fonctionnel, aucun mur.
 
+## Modifier un fichier `.lumora` a la main : il DOIT etre chiffre DPAPI
+
+Tous les fichiers `.lumora` du profil (`ui-settings.lumora`, `profile.lumora`,
+`vault.lumora`...) sont proteges par `ProtectedData.Protect` (voir
+`Storage/LumoraFile.cs`, entropie `"Lumora.WinUI.v1"`,
+`DataProtectionScope.CurrentUser`) - **jamais du JSON en clair**. Ecrire du
+JSON en clair a la place ne leve AUCUNE erreur visible : `TryReadAllText`
+avale l'exception de dechiffrement et retourne `null`, et `UiSettings.Load()`
+(ou l'equivalent) retombe silencieusement sur `Default()`. Resultat : le
+reglage qu'on croit avoir pose n'a jamais existe pour l'app, sans le moindre
+message d'erreur - piege reel rencontre le 2026-08-18 (`VaultTotpFeatureEnabled`
+qui semblait "ne jamais s'appliquer"), qui a aussi retroactivement explique un
+"mystere" d'une session precedente (`SetupWizardCompleted: true` ecrit a la
+main mais l'assistant premier lancement continuait d'apparaitre).
+
+Pour ecrire un `.lumora` valide a la main (PowerShell) :
+
+```powershell
+Add-Type -AssemblyName System.Security
+$plain = [System.Text.Encoding]::UTF8.GetBytes($json)
+$entropy = [System.Text.Encoding]::UTF8.GetBytes("Lumora.WinUI.v1")
+$cipher = [System.Security.Cryptography.ProtectedData]::Protect($plain, $entropy, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+[System.IO.File]::WriteAllBytes($path, $cipher)
+```
+
+Prudence : le "profil de test craftable directement (DPAPI+PBKDF2)" deja
+documente pour `UserProfile`/`VaultStore` (voir MEMORY.md) utilise deja ce
+mecanisme via les classes du produit (`UserProfile.Save`, `new VaultStore(...)`)
+- toujours preferer cette voie (code produit reel) a l'ecriture manuelle
+ci-dessus quand c'est possible, l'ecriture manuelle n'etant qu'un filet pour
+les cas (comme `UiSettings`) sans fabrique de test dediee.
+
 ## Pilotage UIA (ce qui marche)
 
 PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes`) :
@@ -44,7 +76,74 @@ PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationCl
 - Faire tout le flux **en une seule commande** : le process WinUI/WebView2 s'est
   deja arrete de facon aleatoire dans cet environnement (0.73/0.74, non reproduit
   en 0.75).
+- **Aucun `AutomationId` explicite** sur la quasi-totalite des controles (boutons,
+  TextBox, ToggleSwitch...) : matcher par `Name` (le `Content`/`Header` visible,
+  ou l'`AutomationProperties.Name` explicite quand pose) plutot que par
+  `AutomationIdProperty`, qui echoue silencieusement (2026-08-14).
+- **Les `MenuFlyoutItem`/`Button.Flyout` (menus contextuels type "..." en haut a
+  droite) ne s'ouvrent pas de facon fiable via `InvokePattern.Invoke()` dans cet
+  environnement** (2026-08-14, session "Compte et ouverture") : le popup ne se
+  materialise pas (aucune nouvelle fenetre, aucun `ControlType.MenuItem` autre que
+  le menu Systeme de la fenetre), meme apres `SetForegroundWindow`/`ShowWindow`.
+  A l'inverse, les overlays en plein `Grid` avec `Visibility` bascule (LoginOverlay,
+  SetupWizardOverlay, CommandPaletteOverlay...) fonctionnent normalement - le
+  probleme est specifique aux vrais `Popup`/`Flyout` XAML, pas aux ecrans qui
+  changent juste de visibilite. **Contournement** : si la fonction testee vit
+  derriere un flyout sans alternative directe, verifier sa logique via un test
+  `dotnet test` cible (extraire la logique pure si besoin, comme
+  `RetryDelete.cs`) plutot que de s'acharner sur l'ouverture du menu.
+- **`Windows.Storage.Pickers.FileOpenPicker` (boite de dialogue systeme, pas
+  XAML) ne materialise aucune fenetre/process observable dans cet
+  environnement** (2026-08-18, session "Coffre V4", scan QR) : le bouton qui
+  l'ouvre s'invoque sans erreur, l'app reste reactive (`Responding=True`,
+  aucun `UNHANDLED` dans le journal), mais ni `root.FindAll(Children)` ni
+  `Get-Process | Where MainWindowTitle` ne voient de nouvelle fenetre "Ouvrir"
+  apparaitre - meme famille de limite que les `MenuFlyoutItem` ci-dessus
+  (une boite modale native, pas un ecran a bascule de `Visibility`), mais sur
+  un dialogue Windows standard cette fois, pas un Popup/Flyout XAML.
+  **Contournement** : verifier la logique de lecture/decodage en aval du
+  picker par un test cible (ex. round-trip encodage/decodage ZXing hors app,
+  voir MEMORY.md "Coffre V4" 2026-08-18) plutot que d'essayer de piloter la
+  selection du fichier ; s'appuyer sur le fait qu'un pattern de picker deja
+  utilise ailleurs dans l'app (ex. `MainWindow.Avatar.cs`) fonctionne en
+  usage reel pour estimer le risque residuel, et signaler explicitement à
+  l'utilisateur que ce point precis reste a confirmer manuellement.
+- Dans un `MenuFlyoutItem`, le noeud dont le `Name` correspond au libelle est
+  souvent le `TextBlock` interne (pas invocable) : `TryGetCurrentPattern` sur ce
+  noeud echoue ("Modele non pris en charge") - remonter au parent avec
+  `TreeWalker.GetParent` jusqu'a trouver un noeud qui supporte `InvokePattern`.
+- `CopyFromScreen` avec le `BoundingRectangle` UIA peut capturer une **autre
+  fenetre reelle du bureau** (deja vu : capture qui montre la session Claude Code
+  elle-meme) si la fenetre Lumora n'est pas au premier plan - les rectangles UIA
+  (existence, `BoundingRectangle`, valeurs de pattern) restent fiables meme quand
+  la capture d'ecran ne l'est pas ; ne pas conclure d'un echec a partir d'une
+  capture seule.
 
 Script complet reutilisable : voir `drive-sitenotfound.ps1` du log 0.75
 (structure : Start-Process -> Wait fenetre -> invite -> SetValue adresse ->
 Invoke -> polls Find-Element -> screenshots -> Stop-Process).
+
+## Un bouton qui "ne fait rien" : instrumenter avant de deviner
+
+Si une action semble ne rien produire (pas de crash, pas de message), ne pas
+enchainer un 2e correctif sur la seule base d'une relecture du code. Ajouter
+des `WinUiRuntimeTrace.Write("...")` (classe `WinUiRuntimeTrace`, deja
+disponible, gardee par `LUMORA_TRACE_STARTUP=1`) a chaque etape de la
+methode suspecte, puis relancer via `run-winui-trace.cmd` et lire
+`winui-runtime-trace.log` (chemin : dossier de lancement, ex.
+`artifacts\tmp\winui-run\...\current\winui-runtime-trace.log`) - accessible
+en lecture directe, inutile de demander a l'utilisateur de le copier.
+
+Le journal capture aussi les **exceptions non gerees avec pile d'appel
+complete** (ligne `UNHANDLED: ...`), la source la plus fiable pour ce genre
+de bug. Deux causes reelles rencontrees ce genre de symptome muet :
+- `COMException 0x8001010E` (`RPC_E_WRONG_THREAD`) : un objet XAML
+  (`PasswordBox.Password`, `TextBox.Text`...) lu DANS un lambda `Task.Run`
+  (thread de pool) - toujours lire la propriete sur le thread UI d'abord,
+  dans une variable locale, avant `Task.Run`.
+- `DefaultButton = ContentDialogButton.Close` sur un dialogue avec un champ
+  de saisie : Entree apres avoir tape ferme le dialogue comme une annulation
+  SILENCIEUSE (`ContentDialogResult.None`), sans qu'aucune exception ne soit
+  levee - seul le journal instrumente le revele (le crash COMException,
+  ci-dessus, log deja son "UNHANDLED" sans instrumentation ; celui-ci non,
+  il faut l'ajouter expres).

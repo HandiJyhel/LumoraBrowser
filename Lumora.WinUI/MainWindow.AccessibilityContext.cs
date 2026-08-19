@@ -233,7 +233,6 @@ public sealed partial class MainWindow
             _ when ReferenceEquals(panel, SavedTabGroupsPanel) => "Groupes enregistrés",
             _ when ReferenceEquals(panel, NotesPanel) => "Notes",
             _ when ReferenceEquals(panel, VaultPanel) => "Gestionnaire de mots de passe",
-            _ when ReferenceEquals(panel, PasskeysPanel) => "Clés d'accès",
             _ when ReferenceEquals(panel, ModulesPanel) => "Modules Lumora",
             _ when ReferenceEquals(panel, SiteControlPanel) => "Centre du site",
             _ when ReferenceEquals(panel, SessionsPanel) => "Sites connectés",

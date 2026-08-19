@@ -255,6 +255,41 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
+                <!-- Pays de sortie Tor (2026-08-18, retour utilisateur : toujours
+                     ressorti aux Pays-Bas malgre "Nouveau circuit") - meme regle de
+                     visibilite que IncognitoNewCircuitButton (Tor connecte
+                     uniquement, jamais visible hors Incognito puisque ce panneau
+                     entier n'existe que dans cette fenetre). Logique dans le
+                     fichier dedie Tor/TorExitCountrySelector.cs, jamais persistee :
+                     repart sur "Automatique" a chaque nouvelle fenetre Incognito. -->
+                <Button x:Name="IncognitoExitCountryButton" Padding="8,5" Visibility="Collapsed"
+                        Style="{StaticResource IncognitoToolbarButtonStyle}"
+                        Content="Sortie : Auto"
+                        AutomationProperties.Name="Choisir le pays de sortie Tor"
+                        ToolTipService.ToolTip="Choisit le pays où ton trafic Tor semble sortir sur Internet">
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom" Opening="IncognitoExitCountryFlyout_Opening">
+                            <StackPanel Width="240" Spacing="10">
+                                <TextBlock Text="Pays de sortie Tor" FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{StaticResource LumoraWindowTextBrush}" />
+                                <TextBlock Text="Choisis le pays où ton trafic semblera sortir sur Internet. Par défaut, Tor décide seul."
+                                           TextWrapping="Wrap" FontSize="11.5" Opacity="0.8"
+                                           Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                                <StackPanel x:Name="IncognitoExitCountryList" Spacing="2">
+                                    <RadioButton Content="Automatique (recommandé)" GroupName="IncognitoExitCountry"
+                                                 IsChecked="True" Tag="{x:Null}"
+                                                 Checked="IncognitoExitCountryOption_Checked" />
+                                    <!-- Le reste de la liste (7 pays fixes) est peuple depuis
+                                         TorExitCountrySelector.Options par IncognitoExitCountryFlyout_Opening,
+                                         pour ne jamais desynchroniser XAML et code. -->
+                                </StackPanel>
+                                <TextBlock Text="Un pays forcé réduit un peu ton anonymat : moins de personnes partagent le même petit groupe de nœuds que toi, ce qui te rend plus repérable. C'est un compromis assumé par le projet Tor lui-même, pas une limite de Lumora."
+                                           TextWrapping="Wrap" FontSize="11.5" Opacity="0.7"
+                                           Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <Button x:Name="IncognitoNewCircuitButton" Padding="8,5" Visibility="Collapsed"
                         Style="{StaticResource IncognitoToolbarButtonStyle}"
                         Content="Nouveau circuit" Click="IncognitoNewCircuitButton_Click"

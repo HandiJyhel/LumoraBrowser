@@ -117,4 +117,75 @@ public sealed partial class MainWindow
         RefreshVaultPanel();
         await ImportPasswordsAsync();
     }
+
+    // ── Fonctions optionnelles du Coffre (TOTP / Passkeys) ──────────────────────
+    //
+    // Vraies au démarrage. Désactiver l'une masque sa section partout (fiche
+    // détaillée + accès rapide) sans jamais toucher au fichier vault.lumora :
+    // réactiver la fait réapparaître à l'identique. Changer l'un ou l'autre
+    // redemande le mot de passe/PIN du profil (RequireVaultAccessAsync, même
+    // barrière que l'ouverture du Coffre) - jamais un simple interrupteur muet,
+    // et de toute façon hors de portée en mode invité (section "vault" des
+    // Paramètres déjà verrouillée, voir SettingsNav_Click).
+
+    // Empêche RefreshVaultSettingsUi (qui pose IsOn depuis les réglages déjà
+    // enregistrés) de redéclencher les gestionnaires Toggled ci-dessous comme
+    // si l'utilisateur venait de cliquer.
+    private bool _vaultFeatureTogglesSyncing;
+
+    private void RefreshVaultSettingsUi()
+    {
+        _vaultFeatureTogglesSyncing = true;
+        VaultTotpFeatureToggle.IsOn = _uiSettings.VaultTotpFeatureEnabled;
+        VaultPasskeyFeatureToggle.IsOn = _uiSettings.VaultPasskeyFeatureEnabled;
+        _vaultFeatureTogglesSyncing = false;
+    }
+
+    private async void VaultTotpFeatureToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_vaultFeatureTogglesSyncing) return;
+        var toggle = (ToggleSwitch)sender;
+        var desired = toggle.IsOn;
+        if (desired == _uiSettings.VaultTotpFeatureEnabled) return;
+
+        if (!await RequireVaultAccessAsync())
+        {
+            _vaultFeatureTogglesSyncing = true;
+            toggle.IsOn = _uiSettings.VaultTotpFeatureEnabled;
+            _vaultFeatureTogglesSyncing = false;
+            UpdateStatusText("Changement annulé : code incorrect ou refusé.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+            return;
+        }
+
+        _uiSettings.VaultTotpFeatureEnabled = desired;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        RefreshVaultPanel();
+        UpdateStatusText(desired
+            ? "Authentification à deux facteurs réactivée dans le Coffre."
+            : "Authentification à deux facteurs masquée dans le Coffre (rien n'est supprimé).");
+    }
+
+    private async void VaultPasskeyFeatureToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_vaultFeatureTogglesSyncing) return;
+        var toggle = (ToggleSwitch)sender;
+        var desired = toggle.IsOn;
+        if (desired == _uiSettings.VaultPasskeyFeatureEnabled) return;
+
+        if (!await RequireVaultAccessAsync())
+        {
+            _vaultFeatureTogglesSyncing = true;
+            toggle.IsOn = _uiSettings.VaultPasskeyFeatureEnabled;
+            _vaultFeatureTogglesSyncing = false;
+            UpdateStatusText("Changement annulé : code incorrect ou refusé.", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+            return;
+        }
+
+        _uiSettings.VaultPasskeyFeatureEnabled = desired;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        RefreshVaultPanel();
+        UpdateStatusText(desired
+            ? "Clés d'accès réactivées dans le Coffre."
+            : "Clés d'accès masquées dans le Coffre (rien n'est supprimé).");
+    }
 }

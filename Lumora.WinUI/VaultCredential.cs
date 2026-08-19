@@ -23,5 +23,9 @@ public sealed class VaultCredential
     [JsonPropertyName("totp_secret")] public string TotpSecret { get; init; } = string.Empty;
     [JsonPropertyName("totp_digits")] public int TotpDigits { get; init; } = 6;
     [JsonPropertyName("totp_period")] public int TotpPeriod { get; init; } = 30;
+    // "SHA1" (défaut, quasi tous les services), "SHA256" ou "SHA512" — voir
+    // TotpService.ParseAlgorithmName/AlgorithmName pour le round-trip. Absent
+    // sur les anciennes entrées → SHA1, valeur déjà utilisée avant ce champ.
+    [JsonPropertyName("totp_algorithm")] public string TotpAlgorithm { get; init; } = "SHA1";
 }
 

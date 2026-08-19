@@ -24,7 +24,6 @@ public sealed class AccessibilityRegressionTests
         var savedGroups = ReadRepoFile("Lumora.WinUI", "MainWindow.SavedTabGroups.cs");
         var siteControl = ReadRepoFile("Lumora.WinUI", "MainWindow.SiteControl.cs");
         var sessions = ReadRepoFile("Lumora.WinUI", "MainWindow.Sessions.cs");
-        var passkeys = ReadRepoFile("Lumora.WinUI", "MainWindow.Passkeys.cs");
         var wallet = ReadRepoFile("Lumora.WinUI", "MainWindow.Wallet.cs");
         var vaultQuickAccess = ReadRepoFile("Lumora.WinUI", "MainWindow.VaultQuickAccess.cs");
 
@@ -40,11 +39,17 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("ApplyNovaControlAccessibility(combo, $\"{descriptor.Label} pour {rootDomain}\")", siteControl, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(trustToggle, $\"Politique de session pour {rootDomain}\")", sessions, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(forgetBtn, $\"Oublier les cookies du site {rootDomain}\")", sessions, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(deleteBtn, $\"Supprimer la clé d'accès pour {entry.Origin}\")", passkeys, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(editBtn, $\"Modifier la carte {title}\")", wallet, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(fillBtn, $\"Utiliser la carte {title} sur la page active\")", wallet, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(unlockBtn, \"Deverrouiller le coffre\")", vaultQuickAccess, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(copyTotpBtn, $\"Copier le code TOTP pour", vaultQuickAccess, StringComparison.Ordinal);
+        // Clé d'accès fusionnée dans le Coffre (0.93.46) : la fiche détaillée
+        // n'affiche qu'un identifiant sélectionné à la fois (pas de nom
+        // distinctif nécessaire, même convention que renameBtn/deleteBtn du
+        // détail du Coffre), mais l'accès rapide peut lister plusieurs
+        // identifiants pour un même site — le bouton de création y garde donc
+        // un nom explicite par identifiant.
+        Assert.Contains("ApplyNovaControlAccessibility(createPasskeyBtn, $\"Créer une clé d'accès pour {PasswordManagerService.DisplayName(cred)}\")", vaultQuickAccess, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -54,6 +59,7 @@ public sealed class AccessibilityRegressionTests
         var windowChrome = ReadRepoFile("Lumora.WinUI", "MainWindow.WindowChrome.cs");
         var sessions = ReadRepoFile("Lumora.WinUI", "MainWindow.Sessions.cs");
         var passkeys = ReadRepoFile("Lumora.WinUI", "MainWindow.Passkeys.cs");
+        var vaultQuickAccess = ReadRepoFile("Lumora.WinUI", "MainWindow.VaultQuickAccess.cs");
         var wallet = ReadRepoFile("Lumora.WinUI", "MainWindow.Wallet.cs");
         var siteControl = ReadRepoFile("Lumora.WinUI", "MainWindow.SiteControl.cs");
         var xamlCs = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
@@ -63,7 +69,6 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("RenderDownloads();", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("RenderSavedTabGroups();", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("RefreshWebAppsPanel();", settingsTheme, StringComparison.Ordinal);
-        Assert.Contains("RenderPasskeysPanel();", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("RefreshWalletPanel();", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("RefreshVaultPanel();", settingsTheme, StringComparison.Ordinal);
         Assert.Contains("_ = RefreshSessionsPanelAsync();", settingsTheme, StringComparison.Ordinal);
@@ -71,7 +76,10 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("private double AccessibilityBodyFontSize()", windowChrome, StringComparison.Ordinal);
         Assert.Contains("private double AccessibilitySecondaryFontSize()", windowChrome, StringComparison.Ordinal);
         Assert.Contains("FontSize = AccessibilityBodyFontSize()", sessions, StringComparison.Ordinal);
-        Assert.Contains("FontSize = AccessibilitySecondaryFontSize()", passkeys, StringComparison.Ordinal);
+        // Clé d'accès fusionnée dans le Coffre (0.93.46) : le rendu vit
+        // maintenant dans l'accès rapide, plus dans Passkeys.cs (devenu une
+        // simple couche de données, voir plus bas).
+        Assert.Contains("FontSize = AccessibilitySecondaryFontSize()", vaultQuickAccess, StringComparison.Ordinal);
         Assert.Contains("FontSize = AccessibilitySecondaryFontSize()", wallet, StringComparison.Ordinal);
         Assert.Contains("FontSize = AccessibilityBodyFontSize()", siteControl, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.SetHelpText(", siteControl, StringComparison.Ordinal);
@@ -85,7 +93,10 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("AutomationProperties.Name=\"État Lumora\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.HelpText=\"Annonce les changements importants de navigation, de sécurité et d'accessibilité.\"", xaml, StringComparison.Ordinal);
         Assert.Contains("UpdateStatusText(\"Sessions de la visite précédente purgées.\")", sessions, StringComparison.Ordinal);
-        Assert.Contains("UpdateStatusText(\"Clés d'accès indisponibles en mode invité.\")", passkeys, StringComparison.Ordinal);
+        // Clé d'accès fusionnée dans le Coffre (0.93.46) : le menu "Clés
+        // d'accès" redirige simplement vers le Coffre, qui porte déjà son
+        // propre message d'indisponibilité en mode invité (VaultAccess.cs).
+        Assert.Contains("private void PasskeysMenu_Click(object sender, RoutedEventArgs e) => VaultMenu_Click(sender, e);", passkeys, StringComparison.Ordinal);
         Assert.Contains("UpdateStatusText(\"Portefeuille indisponible en mode invité.\")", wallet, StringComparison.Ordinal);
     }
 
@@ -276,9 +287,6 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("_uiSettings.AccessibilityReadingGuideBandHeight = SelectedReadingGuideBandHeight();", settings, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"ApplySettingsChangesButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.Name=\"Appliquer les changements\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("x:Name=\"PasskeysWindowsSettingsButton\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("AutomationProperties.Name=\"Ouvrir les paramètres Windows des clés d'accès\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("AutomationProperties.HelpText=\"Gérez vos clés d'accès locales et ouvrez les paramètres Windows dédiés.\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"WalletAddCardButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.Name=\"Ajouter une carte au portefeuille\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.HelpText=\"Ajoutez une carte locale, modifiez-la ou utilisez-la sur la page active.\"", xaml, StringComparison.Ordinal);

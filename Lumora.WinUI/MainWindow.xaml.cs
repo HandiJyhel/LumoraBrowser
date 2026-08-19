@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.41.0-dev";
+    internal const string Version = "0.93.52.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -288,6 +288,7 @@ public sealed partial class MainWindow : Window
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");
         Title = $"Lumora {Version}";
         UpdateAddressIdentityChrome(string.Empty);
+        InitializeOpenPanelsTaskbar();
 
         // Initialiser le service de réorganisation de la barre d'outils
         // (0.93.34.0-dev, mode édition accessible via clic droit sur la barre
@@ -350,10 +351,12 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         ApplyWindowTitleBarColors();
         ApplyTitleBarSafeArea();
+        ApplyCustomCaptionButtons();
         RootShell.SizeChanged += (_, _) =>
         {
             UpdateTitleBarDragRegion();
             UpdateResponsiveChromeLayout();
+            ApplyCustomCaptionButtons();
         };
         HookAutomaticPointerFocus();
         RootShell.Loaded += (_, _) => HookAutomaticPointerFocus();
@@ -512,25 +515,16 @@ public sealed partial class MainWindow : Window
     // tentatives espacees suffisent le temps que Chromium termine sa sortie - la
     // fenetre est de toute facon deja fermee a ce stade, une legere attente
     // synchrone ici est invisible pour l'utilisateur.
+    // Delegue au module partage RetryDelete (Storage/RetryDelete.cs, extrait le
+    // 2026-08-14 - meme mecanisme desormais reutilise par
+    // ResetProfileButton_Click/MainWindow.Profile.cs) - resultat ignore ici :
+    // nettoyage best-effort d'un dossier ephemere, jamais critique pour
+    // l'utilisateur contrairement a une reinitialisation de profil demandee
+    // explicitement.
     private static void DeleteGuestSessionDirectoryWithRetry(string path)
     {
-        for (var attempt = 0; attempt < 15; attempt++)
-        {
-            try
-            {
-                if (!Directory.Exists(path)) return;
-                Directory.Delete(path, recursive: true);
-                return;
-            }
-            catch (IOException)
-            {
-                System.Threading.Thread.Sleep(200);
-            }
-            catch
-            {
-                return;
-            }
-        }
+        try { RetryDelete.TryDeleteDirectory(path, maxAttempts: 15, delayMs: 200, out _); }
+        catch { /* best-effort : ne jamais faire echouer la fermeture de fenetre pour ca */ }
     }
 
     public void InitializeBrowserSurface()
@@ -661,6 +655,7 @@ public sealed partial class MainWindow : Window
         }
 
         if (section == "appearance") RefreshWallpaperUi();
+        if (section == "vault") RefreshVaultSettingsUi();
 
         SettingsSectionOverview.Visibility = section == "overview" ? Visibility.Visible : Visibility.Collapsed;
         SettingsSectionNavigation.Visibility = section == "navigation" ? Visibility.Visible : Visibility.Collapsed;
@@ -1038,7 +1033,6 @@ public sealed partial class MainWindow : Window
         NotesPanel.Visibility = Visibility.Collapsed;
         RssPanel.Visibility = Visibility.Collapsed;
         VaultPanel.Visibility = Visibility.Collapsed;
-        PasskeysPanel.Visibility = Visibility.Collapsed;
         ModulesPanel.Visibility = Visibility.Collapsed;
         SiteControlPanel.Visibility = Visibility.Collapsed;
         SessionsPanel.Visibility = Visibility.Collapsed;
@@ -1057,6 +1051,11 @@ public sealed partial class MainWindow : Window
             : Visibility.Visible;
         StatusBarRow.Visibility = Visibility.Visible;
         FocusVisiblePanelEntryPoint(visiblePanel);
+
+        // Barre des taches Lumora (2026-08-18, MainWindow.OpenPanelsTaskbar.cs) :
+        // point d'ancrage unique, couvre tous les appelants existants et
+        // futurs de ShowPanel sans qu'aucun d'eux n'ait besoin d'etre modifie.
+        SyncOpenPanelsTaskbar(visiblePanel);
     }
 
     private string DescribePanelStatus(FrameworkElement visiblePanel, string status)
@@ -1064,11 +1063,6 @@ public sealed partial class MainWindow : Window
         if (ReferenceEquals(visiblePanel, BrowserPanel))
         {
             return status;
-        }
-
-        if (ReferenceEquals(visiblePanel, PasskeysPanel))
-        {
-            return $"{status}. Ouvrez les paramètres Windows ou gérez les sites déjà enregistrés.";
         }
 
         if (ReferenceEquals(visiblePanel, WalletPanel))

@@ -80,8 +80,75 @@ public sealed class RealUserManagementAndGuestPolicyTests
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
         var resetMethod = ExtractMethod(code, "private async void ResetProfileButton_Click(object sender, RoutedEventArgs e)");
 
-        Assert.Contains("VerifyPassword(passwordBox.Password)", resetMethod, StringComparison.Ordinal);
-        Assert.Contains("Mot de passe incorrect : profil non réinitialisé.", resetMethod, StringComparison.Ordinal);
+        // enteredPassword (variable locale) et non plus passwordBox.Password
+        // directement depuis le 2026-08-14 : lire .Password sur le thread UI avant
+        // Task.Run, voir Aucun_Task_Run_ne_lit_Password_directement_sur_un_controle_XAML.
+        Assert.Contains("VerifyPassword(enteredPassword)", resetMethod, StringComparison.Ordinal);
+        Assert.Contains("ShowSimpleDialogAsync(\"Mot de passe incorrect\"", resetMethod, StringComparison.Ordinal);
+    }
+
+    // Bug reel trouve par l'utilisateur en testant (session "Compte et ouverture",
+    // 2026-08-14) : le bouton "Reinitialiser" ne faisait rien de visible - aucun
+    // message, profil intact - parce que Directory.Delete echouait en silence
+    // (aucun try/catch) contre le dossier webview2/ toujours verrouille par le
+    // moteur Chromium en cours d'execution. Meme piege deja rencontre et corrige
+    // pour le dossier ephemere invite (DeleteGuestSessionDirectoryWithRetry,
+    // MainWindow.xaml.cs) - verrouille ici pour le profil reel : fermer les
+    // WebView2 avant de supprimer, et rapporter un echec a l'utilisateur au lieu
+    // de l'avaler en silence.
+    [Fact]
+    public void Reinitialiser_ferme_les_webview2_et_signale_un_echec_de_suppression()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
+        var resetMethod = ExtractMethod(code, "private async void ResetProfileButton_Click(object sender, RoutedEventArgs e)");
+
+        Assert.Contains("tab.View?.Close();", resetMethod, StringComparison.Ordinal);
+        Assert.Contains("RetryDelete.TryDeleteDirectory(_profile.ProfileDir", resetMethod, StringComparison.Ordinal);
+        Assert.Contains("Réinitialisation impossible", resetMethod, StringComparison.Ordinal);
+    }
+
+    // 3e bug reel trouve par l'utilisateur sur ce meme bouton (session "Compte et
+    // ouverture", 2026-08-14) - confirme par winui-runtime-trace.log
+    // (resultat=None a chaque tentative) : DefaultButton=Close sur le dialogue de
+    // confirmation faisait qu'appuyer sur Entree apres avoir tape le mot de passe
+    // (reflexe naturel) annulait SILENCIEUSEMENT le dialogue, comme un clic sur
+    // "Annuler" - aucune verification de mot de passe n'etait meme tentee. Corrige
+    // en DefaultButton=None (Entree ne declenche plus rien, reste ouvert) + un
+    // retour visible si le dialogue est quand meme annule (StatusText).
+    [Fact]
+    public void Dialogue_de_reinitialisation_n_annule_plus_silencieusement_sur_entree()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
+        var resetMethod = ExtractMethod(code, "private async void ResetProfileButton_Click(object sender, RoutedEventArgs e)");
+
+        Assert.Contains("DefaultButton = ContentDialogButton.None", resetMethod, StringComparison.Ordinal);
+        Assert.DoesNotContain("DefaultButton = ContentDialogButton.Close", resetMethod, StringComparison.Ordinal);
+        Assert.Contains("Réinitialisation annulée", resetMethod, StringComparison.Ordinal);
+    }
+
+    // Bug reel trouve par l'utilisateur (session "Compte et ouverture", 2026-08-14) :
+    // "Réinitialiser ce profil..." ne faisait RIEN de visible, meme mot de passe
+    // correct - confirme par winui-runtime-trace.log, un COMException 0x8001010E
+    // (RPC_E_WRONG_THREAD) partait en silence a la ligne `Task.Run(() => ...
+    // passwordBox.Password)`. Un objet XAML (PasswordBox) ne peut etre lu que sur
+    // le thread UI ; l'accéder DANS le lambda passe a Task.Run (qui s'execute sur
+    // un thread de pool) leve toujours cette exception. Trouve a 5 endroits du
+    // meme fichier (verification de mot de passe pour reinitialiser/modifier un
+    // profil, changer son mot de passe, definir un PIN). Le motif correct
+    // (deja utilise ailleurs dans ce fichier, ex. LoginButton_Click) est de lire
+    // .Password dans une variable locale AVANT Task.Run. Ce test empeche toute
+    // regression future de cette classe de bug, sur tout le fichier.
+    [Fact]
+    public void Aucun_Task_Run_ne_lit_Password_directement_sur_un_controle_XAML()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
+
+        var offenders = System.Text.RegularExpressions.Regex.Matches(
+            code, @"Task\.Run\([^)]*\.Password[^)]*\)");
+
+        Assert.True(offenders.Count == 0,
+            "Task.Run lit .Password directement sur un controle XAML (COMException " +
+            "0x8001010E garanti) : " + string.Join(" | ", offenders.Select(m => m.Value)));
     }
 
     [Fact]
