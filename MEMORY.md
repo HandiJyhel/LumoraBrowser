@@ -23168,3 +23168,54 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   de coherence (renomme `..._0_93_53_0`).
 - **Reste a faire** : nouvel installeur complet une fois tout stabilise et confirme par
   l'utilisateur en usage reel (dernier point du plan initial de cette session).
+
+## 2026-08-19 (suite) — Installeur repense en assistant classique/tons Lumora -> 0.93.54.0-dev
+
+- 2 maquettes montrees et discutees avant codage : une reprenant exactement l'identite
+  visuelle du navigateur (ecran unique), une structure "assistant classique" façon
+  installeurs Windows habituels (bandeau, etapes Precedent/Suivant, fond clair). L'utilisateur
+  a valide la structure classique mais demande de la reteinter dans les tons du navigateur ->
+  3e maquette (fusion), validee, puis codee.
+- **Refonte complete de `scripts/installer/Program.cs.template`** (WinForms, seule
+  l'habillage change, le comportement d'installation reel est strictement identique) :
+  passage d'un ecran unique scrollable (760x894) a un assistant en **3 pages** dans une
+  seule Form (Panel dont la Visibilite bascule, pas de nouvelles fenetres) :
+  1. Bienvenue (texte d'intro + avertissement build non signe)
+  2. Dossier et options (chemin d'installation, contenu installe, cases a cocher)
+  3. Termine (icone de succes, message, case "Lancer maintenant", bouton Terminer)
+  Bandeau lateral avec logo dans son halo (meme motif que l'ecran de bienvenue de l'app),
+  repere d'etapes numerotees 1-2-3, points systeme "a la Apple" en haut a droite. Palette
+  (`LumoraPalette`) entierement realignee sur les brushes reelles de `MainWindow.xaml`
+  (`NovaAppBackgroundBrush #FF090D14`, `NovaAccentBrush #FFE6AA48`,
+  `NovaCoolAccentBrush #FF56C2E4`...) au lieu de l'ancienne palette verte/turquoise.
+  Boutons redessines au style "Doux moderne" (bordure fine, sans degrade/relief).
+  Simplification assumee : la case "Lancer apres l'installation" (page Options) fusionnee
+  avec la case "Lancer maintenant" de la page Terminee - un seul choix, decide a la fin
+  plutot que redondant a deux endroits.
+- **Verification reelle poussee** (au-dela du simple `dotnet build`) : projet WinForms
+  autonome monte dans un dossier temporaire (memes fichiers que le vrai pipeline
+  `build-installer.ps1` - `Program.cs`, `Tor/TorTrustedRelease.cs`, `Tor/TorEngineProvider.cs`,
+  ressources factices), compile puis **reellement lance et pilote par UIA**. **1 bug reel
+  trouve et corrige avant tout impact** : `FinishIconControl` (page Terminee) plantait
+  l'installateur DES LE LANCEMENT (`ArgumentException` - "Le controle ne prend pas en charge
+  les couleurs d'arriere-plan transparentes", `Control.BackColor = Color.Transparent` sans
+  `ControlStyles.SupportsTransparentBackColor`) - toutes les pages sont construites dans le
+  constructeur, donc ce plantage aurait touche 100% des lancements. Trouve via
+  `Get-WinEvent`/Observateur d'evenements (meme methode que les crashs natifs WinUI deja
+  documentes), corrige, revérifie : les 3 pages s'affichent, la navigation Suivant/Precedent
+  fonctionne, un echec d'installation (zip factice pour le test) affiche une MessageBox
+  d'erreur claire sans crash et laisse l'UI reutilisable - confirme par capture d'ecran a
+  chaque etape. 2 ajustements de mise en page mineurs trouves et corriges pendant cette
+  verification (texte tronque page Bienvenue, texte tronque sur la case Tor page Options).
+- Build MSBuild (app) -> 0 erreur. `dotnet test` -> 832/832 verts (aucun test ne couvre
+  Program.cs.template, hors du perimetre `dotnet test`).
+- Version `0.93.53.0-dev` -> `0.93.54.0-dev` (**3e chiffre**, choix de l'utilisateur explicitement
+  demande vu le doute reel sur la nature du changement - nouvel assistant/nouvelles pages,
+  pas juste une correction) dans les 4 memes fichiers + test de coherence (renomme
+  `..._0_93_54_0`).
+- **Reste a faire** : generer l'installeur complet via le vrai pipeline
+  (`build-clean-test-artifact.ps1` puis `build-installer.ps1`, Go explicite requis, jamais
+  execute automatiquement) une fois que l'utilisateur veut le tester. Discute aussi mais
+  PAS decide/code : mode portable (dossier autonome, pas de trace registre) et signature de
+  code (SignPath Foundation, gratuit mais exige un depot deja public - voir memoire de
+  session `gamme-applications-confidentialite-sans-pub`).
