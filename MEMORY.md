@@ -22905,3 +22905,22 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   visuellement propre - boutons a bordure fine, aucune ombre nette, "Vider" toujours bien en
   rouge (danger). Barre du bas, boutons de la barre d'outils, bouton "Retour au site" (accent)
   tous coherents avec le nouveau style.
+## 2026-08-19 — Installateur complet 0.93.52.0-dev pour test reel serieux, commit du chantier en cours
+
+- Demande explicite : "installeur complet du Navigateur" en vue d'un test reel serieux, sans
+  toucher a l'app pendant la duree du test. Clarifie par l'utilisateur : il veut le logiciel
+  **au complet**, y compris tout ce qui etait encore non commite (tableau de bord de compte,
+  barre des taches des panneaux ouverts, selecteur de pays de sortie Tor, lecteur QR image,
+  suppression avec reessai) - commit fait avant l'installateur sur instruction explicite.
+- Commit `84413ff` (53 fichiers, +4971/-810) sur `feature/refonte-coffre-0-79-1`, version
+  laissee telle quelle dans le code (`0.93.52.0-dev`, deja incrementee la veille pour le chantier
+  boutons/chrome) - aucun bump supplementaire decide unilateralement.
+- Build MSBuild -> 0 erreur. `dotnet test` -> 821/821 verts. Artefact propre
+  `Lumora-0.93.52.0-dev-win-x64-clean-20260819-104721` genere sans erreur.
+- Installateur genere : `artifacts/installer/LumoraSetup-0.93.52.0-dev-win-x64.exe`
+  (SHA256 `9327f93ba71fe69e62bcb0224c4d4be6c0bcb7e951768e87663335a143b9c0dd`, non signe
+  Authenticode). Non execute par moi (regle "installeur jamais auto") - l'utilisateur le
+  testera lui-meme.
+- Anciens installateurs (`0.93.37.2-dev`, `0.93.44.0-dev`) volontairement **conserves** dans
+  `artifacts/installer/` - a supprimer seulement apres validation du nouveau par l'utilisateur
+  (sa demande explicite, pas une suppression automatique).
