@@ -42,6 +42,20 @@ public class ConsentManagerScriptsTests
     }
 
     [Fact]
+    public void Les_liens_sans_href_reconnu_sont_consideres_cliquables()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        // Bug réel 2026-08-19 (leboncoin.fr) : le lien "Continuer sans accepter"
+        // n'a ni href="#" ni href="" - un CLICKABLE restreint à ces deux motifs le
+        // rate complètement malgré un texte déjà reconnu (TXT).
+        Assert.Contains(
+            "var CLICKABLE = 'button, [role=\"button\"], input[type=\"button\"], input[type=\"submit\"], a';",
+            script,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void La_liste_de_compatibilite_connexion_apparait_en_json()
     {
         var script = ConsentManagerScripts.BuildInjectionScript(["exemple.fr", "site.test"]);

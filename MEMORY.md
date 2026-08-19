@@ -22924,3 +22924,54 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
 - Anciens installateurs (`0.93.37.2-dev`, `0.93.44.0-dev`) volontairement **conserves** dans
   `artifacts/installer/` - a supprimer seulement apres validation du nouveau par l'utilisateur
   (sa demande explicite, pas une suppression automatique).
+
+## 2026-08-19 — Bug reel Deliveroo (connexion Google), audit "passe globale", 3 correctifs -> 0.93.52.1-dev
+
+- Retour utilisateur (test reel de l'installateur ci-dessus, quelques minutes apres) : sur
+  Deliveroo, popup Windows d'autorisation WebView2 non comprise, puis fenetre de connexion
+  Google ouverte dans un nouvel onglet qui ne prenait jamais le dessus, connexion impossible.
+- Diagnostic par lecture de code : `CoreWebView2_NewWindowRequested` ouvrait deliberement les
+  popups Google (`accounts.google.com/gsi|oauth2|signin`) **non selectionnees** (`select:
+  !isFederatedIdentity`), pari sur un flux 100% silencieux (postMessage) - faux des que le
+  flux demande un choix de compte reel.
+- L'utilisateur a alors demande une **passe globale** ("un bug corrige, dix qui se creent"),
+  plus un rappel d'un bug deja signale et jamais confirme corrige : le refus automatique des
+  cookies ("cookies essentiels uniquement") ne fonctionnait pas sur certains sites. Methode
+  choisie ensemble : **audit d'abord** (rien casser sans montrer), priorite Go donnee pour
+  corriger les 3 trouvailles avant de continuer sur Navigation/onglets/popups.
+- Audit (`dotnet build` + `dotnet test` + verification reelle skill `verify`, mode invite) a
+  trouve 3 bugs reels :
+  1. Popup Google jamais visible (ci-dessus).
+  2. `ConsentManagerScripts.cs` : le selecteur `CLICKABLE` ne reconnaissait que
+     `a[href="#"]`/`a[href=""]`, ratant les liens `<a>` geres en JS pur (ex. "Continuer sans
+     accepter" sur leboncoin.fr) - **reproduit en reel** (bandeau leboncoin.fr jamais ferme
+     tout seul, capture avant/apres).
+  3. `dotnet test` : 2 echecs intermittents sur 821 (`LumoraConfigTests`,
+     `ProfileRegistryTests`) dus a `LUMORA_PROFILE_DIR` (`Environment.SetEnvironmentVariable`,
+     global au process) modifie en parallele par 3 classes de tests xUnit differentes -
+     confirme flaky (passe seul, echoue parfois en suite complete).
+- Correctifs appliques :
+  1. `NewWindowRequested` : popup toujours selectionnee a l'ouverture (`select: true`),
+     `_browserView` suit la selection, retrait des 2 appels qui ramenaient prematurement
+     l'onglet parent au premier plan pendant que Google est encore en cours de flux (plus
+     aucun usage utile, methode `ReturnToPopupParentIfVisible` retiree), `CloseTab` renvoie
+     desormais vers le vrai onglet parent enregistre (`_popupParentTabIds`) plutot qu'un
+     voisin par index.
+  2. `CLICKABLE` elargi a tout `<a>` (plus seulement `href="#"`/`href=""`) + test dedie
+     dans `ConsentManagerScriptsTests.cs`.
+  3. Nouvelle xUnit `[Collection]` (`ProfileDirEnvironmentCollection.cs`) forcant les 3
+     classes sensibles a `LUMORA_PROFILE_DIR` a tourner en sequence entre elles, sans
+     ralentir le reste de la suite.
+- Verification : correctif 2 et 3 **confirmes en reel** (leboncoin.fr : bandeau disparait
+  tout seul apres correctif, diagnostic instrumente temporairement puis retire une fois la
+  cause confirmee ; tests : 822/822 sur 3 lancements consecutifs). Correctif 1 **non verifie
+  en reel** - UIA ne peut pas cliquer de facon fiable dans le contenu web profond d'une page
+  (meme famille de limite que les flyouts/pickers deja documentee, voir `MEMORY.md`
+  assistant) ; verifie uniquement par relecture precise du code + build/tests verts. A
+  confirmer manuellement par l'utilisateur a la prochaine vraie connexion Google rencontree.
+- Version `0.93.52.0-dev` -> `0.93.52.1-dev` (micro-correction, 4e chiffre - 3 corrections de
+  bugs existants, aucun ajout de fonctionnalite) dans `MainWindow.xaml.cs`, `AGENTS.md`,
+  `build-clean-test-artifact.ps1`, `build-installer.ps1` et le test qui verifie leur
+  coherence (`UsageModeVisualIdentityTests.cs`).
+- Build MSBuild -> 0 erreur. `dotnet test` -> 822/822 verts (821 + 1 nouveau test cookies).
+- Suite prevue (Go donne) : continuer l'audit sur Navigation/onglets/popups.

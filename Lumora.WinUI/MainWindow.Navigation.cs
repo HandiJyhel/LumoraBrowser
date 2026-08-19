@@ -250,6 +250,11 @@ public sealed partial class MainWindow
         RememberClosedTab(state);
         var wasActive = CurrentTab()?.Id == state.Id;
         var oldIndex = _tabs.FindIndex(tab => tab.Id == state.Id);
+        // Capturé avant CloseTabView : celui-ci oublie l'appartenance popup->parent
+        // (_popupParentTabIds.Remove). Une fenêtre de connexion (Google, etc.) qui se
+        // ferme elle-même (window.close()) doit rendre la main à l'onglet qui l'a
+        // ouverte, pas au voisin le plus proche dans la barre d'onglets.
+        var popupParentId = _popupParentTabIds.TryGetValue(state.Id, out var parentId) ? parentId : (int?)null;
         _tabs.Remove(state);
         CloseTabView(state);
 
@@ -267,13 +272,29 @@ public sealed partial class MainWindow
         }
         else if (wasActive)
         {
-            var nextIndex = Math.Clamp(oldIndex, 0, BrowserTabs.TabItems.Count - 1);
-            if (BrowserTabs.TabItems[nextIndex] is TabViewItem nextItem)
+            var parentTab = popupParentId is int wantedParentId
+                ? _tabs.FirstOrDefault(tab => tab.Id == wantedParentId)
+                : null;
+            var parentItem = parentTab is null
+                ? null
+                : BrowserTabs.TabItems.OfType<TabViewItem>()
+                    .FirstOrDefault(candidate => candidate.Tag is int id && id == parentTab.Id);
+
+            if (parentTab is not null && parentItem is not null)
             {
-                BrowserTabs.SelectedItem = nextItem;
-                if (nextItem.Tag is int nextId && _tabs.FirstOrDefault(tab => tab.Id == nextId) is { } nextTab)
+                BrowserTabs.SelectedItem = parentItem;
+                ActivateTab(parentTab);
+            }
+            else
+            {
+                var nextIndex = Math.Clamp(oldIndex, 0, BrowserTabs.TabItems.Count - 1);
+                if (BrowserTabs.TabItems[nextIndex] is TabViewItem nextItem)
                 {
-                    ActivateTab(nextTab);
+                    BrowserTabs.SelectedItem = nextItem;
+                    if (nextItem.Tag is int nextId && _tabs.FirstOrDefault(tab => tab.Id == nextId) is { } nextTab)
+                    {
+                        ActivateTab(nextTab);
+                    }
                 }
             }
         }
@@ -481,7 +502,11 @@ public sealed partial class MainWindow
         if (startingTab is not null && IsFederatedIdentityIntermediary(args.Uri))
         {
             _federatedIdentityPopupTabIds.Add(startingTab.Id);
-            ReturnToPopupParentIfVisible(startingTab);
+            // Ne PAS ramener l'onglet parent au premier plan ici : le flux Google est
+            // potentiellement encore en cours d'interaction (choix de compte,
+            // consentement) sur CET onglet. Le retour au parent se fait via la
+            // fermeture de la fenêtre par le site lui-même (BrowserCore_WindowCloseRequested)
+            // - voir bug réel 2026-08-19 (Deliveroo, fenêtre masquée avant interaction).
             HideCredentialAutomationBars();
         }
 
@@ -757,7 +782,9 @@ public sealed partial class MainWindow
             if (IsFederatedIdentityIntermediary(address))
             {
                 _federatedIdentityPopupTabIds.Add(tab.Id);
-                ReturnToPopupParentIfVisible(tab);
+                // Même raison que dans BrowserView_NavigationStarting ci-dessus : ne pas
+                // masquer l'onglet tant que le flux Google peut encore demander une
+                // interaction.
                 HideCredentialAutomationBars();
             }
         }
@@ -1359,7 +1386,11 @@ public sealed partial class MainWindow
         try
         {
             var isFederatedIdentity = IsFederatedIdentityIntermediary(uri);
-            var popupTab = AddTab(PopupTabTitle(uri), uri, select: !isFederatedIdentity, createViewWhenSelected: false);
+            // Toujours au premier plan : un flux Google (choix de compte, consentement...)
+            // peut demander une vraie interaction, pas seulement un aller-retour silencieux
+            // (postMessage). Une fenêtre restée en arrière-plan est une fenêtre que
+            // l'utilisateur ne voit jamais - bug réel constaté le 2026-08-19 (Deliveroo).
+            var popupTab = AddTab(PopupTabTitle(uri), uri, select: true, createViewWhenSelected: false);
             if (parentTab is not null)
             {
                 _popupParentTabIds[popupTab.Id] = parentTab.Id;
@@ -1374,12 +1405,12 @@ public sealed partial class MainWindow
             if (popupView?.CoreWebView2 is not null)
             {
                 args.NewWindow = popupView.CoreWebView2;
-                if (!isFederatedIdentity)
-                {
-                    _browserView = popupView;
-                }
+                // Suit la sélection ci-dessus : sans ça, la barre d'adresse et les
+                // actions de la barre d'outils continueraient de viser l'onglet parent
+                // pendant que l'onglet visible est la fenêtre de connexion.
+                _browserView = popupView;
                 StatusText.Text = isFederatedIdentity
-                    ? "Connexion Google en cours dans une fenetre Lumora rattachee."
+                    ? "Connexion Google ouverte dans un onglet Lumora."
                     : "Fenetre de connexion ouverte dans un onglet Lumora.";
             }
             else
@@ -1406,21 +1437,6 @@ public sealed partial class MainWindow
                host.Contains("login", StringComparison.OrdinalIgnoreCase)
             ? "Connexion"
             : "Nouvel onglet";
-    }
-
-    private void ReturnToPopupParentIfVisible(BrowserTabState popupTab)
-    {
-        if (!_popupParentTabIds.TryGetValue(popupTab.Id, out var parentId) ||
-            CurrentTab()?.Id != popupTab.Id)
-        {
-            return;
-        }
-
-        var parentTab = _tabs.FirstOrDefault(tab => tab.Id == parentId);
-        if (parentTab is not null)
-        {
-            DispatcherQueue.TryEnqueue(() => ActivateTab(parentTab));
-        }
     }
 
     private void HideCredentialAutomationBars()

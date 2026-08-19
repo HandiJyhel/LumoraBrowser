@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Lumora.Tests;
 
+[Collection(ProfileDirEnvironmentCollection.Name)]
 public sealed class ProfileRegistryTests : IDisposable
 {
     private readonly string _root =

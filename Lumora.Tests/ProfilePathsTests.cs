@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Lumora.Tests;
 
+[Collection(ProfileDirEnvironmentCollection.Name)]
 public class ProfilePathsTests
 {
     [Fact]

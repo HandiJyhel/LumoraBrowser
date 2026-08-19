@@ -203,7 +203,12 @@ internal static class ConsentManagerScripts
         var LOGRISK = {{{LoginRiskTextList}}};
         var MANAGE  = {{{ManageTextList}}};
         var CONFIRM = {{{ConfirmTextList}}};
-        var CLICKABLE = 'button, [role="button"], input[type="button"], input[type="submit"], a[href="#"], a[href=""]';
+        // 'a' sans restriction sur le href : beaucoup de bandeaux modernes (ex.
+        // leboncoin, "Continuer sans accepter") utilisent un lien géré uniquement en
+        // JS, sans href="#" ni href="" - le filtre précédent (a[href="#"], a[href=""])
+        // les ratait completement. Bug réel constaté le 2026-08-19 (bandeau jamais
+        // fermé automatiquement, alors même que le bon texte était dans TXT).
+        var CLICKABLE = 'button, [role="button"], input[type="button"], input[type="submit"], a';
 
         // Traverse aussi les shadow roots OUVERTS (certains bandeaux modernes -
         // Cookiebot recent, certaines configs OneTrust - encapsulent leur bannière
