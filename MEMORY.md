@@ -23133,3 +23133,38 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   `..._0_93_52_3`).
 - **Reste a faire** : ecran de bienvenue (maquette a montrer avant de coder), puis nouvel
   installeur complet une fois tout stabilise et confirme par l'utilisateur en usage reel.
+
+## 2026-08-19 (suite) — Ecran de bienvenue enrichi (8 diapositives) -> 0.93.53.0-dev
+
+- Maquette HTML montree et validee par l'utilisateur ("oui") avant tout codage (voir regle
+  "maquette avant nouveau bouton") : passage de 6 a 8 diapositives dans l'assistant de bienvenue.
+- **2 nouvelles diapositives** :
+  1. "Fonctionnement" — repond directement a la demande utilisateur d'expliquer que Lumora
+     fonctionne differemment d'un navigateur grand public : tout chiffre et garde localement,
+     aucune vente de donnees, aucun suivi, aucune publicite.
+  2. "Mon compte" — presente le tableau de bord de compte (favoris/historique/mots de passe) et
+     la sauvegarde complete chiffree, jamais mentionnes dans l'accueil jusqu'ici.
+- **2 diapositives mises a jour** : Coffre (ajout clefs d'acces + codes de verification a deux
+  facteurs/TOTP), Incognito+Tor (ajout de la mention du choix du pays de sortie).
+- **4 inchangees** : Bienvenue, Lecture/traduction/recherche, Accessibilite, Connexions
+  persistantes. La barre des taches des panneaux ouverts et le nouveau chrome de fenetre ont ete
+  volontairement laisses hors de l'accueil (details d'usage decouverts naturellement, pas des
+  concepts a expliquer des le premier lancement) - l'utilisateur n'a pas demande de les ajouter.
+- Implementation : `MainWindow.xaml` (2 nouvelles `StackPanel` nommees `WelcomeStepPhilosophy`/
+  `WelcomeStepDashboard`, 2 nouveaux `Storyboard` de pulsation, rail de progression etendu a 8
+  pastilles) + `MainWindow.WelcomeSlides.cs` (`WelcomeSlideCount = 8`, tableaux `WelcomeSteps`/
+  `WelcomeStepTransforms`/`WelcomePulseKeys` reordonnes pour inserer les 2 nouvelles diapositives
+  aux bons emplacements — noms XAML distincts plutot que renumeroter les 6 existantes, moins
+  d'edits et moins de risque).
+- Build MSBuild -> 0 erreur, 0 avertissement. `dotnet test` -> 832/832 verts (inchange, aucun
+  nouveau test - rien dans `Lumora.Tests` ne referencait deja les slides de bienvenue).
+- **Verifie en conditions reelles** (profil isole, premier lancement) : les 8 diapositives
+  défilent dans le bon ordre avec le bon texte (parcours complet via `Suivant`/`Commencer`
+  jusqu'a la fin, capture d'ecran des 2 nouvelles diapositives - rendu fidele au style existant,
+  rail de progression a 8 points correct), aucune exception `UNHANDLED` dans
+  `winui-runtime-trace.log`.
+- Version `0.93.52.3-dev` -> `0.93.53.0-dev` (**3e chiffre**, pas le 4e : ajout de contenu/aide,
+  pas une correction — regle "ajout = 3e chiffre" du 2026-07-27) dans les 4 memes fichiers + test
+  de coherence (renomme `..._0_93_53_0`).
+- **Reste a faire** : nouvel installeur complet une fois tout stabilise et confirme par
+  l'utilisateur en usage reel (dernier point du plan initial de cette session).

@@ -8209,6 +8209,18 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                     <DoubleAnimation Storyboard.TargetName="WelcomeHalo5" Storyboard.TargetProperty="Opacity" From="0.55" To="1" Duration="0:00:02.6" />
                     <DoubleAnimation Storyboard.TargetName="WelcomeRing5" Storyboard.TargetProperty="Opacity" From="0.35" To="0.85" Duration="0:00:02.6" />
                 </Storyboard>
+                <!-- 2 diapositives ajoutees le 2026-08-19 (fonctions recentes, maquette validee) :
+                     noms distincts plutot que renumeroter les 6 existantes (moins d'edits, meme
+                     principe). L'ORDRE d'affichage vient uniquement de WelcomeSteps/
+                     WelcomeStepTransforms/WelcomePulseKeys en code-behind, pas de l'ordre XAML. -->
+                <Storyboard x:Key="WelcomePhilosophyPulse" RepeatBehavior="Forever" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetName="WelcomeHaloPhilosophy" Storyboard.TargetProperty="Opacity" From="0.55" To="1" Duration="0:00:02.6" />
+                    <DoubleAnimation Storyboard.TargetName="WelcomeRingPhilosophy" Storyboard.TargetProperty="Opacity" From="0.35" To="0.85" Duration="0:00:02.6" />
+                </Storyboard>
+                <Storyboard x:Key="WelcomeDashboardPulse" RepeatBehavior="Forever" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetName="WelcomeHaloDashboard" Storyboard.TargetProperty="Opacity" From="0.55" To="1" Duration="0:00:02.6" />
+                    <DoubleAnimation Storyboard.TargetName="WelcomeRingDashboard" Storyboard.TargetProperty="Opacity" From="0.35" To="0.85" Duration="0:00:02.6" />
+                </Storyboard>
             </Grid.Resources>
 
             <!-- Fond ambiant : deux lueurs larges qui respirent lentement,
@@ -8277,6 +8289,36 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
 
+                            <!-- Slide "Philosophie" (2026-08-19, maquette validee) : ce qui rend
+                                 Lumora different d'un navigateur grand public - repond directement
+                                 a la demande utilisateur d'expliquer "le fonctionnement particulier"
+                                 des l'accueil. -->
+                            <StackPanel x:Name="WelcomeStepPhilosophy" Spacing="14" HorizontalAlignment="Center" Visibility="Collapsed">
+                                <StackPanel.RenderTransform>
+                                    <TranslateTransform />
+                                </StackPanel.RenderTransform>
+                                <Grid Width="96" Height="96" Margin="0,4,0,4">
+                                    <Ellipse x:Name="WelcomeHaloPhilosophy" Fill="{StaticResource NovaChromeHaloWarmGlowBrush}" />
+                                    <Ellipse x:Name="WelcomeRingPhilosophy" Width="76" Height="76"
+                                             Stroke="{StaticResource NovaAccentBrush}" StrokeThickness="1.4" Opacity="0.6"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <Border Width="64" Height="64" CornerRadius="32"
+                                            Background="{StaticResource NovaIdentityMarkBrush}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="White" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="FONCTIONNEMENT" FontSize="12" FontWeight="SemiBold" CharacterSpacing="60"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource NovaAccentBrush}" />
+                                <TextBlock FontSize="24" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
+                                    <Run Text="Un navigateur " /><Run Text="pas comme les autres" Foreground="{StaticResource NovaAccentBrush}" />
+                                </TextBlock>
+                                <TextBlock Text="Vos mots de passe, votre historique, vos favoris : tout reste chiffré sur votre appareil, jamais envoyé ailleurs. Lumora ne vend rien, ne vous suit pas, et n'affiche aucune publicité — nulle part, jamais."
+                                           TextWrapping="Wrap" TextAlignment="Center" Width="340"
+                                           FontSize="14" Opacity="0.72" />
+                            </StackPanel>
+
                             <!-- Slide 1 : Coffre de mots de passe + portefeuille -->
                             <StackPanel x:Name="WelcomeStep1" Spacing="14" HorizontalAlignment="Center" Visibility="Collapsed">
                                 <StackPanel.RenderTransform>
@@ -8299,7 +8341,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
                                     <Run Text="Un " /><Run Text="coffre" Foreground="{StaticResource NovaAccentBrush}" /><Run Text=" pour vos mots de passe" />
                                 </TextBlock>
-                                <TextBlock Text="Mots de passe et cartes bancaires chiffrés localement, jamais envoyés ailleurs. Lumora peut aussi générer et retenir vos mots de passe à votre place."
+                                <TextBlock Text="Mots de passe, cartes bancaires, clés d'accès et codes de vérification à deux facteurs — générés, remplis et chiffrés localement. Un code affiché à l'écran suffit à activer la double authentification d'un site."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -8326,7 +8368,36 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
                                     <Run Text="Incognito" Foreground="{StaticResource NovaCoolAccentBrush}" /><Run Text=", et Tor si besoin" />
                                 </TextBlock>
-                                <TextBlock Text="Une fenêtre privée qui ne garde aucune trace, avec un bouton pour faire transiter votre trafic par le réseau Tor et masquer votre adresse IP en un geste."
+                                <TextBlock Text="Une fenêtre privée qui ne garde aucune trace, avec un bouton pour faire transiter votre trafic par le réseau Tor et masquer votre adresse IP en un geste — vous pouvez même choisir le pays par lequel votre trafic ressort."
+                                           TextWrapping="Wrap" TextAlignment="Center" Width="340"
+                                           FontSize="14" Opacity="0.72" />
+                            </StackPanel>
+
+                            <!-- Slide "Tableau de bord" (2026-08-19, maquette validee) : le
+                                 dashboard "Mon compte" et la sauvegarde complete n'etaient
+                                 mentionnes nulle part dans l'accueil. -->
+                            <StackPanel x:Name="WelcomeStepDashboard" Spacing="14" HorizontalAlignment="Center" Visibility="Collapsed">
+                                <StackPanel.RenderTransform>
+                                    <TranslateTransform />
+                                </StackPanel.RenderTransform>
+                                <Grid Width="96" Height="96" Margin="0,4,0,4">
+                                    <Ellipse x:Name="WelcomeHaloDashboard" Fill="{StaticResource NovaChromeHaloCoolGlowBrush}" />
+                                    <Ellipse x:Name="WelcomeRingDashboard" Width="76" Height="76"
+                                             Stroke="{StaticResource NovaCoolAccentBrush}" StrokeThickness="1.4" Opacity="0.6"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <Border Width="64" Height="64" CornerRadius="32"
+                                            Background="{StaticResource NovaIdentityMarkBrush}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="26" Foreground="White" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="MON COMPTE" FontSize="12" FontWeight="SemiBold" CharacterSpacing="60"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource NovaCoolAccentBrush}" />
+                                <TextBlock FontSize="24" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
+                                    <Run Text="Tout ce que vous gardez, " /><Run Text="visible" Foreground="{StaticResource NovaCoolAccentBrush}" />
+                                </TextBlock>
+                                <TextBlock Text="Un tableau de bord répertorie vos favoris, votre historique et vos mots de passe. Une sauvegarde complète et chiffrée se restaure d'un clic, sur n'importe quelle machine."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -8422,21 +8493,23 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                              mobile qui glisse d'une position a l'autre (Canvas.Left anime en
                              code-behind) au lieu de sauter d'un bloc - retour utilisateur :
                              "on ne la voit pas se deplacer". -->
-                        <Canvas Width="100" Height="8" HorizontalAlignment="Center" Margin="0,24,0,18">
+                        <Canvas Width="132" Height="8" HorizontalAlignment="Center" Margin="0,24,0,18">
                             <Rectangle Canvas.Left="6" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="22" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="38" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="54" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="70" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle Canvas.Left="86" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
+                            <Rectangle Canvas.Left="102" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
+                            <Rectangle Canvas.Left="118" Width="8" Height="8" RadiusX="4" RadiusY="4" Fill="{StaticResource NovaChromeStrokeBrush}" />
                             <Rectangle x:Name="WelcomeStepCursor" Canvas.Left="0" Width="20" Height="8" RadiusX="4" RadiusY="4"
                                        Fill="{StaticResource NovaAccentBrush}" />
                         </Canvas>
                         <!-- Texte equivalent pour le lecteur d'ecran (le rail de pastilles ne
                              porte aucune information a lui seul) -->
-                        <TextBlock x:Name="WelcomeStepIndicator" Text="1 / 6"
+                        <TextBlock x:Name="WelcomeStepIndicator" Text="1 / 8"
                                    HorizontalAlignment="Center" Opacity="0.001" FontSize="1"
-                                   AutomationProperties.Name="Étape 1 sur 6" />
+                                   AutomationProperties.Name="Étape 1 sur 8" />
 
                         <!-- Separateur -->
                         <Border Height="1"

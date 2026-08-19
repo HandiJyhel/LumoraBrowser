@@ -14,7 +14,12 @@ namespace Lumora.WinUI;
 // la version "premier lancement" a deja ete vue.
 public sealed partial class MainWindow
 {
-    private const int WelcomeSlideCount = 6;
+    // 8 depuis le 2026-08-19 (maquette validee) : 2 diapositives ajoutees
+    // (Philosophie, Tableau de bord) pour les fonctions recentes - noms XAML
+    // distincts plutot que renumeroter les 6 existantes, l'ORDRE d'affichage
+    // vient uniquement de l'ordre dans WelcomeSteps/WelcomeStepTransforms/
+    // WelcomePulseKeys ci-dessous, pas de l'ordre dans le XAML.
+    private const int WelcomeSlideCount = 8;
     private const double WelcomeSlideDistance = 48;
     private const double WelcomeCursorStep = 16;
     private const double WelcomeTransitionMs = 260;
@@ -25,16 +30,23 @@ public sealed partial class MainWindow
 
     private static readonly string[] WelcomePulseKeys =
     {
-        "Welcome0Pulse", "Welcome1Pulse", "Welcome2Pulse", "Welcome3Pulse", "Welcome4Pulse", "Welcome5Pulse",
+        "Welcome0Pulse", "WelcomePhilosophyPulse", "Welcome1Pulse", "Welcome2Pulse",
+        "WelcomeDashboardPulse", "Welcome3Pulse", "Welcome4Pulse", "Welcome5Pulse",
     };
 
-    private StackPanel[] WelcomeSteps => new[] { WelcomeStep0, WelcomeStep1, WelcomeStep2, WelcomeStep3, WelcomeStep4, WelcomeStep5 };
+    private StackPanel[] WelcomeSteps => new[]
+    {
+        WelcomeStep0, WelcomeStepPhilosophy, WelcomeStep1, WelcomeStep2,
+        WelcomeStepDashboard, WelcomeStep3, WelcomeStep4, WelcomeStep5,
+    };
 
     private TranslateTransform[] WelcomeStepTransforms => new[]
     {
         (TranslateTransform)WelcomeStep0.RenderTransform,
+        (TranslateTransform)WelcomeStepPhilosophy.RenderTransform,
         (TranslateTransform)WelcomeStep1.RenderTransform,
         (TranslateTransform)WelcomeStep2.RenderTransform,
+        (TranslateTransform)WelcomeStepDashboard.RenderTransform,
         (TranslateTransform)WelcomeStep3.RenderTransform,
         (TranslateTransform)WelcomeStep4.RenderTransform,
         (TranslateTransform)WelcomeStep5.RenderTransform,
