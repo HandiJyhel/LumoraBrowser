@@ -22975,3 +22975,92 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   coherence (`UsageModeVisualIdentityTests.cs`).
 - Build MSBuild -> 0 erreur. `dotnet test` -> 822/822 verts (821 + 1 nouveau test cookies).
 - Suite prevue (Go donne) : continuer l'audit sur Navigation/onglets/popups.
+
+## 2026-08-19 — Profil "explose" (2), audit par risque en 3 domaines, 7 correctifs -> 0.93.52.2-dev
+
+- Point de depart : l'utilisateur a signale un profil "explose" (nouveau profil recree lui-meme,
+  pas de restauration demandee), puis a demande un **audit complet** de l'app avant tout nouvel
+  installeur, plus une refonte de l'ecran de bienvenue pour expliquer les fonctions recentes.
+  Plan valide en amont (diagnostic -> audit par risque -> Go pour corriger -> ecran de bienvenue
+  -> installeur), priorisation "par risque" choisie par l'utilisateur.
+- **Diagnostic du profil "explose"** (lecture seule) : le vrai `%LOCALAPPDATA%\Lumora\config.json`
+  contenait `ActiveProfileId: "profil-de-test-isole"` (litteral code en dur dans
+  `LumoraConfigTests.cs`) alors que `CustomProfilePath` (prioritaire) pointait correctement vers
+  le vrai profil `HJ-Admin` - invisible aujourd'hui, mais c'est exactement le mecanisme qui avait
+  produit l'incident du 2026-08-14 (voir `incident-profil-pointeur-config-casse-0-93-41` dans la
+  memoire de session). **Cause racine trouvee** : une race entre 3 classes de tests xUnit qui
+  manipulent la meme variable globale `LUMORA_PROFILE_DIR` a probablement laisse un `dotnet test`
+  lance sur la machine reelle (avant le correctif `[Collection]` du commit `2cb9559`, plus tot le
+  meme jour) ecrire ce litteral dans le vrai config.json. Config.json de la machine **non touche**
+  (regle 3 : Claude n'ecrit que dans les fichiers du depot) - reste un residu inoffensif tant que
+  `CustomProfilePath` reste valide, sera nettoye naturellement au prochain changement de profil
+  via l'app grace au correctif ci-dessous.
+- **Audit par risque** : 3 agents en parallele, lecture seule, aucune correction pendant l'audit -
+  Coffre/comptes/passkeys/TOTP, profils/config/migration, navigation/onglets/WebView2. 7 bugs
+  trouves et corriges (build + tests + verification reelle apres) :
+  1. **[Critique]** `TotpService.cs` : `period<=0` (URI otpauth:// malformee/hostile) faisait
+     planter l'app en boucle (`DivideByZeroException`) a chaque ouverture de la fiche TOTP.
+     Corrige a 2 niveaux : validation a l'entree (`TryParseOtpAuthUri` replie sur les valeurs par
+     defaut si period<=0 ou digits hors 6-10) + garde defensive dans `GenerateCode`/
+     `SecondsRemaining` (protege aussi les credentials deja stockes avec une valeur invalide
+     avant ce correctif).
+  2. **[Critique]** Vue divisee (split view) : `CurrentTab()` ne suivait que
+     `BrowserTabs.SelectedItem`, jamais mis a jour par `FocusSplitPane` (le faire aurait
+     redeclenche `ActivateTab` -> `ExitSplitView` a chaque clic dans l'autre volet). Consequence
+     reelle : adresse tapee, coffre/autofill, "Installer en application", titre de favori
+     agissaient tous sur le volet gauche meme quand l'utilisateur regardait/cliquait a droite.
+     Corrige en un seul point : `CurrentTab()` retourne desormais le volet suivant `_browserView`
+     quand une vue divisee est active.
+  3. **[Moyen-critique]** Coffre verrouille silencieusement : `RequireVaultAccessAsync`,
+     `LoginButton_Click` et `ChangeProfilePasswordButton_Click` ignoraient le booleen de retour
+     de `EnsureUnlockedWith`/`UnlockWithPin` (coffre decorreles du mot de passe profil, cas des
+     anciens coffres pre-couplage 0.93.41) - le Coffre paraissait juste "vide" sans aucun message
+     d'erreur. Corrige : echec desormais signale explicitement (`UpdateStatusText`), plus de
+     faux message de succes dans le changement de mot de passe si le re-chiffrement echoue.
+  4. **[Moyen]** `MainWindow.Profile.cs` `SaveSelectedProfileAndRestart` : `ActiveProfileId`
+     jamais reinitialise en basculant vers un profil a chemin personnalise (`IsCustom`) - un
+     residu (ex. profil de test) restait cache indefiniment tant que `CustomProfilePath` restait
+     valide. Corrige : remis a `"default"` dans cette branche. C'est ce correctif qui empeche la
+     recidive de l'incident diagnostique ci-dessus.
+  5. **[Moyen]** Fuite memoire : `_geolocationSpoofScriptIds`/`_fingerprintProtectionScriptIds`
+     jamais nettoyes dans `CloseTabView` (contrairement aux 4 autres dictionnaires par-moteur
+     juste a cote) - accumulation sur une session longue. Corrige.
+  6. **[Moyen, risque non confirme mais corrige par prudence]** `CredentialService.cs` :
+     `Dictionary<CoreWebView2,...>` (piege deja documente dans ce depot, voir
+     `NavigationHealthTracker.cs` "lecon 0.76" sur l'instabilite d'identite des wrappers WinRT) -
+     le garde-fou "onglet actif seulement" etait fail-open (si le core n'est pas retrouve dans le
+     dictionnaire, publication quand meme). Bascule en fail-closed dans `PublishFillReport` et le
+     filtre page-state : absence du core = on ne publie pas, plutot que de publier en silence
+     pour un onglet non identifie.
+  7. **[Mineur]** `DetachTabToNewWindow` polluait "Onglets recemment fermes" de la fenetre
+     d'origine (l'onglet detache reste vivant ailleurs). `CloseTab` prend desormais un parametre
+     `rememberInClosedHistory` (`false` pour un detachement).
+  - Plus 2 ameliorations d'outillage (pas des bugs app) : `scripts/run-winui.ps1` accepte
+    desormais `-ProfileDir` (positionne `LUMORA_PROFILE_DIR` et lance dans le meme appel, pour
+    eviter le meme risque de contamination que le diagnostic ci-dessus dans de futures sessions
+    d'agent) ; doc `.claude/skills/verify/SKILL.md` corrigee (l'avertissement "le selecteur de
+    profil decouvre quand meme le vrai profil machine" etait obsolete depuis le correctif du
+    2026-08-14).
+- Tests : 10 nouveaux tests de regression `TotpServiceTests.cs` (period<=0 sur `GenerateCode`/
+  `SecondsRemaining`/`ParseSecretInput`, digits hors plage). Suite complete : 832/832 verts.
+- **Verification reelle** (skill `verify`, profil isole `LUMORA_PROFILE_DIR`, mode invite) :
+  build recompile lance, slides de bienvenue passees, mode invite, 2e onglet ajoute, vue divisee
+  activee avec succes (capture d'ecran : 2 volets affiches cote a cote, statut "Ecran divise
+  entre deux onglets."), process **responsive**, **aucune exception UNHANDLED** dans
+  `winui-runtime-trace.log` sur toute la session (guest mode, 2 onglets, split). Le test le plus
+  direct du correctif #2 (taper une adresse en ayant clique dans le volet NON initialement
+  selectionne, verifier que c'est bien ce volet qui navigue) **non fait** - meme limite deja
+  documentee (UIA ne peut pas interagir de facon fiable avec le contenu WebView2, les 2 volets en
+  vue divisee sont des `Document` UIA non trouves/non cliquables) ; correctif verifie uniquement
+  par relecture precise (meme mecanisme que `TabForView`/`IsTabInSplitView` deja utilises et
+  fiables ailleurs dans le fichier) - **a confirmer manuellement par l'utilisateur**. Le correctif
+  #6 (fail-closed CredentialService) est lui passe par le meme parcours reel sans regression
+  (trace `CredentialService_PageStateChanged` presente et coherente pour les 2 onglets).
+- Version `0.93.52.1-dev` -> `0.93.52.2-dev` (micro-correction, 4e chiffre - 7 corrections de
+  bugs + 2 ameliorations d'outillage, aucun ajout de fonctionnalite) dans `MainWindow.xaml.cs`,
+  `AGENTS.md`, `build-clean-test-artifact.ps1`, `build-installer.ps1` et le test de coherence
+  (`UsageModeVisualIdentityTests.cs`, renomme `..._0_93_52_2`).
+- **Reste a faire** (Go deja donne pour "corriger", pas encore pour la suite) : audit des
+  domaines restants si temps disponible (Tor, tableau de bord, lecteur QR, theme - fonctions
+  tres recentes 0.93.52.0), refonte de l'ecran de bienvenue (maquette a montrer avant de coder),
+  puis nouvel installeur complet une fois tout stabilise.

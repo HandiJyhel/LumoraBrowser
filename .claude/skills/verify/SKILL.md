@@ -23,9 +23,15 @@ Les tests purs (`dotnet test Lumora.Tests`) sont l'affaire de CI, pas de verify.
 
 - `$env:LUMORA_PROFILE_DIR` -> dossier jetable (scratchpad), `$env:LUMORA_TRACE_STARTUP = "1"`
   (trace dans `bin/.../winui-runtime-trace.log`, exceptions non gerees incluses).
-- Le selecteur de profil decouvre quand meme le vrai profil machine (protege par
-  PIN). NE PAS cliquer « Continuer avec ce profil » : cliquer
-  **« Continuer sans profil (mode invite) »** — navigateur fonctionnel, aucun mur.
+  Positionner la variable et lancer l'exe dans le MEME appel d'outil : l'etat du
+  shell d'un agent ne persiste pas entre deux appels separes, un lancement dans un
+  appel different herite d'un process non isole sans aucun avertissement (`-ProfileDir`
+  de `scripts/run-winui.ps1` fait les deux d'un coup, ajoute le 2026-08-19).
+- Depuis le correctif du 2026-08-14 (`LumoraProfileRegistry.Discover`), le
+  selecteur de profil sous `LUMORA_PROFILE_DIR` ne decouvre plus JAMAIS le vrai
+  profil machine - seul le profil isole du dossier jetable existe. Mode invite
+  (**« Continuer sans profil (mode invite) »**) reste la voie la plus simple pour
+  un test sans creer de profil du tout.
 
 ## Modifier un fichier `.lumora` a la main : il DOIT etre chiffre DPAPI
 

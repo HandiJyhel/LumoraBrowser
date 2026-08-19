@@ -221,7 +221,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private void CloseTab(BrowserTabState state)
+    // rememberInClosedHistory=false pour un détachement vers une nouvelle fenêtre
+    // (DetachTabToNewWindow) : l'onglet reste vivant ailleurs, "Onglets récemment
+    // fermés" ne doit pas proposer de le rouvrir en double (bug réel trouvé le
+    // 2026-08-19).
+    private void CloseTab(BrowserTabState state, bool rememberInClosedHistory = true)
     {
         // Fermer un onglet qui fait partie de la vue divisee la fait disparaitre :
         // pas de sens de garder un split a un seul volet, on repasse en vue simple.
@@ -247,7 +251,10 @@ public sealed partial class MainWindow
             _savedGroupIds.Remove(closingGroupId);
         }
 
-        RememberClosedTab(state);
+        if (rememberInClosedHistory)
+        {
+            RememberClosedTab(state);
+        }
         var wasActive = CurrentTab()?.Id == state.Id;
         var oldIndex = _tabs.FindIndex(tab => tab.Id == state.Id);
         // Capturé avant CloseTabView : celui-ci oublie l'appartenance popup->parent
@@ -328,6 +335,12 @@ public sealed partial class MainWindow
             _consentScriptIds.Remove(core);
             _loginCompatibilityScriptIds.Remove(core);
             _loginDiagnosticScriptIds.Remove(core);
+            // Oubliés ici avant le 2026-08-19 : comme AttachedCores() n'énumère que les
+            // onglets encore ouverts (_tabs), une entrée orpheline pour cet onglet fermé
+            // restait indéfiniment dans ces deux dictionnaires (fuite lente sur une
+            // session longue, bug réel trouvé en audit).
+            _geolocationSpoofScriptIds.Remove(core);
+            _fingerprintProtectionScriptIds.Remove(core);
             if (ReferenceEquals(_contentFullScreenCore, core))
             {
                 CompleteContentFullScreenExit("Mode plein ecran quitte.");
@@ -1350,6 +1363,22 @@ public sealed partial class MainWindow
 
     private BrowserTabState? CurrentTab()
     {
+        // En vue divisée, BrowserTabs.SelectedItem reste figé sur l'onglet choisi à
+        // l'entrée du split (le faire suivre le focus déclencherait ActivateTab ->
+        // ExitSplitView à chaque clic dans l'autre volet, voir MainWindow.SplitView.cs).
+        // Le volet réellement actif est suivi par _browserView (FocusSplitPane). Sans ce
+        // détour, adresse/coffre/favoris/"Installer en application" agissaient tous sur
+        // le volet gauche même quand l'utilisateur regardait et cliquait dans le volet
+        // droit (bug réel trouvé le 2026-08-19).
+        if (_splitView is not null && _browserView is not null)
+        {
+            var focused = TabForView(_browserView);
+            if (focused is not null && IsTabInSplitView(focused.Id))
+            {
+                return focused;
+            }
+        }
+
         if (BrowserTabs.SelectedItem is not TabViewItem item || item.Tag is not int id)
         {
             return null;

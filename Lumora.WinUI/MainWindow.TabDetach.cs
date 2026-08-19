@@ -57,7 +57,7 @@ public sealed partial class MainWindow
             window.BrowserReady += () => AdoptDetachedTab(window, title, address, pinned);
         }
 
-        CloseTab(tab);
+        CloseTab(tab, rememberInClosedHistory: false);
     }
 
     // La nouvelle fenêtre a déjà créé/restauré son propre onglet par défaut

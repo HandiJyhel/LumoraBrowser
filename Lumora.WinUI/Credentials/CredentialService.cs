@@ -93,8 +93,12 @@ internal sealed class CredentialService
 
     private void PublishFillReport(CoreWebView2 core, JsonObject message)
     {
-        // Meme garde que le page-state : seul l'onglet visible pilote l'UI.
-        if (_tabIdByCore.TryGetValue(core, out var ownerTabId) &&
+        // Meme garde que le page-state : seul l'onglet visible pilote l'UI. Sens
+        // volontairement "fail-closed" : si ce core n'est pas retrouvé dans
+        // _tabIdByCore (identité de wrapper WinRT potentiellement instable, piège déjà
+        // documenté dans NavigationHealthTracker.cs), on ne publie PAS plutôt que de
+        // publier en silence pour un onglet non identifié (audit du 2026-08-19).
+        if (!_tabIdByCore.TryGetValue(core, out var ownerTabId) ||
             ownerTabId != ActiveTabIdProvider?.Invoke())
         {
             return;
@@ -310,9 +314,10 @@ internal sealed class CredentialService
             // que pour l'onglet visible ; un onglet d'arrière-plan ne doit pas
             // déclencher de proposition pour une page que l'utilisateur ne voit pas.
             // Comparaison par ID d'onglet (entiers), jamais par référence d'objet.
+            // Fail-closed (2026-08-19) : cf. PublishFillReport ci-dessus, même raisonnement.
             if (sender is CoreWebView2 core &&
-                _tabIdByCore.TryGetValue(core, out var ownerTabId) &&
-                ownerTabId != ActiveTabIdProvider?.Invoke())
+                (!_tabIdByCore.TryGetValue(core, out var ownerTabId) ||
+                 ownerTabId != ActiveTabIdProvider?.Invoke()))
             {
                 return;
             }

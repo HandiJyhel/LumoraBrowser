@@ -69,13 +69,27 @@ public sealed partial class MainWindow
         {
             var pin = await PromptMasterPasswordAsync("Entrez votre code PIN pour ouvrir le coffre", confirm: false);
             if (string.IsNullOrWhiteSpace(pin) || !_userProfile.VerifyPin(pin)) return false;
-            if (_vault.IsLocked) _vault.UnlockWithPin(pin);
+            // Le PIN du profil est correct, mais ça ne garantit pas que le coffre
+            // se déverrouille avec (coffre créé avant le couplage automatique,
+            // mot de passe divergent...). Ne jamais rendre "true" en silence dans
+            // ce cas : le panneau afficherait "Aucun identifiant" comme si le
+            // coffre était vide, alors qu'il est juste resté verrouillé (bug réel
+            // trouvé le 2026-08-19).
+            if (_vault.IsLocked && !_vault.UnlockWithPin(pin))
+            {
+                UpdateStatusText("Le coffre n'a pas pu être déverrouillé avec ce PIN (mot de passe du coffre différent de celui du profil).", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+                return false;
+            }
             return true;
         }
 
         var pw = await PromptMasterPasswordAsync("Entrez votre mot de passe pour ouvrir le coffre", confirm: false);
         if (string.IsNullOrWhiteSpace(pw) || !_userProfile.VerifyPassword(pw)) return false;
-        if (_vault.IsLocked) _vault.EnsureUnlockedWith(pw);
+        if (_vault.IsLocked && !_vault.EnsureUnlockedWith(pw))
+        {
+            UpdateStatusText("Le coffre n'a pas pu être déverrouillé (mot de passe du coffre différent de celui du profil).", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+            return false;
+        }
         return true;
     }
 

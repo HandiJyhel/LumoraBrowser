@@ -40,6 +40,13 @@ internal static class TotpService
         int digits = DefaultDigits, int period = DefaultPeriod,
         OtpHashAlgorithm algorithm = OtpHashAlgorithm.Sha1)
     {
+        // Garde-fou : une URI otpauth:// malformée ou un identifiant enregistré
+        // avant la validation ci-dessous (TryParseOtpAuthUri) peut porter un
+        // period<=0 -> division par zéro sinon (bug réel trouvé le 2026-08-19,
+        // plantage en boucle à l'ouverture de la fiche).
+        if (period <= 0) period = DefaultPeriod;
+        if (digits <= 0) digits = DefaultDigits;
+
         var key = Base32Decode(base32Secret);
         var counter = at.ToUnixTimeSeconds() / period;
 
@@ -73,6 +80,7 @@ internal static class TotpService
     // compte à rebours affiché à côté du code).
     public static int SecondsRemaining(DateTimeOffset at, int period = DefaultPeriod)
     {
+        if (period <= 0) period = DefaultPeriod;
         var elapsed = (int)(at.ToUnixTimeSeconds() % period);
         return period - elapsed;
     }
@@ -153,8 +161,13 @@ internal static class TotpService
             accountName = label[(separator + 1)..];
         }
 
-        var digits = parameters.TryGetValue("digits", out var digitsRaw) && int.TryParse(digitsRaw, out var d) ? d : DefaultDigits;
-        var period = parameters.TryGetValue("period", out var periodRaw) && int.TryParse(periodRaw, out var p) ? p : DefaultPeriod;
+        // digits/period bornés à des valeurs plausibles : une URI otpauth://
+        // corrompue ou hostile (period=0/négatif, digits absurde) ne doit
+        // jamais être acceptée telle quelle (voir garde-fou dans GenerateCode).
+        var digits = parameters.TryGetValue("digits", out var digitsRaw) && int.TryParse(digitsRaw, out var d) && d is >= 6 and <= 10
+            ? d : DefaultDigits;
+        var period = parameters.TryGetValue("period", out var periodRaw) && int.TryParse(periodRaw, out var p) && p > 0
+            ? p : DefaultPeriod;
         var algorithm = parameters.TryGetValue("algorithm", out var algoRaw) ? ParseAlgorithmName(algoRaw) : OtpHashAlgorithm.Sha1;
 
         return new TotpAccount(secret, issuer.Trim(), accountName.Trim(), digits, period, algorithm);

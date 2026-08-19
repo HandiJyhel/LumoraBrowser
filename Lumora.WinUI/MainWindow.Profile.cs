@@ -277,6 +277,11 @@ public sealed partial class MainWindow
         if (entry.IsCustom)
         {
             config.CustomProfilePath = entry.ProfileDir;
+            // ActiveProfileId doit être remis à une valeur neutre : sinon un résidu
+            // (ex. un id de profil de test isolé) reste caché tant que CustomProfilePath
+            // est valide, mais redevient actif au moindre pépin sur ce chemin - c'est
+            // exactement le mécanisme du profil "explosé" trouvé le 2026-08-19.
+            config.ActiveProfileId = "default";
         }
         else
         {
@@ -1424,7 +1429,14 @@ public sealed partial class MainWindow
         if (ok)
         {
             // Le mot de passe du profil déverrouille (ou active la première fois) le coffre.
-            _vault.EnsureUnlockedWith(pw);
+            // Si ça échoue (coffre décorrélé, créé avant le couplage automatique), on laisse
+            // quand même la connexion réussir (le mot de passe du PROFIL est correct) mais on
+            // prévient : sinon le Coffre paraîtrait juste "vide" sans explication (bug réel
+            // trouvé le 2026-08-19).
+            if (!_vault.EnsureUnlockedWith(pw))
+            {
+                UpdateStatusText("Connecté, mais le coffre n'a pas pu être déverrouillé automatiquement (mot de passe du coffre différent).", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
+            }
             LoginPasswordBox.Password = string.Empty;
             DismissLoginOverlay();
         }
@@ -1704,10 +1716,21 @@ public sealed partial class MainWindow
 
         // Re-clé du coffre avec le nouveau mot de passe : on déverrouille d'abord avec
         // l'ancien (pour ne pas perdre les identifiants), puis on re-chiffre.
+        var vaultRekeyed = true;
         if (_vault.HasMasterPassword)
         {
             if (_vault.EnsureUnlockedWith(oldPassword))
+            {
                 _vault.SetMasterPassword(newPassword);
+            }
+            else
+            {
+                // Ancien mot de passe du coffre différent de l'ancien mot de passe du
+                // profil : le re-chiffrement n'a pas pu avoir lieu. Ne JAMAIS l'annoncer
+                // comme réussi (bug réel trouvé le 2026-08-19) - le coffre reste verrouillé
+                // avec son ancien mot de passe, toujours récupérable avec lui.
+                vaultRekeyed = false;
+            }
         }
         else
         {
@@ -1724,7 +1747,9 @@ public sealed partial class MainWindow
                 _vault.EnablePinUnlock(pin);
         }
 
-        StatusText.Text = "Mot de passe du profil mis à jour.";
+        StatusText.Text = vaultRekeyed
+            ? "Mot de passe du profil mis à jour."
+            : "Mot de passe du profil mis à jour, mais le coffre n'a pas pu être re-chiffré (ancien mot de passe du coffre incorrect ou différent) : il reste verrouillé avec son ancien mot de passe.";
     }
 
     private async void CreateRecoveryKeyButton_Click(object sender, RoutedEventArgs e)
@@ -1974,10 +1999,7 @@ public sealed partial class MainWindow
             "Votre profil a été supprimé. Lumora va redémarrer pour repartir de zéro.",
             closeButtonText: "OK");
 
-        var exe = Environment.ProcessPath;
-        if (exe is not null)
-            System.Diagnostics.Process.Start(exe);
-        Application.Current.Exit();
+        RestartApp();
     }
 
     // Meme logique de nouvelles tentatives que DeleteGuestSessionDirectoryWithRetry

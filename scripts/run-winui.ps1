@@ -1,5 +1,14 @@
 [CmdletBinding()]
-param()
+param(
+    # Optionnel : dossier de profil isolé (LUMORA_PROFILE_DIR) à positionner pour
+    # CE lancement uniquement. Ajouté le 2026-08-19 suite à un incident réel où une
+    # session de vérification a positionné la variable dans un appel d'outil séparé
+    # du lancement de l'exe (l'état du shell d'un agent ne persiste pas entre deux
+    # appels) - le process n'héritait alors d'aucune isolation, sans avertissement.
+    # Passer -ProfileDir garantit que la variable est positionnée et utilisée dans
+    # le même appel. Sans ce paramètre, comportement inchangé (usage normal).
+    [string]$ProfileDir
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -50,4 +59,10 @@ if (-not (Test-Path $exe)) {
     throw "Executable WinUI introuvable apres copie de lancement: $exe"
 }
 
-Start-Process -FilePath $exe -WorkingDirectory $launchDir
+if ($ProfileDir) {
+    $resolvedProfileDir = (New-Item -ItemType Directory -Force -Path $ProfileDir).FullName
+    Write-Host "Lancement isole : LUMORA_PROFILE_DIR = $resolvedProfileDir"
+    Start-Process -FilePath $exe -WorkingDirectory $launchDir -Environment @{ LUMORA_PROFILE_DIR = $resolvedProfileDir }
+} else {
+    Start-Process -FilePath $exe -WorkingDirectory $launchDir
+}

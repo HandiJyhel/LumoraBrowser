@@ -189,4 +189,53 @@ public sealed class TotpServiceTests
             TotpService.GenerateCode(Rfc6238Secret, at, digits: 8, algorithm: OtpHashAlgorithm.Sha1),
             TotpService.GenerateCode(Rfc6238Secret, at, digits: 8));
     }
+
+    // ── Garde-fou period<=0 (bug réel trouvé le 2026-08-19) ──────────────────
+    // Une URI otpauth:// avec period=0/négatif (malformée, corrompue, ou hostile)
+    // provoquait un DivideByZeroException à chaque appel de GenerateCode/
+    // SecondsRemaining, donc un plantage en boucle à l'ouverture de la fiche.
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-30)]
+    public void GenerateCode_avec_period_invalide_ne_plante_pas(int invalidPeriod)
+    {
+        var code = TotpService.GenerateCode(Rfc6238Secret, DateTimeOffset.FromUnixTimeSeconds(59), period: invalidPeriod);
+        Assert.Equal(6, code.Length);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void SecondsRemaining_avec_period_invalide_ne_plante_pas(int invalidPeriod)
+    {
+        var remaining = TotpService.SecondsRemaining(DateTimeOffset.FromUnixTimeSeconds(59), period: invalidPeriod);
+        Assert.InRange(remaining, 1, TotpService.DefaultPeriod);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-30)]
+    public void ParseSecretInput_uri_otpauth_avec_period_invalide_replie_sur_le_defaut(int invalidPeriod)
+    {
+        var uri = $"otpauth://totp/Exemple:alice?secret={Rfc6238Secret}&period={invalidPeriod}";
+        var account = TotpService.ParseSecretInput(uri);
+
+        Assert.NotNull(account);
+        Assert.Equal(TotpService.DefaultPeriod, account!.Period);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(999)]
+    public void ParseSecretInput_uri_otpauth_avec_digits_hors_plage_replie_sur_le_defaut(int invalidDigits)
+    {
+        var uri = $"otpauth://totp/Exemple:alice?secret={Rfc6238Secret}&digits={invalidDigits}";
+        var account = TotpService.ParseSecretInput(uri);
+
+        Assert.NotNull(account);
+        Assert.Equal(TotpService.DefaultDigits, account!.Digits);
+    }
 }
