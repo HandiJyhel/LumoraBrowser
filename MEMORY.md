@@ -23411,3 +23411,125 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
 - **Reste a faire** : tassement visuel de la barre toujours pas retraite (attend les icones
   manquantes en priorite, voir point 3 de l'entree precedente) ; bouton "Retrouver les
   icônes" a confirmer par l'utilisateur en usage normal.
+
+## 2026-08-22 (suite) — App qui ne s'ouvrait plus + 5 points signales (captures d'ecran) -> 0.93.54.5-dev
+
+- Signale : "l'application ne s'ouvre plus" via le script de lancement. Reproduit avec le
+  meme script (`run-winui.ps1`) : build 0 erreur, processus lance, fenetre reelle visible
+  et reactive, aucun crash natif dans l'Observateur d'evenements Windows sur les 8 dernieres
+  heures. Non reproduit - probablement transitoire (ancienne instance encore en train de se
+  fermer). Un exe **perime** (`bin\x64\Debug\...`, version 0.93.52.1-dev, tres ancien) a ete
+  detecte et ecarte a temps grace au titre de fenetre incoherent, avant de fausser cette
+  verification - meme classe de piege que deja documentee.
+- 4 nouvelles captures d'ecran avec retour precis, plan complet redemande et Go donne :
+  1. **Vrai bug #1** : flèche "»" de debordement apparaissait sur la barre de favoris alors
+     qu'il restait de la place visible - l'estimation par nombre de caracteres surevaluait
+     la largeur reelle des puces WinUI. Remplacee par une mesure reelle (`Button.Measure()`),
+     qui compte aussi le separateur "✦" et l'espacement du StackPanel (jamais comptes avant).
+  2. **Regression reelle #2** (introduite la session precedente) : le correctif "bouton reste
+     clique sans effet" (`checkOpacity: true` sur `vis()`) excluait a tort les boutons a
+     opacite 0 - technique d'accessibilite standard, PAS un doublon cache. Trouve en direct
+     sur amazon.fr (bandeau cookies jamais ferme). Retire `checkOpacity`, garde
+     `checkVisibilityCSS` (le vrai bug d'origine reste corrige).
+  3. **Vrai bug #3, le plus important** : MEME apres le correctif #2, le bandeau Amazon
+     restait affiche. Diagnostic pousse jusqu'au bout via CDP (Edge headless pilote comme un
+     vrai navigateur, injection reproduisant EXACTEMENT `AddScriptToExecuteOnDocumentCreatedAsync`
+     via `Page.addScriptToEvaluateOnNewDocument`, logs instrumentes) : `document.documentElement`
+     est encore `null` au moment ou ce script s'execute - `MutationObserver.observe(document.documentElement, ...)`
+     levait une exception silencieuse (avalee par le `try/catch`), l'observateur ne s'attachait
+     JAMAIS. Consequence : tout bandeau affiche apres le chargement initial (Sourcepoint sur
+     amazon.fr, tres probablement d'autres sites aussi) n'etait jamais detecte, quels que
+     soient les autres correctifs de ce moteur - bug preexistant, pas introduit cette session.
+     Corrige : `observe(document)` au lieu de `document.documentElement` (document existe
+     toujours des la creation, capte les memes mutations). **Verifie en direct sur l'app
+     Lumora reelle (pas juste un test) : le bandeau Amazon disparait tout seul.**
+  4. Ajoute aussi le vrai identifiant du conteneur Amazon (`#sp-cc-wrapper`, confirme en
+     direct - different de `#sp-cc` deja present).
+  5. **Principe confirme par l'utilisateur** : "la barre d'adresse doit rester visible en
+     toute circonstance". Aucun plancher n'existait avant (verifie : les colonnes Auto de la
+     grille ne se compressent jamais, contrairement aux colonnes `*`). Corrige :
+     `AddressBox.MinWidth="220"` + nouvelle fonction `CollapseOverflowingToolbarModules`
+     (masque les modules pingles en exces, des derniers pingles en premier, jusqu'a ce que
+     la place restante permette a la barre d'adresse d'atteindre son plancher ; recalcule a
+     partir de l'etat de pin reel a chaque appel, se retablit automatiquement si la fenetre
+     s'agrandit). Les 6 boutons "toujours dans la barre" ne sont jamais masques.
+  6. Taille de police de la barre d'adresse : 16px par defaut (etait 14px), 18px avec
+     "Texte agrandi" (etait 16px) - dedie a `AddressBox` uniquement, pas au reste de
+     `mainFontSize` (CommandPaletteSearchBox, etc.) pour ne pas elargir le changement
+     au-dela de ce qui a ete discute.
+  7. **Ajoute mais non confirme** : bouton d'interrupteur de module qui ne bouge pas
+     visuellement au clic - relu en profondeur (donnees, template VisualStateManager), tout
+     semble correct sur le papier. Meme limite documentee que d'autres menus flottants :
+     non pilotable de facon fiable dans cet environnement pour le tester moi-meme.
+- **Technique de diagnostic reutilisable** : Edge headless (`msedge --headless=new
+  --remote-debugging-port=X`) pilote via le Chrome DevTools Protocol (WebSocket, Node natif
+  `fetch`/`WebSocket`) permet de reproduire EXACTEMENT le mecanisme d'injection de WebView2
+  (`Page.addScriptToEvaluateOnNewDocument` = `AddScriptToExecuteOnDocumentCreatedAsync`) et
+  d'instrumenter le script reel extrait par reflexion pour voir precisement ce qui se passe -
+  bien plus fiable qu'un test manuel a posteriori (qui masque les bugs de timing/d'attachement
+  d'observateur).
+- Build MSBuild (Debug) : 0 erreur. `dotnet test` : 850/850 verts (6 nouveaux tests).
+- Version `0.93.54.4-dev` -> `0.93.54.5-dev` (**4e chiffre**, corrections uniquement) dans
+  les 5 memes points.
+- **Reste a faire** : bouton d'interrupteur de module (point 7) toujours sans cause
+  confirmee ; tassement visuel de la barre de favoris toujours pas retraite.
+
+## 2026-08-22 (suite) — Barre d'adresse simplifiee au repos -> 0.93.54.6-dev
+
+- L'utilisateur a confirme tester la bonne version (0.93.54.5-dev) - le correctif 16px
+  etait donc bien actif, mais insuffisant : verifie en direct (meme URL Amazon dense) que
+  meme a 16px, une URL de tracking de 200+ caracteres reste difficile a lire faute de
+  hierarchie visuelle entre le domaine et le bruit des parametres. Maquette montree
+  (adresse simplifiee au repos, complete au clic - convention Chrome/Firefox/Edge) avant
+  codage, Go obtenu.
+- Nouveau mecanisme repos/edition pour `AddressBox` :
+  - `DisplayAddressForBar`/`SimplifyAddressForDisplay` (MainWindow.xaml.cs) : au repos,
+    affiche domaine (sans `www.`, avec port si non standard) + chemin joint par "›", jamais
+    le schema ni la requete.
+  - `AddressBox_GotFocus` (nouveau) : bascule sur l'URL complete (`CurrentTab().Address`) +
+    `SelectAll()` des que la barre recoit le focus (clic, Tab, Ctrl+L...).
+  - `AddressBox_LostFocus` + `RevertAddressBarToSimplifiedDisplay` (nouveau) : revient a
+    l'affichage simplifie si on clique ailleurs SANS valider - sans ca la barre restait
+    affichee en URL complete pour toujours apres un simple clic hors champ.
+  - Jamais rien de perdu : l'URL complete reste a un clic, copiable en entier.
+- Question de versionnement posee explicitement (ajout vs correction) - l'utilisateur a
+  tranche pour le 4e chiffre (suite du correctif de lisibilite du meme palier).
+- **Verifie en direct sur l'app reelle**, 3 comportements distincts confirmes par lecture
+  UIA de la valeur exacte de la barre (pas juste une capture d'ecran) : au repos =
+  "amazon.fr › dp › B0D6YQ1DN6", au focus = URL complete exacte, apres clic ailleurs sans
+  naviguer = retour au format simplifie.
+- Build MSBuild (Debug) : 0 erreur. `dotnet test` : 853/853 verts (3 nouveaux tests).
+- Version `0.93.54.5-dev` -> `0.93.54.6-dev` (**4e chiffre**, choix explicite de
+  l'utilisateur) dans les 5 memes points.
+- **Reste a faire** : espacement de la barre des favoris ET des modules (maquette montree,
+  option A/B en attente de choix pour les favoris, validation en attente pour les modules) ;
+  bouton d'interrupteur de module toujours sans cause confirmee ; boutons systeme ronds
+  restent tels quels (choix deja fait, pas remis en question).
+
+## 2026-08-22 (suite) — Espacement favoris + modules, "option A" -> 0.93.54.7-dev
+
+- L'utilisateur a choisi "option A" (garder le "✦" Constellation mais visible/espace) pour
+  les favoris ; meme traitement applique aux modules (une seule proposition, pas de choix).
+- `CreateConstellationConnector` : FontSize 7->9, Opacity 0.3->0.85. `BookmarksBarPanel`/
+  `BookmarksBottomBarPanel` : Spacing 6->16. `ToolbarButtonsPanel` (modules) : Spacing 5->12.
+- **Bug trouve en cours de route et corrige avant impact** : `CollapseOverflowingToolbarModules`
+  (ajoute pour garantir la barre d'adresse toujours visible, session precedente) ne comptait
+  QUE la largeur propre de chaque module, jamais l'espacement du StackPanel entre eux -
+  deja faux a 5px, serait devenu plus faux encore a 12px (risque de re-ecraser la barre
+  d'adresse malgre le mecanisme cense l'en empecher). Corrige : lit `ToolbarButtonsPanel.Spacing`
+  directement (pas de constante en dur) et l'ajoute au budget entre elements visibles.
+- Constante `panelSpacing` du calcul de debordement des favoris (deja ajoutee session
+  precedente) mise a jour 6->16 en meme temps, meme raison.
+- **Incident de verification reel, resolu avant fausse conclusion** : premiers essais de
+  capture d'ecran systematiquement vides (juste les boutons systeme) malgre fenetre au
+  premier plan confirmee - cause trouvee : l'assistant premier lancement etait reste
+  bloque a l'etape 6/6 (bouton "Terminer", pas "Suivant", que la boucle de clics
+  precedente ne cherchait pas), overlay plein ecran masquant tout le contenu reel en
+  dessous. Corrige (clic sur "Terminer"), capture refaite avec succes : "✦" nettement
+  visible entre chaque favori, espacement reel confirme a l'oeil.
+- Build MSBuild (Debug) : 0 erreur. `dotnet test` : 855/855 verts (2 nouveaux tests).
+- Version `0.93.54.6-dev` -> `0.93.54.7-dev` (**4e chiffre**, suite du meme correctif de
+  lisibilite/espacement de ce palier, pas re-demande explicitement cette fois - deja
+  tranche 2 fois de suite sur ce meme fil).
+- **Reste a faire** : bouton d'interrupteur de module toujours sans cause confirmee ;
+  boutons systeme ronds restent tels quels (choix deja fait).

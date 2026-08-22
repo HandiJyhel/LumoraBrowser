@@ -1642,6 +1642,7 @@
                 <TextBox
                     x:Name="AddressBox"
                     MinHeight="42"
+                    MinWidth="220"
                     Padding="54,8,18,8"
                     CornerRadius="22"
                     Background="Transparent"
@@ -1655,6 +1656,7 @@
                     VerticalAlignment="Center"
                     KeyDown="AddressBox_KeyDown"
                     TextChanged="AddressBox_TextChanged"
+                    GotFocus="AddressBox_GotFocus"
                     LostFocus="AddressBox_LostFocus"
                     PlaceholderText="Aller vers un site ou lancer une recherche" />
                 <!-- Les deux filets "reflet de verre" (haut blanc/bas ambre) ont
@@ -1846,7 +1848,7 @@
                      Descendre) directement dans ModulesQuickAccessFlyout,
                      le menu où l'utilisateur épingle déjà ses modules - voir
                      MainWindow.ToolbarCustomization.cs et MEMORY.md. -->
-                <StackPanel x:Name="ToolbarButtonsPanel" Orientation="Horizontal" Spacing="5" Padding="0">
+                <StackPanel x:Name="ToolbarButtonsPanel" Orientation="Horizontal" Spacing="12" Padding="0">
                     <!-- Favoris/Incognito/Bouclier/Coffre/Historique/Telechargements
                          (2026-08-14) : deplaces ici depuis leurs colonnes fixes de
                          NavigationToolbar - reordonnables au meme titre que les
@@ -2645,7 +2647,7 @@
             <StackPanel x:Name="BookmarksBarPanel"
                         Grid.Column="1"
                         Orientation="Horizontal"
-                        Spacing="6"
+                        Spacing="16"
                         VerticalAlignment="Center" />
             <Border Grid.Column="2"
                     Width="1"
@@ -2655,7 +2657,7 @@
             <StackPanel x:Name="OtherBookmarksBarHost"
                         Grid.Column="3"
                         Orientation="Horizontal"
-                        Spacing="6"
+                        Spacing="16"
                         VerticalAlignment="Center" />
         </Grid>
         </Border>
@@ -6390,7 +6392,7 @@
                 <StackPanel x:Name="BookmarksBottomBarPanel"
                             Grid.Column="1"
                             Orientation="Horizontal"
-                            Spacing="6"
+                            Spacing="16"
                             VerticalAlignment="Center" />
                 <Border Grid.Column="2"
                         Width="1"
@@ -6400,7 +6402,7 @@
                 <StackPanel x:Name="OtherBookmarksBottomHost"
                             Grid.Column="3"
                             Orientation="Horizontal"
-                            Spacing="6"
+                            Spacing="16"
                             VerticalAlignment="Center" />
             </Grid>
         </Grid>

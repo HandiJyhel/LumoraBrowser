@@ -605,6 +605,13 @@ public sealed partial class MainWindow : Window
         {
             RefreshToolbarReorganizeSections();
         }
+
+        // Reevalue immediatement si le nouvel etat de pin fait deborder la
+        // barre d'outils (voir CollapseOverflowingToolbarModules,
+        // MainWindow.xaml.cs) - sans cet appel, epingler un module de trop
+        // n'ecrasait la barre d'adresse qu'au prochain redimensionnement de
+        // fenetre, pas immediatement.
+        UpdateResponsiveChromeLayout();
     }
 
     private static string UsageModeLabel(string usageMode) =>

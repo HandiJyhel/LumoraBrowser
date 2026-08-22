@@ -51,12 +51,52 @@ public sealed partial class MainWindow
         UpdateAddressSuggestions();
     }
 
+    // Bascule vers l'URL complète pour l'édition dès que la barre reçoit le
+    // focus (clic, Tab, Ctrl+L...) - l'affichage au repos (DisplayAddressForBar,
+    // MainWindow.xaml.cs) est simplifié depuis le 2026-08-22 (domaine + chemin,
+    // sans requête). SelectAll() en plus : même convention que Chrome/Firefox/
+    // Edge, permet de retaper une adresse complète immédiatement sans effacer
+    // à la main.
+    private void AddressBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        var rawAddress = CurrentTab()?.Address;
+        if (string.IsNullOrWhiteSpace(rawAddress) || rawAddress.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (AddressBox.Text != rawAddress)
+        {
+            _suppressAddressSuggestions = true;
+            AddressBox.Text = rawAddress;
+            _suppressAddressSuggestions = false;
+        }
+
+        AddressBox.SelectAll();
+    }
+
     private void AddressBox_LostFocus(object sender, RoutedEventArgs e)
     {
         // Un clic sur une suggestion retire d'abord le focus de la barre : ne pas
-        // fermer le popup avant que ItemClick ait pu s'exécuter.
+        // fermer le popup avant que ItemClick ait pu s'exécuter, ni revenir à
+        // l'affichage simplifié avant que la navigation choisie ait eu lieu.
         if (_addressSuggestionsPointerInside) return;
         ScheduleAddressSuggestionsClose();
+        RevertAddressBarToSimplifiedDisplay();
+    }
+
+    // Barre au repos (hors édition) : revient à l'affichage simplifié de la
+    // page réellement chargée, quoi que l'utilisateur ait tapé/laissé dans la
+    // barre - même convention que Chrome/Firefox/Edge (annuler une saisie non
+    // validée en cliquant ailleurs). Sans ça, un simple clic hors de la barre
+    // la laissait affichée en URL complète pour toujours.
+    private void RevertAddressBarToSimplifiedDisplay()
+    {
+        var address = CurrentTab()?.Address;
+        if (string.IsNullOrWhiteSpace(address)) return;
+
+        var displayAddress = DisplayAddressForBar(address);
+        if (AddressBox.Text != displayAddress) AddressBox.Text = displayAddress;
     }
 
     // Ferme le popup apres un court delai plutot qu'immediatement, pour laisser

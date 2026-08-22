@@ -104,7 +104,7 @@ internal static class ConsentManagerScripts
             '[class*="cmp"]', '[id*="cmp"]',
             '[class*="cmplz"]', '[id*="cmplz"]',
             '[id*="usercentrics"]', '[class*="usercentrics"]',
-            '[role="dialog"][aria-modal="true"]', '#sp-cc', '.sp_choice_type_REJECT_ALL',
+            '[role="dialog"][aria-modal="true"]', '#sp-cc', '#sp-cc-wrapper', '.sp_choice_type_REJECT_ALL',
             '[id^="sp_message"]', '[class*="sp_message"]', '[id*="sp_message"]',
             '.cc-window', '#cookie-law-info-bar', '.cli-modal-backdrop',
             '#cookiescript_injected', '.osano-cm-window', '#ccc-module',
@@ -169,9 +169,20 @@ internal static class ConsentManagerScripts
 
             // MutationObserver pour les CMPs qui s'affichent après le chargement initial,
             // et pour repasser sur le panneau détaillé une fois ouvert (passe 4).
+            //
+            // observe(document), PAS document.documentElement (bug réel trouvé le
+            // 2026-08-22, confirmé en direct sur amazon.fr via CDP/Edge headless avec
+            // le VRAI mecanisme d'injection de WebView2 - AddScriptToExecuteOnDocumentCreatedAsync
+            // s'execute avant que document.documentElement existe : observe() levait donc
+            // une exception silencieuse (avalee par le try/catch), l'observateur ne
+            // s'attachait JAMAIS. Consequence : tout bandeau affiche apres le chargement
+            // initial (Sourcepoint sur amazon.fr, entre autres) n'etait jamais detecte,
+            // quels que soient les autres correctifs de ce moteur. document existe toujours
+            // des la creation du document (contrairement a documentElement), et observer
+            // document avec subtree:true capte exactement les memes mutations.
             try {
                 var obs = new MutationObserver(function() { runConsentEngine(); });
-                obs.observe(document.documentElement, {childList: true, subtree: true});
+                obs.observe(document, {childList: true, subtree: true});
                 // 20s : couvre les CMP à affichage tardif (ex. Sourcepoint sur connexion lente).
                 setTimeout(function() { obs.disconnect(); }, 20000);
             } catch(e) {}
@@ -250,16 +261,24 @@ internal static class ConsentManagerScripts
             return out;
         }
         // checkVisibility() (disponible dans le Chromium de ce WebView2) couvre
-        // aussi visibility:hidden et opacity:0, que offsetWidth/offsetHeight ne
-        // detectent pas (l'element garde sa mise en page, juste invisible a
-        // l'oeil) - un bouton "Refuser" cache de cette facon (variante desktop/
-        // mobile dupliquee, onglet inactif d'un bandeau a plusieurs vues) etait
+        // visibility:hidden, que offsetWidth/offsetHeight ne detectent pas
+        // (l'element garde sa mise en page, juste invisible a l'oeil) - un
+        // bouton "Refuser" cache de cette facon (variante desktop/mobile
+        // dupliquee, onglet inactif d'un bandeau a plusieurs vues) etait
         // clique sans aucun effet reel, laissant le bandeau ouvert (2026-08-22,
         // trouve par relecture apres un signalement utilisateur). Repli sur
         // l'ancienne methode si l'API n'existe pas.
+        //
+        // PAS de checkOpacity ici (regression reelle trouvee le meme jour,
+        // capture d'ecran a l'appui sur amazon.fr) : le vrai bouton "Refuser"
+        // (#sp-cc-rejectall-link) est un <input> natif rendu a opacite 0,
+        // technique d'accessibilite standard (le rendu visuel vient d'un
+        // habillage voisin, le natif reste le vrai element cliquable/
+        // focusable au clavier) - PAS un doublon cache. checkOpacity:true
+        // excluait a tort ce genre de bouton parfaitement fonctionnel.
         function vis(el) {
             if (typeof el.checkVisibility === 'function') {
-                try { return el.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}); } catch(e) {}
+                try { return el.checkVisibility({checkVisibilityCSS: true}); } catch(e) {}
             }
             return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
         }

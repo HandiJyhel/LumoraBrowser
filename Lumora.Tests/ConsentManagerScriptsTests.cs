@@ -103,7 +103,48 @@ public class ConsentManagerScriptsTests
         // cette façon (variante desktop/mobile dupliquée) était cliqué sans
         // effet réel, laissant le bandeau ouvert.
         Assert.Contains("typeof el.checkVisibility === 'function'", script, StringComparison.Ordinal);
-        Assert.Contains("checkVisibility({checkOpacity: true, checkVisibilityCSS: true})", script, StringComparison.Ordinal);
+        Assert.Contains("checkVisibility({checkVisibilityCSS: true})", script, StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 (suite) : cause reelle du gel sur amazon.fr, plus grave que
+    // les correctifs precedents - confirmee en direct (CDP/Edge headless,
+    // meme mecanisme d'injection que WebView2 - AddScriptToExecuteOnDocumentCreatedAsync)
+    // que document.documentElement est encore null au moment ou ce script
+    // s'execute : observe(document.documentElement) levait une exception
+    // silencieuse, l'observateur ne s'attachait JAMAIS - aucun bandeau affiche
+    // apres le chargement initial (Sourcepoint sur amazon.fr, entre autres)
+    // n'etait donc jamais detecte, quels que soient les autres correctifs.
+    [Fact]
+    public void Lobservateur_de_mutations_cible_document_pas_documentElement()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        Assert.Contains("obs.observe(document, {childList: true, subtree: true});", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("obs.observe(document.documentElement", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Le_conteneur_amazon_est_reconnu()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        // Vrai identifiant confirme en direct sur amazon.fr (#sp-cc-wrapper),
+        // different de #sp-cc deja present.
+        Assert.Contains("'#sp-cc-wrapper'", script, StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 (suite) : checkOpacity:true était une régression réelle,
+    // trouvée en direct sur amazon.fr - le vrai bouton "Refuser"
+    // (#sp-cc-rejectall-link) est un <input> natif à opacité 0 (technique
+    // d'accessibilité standard, pas un doublon caché) : checkOpacity
+    // l'excluait à tort, laissant le bandeau ouvert sur un site pourtant
+    // très commun.
+    [Fact]
+    public void La_visibilite_ne_verifie_plus_lopacite()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        Assert.DoesNotContain("checkOpacity: true", script, StringComparison.Ordinal);
     }
 
     [Fact]

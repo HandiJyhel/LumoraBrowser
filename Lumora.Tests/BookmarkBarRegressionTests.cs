@@ -356,6 +356,84 @@ public sealed class BookmarkBarRegressionTests
         Assert.Contains("_bookmarks.SetIconForOrigin(origin, path);", code, StringComparison.Ordinal);
     }
 
+    // 2026-08-22 (suite) : "»" apparaissait alors qu'il restait de la place
+    // visible - l'estimation par nombre de caractères surevaluait la largeur
+    // reelle des puces WinUI. Remplacee par une mesure reelle (Button.Measure()),
+    // qui compte aussi le separateur "✦" et l'espacement du StackPanel
+    // (jamais comptes avant).
+    [Fact]
+    public void Debordement_favoris_mesure_la_largeur_reelle_au_lieu_de_lestimer()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+
+        Assert.DoesNotContain("EstimateBookmarkBarWidth", code, StringComparison.Ordinal);
+        Assert.Contains("private double MeasureBookmarkBarButtonWidth(BookmarkNode node, UiDensityMetrics metrics)", code, StringComparison.Ordinal);
+        Assert.Contains("probe.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));", code, StringComparison.Ordinal);
+        Assert.Contains("private static double MeasureConstellationConnectorWidth()", code, StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 (suite) : "la barre d'adresse doit rester visible en toute
+    // circonstance" (demande explicite utilisateur, capture d'ecran a
+    // l'appui) - rien ne l'empechait avant d'etre ecrasee a presque rien par
+    // les modules epingles.
+    [Fact]
+    public void Barre_adresse_a_une_largeur_minimale_garantie()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+
+        Assert.Contains("x:Name=\"AddressBox\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"220\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("private void CollapseOverflowingToolbarModules(double toolbarWidth)", code, StringComparison.Ordinal);
+        Assert.Contains("var budget = Math.Max(0, toolbarWidth - fixedWidth - AddressBox.MinWidth);", code, StringComparison.Ordinal);
+        // Les 6 boutons "toujours dans la barre" ne font jamais partie de la
+        // table des modules pingables - jamais masques par ce mecanisme.
+        Assert.DoesNotContain("[AddBookmarkButton]", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Barre_adresse_passe_a_16px_par_defaut()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
+
+        Assert.Contains("AddressBox.FontSize = largeText ? 18 : 16;", code, StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 (suite) : "option A" choisie sur maquette - garder le motif
+    // "✦" mais reellement visible et espace (6px/opacite 0.3 -> 16px/opacite
+    // 0.85), meme traitement sur les modules epingles (5px -> 12px).
+    [Fact]
+    public void Espacement_barre_favoris_et_connecteur_sont_reellement_visibles()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+
+        foreach (var panelName in new[] { "BookmarksBarPanel", "BookmarksBottomBarPanel" })
+        {
+            var nameIndex = xaml.IndexOf($"x:Name=\"{panelName}\"", StringComparison.Ordinal);
+            Assert.True(nameIndex >= 0, $"{panelName} introuvable");
+            var window = xaml.Substring(nameIndex, 220);
+            Assert.Contains("Spacing=\"16\"", window, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("FontSize = 9,", code, StringComparison.Ordinal);
+        Assert.Contains("Opacity = 0.85,", code, StringComparison.Ordinal);
+        Assert.Contains("const double panelSpacing = 16d;", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Espacement_barre_modules_est_augmente_et_compte_dans_le_repli()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+
+        Assert.Contains("x:Name=\"ToolbarButtonsPanel\" Orientation=\"Horizontal\" Spacing=\"12\"", xaml, StringComparison.Ordinal);
+        // L'espacement entre modules visibles doit compter dans le budget de
+        // CollapseOverflowingToolbarModules, sinon la barre d'adresse peut a
+        // nouveau passer sous son plancher malgre le mecanisme de repli.
+        Assert.Contains("var withSpacing = used + (visibleCount > 0 ? ToolbarButtonsPanel.Spacing : 0) + w;", code, StringComparison.Ordinal);
+    }
+
     private static string ReadRepoFile(params string[] segments)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

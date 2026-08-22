@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.54.4-dev";
+    internal const string Version = "0.93.54.7-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -1554,8 +1554,52 @@ public sealed partial class MainWindow : Window
         return address;
     }
 
-    private static string DisplayAddressForBar(string address) =>
-        address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase) ? string.Empty : address;
+    // Affichage AU REPOS (hors édition) de la barre d'adresse : simplifié
+    // (domaine + chemin, sans schéma ni requête) plutôt que l'URL brute
+    // complète - demande explicite utilisateur, 2026-08-22, capture d'écran
+    // à l'appui : une URL de tracking de 200+ caractères (paramètres
+    // publicitaires Amazon) restait illisible à n'importe quelle taille de
+    // police raisonnable, faute de hiérarchie visuelle entre le domaine et le
+    // bruit des paramètres. Même convention que Chrome/Firefox/Edge : l'URL
+    // complète reste accessible en un clic (AddressBox_GotFocus bascule
+    // dessus pour l'édition), rien n'est perdu.
+    private static string DisplayAddressForBar(string address)
+    {
+        if (address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        return SimplifyAddressForDisplay(address);
+    }
+
+    private static string SimplifyAddressForDisplay(string address)
+    {
+        if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+        {
+            return address;
+        }
+
+        var host = uri.Host;
+        if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+        {
+            host = host[4..];
+        }
+
+        if (!uri.IsDefaultPort)
+        {
+            host += $":{uri.Port}";
+        }
+
+        var path = uri.AbsolutePath.Trim('/');
+        if (string.IsNullOrEmpty(path))
+        {
+            return host;
+        }
+
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return host + " › " + string.Join(" › ", segments);
+    }
 
     private void UpdateAddressIdentityChrome(string? address)
     {
@@ -1595,6 +1639,93 @@ public sealed partial class MainWindow : Window
         if (NavigationToolbarToolsShell is not null)
         {
             NavigationToolbarToolsShell.Opacity = width < 1480 ? 0.9 : 1;
+        }
+
+        CollapseOverflowingToolbarModules(width);
+    }
+
+    // La barre d'adresse doit rester visible et utilisable en toute
+    // circonstance (demande explicite utilisateur, 2026-08-22, capture
+    // d'ecran a l'appui) : avant ce correctif, rien n'empechait les modules
+    // epingles de l'ecraser a presque rien (aucun plancher, aucun mecanisme
+    // de repli - seul AddressBox.MinWidth, pose en XAML, definit desormais
+    // ce plancher). Masque les modules pingles EN EXCES (dans leur ordre
+    // d'affichage reel, donc les derniers epingles/les plus proches du
+    // bouton "Modules epingles" en premier) jusqu'a ce que la place restante
+    // permette a la barre d'adresse d'atteindre ce plancher. Recalcule
+    // entierement a partir de l'etat de pin reel a chaque appel (pas d'etat
+    // intermediaire a faire converger) : agrandir la fenetre refait
+    // reapparaitre un module ainsi masque des que la place le permet a
+    // nouveau. Les 6 boutons "toujours dans la barre" (favoris, incognito,
+    // bouclier, coffre, historique, telechargements) ne sont jamais masques
+    // par ce mecanisme, uniquement les modules optionnels.
+    private void CollapseOverflowingToolbarModules(double toolbarWidth)
+    {
+        if (ToolbarButtonsPanel is null || AddressBox is null)
+        {
+            return;
+        }
+
+        var pinned = _uiSettings.PinnedModuleIds;
+        bool IsPinned(string id) => pinned.Contains(id, StringComparer.OrdinalIgnoreCase);
+
+        var moduleIds = new Dictionary<FrameworkElement, string>
+        {
+            [ReaderModeButton] = "reader",
+            [NotesModuleButton] = "notes",
+            [ReadAloudButton] = "readAloud",
+            [VideoDownloadButton] = "videoDownload",
+            [SearchAssistButton] = "searchAssist",
+            [DetachVideoPinnedButton] = "detachVideo",
+            [TranslatePinnedButton] = "translate",
+            [WebAppsPinnedButton] = "webApps",
+            [DictationPinnedButton] = "dictation",
+            [RssModuleButton] = "rss",
+            [ReadingLensButton] = "readingLens"
+        };
+
+        // Tout ce qui n'est ni AddressBox ni ToolbarButtonsPanel (retour/
+        // avance/recharger, bouton "Ouvrir l'adresse", espacements de
+        // colonnes...) - stable quel que soit le nombre de modules pingles.
+        var fixedWidth = toolbarWidth - AddressBox.ActualWidth - ToolbarButtonsPanel.ActualWidth;
+        var budget = Math.Max(0, toolbarWidth - fixedWidth - AddressBox.MinWidth);
+
+        // Compte aussi l'espacement du StackPanel entre elements VISIBLES
+        // (ToolbarButtonsPanel.Spacing, lu directement plutot qu'en dur - suit
+        // automatiquement toute future retouche de cet espacement) : un module
+        // masque par ce mecanisme ne laisse pas de trou facture en trop pour
+        // le suivant, corrige au passage a 12px (2026-08-22, "option A" espacement).
+        var used = 0d;
+        var visibleCount = 0;
+        foreach (var child in ToolbarButtonsPanel.Children.OfType<FrameworkElement>())
+        {
+            var isModule = moduleIds.TryGetValue(child, out var moduleId);
+            if (isModule && !IsPinned(moduleId!))
+            {
+                continue; // deja masque (non pingle) par UpdateModulesPinUi, ne compte pas
+            }
+
+            if (!isModule && child.Visibility != Visibility.Visible)
+            {
+                continue;
+            }
+
+            var w = child.ActualWidth > 0 ? child.ActualWidth : child.DesiredSize.Width;
+            var withSpacing = used + (visibleCount > 0 ? ToolbarButtonsPanel.Spacing : 0) + w;
+
+            if (isModule)
+            {
+                if (withSpacing > budget)
+                {
+                    child.Visibility = Visibility.Collapsed;
+                    continue;
+                }
+
+                child.Visibility = Visibility.Visible;
+            }
+
+            used = withSpacing;
+            visibleCount++;
         }
     }
 

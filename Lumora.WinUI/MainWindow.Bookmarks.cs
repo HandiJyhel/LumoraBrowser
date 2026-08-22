@@ -713,6 +713,15 @@ public sealed partial class MainWindow
         }
     }
 
+    // Remplace l'ancienne estimation par nombre de caracteres (2026-08-22,
+    // signale par l'utilisateur : le "»" de debordement apparaissait alors
+    // qu'il restait de la place visible) : l'estimation surevaluait la
+    // largeur reelle des puces WinUI, coupant des favoris qui auraient tenu.
+    // Mesure desormais la largeur REELLE de chaque bouton (memes Style/
+    // Padding/FontSize que celui vraiment affiche, juste hors de l'arbre
+    // visuel - Measure() fonctionne sur un element deconnecte tant que son
+    // Style est deja assigne), plus le cout reel du separateur "✦" et de
+    // l'espacement du StackPanel (ni l'un ni l'autre n'etait compte avant).
     private int VisibleBookmarkBarCount(IReadOnlyList<BookmarkNode> nodes, bool bottomLayout)
     {
         if (nodes.Count <= 0)
@@ -722,51 +731,80 @@ public sealed partial class MainWindow
 
         var row = bottomLayout ? BookmarksBottomRow : BookmarksBarRow;
         var otherHost = bottomLayout ? OtherBookmarksBottomHost : OtherBookmarksBarHost;
-        var available = row.ActualWidth - otherHost.ActualWidth - 142;
+        var available = row.ActualWidth - otherHost.ActualWidth - 24;
         if (available <= 0)
         {
             return Math.Min(nodes.Count, 20);
         }
 
-        var used = 0d;
+        var metrics = ResolveUiDensityMetrics(_uiDensity);
+        // 16 (pas 6) depuis le 2026-08-22 : BookmarksBarPanel/BookmarksBottomBarPanel
+        // Spacing releve pour que le separateur "✦" respire reellement entre les
+        // favoris ("option A" choisie sur maquette, demande explicite utilisateur).
+        const double panelSpacing = 16d;
+        var connectorSlotWidth = MeasureConstellationConnectorWidth() + panelSpacing * 2;
+        var overflowButtonReserve = metrics.BookmarksOverflowChipSize + panelSpacing;
+
+        var buttonsWidth = 0d;
         var count = 0;
         for (var index = 0; index < nodes.Count; index++)
         {
             var remaining = nodes.Count - index - 1;
-            var reserveOverflow = remaining > 0 ? 28d : 0d;
-            var nextWidth = EstimateBookmarkBarWidth(nodes[index]);
-            if (count > 0 && used + nextWidth + reserveOverflow > available)
+            var reserveOverflow = remaining > 0 ? overflowButtonReserve : 0d;
+            var candidateCount = count + 1;
+            var candidateButtonsWidth = buttonsWidth + MeasureBookmarkBarButtonWidth(nodes[index], metrics);
+            var candidateConnectors = candidateCount > 1 ? (candidateCount - 1) * connectorSlotWidth : 0d;
+            var candidateTotal = candidateButtonsWidth + candidateConnectors + reserveOverflow;
+            if (count > 0 && candidateTotal > available)
             {
                 break;
             }
 
-            used += nextWidth;
-            count++;
+            buttonsWidth = candidateButtonsWidth;
+            count = candidateCount;
         }
 
         return Math.Clamp(count, 1, nodes.Count);
     }
 
-    private static double EstimateBookmarkBarWidth(BookmarkNode node)
+    private double MeasureBookmarkBarButtonWidth(BookmarkNode node, UiDensityMetrics metrics)
     {
-        if (BookmarkStore.IsIconOnlyTitle(node.Title))
+        var probe = new Button
         {
-            return 40d;
-        }
+            Content = BookmarkButtonContent(node),
+            Style = (Style)RootShell.Resources["NovaBookmarkBarButtonStyle"],
+            Height = metrics.BookmarkChipHeight,
+            MinHeight = metrics.BookmarkChipHeight,
+            MinWidth = 0,
+            Padding = BookmarkStore.IsIconOnlyTitle(node.Title) ? metrics.BookmarkChipPaddingIcon : metrics.BookmarkChipPaddingText,
+            CornerRadius = new CornerRadius(metrics.BookmarkChipCornerRadius),
+            FontSize = metrics.BookmarkChipFontSize
+        };
+        probe.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        return probe.DesiredSize.Width;
+    }
 
-        var title = BookmarkBarTitle(node);
-        var textWidth = Math.Min(Math.Max(title.Length * 8.4d, 48d), 160d);
-        return 50d + textWidth;
+    private static double MeasureConstellationConnectorWidth()
+    {
+        var probe = CreateConstellationConnector();
+        probe.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        return probe.DesiredSize.Width;
     }
 
     // Repere visuel discret entre deux favoris de la barre : fait vivre le nom
     // "Constellation" comme un vrai motif (trajectoire de points) plutot que
     // comme une simple etiquette.
+    // Rendu reellement visible (2026-08-22, "option A" choisie sur maquette,
+    // demande explicite utilisateur : "c'est completement tasse... meme pas
+    // espace") : a 7px/opacite 0.3, le motif "Constellation" etait quasi
+    // invisible et n'apportait aucune respiration reelle entre les favoris.
+    // Garde le motif (identite deja nommee dans le code) plutot que de le
+    // retirer, mais avec un vrai poids visuel.
     private static TextBlock CreateConstellationConnector() => new()
     {
         Text = "✦",
-        FontSize = 7,
-        Opacity = 0.3,
+        FontSize = 9,
+        Opacity = 0.85,
         VerticalAlignment = VerticalAlignment.Center,
         IsHitTestVisible = false
     };
