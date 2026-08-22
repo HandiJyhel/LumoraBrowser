@@ -12,6 +12,16 @@ namespace Lumora.WinUI;
 // simple GET vers /favicon.ico de chaque origine sans icone usable, converti
 // en PNG reel (memes garde-fous que le reste de l'app - FaviconImageConverter,
 // FaviconQuality) puis propage a tous les favoris de la meme origine.
+//
+// Repli silencieux au demarrage (2026-08-23, session "petites corrections",
+// maquette approuvee) : la meme logique tourne aussi UNE FOIS par lancement,
+// sans texte de statut ni bouton - une quinzaine de favoris icone-seule sans
+// favicon retombaient tous sur la meme icone generique, illisible meme avec un
+// espacement correct (pas le bug d'espacement deja corrige la veille). Le
+// repli visuel definitif (pastille 1ere-lettre, voir BookmarkIconElement dans
+// MainWindow.Bookmarks.cs) s'applique de toute facon si cette tentative
+// echoue aussi - ce repli silencieux n'est qu'une chance suppplementaire
+// d'obtenir la vraie icone avant d'y recourir.
 public sealed partial class MainWindow : Window
 {
     private static readonly HttpClient FaviconRefreshHttp = new()
@@ -21,11 +31,20 @@ public sealed partial class MainWindow : Window
 
     private bool _faviconRefreshInProgress;
 
-    private async void RefreshMissingIconsButton_Click(object sender, RoutedEventArgs e)
+    private async void RefreshMissingIconsButton_Click(object sender, RoutedEventArgs e) =>
+        await RefreshMissingBookmarkIconsAsync(silent: false);
+
+    // Appelee une seule fois au demarrage (constructeur, juste apres le premier
+    // ReloadBookmarks()) : "fire-and-forget" volontaire (pas de await dans
+    // l'appelant) - ne doit jamais retarder l'ouverture de la fenetre pour une
+    // recuperation reseau optionnelle. Les erreurs restent dans
+    // TryFetchFaviconIcoAsync (try/catch deja present), rien ne peut remonter
+    // ici sans await.
+    private async Task RefreshMissingBookmarkIconsAsync(bool silent)
     {
         if (_faviconRefreshInProgress)
         {
-            StatusText.Text = "Récupération des icônes déjà en cours.";
+            if (!silent) StatusText.Text = "Récupération des icônes déjà en cours.";
             return;
         }
 
@@ -39,12 +58,12 @@ public sealed partial class MainWindow : Window
 
         if (missingOrigins.Count == 0)
         {
-            StatusText.Text = "Tous les favoris ont déjà une icône.";
+            if (!silent) StatusText.Text = "Tous les favoris ont déjà une icône.";
             return;
         }
 
         _faviconRefreshInProgress = true;
-        StatusText.Text = $"Recherche des icônes manquantes ({missingOrigins.Count} site(s))...";
+        if (!silent) StatusText.Text = $"Recherche des icônes manquantes ({missingOrigins.Count} site(s))...";
         try
         {
             var found = 0;
@@ -69,10 +88,16 @@ public sealed partial class MainWindow : Window
             });
             await Task.WhenAll(tasks);
 
-            ReloadBookmarks();
-            StatusText.Text = found == 0
-                ? $"Aucune icône supplémentaire trouvée sur {missingOrigins.Count} site(s)."
-                : $"{found} icône(s) retrouvée(s) sur {missingOrigins.Count} site(s) sans icône.";
+            if (found > 0)
+            {
+                ReloadBookmarks();
+            }
+            if (!silent)
+            {
+                StatusText.Text = found == 0
+                    ? $"Aucune icône supplémentaire trouvée sur {missingOrigins.Count} site(s)."
+                    : $"{found} icône(s) retrouvée(s) sur {missingOrigins.Count} site(s) sans icône.";
+            }
         }
         finally
         {

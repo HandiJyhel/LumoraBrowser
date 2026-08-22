@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -7,6 +8,7 @@ using Microsoft.UI.Xaml.Media;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
+using Windows.UI;
 using WinRT.Interop;
 
 namespace Lumora.WinUI;
@@ -1057,11 +1059,102 @@ public sealed partial class MainWindow
             };
         }
 
-        return new SymbolIcon
+        // Repli pastille-lettre (2026-08-23, maquette approuvee) : un dossier
+        // garde son icone dossier (toujours parlante), mais un lien sans
+        // favicon utilisable ne retombait avant que sur le MEME symbole
+        // "maillon" generique - avec une quinzaine de favoris ainsi affectes
+        // cote a cote (capture d'ecran utilisateur), impossible de les
+        // distinguer d'un coup d'oeil meme avec un espacement correct entre
+        // eux. La pastille-lettre (1ere lettre du nom, couleur derivee du
+        // nom) redonne un repere visuel propre a chaque favori.
+        if (node.Kind == BookmarkKind.Folder)
         {
-            Symbol = node.Kind == BookmarkKind.Folder ? Symbol.Folder : Symbol.Link,
+            return new SymbolIcon { Symbol = Symbol.Folder, Width = size, Height = size };
+        }
+
+        return BookmarkLetterAvatar(node, size);
+    }
+
+    // Nom affiche si present, sinon l'hote de l'URL (pour les favoris "icone
+    // seule" dont le titre a ete vide volontairement - voir IsIconOnlyTitle) -
+    // jamais une chaine vide, sinon la pastille n'aurait aucune lettre.
+    private static string BookmarkAvatarSource(BookmarkNode node)
+    {
+        var title = node.Title?.Trim();
+        if (!string.IsNullOrEmpty(title))
+        {
+            return title;
+        }
+
+        if (Uri.TryCreate(node.Url, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host))
+        {
+            return uri.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+                ? uri.Host[4..]
+                : uri.Host;
+        }
+
+        return "?";
+    }
+
+    // Meme algorithme de hachage que la maquette (h = h*31 + code, mod 360) :
+    // meme favori, meme couleur, a chaque rendu et sur chaque appareil - pas
+    // de couleur aleatoire qui changerait d'un lancement a l'autre.
+    private static int BookmarkAvatarHue(string source)
+    {
+        var hash = 0u;
+        foreach (var c in source)
+        {
+            hash = unchecked(hash * 31 + c);
+        }
+
+        return (int)(hash % 360);
+    }
+
+    private static Color BookmarkAvatarColor(int hue)
+    {
+        const double saturation = 0.72;
+        const double lightness = 0.68;
+        var c = (1 - Math.Abs(2 * lightness - 1)) * saturation;
+        var x = c * (1 - Math.Abs(hue / 60.0 % 2 - 1));
+        var m = lightness - c / 2;
+        var (r1, g1, b1) = hue switch
+        {
+            < 60 => (c, x, 0d),
+            < 120 => (x, c, 0d),
+            < 180 => (0d, c, x),
+            < 240 => (0d, x, c),
+            < 300 => (x, 0d, c),
+            _ => (c, 0d, x)
+        };
+
+        return Color.FromArgb(
+            255,
+            (byte)Math.Round((r1 + m) * 255),
+            (byte)Math.Round((g1 + m) * 255),
+            (byte)Math.Round((b1 + m) * 255));
+    }
+
+    private static FrameworkElement BookmarkLetterAvatar(BookmarkNode node, double size)
+    {
+        var source = BookmarkAvatarSource(node);
+        var letter = char.ToUpperInvariant(source[0]).ToString();
+        var color = BookmarkAvatarColor(BookmarkAvatarHue(source));
+
+        return new Border
+        {
             Width = size,
-            Height = size
+            Height = size,
+            CornerRadius = new CornerRadius(size * 0.3),
+            Background = new SolidColorBrush(color),
+            Child = new TextBlock
+            {
+                Text = letter,
+                FontSize = size * 0.62,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromArgb(255, 0x14, 0x16, 0x2a)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            }
         };
     }
 

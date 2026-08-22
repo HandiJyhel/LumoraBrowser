@@ -13,6 +13,15 @@ namespace Lumora.Privacy.ConsentManager;
 //   4. Aucun refus direct disponible : ouverture du panneau "Personnaliser"/"Gérer mes
 //      choix", décochage de tout ce qui n'est pas obligatoire, puis validation — c'est
 //      l'équivalent du "sinon, cookies essentiels uniquement" demandé pour ce module.
+//   5. Dernier repli — acceptation (2026-08-22, demande explicite utilisateur, captures
+//      d'écran à l'appui) : certains bandeaux n'offrent ni refus direct ni panneau
+//      détaillé (ex. "Tout accepter" / "Personnaliser" sans case à cocher exploitable,
+//      ou "Je m'abonne" / "J'accepte" sur les sites à option payante) ; d'autres ont un
+//      panneau qui s'ouvre mais dont le bouton de validation n'est pas reconnu. Dans ces
+//      deux cas, mieux vaut accepter automatiquement que laisser le bandeau bloqué
+//      indéfiniment — l'utilisateur le faisait de toute façon à la main. Ne clique
+//      JAMAIS sur un bouton d'abonnement/paiement : liste positive de libellés
+//      d'acceptation uniquement (AcceptTextList), jamais de recherche par exclusion.
 internal static class ConsentManagerScripts
 {
     // Sélecteurs CSS des boutons "Refuser tout" / "essentiels uniquement" par CMP.
@@ -154,6 +163,20 @@ internal static class ConsentManagerScripts
         ]
         """;
 
+    // Dernier repli (passe 5) : libellés d'ACCEPTATION uniquement — jamais un bouton
+    // d'abonnement/paiement ("Je m'abonne", "S'abonner"...), qui n'apparaît nulle part
+    // dans cette liste. Prefix-match comme TXT/CONFIRM (ex. "accepter" matche "accepter
+    // les cookies", "accepter et fermer"...).
+    private const string AcceptTextList = """
+        [
+            'tout accepter', 'accepter tout', 'j\'accepte', 'accepter et fermer',
+            'accepter les cookies', 'accepter tous les cookies', 'accepter',
+            'autoriser tout', 'autoriser tous les cookies', 'autoriser',
+            'accept all', 'accept all cookies', 'i accept', 'agree', 'i agree',
+            'allow all', 'allow all cookies', 'accept cookies', 'accept'
+        ]
+        """;
+
     internal static string BuildInjectionScript(IEnumerable<string> loginCompatibilitySites)
     {
         var compatibilityList = CompatibilityList(loginCompatibilitySites);
@@ -214,6 +237,7 @@ internal static class ConsentManagerScripts
         var LOGRISK = {{{LoginRiskTextList}}};
         var MANAGE  = {{{ManageTextList}}};
         var CONFIRM = {{{ConfirmTextList}}};
+        var ACCEPT  = {{{AcceptTextList}}};
         // 'a' sans restriction sur le href : beaucoup de bandeaux modernes (ex.
         // leboncoin, "Continuer sans accepter") utilisent un lien géré uniquement en
         // JS, sans href="#" ni href="" - le filtre précédent (a[href="#"], a[href=""])
@@ -420,12 +444,19 @@ internal static class ConsentManagerScripts
 
             // 4. Panneau détaillé déjà ouvert (passe 5 d'un tour précédent) : décoche
             // tout ce qui n'est pas obligatoire (les cases désactivées restent —
-            // cookies strictement nécessaires) puis valide.
+            // cookies strictement nécessaires) puis valide. Si aucun bouton de
+            // validation reconnu n'existe (panneau non standard), repli passe 6 :
+            // accepter plutôt que laisser le bandeau ouvert indéfiniment.
             if (window.__lumoraConsentPanelOpened) {
                 for (var c4 = 0; c4 < containers.length; c4++) uncheckToggles(containers[c4]);
                 if (containers.length && clickByTextIn(containers, CONFIRM, false)) {
                     window.__lumoraConsentDone = true;
                     notifyHost('panel');
+                    return true;
+                }
+                if (containers.length && clickByTextIn(containers, ACCEPT, false)) {
+                    window.__lumoraConsentDone = true;
+                    notifyHost('accept-fallback');
                     return true;
                 }
                 return false;
@@ -437,6 +468,18 @@ internal static class ConsentManagerScripts
             if (containers.length && clickByTextIn(containers, MANAGE, true)) {
                 window.__lumoraConsentPanelOpened = true;
                 setTimeout(function() { try { runConsentEngine(); } catch(e) {} }, 400);
+                return true;
+            }
+
+            // 6. Ni refus direct, ni panneau détaillé disponible (ex. bandeau
+            // "Tout accepter" / "Personnaliser" sans case exploitable, ou "Je
+            // m'abonne" / "J'accepte" sur les sites à option payante) : dernier
+            // repli, accepter plutôt que laisser le bandeau bloqué indéfiniment.
+            // ACCEPT ne contient que des libellés d'acceptation — jamais un bouton
+            // d'abonnement/paiement.
+            if (containers.length && clickByTextIn(containers, ACCEPT, false)) {
+                window.__lumoraConsentDone = true;
+                notifyHost('accept-fallback');
                 return true;
             }
 

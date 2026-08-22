@@ -370,17 +370,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_93_54_7()
+    public void Version_projet_est_alignee_sur_0_93_54_9()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.93.54.7-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.93.54.7-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.93.54.7-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.93.54.7-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.54.9-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.93.54.9-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.93.54.9-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.93.54.9-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

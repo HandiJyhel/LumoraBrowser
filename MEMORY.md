@@ -23533,3 +23533,75 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   tranche 2 fois de suite sur ce meme fil).
 - **Reste a faire** : bouton d'interrupteur de module toujours sans cause confirmee ;
   boutons systeme ronds restent tels quels (choix deja fait).
+
+## 2026-08-22 (suite) — Session "petites corrections" : cookies, popup Notifications, maquette favoris -> 0.93.54.8-dev
+
+- 3 captures d'ecran (`Screenshots/220826/`) + un retour vocal sur Twitch. Plan complet
+  presente avec 2 questions de clarification (AskUserQuestion) avant tout code, Go obtenu.
+- **A. Repli "Accepter" en dernier recours** (`ConsentManagerScripts.cs`) : deux cas reels
+  sans refus exploitable trouves dans les captures - "Tout accepter"/"Personnaliser" sans
+  panneau standard (Eneba) et "Je m'abonne"/"J'accepte" (Allocine, option payante pour
+  eviter les cookies). Le moteur avait deja un mecanisme "ouvrir Personnaliser + decocher +
+  valider" (session precedente) mais AUCUN repli quand ce mecanisme echouait ou n'existait
+  pas - le bandeau restait bloque indefiniment, l'utilisateur cliquait a la main. Nouvelle
+  passe 6 : si refus direct ET panneau detaille echouent, clique sur un libelle
+  d'acceptation (`AcceptTextList`, liste POSITIVE uniquement - ne contient jamais un mot
+  lie a l'abonnement/paiement, garde-fou verifie par test dedie). Icone de statut distingue
+  desormais 3 methodes (`direct`/`panel`/`accept-fallback`) ; le fallback n'est plus compte
+  dans les compteurs "bloque" du bouclier (rien n'a ete bloque, ce serait trompeur).
+- **B. Popup Windows natif de permission Notifications** (`MainWindow.SiteControl.cs`) :
+  signale sur twitch.tv, jamais vu sur Chrome, fenetre non capturable par l'utilisateur.
+  Cause : `CoreWebView2_PermissionRequested` ne tranchait pas l'etat "Ask" par defaut - une
+  demande "notifications" non tranchee est deleguee par WebView2 a la boite de dialogue
+  SYSTEME Windows (comportement propre a ce type de permission, different de camera/micro/
+  geoloc qui restent sur le bandeau interne WebView2). Corrige : bloque silencieusement par
+  defaut (`CoreWebView2PermissionState.Deny`) en l'absence de regle de site ; le reglage par
+  site (Autoriser/Bloquer/Demander) reste le moyen d'activer un site precis.
+- **C. Favoris icone-seule sans favicon, tasses visuellement** (capture `03.barrefav.png`) :
+  PAS le bug d'espacement deja corrige le meme jour (entree precedente, "✦" Constellation) -
+  une quinzaine de favoris retombent sur la MEME icone generique (maillon), illisibles meme
+  avec un espacement correct. Direction choisie par l'utilisateur (question posee) :
+  retenter la recuperation du favicon en tache de fond, puis pastille 1ere-lettre (couleur
+  derivee du nom) si ca echoue encore. **Maquette publiee en artifact, pas encore codee**,
+  en attente de Go avant implementation dans `MainWindow.Bookmarks.cs`.
+- **Verification reelle poussee (A)** : harnais Node (vm + DOM factice fait main, technique
+  deja documentee) executant le VRAI script JS extrait de l'assembly compilee (pas une
+  copie recrite) sur les 2 scenarios EXACTS des captures d'ecran - confirme le clic sur
+  "Tout accepter"/"J'accepte" et l'absence totale de clic sur "Je m'abonne" dans les deux
+  cas, plus le signal `notifyHost('accept-fallback')`.
+- **Verification reelle poussee (B)** : app relancee isolee (mode invite, LUMORA_PROFILE_DIR
+  jetable), page locale appelant `Notification.requestPermission()` - resultat affiche par
+  la page elle-meme : "denied", ET liste des fenetres top-level UIA identique avant/apres
+  (aucune fenetre Windows parasite n'est apparue). Nettoyage par PID exact.
+- Build MSBuild (Debug) : 0 erreur. `dotnet test` : 857/857 verts (2 nouveaux tests).
+- Version `0.93.54.7-dev` -> `0.93.54.8-dev` (**4e chiffre**, A et B sont des corrections
+  d'un comportement deja cense fonctionner) dans les 5 memes points. C bumpera separement
+  une fois codee et confirmee.
+- **C code, Go recu** : `BookmarkIconElement` (`MainWindow.Bookmarks.cs`) ne retombe plus
+  sur `Symbol.Link` generique pour un lien sans favicon usable (dossiers inchanges,
+  `Symbol.Folder` toujours parlant) - nouvelle `BookmarkLetterAvatar` (Border+TextBlock,
+  1ere lettre du nom ou de l'hote si titre vide, teinte HSL deterministe par hachage du
+  nom, meme algorithme que la maquette approuvee). Repli reseau silencieux ajoute en plus
+  (`RefreshMissingBookmarkIconsAsync(silent:true)`, refactor de la logique deja existante
+  du bouton manuel "Retrouver les icônes" - une seule tentative par lancement, jamais
+  attendue au demarrage).
+- **Tentative de verification visuelle reelle, bloquee par une contrainte du produit, pas
+  de l'outillage** : navigation vers une page `file://` locale (pour garantir l'absence de
+  favicon sans dependance reseau) refusee par `BookmarkStore.IsWebUrl` ("Ouvre une page web
+  avant de l'ajouter aux favoris.") - `AddBookmarkButton_Click` n'atteint donc jamais le
+  `ContentDialog` d'edition dans ce cas, avant meme de rencontrer une eventuelle limite UIA
+  sur ce controle. Forger un profil de test complet (UserProfile interne + PBKDF2/DPAPI)
+  pour bookmarker de vraies pages http(s) sans favicon aurait ete disproportionne pour ce
+  changement (Border/TextBlock reutilisent exactement le meme motif que SymbolIcon/Image
+  deja en production dans la meme fonction). **Verifie par execution reelle** : build
+  MSBuild 0 erreur, 3 nouveaux tests sur la logique source (branche generique disparue,
+  jamais de plantage sans titre/URL, hachage deterministe sans `Random`). **Non confirme
+  visuellement en conditions reelles** - signale honnetement, a confirmer par l'utilisateur
+  en usage normal des qu'un favori sans favicon apparait dans sa vraie barre.
+- Build MSBuild (Debug) : 0 erreur. `dotnet test` : 860/860 verts (3 nouveaux tests).
+- L'utilisateur a tranche l'ambiguite ajout/correction pour C : **4e chiffre** (meme
+  categorie que A/B), question posee plutot que tranchee seul comme prevu. Version
+  `0.93.54.8-dev` -> `0.93.54.9-dev` dans les 5 memes points, build+tests reverifies verts.
+- **Reste a faire** : confirmation visuelle de C en usage reel (voir contrainte `IsWebUrl`
+  ci-dessus) ; bouton d'interrupteur de module toujours sans cause confirmee (report
+  anterieur).

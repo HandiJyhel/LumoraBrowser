@@ -434,6 +434,54 @@ public sealed class BookmarkBarRegressionTests
         Assert.Contains("var withSpacing = used + (visibleCount > 0 ? ToolbarButtonsPanel.Spacing : 0) + w;", code, StringComparison.Ordinal);
     }
 
+    // 2026-08-23 (session "petites corrections") : une quinzaine de favoris
+    // icone-seule sans favicon retombaient tous sur la MEME icone generique
+    // (maillon), illisibles cote a cote meme avec un espacement correct - pas
+    // le meme bug que l'entree precedente (espacement). Repli : pastille
+    // 1ere-lettre, couleur derivee du nom, dossiers inchanges. La construction
+    // reelle des controles WinUI (Border/TextBlock) ne peut pas s'executer
+    // hors de l'app (pas de DispatcherQueue dans l'hote xunit, meme
+    // contrainte que le reste de ce fichier) - verifiee en reel sur l'app via
+    // le skill verify a la place ; ces tests couvrent la logique source.
+    [Fact]
+    public void Un_lien_sans_favicon_utilisable_retombe_sur_une_pastille_lettre_pas_licone_generique()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+
+        // La branche generique "Symbol.Link pour tout lien sans favicon" ne
+        // doit plus exister : seul un dossier garde encore une icone fixe.
+        Assert.DoesNotContain("Symbol.Folder : Symbol.Link", code, StringComparison.Ordinal);
+        Assert.Contains("return BookmarkLetterAvatar(node, size);", code, StringComparison.Ordinal);
+        Assert.Contains("return new SymbolIcon { Symbol = Symbol.Folder, Width = size, Height = size };", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void La_pastille_ne_plante_jamais_meme_sans_titre_ni_url_exploitable()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+
+        // Favori "icone seule" : node.Title reste vide en base (IsIconOnlyTitle
+        // masque juste l'affichage) - repli sur l'hote de l'URL, puis "?" en
+        // tout dernier recours, jamais une chaine vide qui ferait planter
+        // char.ToUpperInvariant(source[0]) dans BookmarkLetterAvatar.
+        Assert.Contains("return \"?\";", code, StringComparison.Ordinal);
+        var sourceMethod = code[code.IndexOf("private static string BookmarkAvatarSource", StringComparison.Ordinal)..];
+        Assert.Contains("uri.Host", sourceMethod[..sourceMethod.IndexOf("private static int BookmarkAvatarHue", StringComparison.Ordinal)], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void La_teinte_de_la_pastille_est_deterministe_et_derivee_du_nom()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+
+        // Meme favori => meme couleur a chaque rendu (hachage pur du nom, pas
+        // Random/Guid) - sinon la pastille "clignoterait" de couleur a chaque
+        // reouverture de la barre.
+        Assert.Contains("hash = unchecked(hash * 31 + c);", code, StringComparison.Ordinal);
+        Assert.Contains("return (int)(hash % 360);", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("new Random(", code, StringComparison.Ordinal);
+    }
+
     private static string ReadRepoFile(params string[] segments)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

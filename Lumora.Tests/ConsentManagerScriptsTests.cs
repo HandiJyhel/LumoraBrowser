@@ -154,4 +154,39 @@ public class ConsentManagerScriptsTests
 
         Assert.Contains("'non merci'", script, StringComparison.Ordinal);
     }
+
+    // 2026-08-22 (session "petites corrections") : deux captures d'écran
+    // utilisateur montrant des bandeaux sans aucun refus exploitable -
+    // "Tout accepter"/"Personnaliser" (Eneba) et "Je m'abonne"/"J'accepte"
+    // (Allociné, option payante pour éviter les cookies). Dans les deux cas,
+    // le moteur n'avait aucun repli et laissait le bandeau ouvert
+    // indéfiniment. Passe 6 : accepter en dernier recours plutôt que bloquer
+    // la navigation - vérifié en réel plus bas (ConsentManagerFallbackAcceptTests).
+    [Fact]
+    public void Le_repli_final_accepte_quand_rien_dautre_ne_fonctionne()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        Assert.Contains("'tout accepter'", script, StringComparison.Ordinal);
+        Assert.Contains("'accept all'", script, StringComparison.Ordinal);
+        Assert.Contains("notifyHost('accept-fallback')", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Le_repli_final_ne_contient_jamais_de_libelle_dabonnement()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        // Garde-fou explicite : le tableau ACCEPT lui-même (pas les commentaires
+        // qui, eux, expliquent légitimement pourquoi "s'abonner" est exclu) ne
+        // doit jamais contenir de libellé d'abonnement/paiement.
+        var start = script.IndexOf("var ACCEPT  = [", StringComparison.Ordinal);
+        Assert.True(start >= 0, "Tableau ACCEPT introuvable dans le script généré.");
+        var end = script.IndexOf(';', start);
+        Assert.True(end > start, "Fin du tableau ACCEPT introuvable.");
+        var acceptArrayLiteral = script[start..end];
+
+        Assert.DoesNotContain("abonn", acceptArrayLiteral, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("subscribe", acceptArrayLiteral, StringComparison.OrdinalIgnoreCase);
+    }
 }

@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.54.7-dev";
+    internal const string Version = "0.93.54.9-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -465,6 +465,13 @@ public sealed partial class MainWindow : Window
         // BookmarksBottomBarPanel existent des l'InitializeComponent et ne
         // sont jamais recrees, contrairement aux boutons qu'ils contiennent.
         WireBookmarkDragPanels();
+        // Repli silencieux des favicons manquantes (2026-08-23, voir
+        // MainWindow.BookmarksFaviconRefresh.cs) : une seule tentative par
+        // lancement, en arriere-plan, jamais attendue ici - ne doit jamais
+        // retarder l'ouverture de la fenetre pour une recuperation reseau
+        // optionnelle. Le repli visuel (pastille-lettre) s'applique de toute
+        // facon si cette tentative echoue aussi.
+        _ = RefreshMissingBookmarkIconsAsync(silent: true);
         WinUiRuntimeTrace.Write("Bookmarks loaded");
         ReloadImportSources();
         WinUiRuntimeTrace.Write("Import sources loaded");

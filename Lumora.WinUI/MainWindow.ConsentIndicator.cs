@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 
@@ -26,10 +27,17 @@ public sealed partial class MainWindow
         tab.ConsentHandledMethod = method switch
         {
             "panel" => "panel",
+            "accept-fallback" => "accept-fallback",
             _ => "direct"
         };
 
-        _privacy.RecordManualBlock("consent-manager", "Refus automatique des cookies", pageUri, pageUri);
+        // "accept-fallback" n'a rien refusé ni bloqué (aucune alternative fiable
+        // trouvée sur ce bandeau, voir ConsentManagerScripts.cs passe 6) : ne pas
+        // le compter dans les compteurs "bloqué" du bouclier, ce serait trompeur.
+        if (tab.ConsentHandledMethod != "accept-fallback")
+        {
+            _privacy.RecordManualBlock("consent-manager", "Refus automatique des cookies", pageUri, pageUri);
+        }
 
         if (IsActiveView(tab.View))
         {
@@ -43,18 +51,24 @@ public sealed partial class MainWindow
         var method = TabForView(_browserView)?.ConsentHandledMethod;
         ConsentIndicatorButton.Visibility = method is null ? Visibility.Collapsed : Visibility.Visible;
 
-        ToolTipService.SetToolTip(
-            ConsentIndicatorButton,
-            method == "panel"
-                ? "Cookies essentiels uniquement (préférences ajustées automatiquement)"
-                : "Cookies refusés automatiquement sur ce site");
+        var tooltip = method switch
+        {
+            "panel" => "Cookies essentiels uniquement (préférences ajustées automatiquement)",
+            "accept-fallback" => "Cookies acceptés automatiquement (aucun refus possible sur ce site)",
+            _ => "Cookies refusés automatiquement sur ce site"
+        };
+        ToolTipService.SetToolTip(ConsentIndicatorButton, tooltip);
+        AutomationProperties.SetName(ConsentIndicatorButton, tooltip);
     }
 
     private void ConsentIndicatorFlyout_Opening(object sender, object e)
     {
         var method = TabForView(_browserView)?.ConsentHandledMethod;
-        ConsentIndicatorText.Text = method == "panel"
-            ? "Lumora n'a pas trouvé de bouton \"Refuser tout\" direct sur ce site : le panneau de préférences a été ouvert, les cases non essentielles décochées, puis validé."
-            : "Lumora a cliqué automatiquement sur le refus des cookies non essentiels pour cette page.";
+        ConsentIndicatorText.Text = method switch
+        {
+            "panel" => "Lumora n'a pas trouvé de bouton \"Refuser tout\" direct sur ce site : le panneau de préférences a été ouvert, les cases non essentielles décochées, puis validé.",
+            "accept-fallback" => "Ce site n'offre ni refus direct, ni panneau de préférences exploitable (ex. \"Tout accepter\"/\"Personnaliser\" sans case à décocher, ou une option payante pour éviter les cookies). Lumora a accepté automatiquement pour éviter de bloquer la navigation — aucun cookie n'a été refusé sur cette page.",
+            _ => "Lumora a cliqué automatiquement sur le refus des cookies non essentiels pour cette page."
+        };
     }
 }

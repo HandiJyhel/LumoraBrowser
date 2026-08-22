@@ -359,6 +359,27 @@ public sealed partial class MainWindow
         {
             args.State = CoreWebView2PermissionState.Deny;
         }
+        else if (permissionKey == "notifications")
+        {
+            // Repli explicite (2026-08-22, retour utilisateur : boîte de dialogue
+            // Windows native vue sur Twitch, jamais rencontrée sur Chrome). Sans
+            // règle de site, une demande "notifications" non tranchée (état par
+            // défaut ci-dessous, `return` sans toucher args.State) est déléguée par
+            // WebView2 à la boîte de dialogue SYSTÈME de permission Windows au lieu
+            // d'un bandeau interne au navigateur - contrairement à caméra/micro/
+            // géolocalisation, qui restent gérés par le bandeau WebView2 par défaut
+            // (comportement inchangé, `return` plus bas). Bloquer silencieusement
+            // par défaut évite cette fenêtre Windows, à l'image du défaut anti-spam
+            // désormais standard sur Chrome/Edge/Firefox pour les notifications non
+            // sollicitées. Le réglage par site (Autoriser/Bloquer/Demander, panneau
+            // du site) reste le moyen d'activer explicitement un site précis.
+            args.State = CoreWebView2PermissionState.Deny;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                UpdateStatusText($"Notifications bloquées par défaut pour {rootDomain} (réglable dans le panneau du site).", announce: false);
+            });
+            return;
+        }
         else
         {
             return;
