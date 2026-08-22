@@ -44,6 +44,19 @@ internal static class TorEngineProvider
             using (var response = await Http.GetAsync(
                 TorTrustedRelease.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // dist.torproject.org ne conserve qu'un nombre limite de versions en
+                    // ligne : la version epinglee dans TorTrustedRelease (verifiee a la
+                    // main par signature GPG lors de sa mise en place) finit par en etre
+                    // retiree - deja constate deux fois (15.0.18 le 2026-07-22, 15.0.19 le
+                    // 2026-08-21). Un 404 brut ("Response status code does not indicate
+                    // success") ne dit pas ca a l'utilisateur ; message explicite a la place.
+                    throw new InvalidOperationException(
+                        $"Le moteur Tor {TorTrustedRelease.Version} n'est plus disponible sur le miroir officiel dist.torproject.org (version retiree). " +
+                        "Une mise à jour de Lumora est nécessaire pour pointer vers une version plus récente et vérifiée.");
+                }
+
                 response.EnsureSuccessStatusCode();
                 await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
                 await using var output = File.Create(archivePath);

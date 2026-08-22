@@ -23224,3 +23224,49 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
 - **Reste a faire** : Discute mais PAS decide/code : mode portable (dossier autonome, pas de
   trace registre) et signature de code (SignPath Foundation, gratuit mais exige un depot deja
   public - voir memoire de session `gamme-applications-confidentialite-sans-pub`).
+
+## 2026-08-21 — Moteur Tor 404 (15.0.19 retire du miroir), re-pin vers 15.0.20 -> 0.93.54.1-dev
+
+- Signale par l'utilisateur avec capture d'ecran : bouton "Installer le moteur Tor" de la
+  fenetre Incognito echouait avec `Response status code does not indicate success: 404
+  (Not Found)`. Diagnostic (lecture seule, avant tout Go) : exactement le meme incident
+  documente dans `Tor/TorTrustedRelease.cs` pour 15.0.18 le 2026-07-22 - `dist.torproject.org`
+  ne conserve qu'un nombre limite de versions en ligne, et la version epinglee en dur
+  (15.0.19) venait d'en etre retiree. Confirme en direct via `WebFetch` du miroir : seule
+  `15.0.20` (sortie le 2026-08-18) et une alpha `16.0a9` restaient disponibles.
+- Question posee avant d'agir : l'utilisateur voulait aussi que l'installeur/l'appli
+  detecte lui-meme qu'une mise a jour est necessaire. Deux options presentees (detection +
+  message clair vs. verification GPG embarquee complete avec bibliotheque OpenPGP tierce) ;
+  l'utilisateur a choisi l'option legere (detection + message clair), pas de nouveau
+  modele de confiance ni de dependance ajoutee.
+- **Re-verification complete a la main** (memes etapes que le 2026-07-22) avant de changer
+  le pin : archive `tor-expert-bundle-windows-x86_64-15.0.20.tar.gz` telechargee, cle GPG
+  "Tor Browser Developers (signing key)" recuperee via l'API HTTPS de keys.openpgp.org
+  (le protocole keyserver classique echouait, `dirmngr` indisponible dans cet
+  environnement), signature du fichier de sommes de controle verifiee (`Good signature`,
+  meme sous-cle `CAAE 408A ... 78A6 5729` que documentee), SHA256 de l'archive et de
+  `tor.exe` extrait tous deux confirmes. `TorTrustedRelease.cs` mis a jour (version, URL,
+  2 hashs, commentaire d'historique).
+- `TorEngineProvider.DownloadEngineAsync` : un 404 explicite sur l'URL epinglee leve
+  maintenant un message clair ("version retiree du miroir officiel, mise a jour de Lumora
+  necessaire") au lieu du message HTTP brut - protection pour la PROCHAINE fois que
+  dist.torproject.org retire une version (deja arrive 2 fois : 15.0.18 puis 15.0.19).
+- Build MSBuild (app) -> 0 erreur. `dotnet test` -> 832/832 verts (test de coherence de
+  version renomme et realigne sur `0.93.54.1-dev`).
+- **Verification reelle poussee** (pas juste `dotnet build`) : appli relancee en profil
+  isole, fenetre Incognito ouverte directement (`--incognito`), pilotage UIA du
+  `ToggleSwitch` Tor puis du bouton "Installer le moteur Tor". Telechargement+verification+
+  installation reussis en direct (pas de 404), l'appli s'est **relancee automatiquement
+  avec Tor active** (comportement deja code) et a affiche "IP masquee : oui" - bootstrap
+  Tor reussi. `tor.exe` confirme present sur disque avec le hash exact nouvellement epingle.
+- Version `0.93.54.0-dev` -> `0.93.54.1-dev` (**4e chiffre**, micro-correction) dans les 4
+  memes fichiers + test de coherence.
+- **Installeur complet regenere, Go explicite** :
+  `artifacts/installer/LumoraSetup-0.93.54.1-dev-win-x64.exe` (build propre self-contained
+  via `build-clean-test-artifact.ps1` puis `build-installer.ps1`), SHA256
+  `8a63d7dff38c3f00cf1f8ea72779656214e770a18675c4446922553650283c26`. **Jamais execute par
+  moi** (regle "installeur jamais auto") - a tester par l'utilisateur.
+- **Reste a faire** : rien d'ouvert sur ce chantier Tor precis. Ancien installateur
+  `0.93.54.0-dev` conserve dans `artifacts/installer/`, a supprimer seulement sur demande
+  explicite.
+

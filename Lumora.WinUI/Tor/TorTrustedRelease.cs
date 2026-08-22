@@ -10,13 +10,14 @@ namespace Lumora.WinUI.Tor;
 // CAAE 408A EBE2 288E 96FC 5D5E 1574 32CF 78A6 5729) et comparaison du SHA256
 // de l'archive avec l'entree correspondante de ce fichier signe.
 //
-// Source verifiee : tor-expert-bundle-windows-x86_64-15.0.19.tar.gz
-// (https://dist.torproject.org/torbrowser/15.0.19/), SHA256 archive
-// 6ac067402c7b4a3dc37887ed3754b3914b67fdc220c966190683e9ccf91abf0f.
-// Re-verifie le 2026-07-22 (signature GPG "Good signature" confirmee contre
+// Source verifiee : tor-expert-bundle-windows-x86_64-15.0.20.tar.gz
+// (https://dist.torproject.org/torbrowser/15.0.20/), SHA256 archive
+// d59bff934e3ad876e1623e24ae60c19aeea56f50178093b9f86fba230639f949.
+// Re-verifie le 2026-08-21 (signature GPG "Good signature" confirmee contre
 // la cle ci-dessus, gpg --verify local) suite au retrait de la version
-// 15.0.18 du miroir officiel (404 constate en usage reel) - dist.torproject.org
-// n'archive qu'un nombre limite de versions a la fois.
+// 15.0.19 du miroir officiel (404 constate en usage reel) - dist.torproject.org
+// n'archive qu'un nombre limite de versions a la fois (15.0.18 avait deja ete
+// retiree de la meme facon le 2026-07-22).
 //
 // Ce bundle Windows ne contient aucune DLL separee (tor.exe est le seul
 // executable utilise par TorProcessManager ; tor-gencert.exe et les
@@ -31,18 +32,18 @@ namespace Lumora.WinUI.Tor;
 // ancienne version du miroir (comme pour 15.0.18) demande la meme chose.
 internal static class TorTrustedRelease
 {
-    public const string VersionLabel = "Tor Expert Bundle 15.0.19 (Windows x86_64)";
+    public const string VersionLabel = "Tor Expert Bundle 15.0.20 (Windows x86_64)";
 
-    public const string Version = "15.0.19";
-    public const string ArchiveFileName = "tor-expert-bundle-windows-x86_64-15.0.19.tar.gz";
+    public const string Version = "15.0.20";
+    public const string ArchiveFileName = "tor-expert-bundle-windows-x86_64-15.0.20.tar.gz";
     public const string ArchiveUrl =
         $"https://dist.torproject.org/torbrowser/{Version}/{ArchiveFileName}";
     public const string ArchiveSha256 =
-        "6ac067402c7b4a3dc37887ed3754b3914b67fdc220c966190683e9ccf91abf0f";
+        "d59bff934e3ad876e1623e24ae60c19aeea56f50178093b9f86fba230639f949";
 
     public static readonly IReadOnlyDictionary<string, string> TrustedFileHashes =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["tor.exe"] = "ec7708e0b43e0e00b1533d11ed3ca244e6f11cb2a7b62d319ad73a7b13123033",
+            ["tor.exe"] = "ea61ba0ed5b89d0622d2894b2a86f5ff34ce9b48e6e40d64341e7c0c7ee03e08",
         };
 }
