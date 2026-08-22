@@ -23270,3 +23270,144 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
   `0.93.54.0-dev` conserve dans `artifacts/installer/`, a supprimer seulement sur demande
   explicite.
 
+## 2026-08-22 — Session "corruption, gestion des favoris et problème d'optimisation" -> 0.93.54.2-dev
+
+- Signale par l'utilisateur : import des favoris (depuis un navigateur detecte, Chrome/Edge/
+  Brave/Vivaldi) a rendu l'application totalement figee ("Non repondant"), obligeant un
+  arret force via le gestionnaire de taches. Favoris visuellement importes mais icones de
+  site absentes, et barre des favoris "tassee"/moche. Diagnostic complet presente et Go
+  obtenu avant toute modification.
+- **3 causes reelles trouvees dans le code** (pas de speculation) :
+  1. `CopyFaviconsAsync` (Models/Bookmarks.cs) lisait TOUTE la base Favicons du navigateur
+     source (icone de chaque site visite depuis des annees, pas seulement les favoris) ->
+     filtre desormais sur les seules URLs (+ origines) des favoris a importer.
+  2. `AddImportItems`/`NextNodeId`/`NextPosition` rescannaient toute la liste de noeuds a
+     CHAQUE favori importe (O(n^2)), en synchrone sur le thread d'interface -> remplace par
+     un etat accumulateur `ImportState` (HashSet d'ids/urls + positions par parent, O(1)
+     amorti par favori), la fusion tournant desormais dans `Task.Run`.
+  3. **Cause dominante du gel** : le bouton "Autres favoris" (ou atterrit la majorite d'un
+     import navigateur) reconstruisait recursivement TOUT son arbre de menus contextuels a
+     CHAQUE rendu de la barre (`RenderBookmarksBar`) - pas seulement a l'import, aussi a
+     chaque redimensionnement de fenetre. Rendu paresseux desormais : le contenu n'est
+     construit qu'a la premiere ouverture reelle (`MenuFlyout.Opening`). Meme correctif
+     tente sur les sous-dossiers imbriques et le menu de debordement "»", mais impossible :
+     `MenuFlyoutSubItem` n'expose pas d'evenement `Opening` dans ce Windows App SDK (erreur
+     de compilation CS1061) - revert vers construction eager a ce niveau precis uniquement,
+     documente dans le code ; le niveau racine (le vrai responsable du gel) reste corrige.
+- Backup automatique deja en place avant tout import (`Backup("before-winui-import")`) :
+  aucune perte de donnees meme avec l'arret force subi par l'utilisateur.
+- **Verification reelle multi-angles** (le picker de fichier `FileOpenPicker` et les
+  `MenuFlyoutItem`/`Flyout` ne sont pas pilotables de façon fiable via UIA dans cet
+  environnement, limites deja documentees dans le skill `verify`) :
+  - Build MSBuild (Debug + Release) -> 0 erreur. `dotnet test` -> 835/835 verts (3 nouveaux
+    tests de regression sur les 3 correctifs).
+  - **Benchmark sur l'assembly Release reellement compilee** (chargee par reflexion depuis
+    PowerShell, memes classes de production `BookmarkStore.MergeImport`) : 16 000 favoris
+    synthetiques importes en **166 ms** (vs plusieurs minutes/gel total avant correctif),
+    mise a l'echelle quasi-lineaire confirmee (500 a 16 000 favoris).
+  - App relancee en reel (profil isole frais, build Debug fraichement recompile - un exe
+    perime `bin\x64\Debug\...` d'une session anterieure a ete detecte et ecarte a temps via
+    le titre de fenetre incoherent) : demarrage propre, aucune exception `UNHANDLED` dans
+    `winui-runtime-trace.log`, barre des favoris rendue normalement ("Ouvrir le dossier de
+    favoris Autres favoris" present), aucune regression sur le cas courant (peu de favoris).
+- Version `0.93.54.1-dev` -> `0.93.54.2-dev` (**4e chiffre**, micro-correction) dans les 5
+  memes points (ajout du fichier de test de coherence de version) + nom du test renomme.
+- **Reste a faire** : le tassement visuel de la barre (point 3 du plan) n'a pas ete
+  reverifie en conditions reelles avec un vrai gros import navigateur (le picker de fichier
+  n'est pas pilotable via UIA) - a confirmer par l'utilisateur apres ces correctifs ; si le
+  tassement persiste, une maquette sera montree avant tout nouveau changement visuel
+  (demande explicite de l'utilisateur). Pas d'installeur regenere cette session (installeur
+  jamais genere/execute sans demande explicite, regle deja etablie).
+
+## 2026-08-22 (suite) — Revue de securite + 2 bugs reels corriges (favoris + refus cookies) -> 0.93.54.3-dev
+
+- **Revue de securite demandee** sur le diff `main...HEAD` (65 fichiers) : methode a 2 passes
+  (identification puis contre-verification anti-faux-positifs par un agent independant,
+  seuil de confiance >=8/10). Un seul candidat releve (selecteur de clic elargi a tout `<a>`
+  dans `ConsentManagerScripts.cs`), note 2/10 par la 2e passe - un site hostile peut deja
+  declencher n'importe quelle navigation depuis son propre JS, Lumora ne lui donne aucun
+  pouvoir supplementaire. **Aucune vulnerabilite confirmee.** Reference `origin/HEAD`
+  necessaire au skill `security-review` recreee localement (`git update-ref`, aucun remote
+  reel, aucun push) puis supprimee apres coup.
+- **Bug reel #1 (favoris)** : `WireBookmarkDragPanels()` ([MainWindow.BookmarksDragDrop.cs](Lumora.WinUI/MainWindow.BookmarksDragDrop.cs))
+  ne cablait le glisser-depose que sur les panneaux haut/bas de la barre - le panneau du
+  rail lateral (position "gauche"/"droite" dans Studio Lumora) n'etait jamais cable, alors
+  que chaque bouton y declenche quand meme la capture du pointeur : glisser un favori dans
+  ce mode ne le reordonnait jamais, en silence. Trouve par relecture (pas de signalement
+  precis), corrige (`BookmarksSideBarPanel` ajoute au tableau des 3 panneaux).
+- **Bugs reels #2-3 (refus automatique des cookies)**, `ConsentManagerScripts.cs` :
+  espaces non normalises avant comparaison de texte (espace insecable tres courant en HTML,
+  texte reparti sur plusieurs lignes) empechant une correspondance EXACTE meme avec le bon
+  texte visible ; `vis()` ne detectait que `display:none` (via offsetWidth/offsetHeight),
+  jamais `visibility:hidden` (l'element garde sa mise en page) - un bouton "Refuser" cache
+  de cette facon pouvait etre "clique" sans effet reel. Corriges : normalisation d'espaces
+  (`\s+` -> espace unique, couvre deja le nbsp en JS) + repli sur `checkVisibility()` quand
+  disponible. Phrase manquante ajoutee ("non merci"). Utilisateur devait donner un/des noms
+  de site precis pour verification ciblee - a suivre si fourni en session suivante.
+- **Verification reelle poussee** : au-dela des tests C# habituels (texte genere), un
+  harnais Node fait main (vm + objets factices, meme technique que documentee pour
+  "verifier un script JS sans jsdom") a execute le VRAI JS extrait par reflexion de
+  l'assembly Release compilee (`ConsentManagerScripts.EngineFunctions`) et confirme que
+  `normalizeText`/`label`/`textOf`/`vis` se comportent correctement sur des cas concrets
+  (nbsp, multi-lignes, `visibility:hidden` simule) - pas juste une recherche de sous-chaine
+  dans le code source. Harnais non conserve dans le depot (scratch uniquement).
+- Build MSBuild (Debug + Release) : 0 erreur. `dotnet test` : 839/839 verts (4 nouveaux
+  tests de regression). App relancee en reel (mode invite, profil isole) : demarrage propre,
+  aucune exception `UNHANDLED`.
+- Version `0.93.54.2-dev` -> `0.93.54.3-dev` (**4e chiffre**, micro-correctifs) dans les 5
+  memes points.
+- **Reste a faire** : verification ciblee du refus de cookies sur le(s) site(s) precis que
+  l'utilisateur doit encore nommer ; tassement visuel de la barre des favoris toujours pas
+  reverifie (voir entree precedente, meme limite : picker de fichier non pilotable via UIA
+  pour un vrai gros import).
+
+## 2026-08-22 (suite) — 4 points signales (captures d'ecran) + 1 ajout -> 0.93.54.4-dev
+
+- L'utilisateur a repondu "essaie de faire au mieux" pour les cookies (pas de site precis a
+  donner, favoris trop nombreux/internet trop vaste) - clot ce point pour cette session.
+- **4 captures d'ecran** fournies avec retour precis. Maquette montree avant codage
+  (`artifacts/tmp/favoris-propositions.html`, publiee en artifact) : chevauchement boutons
+  systeme, en-tete de dossier redondant, sous-menus encombres, indicateur favori peu visible.
+- **Bug reel #1** : seule `BrowserTabs` recevait la reserve dynamique des boutons systeme
+  (`ApplyTitleBarSafeArea`) - `NavigationToolbarCapsule` (ligne d'adresse/outils) n'en avait
+  aucune (juste 14px fixes en XAML) et son contenu passait SOUS les boutons systeme des
+  qu'elle etait assez remplie (modules epingles). Corrige : meme reserve appliquee, en plus
+  de l'inset esthetique existant.
+- **Choix utilisateur #2** : en-tete de `CreateBookmarkFolderFlyout` (ouverture d'un dossier
+  depuis la barre) ne repete plus le nom du dossier (deja visible sur le bouton clique) ;
+  nouveau helper dedie `AddBookmarkFolderCountHeader` (pas de changement du helper partage
+  `AddLumoraMenuHeader`, utilise ailleurs - historique, groupes d'onglets - pour ne pas les
+  affecter sans approbation) ; nombre d'elements garde mais discret (11px, majuscules,
+  couleur attenuee).
+- **Choix utilisateur #3** (option B choisie sur 2 proposees) : Ouvrir/Renommer/Supprimer
+  retires des sous-menus de dossiers de la barre (`AddBookmarkFlyoutItems`) - deja
+  disponibles au clic droit partout ailleurs dans l'app, les repeter dans CHAQUE sous-dossier
+  encombrait sans rien apporter.
+- **Bug reel #4** : l'etoile favori restait TOUJOURS pleine (glyph E735 fige), seule la
+  couleur changeait - difference peu visible a 16px. Contour (E734) desormais utilise quand
+  pas en favori, plein (E735) + couleur quand en favori - convention standard identique a
+  Chrome/Edge/Firefox.
+- **Ajout #5** (Go explicite, malgre versionnement en 4e chiffre choisi par l'utilisateur -
+  lot traite comme un tout) : nouveau bouton "Retrouver les icônes" dans le panneau Favoris
+  (`MainWindow.BookmarksFaviconRefresh.cs`) - tente un GET `/favicon.ico` pour chaque origine
+  de favori sans icone usable, converti/valide avec les memes garde-fous que le reste de
+  l'app, propage a tous les favoris de la meme origine via `SetIconForOrigin` (deja existant).
+  Clarifie au passage : le correctif favicon de la session precedente n'aide QUE les futurs
+  imports, pas retroactivement les favoris deja importes sans icone - backfill passif deja
+  en place (revisite), ce bouton est un backfill actif optionnel.
+- Build MSBuild (Debug) : 0 erreur. `dotnet test` : 844/844 verts (5 nouveaux tests).
+- **Verification reelle poussee** : profil de test complet forge par reflexion sur
+  l'assembly compilee (BookmarkStore.MergeImport + UserProfile.Create/Save - memes classes
+  de production, technique deja documentee) avec un vrai dossier de favoris peuple, app
+  relancee dessus, pilotage UIA reel : en-tete confirme "1 ELEMENT" (sans repetition du nom),
+  sous-dossier confirme sans les 3 raccourcis retires, aucune exception. Bouton "Retrouver
+  les icônes" **non verifie en direct** (menu flottant non pilotable de façon fiable dans cet
+  environnement, limite deja documentee dans le skill `verify`) - signale honnetement a
+  l'utilisateur, risque residuel juge faible (reutilise des briques deja testees cette
+  session).
+- Version `0.93.54.3-dev` -> `0.93.54.4-dev` (**4e chiffre**, choix explicite de
+  l'utilisateur malgre la presence d'un ajout dans le lot - question posee, pas tranchee
+  seul) dans les 5 memes points.
+- **Reste a faire** : tassement visuel de la barre toujours pas retraite (attend les icones
+  manquantes en priorite, voir point 3 de l'entree precedente) ; bouton "Retrouver les
+  icônes" a confirmer par l'utilisateur en usage normal.

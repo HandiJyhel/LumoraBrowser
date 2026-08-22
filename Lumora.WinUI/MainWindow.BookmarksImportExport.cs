@@ -130,6 +130,12 @@ public sealed partial class MainWindow
 
     private async Task ImportBookmarksHtmlAsync()
     {
+        if (_bookmarkImportInProgress)
+        {
+            StatusText.Text = "Un import de favoris est déjà en cours.";
+            return;
+        }
+
         var picker = new FileOpenPicker();
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         picker.FileTypeFilter.Add(".html");
@@ -142,11 +148,21 @@ public sealed partial class MainWindow
             return;
         }
 
-        var content = await FileIO.ReadTextAsync(file);
-        var imported = _bookmarks.MergeImport(BookmarkImportTree.FromHtml(content, Path.GetFileNameWithoutExtension(file.Name)));
-        ReloadBookmarks();
-        StatusText.Text = $"Import HTML: {imported} favoris ajoutés.";
-        ShowPanel(BookmarksPanel, "Favoris importés");
+        _bookmarkImportInProgress = true;
+        try
+        {
+            var content = await FileIO.ReadTextAsync(file);
+            StatusText.Text = "Import des favoris en cours...";
+            var tree = BookmarkImportTree.FromHtml(content, Path.GetFileNameWithoutExtension(file.Name));
+            var imported = await Task.Run(() => _bookmarks.MergeImport(tree));
+            ReloadBookmarks();
+            StatusText.Text = $"Import HTML: {imported} favoris ajoutés.";
+            ShowPanel(BookmarksPanel, "Favoris importés");
+        }
+        finally
+        {
+            _bookmarkImportInProgress = false;
+        }
     }
 
     private async Task ExportBookmarksHtmlAsync()

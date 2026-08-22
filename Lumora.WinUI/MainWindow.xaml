@@ -3151,6 +3151,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Spacing="3">
                             <TextBlock x:Name="CurrentBookmarkFolderTitle" Text="Barre des favoris" FontSize="24" FontWeight="SemiBold" />
@@ -3207,6 +3208,18 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="Save" />
                                 <TextBlock Text="Exporter" />
+                            </StackPanel>
+                        </Button>
+                        <!-- Favoris importes sans icone (import navigateur trop ancien,
+                             ou favicon absente de la base source) : cette action retente
+                             une recuperation directe (favicon.ico du site) sans attendre
+                             une revisite naturelle - demande explicite utilisateur,
+                             2026-08-22. -->
+                        <Button Grid.Column="8" Margin="12,0,0,0" Style="{StaticResource NovaButtonStyle}" Click="RefreshMissingIconsButton_Click"
+                                ToolTipService.ToolTip="Retente de récupérer l'icône des favoris qui n'en ont pas">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <SymbolIcon Symbol="Refresh" />
+                                <TextBlock Text="Retrouver les icônes" />
                             </StackPanel>
                         </Button>
                     </Grid>

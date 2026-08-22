@@ -68,15 +68,44 @@ public sealed partial class MainWindow
         }
     }
 
+    // En-tete discret du dossier de favoris ouvert depuis la barre :
+    // contrairement a AddLumoraMenuHeader (utilise ailleurs - historique,
+    // groupes d'onglets, Studio Lumora, et le menu contextuel des favoris),
+    // le nom du dossier n'est PAS repete ici. Le bouton qu'on vient de
+    // cliquer l'affiche deja - le redire etait juge inutile par l'utilisateur
+    // (2026-08-22, capture d'ecran a l'appui). Seul le nombre d'elements est
+    // garde, en retrait (petit, attenue, majuscules espacees) plutot qu'a la
+    // meme taille qu'un vrai item de menu.
+    private void AddBookmarkFolderCountHeader(IList<MenuFlyoutItemBase> items, string folderId)
+    {
+        items.Add(new MenuFlyoutItem
+        {
+            Text = BookmarkFolderChildCountLabel(folderId).ToUpperInvariant(),
+            IsEnabled = false,
+            FontSize = 11,
+            CharacterSpacing = 40,
+            Foreground = (Brush)RootShell.Resources["NovaTextMutedBrush"]
+        });
+    }
+
     private MenuFlyout CreateBookmarkFolderFlyout(BookmarkNode folder)
     {
         var flyout = new MenuFlyout { Placement = FlyoutPlacementMode.Bottom };
-        AddLumoraMenuHeader(
-            flyout.Items,
-            BookmarkReadableTitle(folder),
-            BookmarkFolderChildCountLabel(folder.Id),
-            "\uE8B7");
-        AddBookmarkFlyoutItems(flyout.Items, folder.Id);
+        AddBookmarkFolderCountHeader(flyout.Items, folder.Id);
+
+        // Contenu construit a la premiere ouverture seulement, pas au rendu de
+        // la barre : un dossier issu d'un gros import navigateur (ex. "Autres
+        // favoris") peut contenir des milliers d'items, et reconstruire tout
+        // l'arbre de menus recursivement a CHAQUE rendu de la barre (import,
+        // mais aussi chaque redimensionnement de fenetre) gelait totalement
+        // l'application - signale par l'utilisateur, 2026-08-22.
+        var built = false;
+        flyout.Opening += (_, _) =>
+        {
+            if (built) return;
+            built = true;
+            AddBookmarkFlyoutItems(flyout.Items, folder.Id);
+        };
         HookFlyoutPointerSupport(flyout);
 
         return flyout;
@@ -252,37 +281,23 @@ public sealed partial class MainWindow
                     Text = BookmarkReadableTitle(child),
                     ContextFlyout = CreateBookmarkContextFlyout(child)
                 };
-                var openFolder = new MenuFlyoutItem
-                {
-                    Text = "Ouvrir le dossier",
-                    Tag = child
-                };
-                openFolder.Click += BookmarkContextOpen_Click;
-                sub.Items.Add(openFolder);
 
-                if (!child.IsRoot)
-                {
-                    var renameFolder = new MenuFlyoutItem
-                    {
-                        Text = "Renommer",
-                        Tag = child
-                    };
-                    renameFolder.Click += BookmarkContextRename_Click;
-                    sub.Items.Add(renameFolder);
-
-                    var deleteFolder = new MenuFlyoutItem
-                    {
-                        Text = "Supprimer",
-                        Tag = child
-                    };
-                    deleteFolder.Click += BookmarkContextDelete_Click;
-                    sub.Items.Add(deleteFolder);
-                }
-
-                sub.Items.Add(new MenuFlyoutSeparator());
-                var contentStartIndex = sub.Items.Count;
+                // Ouvrir le dossier/Renommer/Supprimer retires d'ici (2026-08-22,
+                // demande explicite utilisateur, capture d'ecran a l'appui) :
+                // deja disponibles au clic droit (ContextFlyout ci-dessus,
+                // CreateBookmarkContextFlyout) - les repeter dans CHAQUE
+                // sous-dossier encombrait la liste sans rien apporter. Ce
+                // sous-menu ne sert plus qu'a naviguer dans le contenu du dossier.
+                //
+                // MenuFlyoutSubItem n'expose pas d'evenement Opening dans ce
+                // Windows App SDK (contrairement a MenuFlyout, voir
+                // CreateBookmarkFolderFlyout) : impossible de differer la
+                // construction de ce niveau precis. Le vrai gain vient du
+                // niveau racine (CreateBookmarkFolderFlyout, ci-dessus) qui
+                // n'est plus reconstruit automatiquement a chaque rendu de la
+                // barre - seulement quand ce dossier est effectivement ouvert.
                 AddBookmarkFlyoutItems(sub.Items, child.Id);
-                if (sub.Items.Count == contentStartIndex)
+                if (sub.Items.Count == 0)
                 {
                     sub.Items.Add(new MenuFlyoutItem
                     {

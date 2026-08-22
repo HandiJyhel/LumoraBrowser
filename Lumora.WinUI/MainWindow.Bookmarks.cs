@@ -115,8 +115,20 @@ public sealed partial class MainWindow
     private async void ReplaceBrowserButton_Click(object sender, RoutedEventArgs e) =>
         await ImportSelectedBrowserSourceAsync(replaceExisting: true);
 
+    // Garde de reentrance : un import est une operation lourde (potentiellement
+    // des milliers de favoris) deportee en arriere-plan (Task.Run) pour ne pas
+    // geler l'interface - un second import lance pendant que le premier tourne
+    // encore ferait deux ecritures concurrentes sur le meme fichier de favoris.
+    private bool _bookmarkImportInProgress;
+
     private async Task ImportSelectedBrowserSourceAsync(bool replaceExisting)
     {
+        if (_bookmarkImportInProgress)
+        {
+            StatusText.Text = "Un import de favoris est déjà en cours.";
+            return;
+        }
+
         var selectedIndex = ImportSourcesList.SelectedIndex;
         if (selectedIndex < 0 && _importSources.Count > 0)
         {
@@ -130,21 +142,43 @@ public sealed partial class MainWindow
         }
 
         var source = _importSources[selectedIndex];
-        StatusText.Text = $"Récupération des icônes {source.Browser}...";
-        var icons = await source.CopyFaviconsAsync(_profile.FaviconsDir);
-        foreach (var pair in icons)
+        _bookmarkImportInProgress = true;
+        try
         {
-            _faviconCache[pair.Key] = pair.Value;
-        }
+            // Les URLs a importer sont connues avant de toucher aux icones : ca
+            // permet de ne recuperer QUE les favicones des favoris importes,
+            // pas celles de tout l'historique de navigation du profil source
+            // (qui peut compter des dizaines de milliers d'entrees).
+            var wantedUrls = FlattenImportUrls(source.ReadTree()).ToList();
 
-        var tree = source.ReadTree(icons);
-        var imported = replaceExisting
-            ? _bookmarks.ReplaceWithImport(tree)
-            : _bookmarks.MergeImport(tree);
-        ReloadBookmarks();
-        var mode = replaceExisting ? "remplacement" : "fusion";
-        StatusText.Text = $"Import navigateur ({mode}) {source.Label}: {imported} favoris traités, {icons.Count} icônes récupérées.";
-        ShowBookmarksFolder(BookmarkStore.ToolbarRootId, "Favoris importés");
+            StatusText.Text = $"Récupération des icônes {source.Browser}...";
+            var icons = await source.CopyFaviconsAsync(_profile.FaviconsDir, wantedUrls);
+            foreach (var pair in icons)
+            {
+                _faviconCache[pair.Key] = pair.Value;
+            }
+
+            StatusText.Text = $"Import des favoris {source.Browser} en cours...";
+
+            // La fusion (potentiellement des milliers de favoris) est purement
+            // CPU/disque et n'a aucune raison de tourner sur le thread
+            // d'interface - sans ce Task.Run, un gros import rendait
+            // l'application totalement figee ("Non répondant") le temps du
+            // traitement (signale par l'utilisateur, 2026-08-22).
+            var tree = source.ReadTree(icons);
+            var imported = await Task.Run(() => replaceExisting
+                ? _bookmarks.ReplaceWithImport(tree)
+                : _bookmarks.MergeImport(tree));
+
+            ReloadBookmarks();
+            var mode = replaceExisting ? "remplacement" : "fusion";
+            StatusText.Text = $"Import navigateur ({mode}) {source.Label}: {imported} favoris traités, {icons.Count} icônes récupérées.";
+            ShowBookmarksFolder(BookmarkStore.ToolbarRootId, "Favoris importés");
+        }
+        finally
+        {
+            _bookmarkImportInProgress = false;
+        }
     }
 
     private async void ExportHtmlButton_Click(object sender, RoutedEventArgs e) =>
@@ -567,7 +601,12 @@ public sealed partial class MainWindow
                          _allBookmarkNodes.Any(node =>
                              node.Kind == BookmarkKind.Url && SameBookmarkUrl(node.Url, address));
 
-        BookmarkStarIcon.Glyph = "\uE735";
+        // E735 (FavoriteStarFill, pleine) vs E734 (FavoriteStar, contour) :
+        // avant ce correctif l'etoile restait TOUJOURS pleine et ne changeait
+        // que de couleur, une difference peu visible a 16px - convention
+        // standard (Chrome/Edge/Firefox) : contour = pas en favori, pleine +
+        // couleur = en favori. Signale par l'utilisateur, 2026-08-22.
+        BookmarkStarIcon.Glyph = bookmarked ? "\uE735" : "\uE734";
         BookmarkStarIcon.Foreground = bookmarked
             ? (Brush)RootShell.Resources["NovaBookmarkButtonActiveForegroundBrush"]
             : (Brush)RootShell.Resources["NovaBookmarkButtonForegroundBrush"];
@@ -838,6 +877,9 @@ public sealed partial class MainWindow
                     Tag = node,
                     ContextFlyout = CreateBookmarkContextFlyout(node)
                 };
+                // MenuFlyoutSubItem n'a pas d'evenement Opening dans ce
+                // Windows App SDK, voir le meme commentaire dans
+                // MainWindow.BookmarksFlyouts.cs (AddBookmarkFlyoutItems).
                 AddBookmarkFlyoutItems(sub.Items, node.Id);
                 if (sub.Items.Count == 0)
                 {

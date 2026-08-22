@@ -73,7 +73,14 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WireBookmarkDragPanels()
     {
-        foreach (var panel in new FrameworkElement?[] { BookmarksBarPanel, BookmarksBottomBarPanel })
+        // BookmarksSideBarPanel (position "gauche"/"droite" dans Studio Lumora,
+        // voir UsesSideBookmarksRail) manquait ici : chaque bouton de favori y
+        // declenche quand meme la capture du pointeur (PointerPressed, cable
+        // sans condition de layout dans CreateBookmarkBarButton), mais aucun
+        // gestionnaire PointerMoved/PointerReleased/PointerCaptureLost n'etait
+        // cable sur ce panneau precis - le glisser ne reordonnait donc jamais
+        // rien dans ce mode, en silence (2026-08-22, trouve par relecture).
+        foreach (var panel in new FrameworkElement?[] { BookmarksBarPanel, BookmarksBottomBarPanel, BookmarksSideBarPanel })
         {
             if (panel is null) continue;
             panel.PointerMoved += BookmarkDragPanel_PointerMoved;

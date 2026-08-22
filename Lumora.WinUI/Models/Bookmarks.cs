@@ -445,9 +445,10 @@ public sealed class BookmarkStore
         EnsureFile();
         Backup("before-winui-import");
         var nodes = AllNodes();
+        var state = ImportState.From(nodes);
         var imported = 0;
-        imported += AddImportItems(nodes, ToolbarRootId, tree.Toolbar);
-        imported += AddImportItems(nodes, OtherRootId, tree.Other);
+        imported += AddImportItems(nodes, ToolbarRootId, tree.Toolbar, state);
+        imported += AddImportItems(nodes, OtherRootId, tree.Other, state);
         MergeSiblingImportFolders(nodes);
         WriteNodes(nodes);
         return imported;
@@ -458,12 +459,55 @@ public sealed class BookmarkStore
         EnsureFile();
         Backup("before-winui-replace");
         var nodes = RootNodes();
+        var state = ImportState.From(nodes);
         var imported = 0;
-        imported += AddImportItems(nodes, ToolbarRootId, tree.Toolbar);
-        imported += AddImportItems(nodes, OtherRootId, tree.Other);
+        imported += AddImportItems(nodes, ToolbarRootId, tree.Toolbar, state);
+        imported += AddImportItems(nodes, OtherRootId, tree.Other, state);
         MergeSiblingImportFolders(nodes);
         WriteNodes(nodes);
         return imported;
+    }
+
+    // Accumulateurs tenus a jour au fil de l'import (au lieu de rescanner toute
+    // la liste de noeuds a chaque favori ajoute) : un import de plusieurs
+    // milliers de favoris passait en O(n^2) sur le thread d'interface et
+    // rendait l'application totalement figee ("impossible de fermer") - signale
+    // par l'utilisateur, 2026-08-22.
+    private sealed class ImportState
+    {
+        public required HashSet<string> ExistingIds { get; init; }
+        public required HashSet<string> ExistingUrls { get; init; }
+        public required Dictionary<string, uint> NextPositionByParent { get; init; }
+        public long IdCounter;
+
+        public static ImportState From(List<BookmarkNode> nodes) => new()
+        {
+            ExistingIds = nodes.Select(node => node.Id).ToHashSet(StringComparer.Ordinal),
+            ExistingUrls = nodes.Where(node => node.Kind == BookmarkKind.Url)
+                .Select(node => node.Url)
+                .ToHashSet(StringComparer.Ordinal),
+            NextPositionByParent = nodes.GroupBy(node => node.ParentId)
+                .ToDictionary(group => group.Key, group => group.Max(node => node.Position) + 1),
+            IdCounter = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+        };
+
+        public string NextId(string prefix)
+        {
+            string id;
+            do
+            {
+                id = $"{prefix}-{IdCounter++}";
+            } while (!ExistingIds.Add(id));
+
+            return id;
+        }
+
+        public uint NextPosition(string parentId)
+        {
+            var position = NextPositionByParent.TryGetValue(parentId, out var next) ? next : 0;
+            NextPositionByParent[parentId] = position + 1;
+            return position;
+        }
     }
 
     private void EnsureFile()
@@ -501,33 +545,33 @@ public sealed class BookmarkStore
         WriteNodes(nodes);
     }
 
-    private int AddImportItems(List<BookmarkNode> nodes, string parentId, IReadOnlyList<BookmarkImportItem> items)
+    private int AddImportItems(List<BookmarkNode> nodes, string parentId, IReadOnlyList<BookmarkImportItem> items, ImportState state)
     {
         var imported = 0;
         foreach (var item in items)
         {
             if (item.Url is not null)
             {
-                if (!IsWebUrl(item.Url) || nodes.Any(node => node.Kind == BookmarkKind.Url && node.Url == item.Url))
+                if (!IsWebUrl(item.Url) || !state.ExistingUrls.Add(item.Url))
                 {
                     continue;
                 }
 
-                nodes.Add(new BookmarkNode(NextNodeId(nodes, "bookmark"), parentId, BookmarkKind.Url, NextPosition(nodes, parentId), CleanTitle(item.Title, item.Url), item.Url, CleanLocalPath(item.IconPath)));
+                nodes.Add(new BookmarkNode(state.NextId("bookmark"), parentId, BookmarkKind.Url, state.NextPosition(parentId), CleanTitle(item.Title, item.Url), item.Url, CleanLocalPath(item.IconPath)));
                 imported++;
                 continue;
             }
 
             var folderTitle = CleanTitle(item.Title, string.Empty);
             var existingFolder = FindExistingImportFolder(nodes, parentId, folderTitle);
-            var folderId = existingFolder?.Id ?? NextNodeId(nodes, "folder");
+            var folderId = existingFolder?.Id ?? state.NextId("folder");
             var createdFolder = existingFolder is null;
             if (createdFolder)
             {
-                nodes.Add(new BookmarkNode(folderId, parentId, BookmarkKind.Folder, NextPosition(nodes, parentId), folderTitle, string.Empty));
+                nodes.Add(new BookmarkNode(folderId, parentId, BookmarkKind.Folder, state.NextPosition(parentId), folderTitle, string.Empty));
             }
 
-            var childImported = AddImportItems(nodes, folderId, item.Children);
+            var childImported = AddImportItems(nodes, folderId, item.Children, state);
             imported += childImported;
 
             if (createdFolder && childImported == 0 && nodes.All(node => node.ParentId != folderId))
@@ -907,9 +951,15 @@ public sealed record BrowserImportSource(string Browser, string Profile, string 
             other);
     }
 
-    public async Task<IReadOnlyDictionary<string, string>> CopyFaviconsAsync(string destinationDir)
+    // wantedUrls : URLs des favoris a importer (pas tout l'historique de
+    // navigation). La base Favicons d'un navigateur contient l'icone de
+    // *chaque site visite depuis des annees*, pas seulement les favoris -
+    // sans ce filtre, un import convertissait et ecrivait sur disque des
+    // dizaines de milliers d'icones inutiles a chaque import, ce qui a bloque
+    // completement l'application (signale par l'utilisateur, 2026-08-22).
+    public async Task<IReadOnlyDictionary<string, string>> CopyFaviconsAsync(string destinationDir, IReadOnlyCollection<string> wantedUrls)
     {
-        if (IsFirefoxSource)
+        if (IsFirefoxSource || wantedUrls.Count == 0)
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
@@ -925,6 +975,13 @@ public sealed record BrowserImportSource(string Browser, string Profile, string 
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
+
+        // page_url en base ne correspond pas toujours exactement a l'URL du
+        // favori (slash final, requete...) mais partage generalement la meme
+        // origine (schema+hote) - on filtre sur les deux pour ne pas perdre
+        // d'icones legitimes tout en excluant le reste de l'historique.
+        var wantedOrigins = wantedUrls.Select(PublicSuffixService.OriginOf).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var wantedExact = wantedUrls.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         Directory.CreateDirectory(destinationDir);
         var tempDb = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"nova-favicons-{Guid.NewGuid():N}.db");
@@ -949,6 +1006,11 @@ public sealed record BrowserImportSource(string Browser, string Profile, string 
             {
                 var pageUrl = reader.GetString(0);
                 if (!BookmarkStore.IsWebUrl(pageUrl) || result.ContainsKey(pageUrl))
+                {
+                    continue;
+                }
+
+                if (!wantedExact.Contains(pageUrl) && !wantedOrigins.Contains(PublicSuffixService.OriginOf(pageUrl)))
                 {
                     continue;
                 }

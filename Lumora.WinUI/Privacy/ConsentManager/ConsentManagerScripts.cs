@@ -78,7 +78,7 @@ internal static class ConsentManagerScripts
     private const string TextList = """
         [
             'tout refuser', 'refuser tout', 'tout rejeter', 'je refuse tout',
-            'refuser', 'refuser et fermer', 'continuer sans accepter',
+            'refuser', 'refuser et fermer', 'non merci', 'continuer sans accepter',
             'continuer sans consentir', 'passer', 'tout décliner', 'décliner tout',
             'refuser tous les cookies', 'continuer sans cookies',
             'cookies essentiels uniquement', 'uniquement les cookies essentiels',
@@ -249,12 +249,34 @@ internal static class ConsentManagerScripts
             }
             return out;
         }
-        function vis(el) { return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length); }
+        // checkVisibility() (disponible dans le Chromium de ce WebView2) couvre
+        // aussi visibility:hidden et opacity:0, que offsetWidth/offsetHeight ne
+        // detectent pas (l'element garde sa mise en page, juste invisible a
+        // l'oeil) - un bouton "Refuser" cache de cette facon (variante desktop/
+        // mobile dupliquee, onglet inactif d'un bandeau a plusieurs vues) etait
+        // clique sans aucun effet reel, laissant le bandeau ouvert (2026-08-22,
+        // trouve par relecture apres un signalement utilisateur). Repli sur
+        // l'ancienne methode si l'API n'existe pas.
+        function vis(el) {
+            if (typeof el.checkVisibility === 'function') {
+                try { return el.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}); } catch(e) {}
+            }
+            return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+        }
+        // Espace insecable (U+00A0, tres courant dans le HTML des bandeaux
+        // cookies), tabulations et retours a la ligne (texte reparti sur
+        // plusieurs lignes dans le HTML source) reduits a un simple espace
+        // avant comparaison - sans ca, un bouton pourtant au bon texte visible
+        // ne correspondait jamais exactement a une phrase de la liste
+        // (2026-08-22, trouve par relecture apres un signalement utilisateur).
+        function normalizeText(s) {
+            return s.replace(/\s+/g, ' ').trim().toLowerCase();
+        }
         function label(el) {
-            return (el.getAttribute('aria-label') || el.value || el.textContent || '').trim().toLowerCase();
+            return normalizeText(el.getAttribute('aria-label') || el.value || el.textContent || '');
         }
         function textOf(el) {
-            return ((el && (el.innerText || el.textContent)) || '').trim().toLowerCase();
+            return normalizeText((el && (el.innerText || el.textContent)) || '');
         }
         function hostMatchesDomain(host, domain) {
             return host === domain || host.endsWith('.' + domain);

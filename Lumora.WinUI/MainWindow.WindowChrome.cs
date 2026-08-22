@@ -186,6 +186,17 @@ public sealed partial class MainWindow : Window
     {
         const double safeRight = 3 * 28 + 2 * 4 + 12 + 12;
         BrowserTabs.Margin = new Thickness(0, 0, safeRight, 0);
+
+        // NavigationToolbarCapsule (ligne d'adresse/outils) n'avait ICI aucune
+        // reserve : seule BrowserTabs (ci-dessus) en recevait une. Des que
+        // cette ligne est assez remplie (beaucoup de modules epingles), son
+        // contenu passait SOUS les boutons systeme au lieu de s'arreter avant
+        // - signale par l'utilisateur avec capture d'ecran, 2026-08-22. Marge
+        // de base (14,6,14,6) reprise telle quelle du XAML (NavigationToolbarCapsule) :
+        // seul le cote droit gagne la reserve systeme, en plus (pas a la
+        // place) de son inset esthetique existant.
+        NavigationToolbarCapsule.Margin = new Thickness(14, 6, safeRight + 14, 6);
+
         _titleBarSafeRight = safeRight;
         UpdateTitleBarDragRegion();
     }

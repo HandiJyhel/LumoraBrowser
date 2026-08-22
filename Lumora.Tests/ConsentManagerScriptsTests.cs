@@ -72,4 +72,45 @@ public class ConsentManagerScriptsTests
         Assert.Contains("runConsentEngine()", script, StringComparison.Ordinal);
         Assert.Contains("uncheckToggles", script, StringComparison.Ordinal);
     }
+
+    // 2026-08-22 : deux bugs réels signalés par l'utilisateur ("ça ne marche
+    // pas encore très bien sur certains sites"), trouvés par relecture puis
+    // vérifiés en exécutant le VRAI script JS extrait de l'assembly compilée
+    // dans un harnais Node fait main (vm + objets factices, même technique que
+    // documentée dans MEMORY.md "vérifier un script JS sans jsdom") - pas
+    // seulement une recherche de sous-chaîne dans le code source.
+    [Fact]
+    public void Le_texte_des_boutons_est_normalise_avant_comparaison()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        // Espace insécable (très courant dans le HTML des bandeaux cookies) et
+        // texte réparti sur plusieurs lignes dans le HTML source empêchaient une
+        // correspondance EXACTE avec la liste de phrases reconnues, même quand
+        // le texte visible était le bon.
+        Assert.Contains("function normalizeText(s) {", script, StringComparison.Ordinal);
+        Assert.Contains("s.replace(/\\s+/g, ' ').trim().toLowerCase();", script, StringComparison.Ordinal);
+        Assert.Contains("return normalizeText(el.getAttribute('aria-label')", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void La_visibilite_detecte_aussi_visibility_hidden()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        // offsetWidth/offsetHeight restent positifs pour visibility:hidden (mise
+        // en page conservée, juste invisible) : un bouton "Refuser" caché de
+        // cette façon (variante desktop/mobile dupliquée) était cliqué sans
+        // effet réel, laissant le bandeau ouvert.
+        Assert.Contains("typeof el.checkVisibility === 'function'", script, StringComparison.Ordinal);
+        Assert.Contains("checkVisibility({checkOpacity: true, checkVisibilityCSS: true})", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void La_liste_de_refus_inclut_non_merci()
+    {
+        var script = ConsentManagerScripts.BuildInjectionScript([]);
+
+        Assert.Contains("'non merci'", script, StringComparison.Ordinal);
+    }
 }

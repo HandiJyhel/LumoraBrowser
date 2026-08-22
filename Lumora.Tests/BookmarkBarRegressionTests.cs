@@ -213,6 +213,149 @@ public sealed class BookmarkBarRegressionTests
         Assert.Contains("_bookmarks.MoveNodeAdjacent(node.Id, moveForward: true)", code, StringComparison.Ordinal);
     }
 
+    // 2026-08-22 : un import de plusieurs milliers de favoris (barre navigateur
+    // pinnee sur des annees) rescannait toute la liste de noeuds a CHAQUE
+    // favori ajoute (NextNodeId/NextPosition/detection de doublon), un cout
+    // O(n^2) execute en synchrone sur le thread d'interface - l'application
+    // devenait "Non repondant" et l'utilisateur a du forcer l'arret via le
+    // gestionnaire de taches. Remplace par un etat accumulateur (ImportState)
+    // mis a jour en O(1) amorti par favori.
+    [Fact]
+    public void Import_favoris_utilise_un_etat_accumulateur_au_lieu_de_rescanner_tous_les_noeuds()
+    {
+        var model = ReadRepoFile("Lumora.WinUI", "Models", "Bookmarks.cs");
+
+        Assert.Contains("private sealed class ImportState", model, StringComparison.Ordinal);
+        Assert.Contains("var state = ImportState.From(nodes);", model, StringComparison.Ordinal);
+        Assert.Contains("!state.ExistingUrls.Add(item.Url)", model, StringComparison.Ordinal);
+        Assert.Contains("state.NextId(\"bookmark\")", model, StringComparison.Ordinal);
+        Assert.Contains("state.NextPosition(parentId)", model, StringComparison.Ordinal);
+        Assert.DoesNotContain("nodes.Any(node => node.Kind == BookmarkKind.Url && node.Url == item.Url)", model, StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 : la recuperation des icones lisait TOUTE la base Favicons du
+    // navigateur source (l'historique de navigation complet, pas seulement les
+    // favoris a importer), ce qui aggravait encore le gel ci-dessus. Filtree
+    // desormais sur les seules URLs (et origines) des favoris importes.
+    [Fact]
+    public void CopyFaviconsAsync_ne_lit_que_les_icones_des_favoris_a_importer()
+    {
+        var model = ReadRepoFile("Lumora.WinUI", "Models", "Bookmarks.cs");
+
+        Assert.Contains("CopyFaviconsAsync(string destinationDir, IReadOnlyCollection<string> wantedUrls)", model, StringComparison.Ordinal);
+        Assert.Contains("wantedExact.Contains(pageUrl)", model, StringComparison.Ordinal);
+        Assert.Contains("wantedOrigins.Contains(PublicSuffixService.OriginOf(pageUrl))", model, StringComparison.Ordinal);
+
+        var caller = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+        Assert.Contains("var wantedUrls = FlattenImportUrls(source.ReadTree()).ToList();", caller, StringComparison.Ordinal);
+        Assert.Contains("CopyFaviconsAsync(_profile.FaviconsDir, wantedUrls)", caller, StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 : la fusion (potentiellement des milliers de favoris) tournait
+    // en synchrone sur le thread d'interface, et le bouton "Autres favoris" (ou
+    // atterrit la majorite d'un import navigateur) reconstruisait TOUT son
+    // arbre de menus contextuels a CHAQUE rendu de la barre - y compris a
+    // chaque redimensionnement de fenetre, pas seulement a l'import. Les deux
+    // sont desormais differes / deportes hors du thread d'interface.
+    [Fact]
+    public void Import_favoris_ne_bloque_plus_le_thread_d_interface()
+    {
+        var caller = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+        var importExport = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksImportExport.cs");
+        var flyouts = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksFlyouts.cs");
+
+        Assert.Contains("private bool _bookmarkImportInProgress;", caller, StringComparison.Ordinal);
+        Assert.Contains("await Task.Run(() => replaceExisting", caller, StringComparison.Ordinal);
+        Assert.Contains("await Task.Run(() => _bookmarks.MergeImport(tree));", importExport, StringComparison.Ordinal);
+
+        // CreateBookmarkFolderFlyout (bouton "Autres favoris" et tout dossier
+        // de la barre) ne construit plus son contenu qu'a la premiere
+        // ouverture (MenuFlyout.Opening), pas au rendu de la barre.
+        Assert.Contains("flyout.Opening += (_, _) =>", flyouts, StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 : trouve par relecture (pas de signalement precis) - le
+    // panneau du rail lateral (position "gauche"/"droite" dans Studio Lumora,
+    // voir UsesSideBookmarksRail) n'etait jamais cable pour le glisser-depose,
+    // alors que chaque bouton de favori y declenche quand meme la capture du
+    // pointeur (PointerPressed, cable sans condition de layout) : glisser un
+    // favori dans ce mode ne le reordonnait jamais, en silence.
+    [Fact]
+    public void Glisser_depose_des_favoris_est_cable_sur_les_3_panneaux_possibles()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksDragDrop.cs");
+
+        Assert.Contains(
+            "new FrameworkElement?[] { BookmarksBarPanel, BookmarksBottomBarPanel, BookmarksSideBarPanel }",
+            code,
+            StringComparison.Ordinal);
+    }
+
+    // 2026-08-22 (suite) : 4 points signales par l'utilisateur avec captures
+    // d'ecran (chevauchement boutons systeme, en-tete de dossier redondant,
+    // raccourcis de sous-menu superflus, indicateur "deja en favori" peu
+    // visible), maquette montree avant codage.
+    [Fact]
+    public void La_ligne_d_adresse_reserve_aussi_la_zone_des_boutons_systeme()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.WindowChrome.cs");
+
+        // Avant ce correctif, seule BrowserTabs recevait la reserve
+        // dynamique (safeRight) - la ligne d'adresse/outils (NavigationToolbarCapsule)
+        // n'en avait aucune et son contenu pouvait passer SOUS les boutons
+        // systeme des qu'elle etait assez remplie (modules epingles).
+        Assert.Contains("NavigationToolbarCapsule.Margin = new Thickness(14, 6, safeRight + 14, 6);", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ouverture_d_un_dossier_de_favoris_ne_repete_plus_son_nom()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksFlyouts.cs");
+
+        Assert.Contains("private void AddBookmarkFolderCountHeader(IList<MenuFlyoutItemBase> items, string folderId)", code, StringComparison.Ordinal);
+        Assert.Contains("AddBookmarkFolderCountHeader(flyout.Items, folder.Id);", code, StringComparison.Ordinal);
+        // La fonction ne doit plus utiliser AddLumoraMenuHeader (qui redisait
+        // le nom du dossier deja visible sur le bouton qu'on vient de cliquer).
+        Assert.DoesNotContain(
+            "AddLumoraMenuHeader(\n            flyout.Items,\n            BookmarkReadableTitle(folder),",
+            code,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Sous_menus_de_dossiers_n_ont_plus_les_raccourcis_ouvrir_renommer_supprimer()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksFlyouts.cs");
+
+        // Toujours disponibles au clic droit (ContextFlyout = CreateBookmarkContextFlyout),
+        // mais plus repetes dans CHAQUE sous-dossier de la barre.
+        Assert.DoesNotContain("Text = \"Ouvrir le dossier\",\n                    Tag = child", code, StringComparison.Ordinal);
+        Assert.Contains("ContextFlyout = CreateBookmarkContextFlyout(child)", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Etoile_favori_utilise_un_contour_quand_absent_des_favoris()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
+
+        // E735 (FavoriteStarFill) uniquement quand bookmarked, E734
+        // (FavoriteStar, contour) sinon - avant ce correctif l'etoile restait
+        // TOUJOURS pleine (E735), seule la couleur changeait.
+        Assert.Contains("BookmarkStarIcon.Glyph = bookmarked ? \"\\uE735\" : \"\\uE734\";", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Action_retrouver_les_icones_manquantes_existe_et_est_cablee()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.BookmarksFaviconRefresh.cs");
+
+        Assert.Contains("Click=\"RefreshMissingIconsButton_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("private async void RefreshMissingIconsButton_Click(object sender, RoutedEventArgs e)", code, StringComparison.Ordinal);
+        Assert.Contains("/favicon.ico", code, StringComparison.Ordinal);
+        Assert.Contains("_bookmarks.SetIconForOrigin(origin, path);", code, StringComparison.Ordinal);
+    }
+
     private static string ReadRepoFile(params string[] segments)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
