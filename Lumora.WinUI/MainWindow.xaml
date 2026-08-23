@@ -1654,6 +1654,7 @@
                     FocusVisualSecondaryBrush="{StaticResource NovaFocusInnerBrush}"
                     AutomationProperties.Name="Adresse ou recherche"
                     VerticalAlignment="Center"
+                    VerticalContentAlignment="Center"
                     KeyDown="AddressBox_KeyDown"
                     TextChanged="AddressBox_TextChanged"
                     GotFocus="AddressBox_GotFocus"
@@ -2635,7 +2636,8 @@
                      VerticalAlignment="Top"
                      Fill="{StaticResource NovaChromeHaloWarmGlowBrush}"
                      IsHitTestVisible="False" />
-            <StackPanel Grid.Column="0"
+            <StackPanel x:Name="BookmarksBarConstellationLabel"
+                        Grid.Column="0"
                         Orientation="Horizontal"
                         Spacing="5"
                         Margin="2,0,10,0"
@@ -6380,7 +6382,8 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0"
+                <StackPanel x:Name="BookmarksBottomConstellationLabel"
+                            Grid.Column="0"
                             Orientation="Horizontal"
                             Spacing="5"
                             Margin="2,0,10,0"

@@ -23605,3 +23605,234 @@ Version : `0.93.45.0-dev`. `dotnet test` : 793/793 verts. Build : 0 erreur, 0 av
 - **Reste a faire** : confirmation visuelle de C en usage reel (voir contrainte `IsWebUrl`
   ci-dessus) ; bouton d'interrupteur de module toujours sans cause confirmee (report
   anterieur).
+
+## 2026-08-23 — Nouvelle session : signalement chevron de debordement + barre d'adresse (en cours, pas encore code)
+
+Nouvelle discussion ouverte par l'utilisateur (pour eviter de charger la precedente). Signale
+2 choses : (1) le repli cookies "j'accepte" (session precedente, 0.93.54.8-dev) n'aurait pas
+marche, (2) les favoris qui debordent de la barre ne seraient plus accessibles ("les 3 petites
+fleches" retirees) - demande une nouvelle maquette "qualite Chrome ou superieure".
+
+- **Maquette publiee avant tout code** ("Constellation des favoris", artifact HTML) : reprend
+  le vocabulaire deja en place (separateur ✦, pastille-lettre, chevron "»", dossier "Autres
+  favoris"), chevron cliquable + toggle Standard/Confort pour donner un vrai apercu avant de
+  toucher au XAML/C#.
+- **Verification reelle du signalement (2), Go recu au prealable** : profil de test forge
+  directement via les classes de production (`UserProfile` sans mot de passe + `BookmarkStore`,
+  meme technique que les sessions precedentes), 22 favoris a la racine de la barre pour forcer
+  un debordement garanti. App relancee isolee (LUMORA_PROFILE_DIR), inspection UIA : le bouton
+  "Afficher 8 favori(s) supplementaire(s)" existe, s'affiche, et `InvokePattern.Invoke()` dessus
+  ouvre reellement un menu listant les 8 favoris en trop. Dossier "Autres favoris" present avec
+  icone dossier (confirme par lecture de `BookmarkIconElement`). **Aucune regression trouvee** -
+  le mecanisme fonctionne dans le code actuel (0.93.54.9-dev) ; recherche git confirme que ce
+  chevron existe depuis tres longtemps (bien avant 0.70.x), pas une fonctionnalite recente.
+- **Captures d'ecran reelles fournies ensuite par l'utilisateur** (sa vraie barre + celle de
+  Chrome) : sa barre reelle ne montre effectivement AUCUN chevron, meme avec une bonne
+  quinzaine de favoris icone-seule + plusieurs dossiers - mais la barre semble deja assez large
+  pour que tout tienne sans rien masquer (aucun signe de contenu coupe avant "Autres favoris").
+  Hypothese a confirmer avec l'utilisateur (nombre exact de favoris a la racine + largeur de
+  fenetre reelle) plutot que supposer un bug non reproduit : soit rien ne deborde reellement
+  chez lui (comportement correct), soit un cas limite specifique a sa fenetre reste a isoler.
+- **Vrai bug candidat trouve par lecture de code** : texte de la barre d'adresse signale "pas
+  centre" par l'utilisateur (capture a l'appui) - `AddressBox` (`MainWindow.xaml`, TextBox de
+  la pilule d'adresse) n'a **aucun `VerticalContentAlignment` explicite**, seulement
+  `VerticalAlignment="Center"` (qui centre la boite entiere, pas le texte a l'interieur). Le
+  gabarit par defaut du `TextBox` WinUI ne centre pas forcement le texte verticalement sans
+  cette propriete explicite - candidat correctif concret, pas encore applique (attend le Go
+  sur le plan global).
+- **Ecart de qualite visuelle vs Chrome** (2e capture fournie) : diagnostic - la barre Chrome
+  parait plus "propre" surtout par densite (favicons nus, sans cadre visible hors survol) et
+  palette neutre, alors que la barre Lumora melange pastilles-lettres tres saturees (HSL
+  S=0.72/L=0.68) et separateurs "✦" a chaque jonction meme entre deux icones seules, ce qui
+  cree plus de bruit visuel a haute densite. Pistes retenues pour le plan (pas encore codees) :
+  reduire le bruit du separateur entre icones-seules consecutives, adoucir legerement la
+  saturation des pastilles-lettres.
+- **Aucun code modifie ce tour-ci** (uniquement verification reelle + lecture) - build/tests
+  non re-executes en consequence. Plan de correction propose a l'utilisateur, en attente de Go.
+- **Reste a faire** : Go sur le plan (centrage adresse, densite visuelle des favoris, test
+  reel du debordement avec les vrais chiffres de l'utilisateur) ; nom du site ou le repli
+  cookies echouerait encore, toujours pas recu.
+
+## 2026-08-23 (suite) — Go recu : centrage adresse + puces adoucies -> 0.93.54.10-dev, puis chevron de debordement rendu visible -> 0.93.54.11-dev
+
+**Go recu**, 3 corrections appliquees et verifiees en reel :
+1. `VerticalContentAlignment="Center"` ajoute sur `AddressBox` (`MainWindow.xaml`) - il ne
+   manquait que ca, confirme par capture d'ecran reelle apres correctif.
+2. Pastilles-lettres adoucies (`BookmarkAvatarColor`) : saturation 0.72->0.58, luminosite
+   0.68->0.62.
+3. Separateur "✦" attenue (`CreateConstellationConnector`) : opacite 0.85->0.6, taille et
+   espacement REEL panelSpacing=16 inchanges (pour ne pas relancer le "trop tasse" corrige
+   le 2026-08-22). Test existant (`Espacement_barre_favoris_...`) ajuste en consequence.
+
+Build MSBuild 0 erreur, `dotnet test` 860/860 verts. Version `0.93.54.9-dev` -> `0.93.54.10-dev`.
+
+**Incident reel post-livraison** : l'utilisateur a teste et n'a vu AUCUN changement, avec un
+ton tres remonte ("tu te moques de moi"). Diagnostic en plusieurs temps :
+- D'abord confirme que le `.dll` compile contenait bien `0.93.54.10-dev` (recherche directe
+  dans les octets du fichier, encodage UTF-16) - donc le correctif etait bien compile.
+- L'utilisateur a alors prouve avoir lance la bonne version (capture d'ecran de l'onglet
+  "A propos" affichant `0.93.54.10-dev`) - **preuve concrete, aucune remise en doute
+  a posteriori justifiee**.
+- Reproduction fidele en isole (profil forge : 9 dossiers + 15 favoris icone-seule + 3
+  favoris nommes, meme composition que la vraie barre de l'utilisateur) : le mecanisme de
+  debordement fonctionne et calcule le bon compte (verifie par instrumentation
+  `WinUiRuntimeTrace` temporaire dans `RenderBookmarksBar`/`BookmarksBarRow_SizeChanged` -
+  3 rendus successifs pendant le demarrage, le dernier avec la vraie largeur de fenetre
+  donne bien le bon partage visible/dissimule).
+- **Fausse piste explorée puis ecartee** : `AutomationElement.Current.BoundingRectangle` du
+  bouton de debordement revenait `Rect.Empty` (Infinity) via UI Automation alors que ses
+  freres (memes rendu) avaient un rectangle valide - semblait indiquer un bouton jamais
+  reellement dispose a l'ecran. **Verification directe EN PROCESSUS** (pas via UIA) a
+  prouve le contraire : `ActualWidth`/`ActualHeight` = 30/30 (taille reelle attendue),
+  `IsLoaded=True`, `Visibility=Visible`, `Parent=StackPanel` - le bouton est bel et bien
+  charge et dimensionne normalement. Le `Rect.Empty` d'UI Automation etait un artefact du
+  pont UIA (COM heritage) sur ce controle precis, pas un vrai defaut de rendu. Capture
+  d'ecran impossible a obtenir de la vraie fenetre dans cet environnement (le focus/premier
+  plan ne peut pas etre force par un processus automatise ici, verifie par une boucle de
+  tentatives - meme limite que l'injection clavier/souris deja documentee), donc aucune
+  preuve visuelle directe des yeux n'a pu completer cette verification.
+- **Vrai defaut trouve, plus modeste** : le bouton utilisait le meme style que les puces
+  normales (`NovaBookmarkBarButtonStyle`, `HorizontalContentAlignment="Left"`) - sur un chip
+  carre de 30px sans texte, le glyphe "»" se retrouvait plaque contre le bord gauche plutot
+  que centre, et son fond/bordure etaient identiques a n'importe quel favori icone-seule :
+  facile a confondre avec un favori de plus ou un artefact visuel plutot qu'un vrai controle
+  "afficher plus" distinct.
+
+**Corrige** : `CreateBookmarksOverflowButton` centre desormais explicitement son contenu
+(`HorizontalContentAlignment="Center"` en valeur locale) et utilise 2 nouveaux brushes
+teintes accent (`NovaBookmarksOverflowChipBackgroundBrush`/`BorderBrush`, ajoutes dans
+`MainWindow.xaml` en repli statique + `ApplyAccessibilitySettings` et
+`ApplyUsageModeChrome` dans `MainWindow.SettingsTheme.cs`, memes conventions que les
+brushes `NovaBrandChip*` existants) au lieu des brushes de puce neutres - le chevron se
+distingue maintenant visuellement d'un favori ordinaire. Verifie en reel : chevron toujours
+invocable (menu correct, 20 favoris masques listes), aucune exception non geree, 0 erreur
+de ressource manquante. Instrumentation de diagnostic entierement retiree apres usage.
+
+Build MSBuild 0 erreur, `dotnet test` 860/860 verts. Version `0.93.54.10-dev` -> `0.93.54.11-dev`
+(meme lot que le reste de la session : corrections, 4e chiffre).
+
+**Why (methode)** : ne jamais conclure d'un rectangle UI Automation invalide seul - le
+verifier EN PROCESSUS (ActualWidth/Height/IsLoaded) avant d'affirmer un bug de rendu. Un
+signalement utilisateur avec preuve (capture "A propos") ne doit jamais etre remis en
+doute une fois la preuve fournie - la bonne reaction est de chercher plus loin, pas de
+soupconner l'utilisateur.
+
+**Reste a faire** : confirmation utilisateur sur le rendu final (chevron desormais visible/
+distinct, adresse centree) ; nom du site ou le repli cookies echouerait encore, toujours
+pas recu ; installeur a jour pas encore construit (attend le Go explicite de l'utilisateur,
+regle 20 du projet).
+
+## 2026-08-23 (suite) — Lecture des vrais favoris (lecture seule) + pastille "» N" -> 0.93.54.12-dev
+
+L'utilisateur, tres remonte, a fourni une capture de sa VRAIE barre Chrome (19 favoris +
+"Tous les favoris") comme preuve qu'il a plus de favoris que ce que Lumora affiche. Plutot
+que continuer a deviner avec des profils inventes, **lecture directe (DPAPI, entropie
+"Lumora.WinUI.v1") du vrai `bookmarks.lumora` de l'utilisateur** (chemin trouve via son
+`config.json` reel, `CustomProfilePath`) - lecture seule, aucune ecriture. Resultat : **31
+favoris/dossiers reels a la racine de sa barre**, jusqu'a "Sods2/godot-mcp" en dernier.
+
+Profil de test clone avec ce contenu EXACT (memes titres, memes chemins de favicon reels)
+puis lance a 6 largeurs de fenetre (1600 a 4200px) : **le chevron s'est affiche correctement
+a chaque fois**, avec le bon compte de favoris caches. Le mecanisme n'a jamais ete casse,
+meme avec les vraies donnees de l'utilisateur.
+
+**Refonte demandee explicitement** ("tu me l'avais fait dans les versions precedentes,
+refais-le, de qualite superieure") : le chevron carre "»" (30px, meme gabarit qu'un favori)
+est remplace par une **pastille a largeur libre "» N"** affichant le NOMBRE de favoris
+caches en plus du chevron - point ou Lumora depasse desormais Chrome (son ">>" natif ne dit
+jamais combien de favoris se trouvent derriere). `CreateOverflowButtonContent`/
+`CreateOverflowButtonVisual` factorisent le rendu probe/reel (meme principe que
+`BookmarkButtonContent`/`MeasureBookmarkBarButtonWidth`) ; `MeasureOverflowButtonWidth`
+reserve la largeur pire cas ("99") dans `VisibleBookmarkBarCount`. Toujours teinte accent
+(brushes ajoutes a l'etape precedente) + contenu reellement centre.
+
+Build MSBuild 0 erreur, `dotnet test` 860/860 verts (aucun test ne verrouillait le detail
+du carre fixe). Verifie en reel sur le clone des vraies donnees : chevron "Afficher 8
+favori(s) supplementaire(s)" affiche et invocable (8 MenuItems corrects a l'ouverture).
+Version `0.93.54.11-dev` -> `0.93.54.12-dev`.
+
+**Why (methode)** : face a un desaccord persistant entre le diagnostic et le vecu reel de
+l'utilisateur, lire directement ses vraies donnees (en lecture seule, avec le meme
+mecanisme DPAPI que le produit) plutot que de multiplier des profils de test inventes -
+tranche le debat avec des faits verifiables au lieu de suppositions repetees.
+
+**Reste a faire** : confirmation utilisateur sur la nouvelle pastille (chevron + compte) en
+conditions reelles ; nom du site pour le repli cookies, toujours pas recu ; installeur a
+jour toujours pas construit (attend un Go explicite, regle 20).
+
+## 2026-08-23 (suite) — Retour en arriere sur la pastille : chevron neutre fidele a Chrome -> 0.93.54.13-dev
+
+L'utilisateur a explicitement rejete la pastille teintee "» N" de l'etape precedente :
+il veut le MEME COMPORTEMENT que Chrome (afficher moins de favoris que Chrome est
+accepte, Lumora restant plus aere - voir etape precedente), mais pas une "amelioration"
+non demandee. Maquette comparative montree (avant/apres, artifact HTML) avant tout code,
+**Go recu** ensuite.
+
+Retire : le chiffre affiche a cote du chevron, la teinte accent (fond+bordure). Garde : le
+centrage reel du "»" (vrai defaut visuel corrige a l'etape precedente, pas une enjolivure),
+le comportement (n'apparait que si ca deborde vraiment, clic -> liste complete, "Autres
+favoris" independant). Le bouton n'a plus de `Background`/`BorderBrush` explicites - il
+herite du meme style que n'importe quelle autre puce de la barre, exactement comme le petit
+"»" gris neutre de Chrome. Les 2 brushes `NovaBookmarksOverflowChip*` ajoutes a l'etape
+precedente sont retires (XAML + les 2 endroits dans MainWindow.SettingsTheme.cs) - plus
+aucune reference dans le code.
+
+Build MSBuild 0 erreur, `dotnet test` 860/860 verts. Verifie en reel sur le clone des
+vraies donnees de l'utilisateur (31 favoris racine) a 3700px : chevron toujours present,
+invocable, 8 favoris caches listes correctement, 0 exception. Version `0.93.54.12-dev` ->
+`0.93.54.13-dev`.
+
+**Why** : une refonte visuelle "de qualite superieure" ajoutee de ma propre initiative
+(sans que l'utilisateur l'ait demandee precisement) peut aller a l'encontre de ce qu'il
+voulait reellement (ici : la parite de comportement avec Chrome, pas une surenchere
+visuelle) - toujours valider le PERIMETRE exact d'un changement visuel avant de l'appliquer,
+pas seulement son existence.
+
+**Reste a faire** : confirmation utilisateur en conditions reelles ; nom du site pour le
+repli cookies, toujours pas recu ; installeur a jour toujours pas construit (attend un Go
+explicite, regle 20).
+
+## 2026-08-23 (suite) — VRAI BUG TROUVE ET CORRIGE : le chevron etait invisible, pas absent -> 0.93.54.14-dev
+
+L'utilisateur a laisse sa VRAIE fenetre Lumora ouverte (pas une capture) pour inspection en
+direct. Diagnostic decisif, enfin concluant :
+
+- **Le chevron EXISTE bel et bien dans la fenetre reelle de l'utilisateur** (verifie par UI
+  Automation, en direct, sur son processus reel PID en cours) : "Afficher 12 favori(s)
+  supplementaire(s)", avec le bon compte. Ce n'etait PAS absent - il etait invisible.
+- **BoundingRectangle** de ce chevron ET du dernier favori icone-seule revenait `Rect.Empty`
+  (Infinity), pendant qu'un favori juste avant lui avait une largeur COUPEE EN DEUX (22px au
+  lieu de ~45px) - signe clair d'un rognage reel a l'ecran, pas d'un artefact UIA cette fois.
+- **Reproduit A L'IDENTIQUE (memes coordonnees au pixel pres)** avec un clone isole utilisant
+  les vraies donnees + les vrais reglages (densite "dense") de l'utilisateur, a sa largeur de
+  fenetre exacte (2880px, lue directement sur sa fenetre reelle).
+- **Cause reelle trouvee par lecture du XAML** (`BookmarksBarRow`, Grid a 4 colonnes : label
+  "✦ Constellation" (Auto) / barre (`*`) / separateur 1px (Auto) / "Autres favoris" (Auto)) :
+  `VisibleBookmarkBarCount` calculait `available = row.ActualWidth - otherHost.ActualWidth - 24`
+  (24 = les 3 `ColumnSpacing="8"`) mais **oubliait de retrancher le Padding de la Grid
+  (10+10=20px) ET la largeur reelle du label "Constellation" (colonne 0, jamais mesuree)** -
+  soit environ 70-110px de largeur disponible surestimee, l'equivalent d'1-2 favoris
+  icone-seule. Un favori (ou le chevron lui-meme) etait donc ajoute juste au-dela de ce que
+  la colonne `*` arrangeait reellement - rogne ou totalement hors-arrangement, invisible a
+  l'oeil malgre un compte par ailleurs juste.
+
+**Corrige** : `BookmarksBarConstellationLabel`/`BookmarksBottomConstellationLabel` (x:Name
+ajoutes aux 2 labels "Constellation", barre du haut et du bas) desormais lus directement
+(`.ActualWidth`) dans le calcul, plus soustraction explicite de `row.Padding.Left/Right` et
+de la colonne separateur (1px fixe). Verifie en reel sur le clone, a la largeur exacte de
+l'utilisateur (2880px) : le chevron a maintenant un `BoundingRectangle` VALIDE (X=2635,
+W=39), plus aucun favori tronque, plus aucun element a `Rect.Empty`.
+
+Build MSBuild 0 erreur (uniquement dans `bin\x64\Debug`, sans toucher au processus reel de
+l'utilisateur qui tournait depuis `artifacts\tmp\winui-run\...\current` - jamais arrete
+pendant l'inspection). `dotnet test` 860/860 verts. Version `0.93.54.13-dev` ->
+`0.93.54.14-dev`.
+
+**Why (methode)** : face a une contradiction persistante entre mes tests synthetiques et le
+vecu reel de l'utilisateur, la bonne solution etait d'inspecter SA fenetre reelle et
+ouverte, en direct, plutot que de multiplier des clones - ca a permis de voir le VRAI
+symptome (un favori coupe en 2, pas juste "aucun chevron") qui a mene droit a la cause.
+
+**Reste a faire** : confirmation utilisateur en conditions reelles (fermer/rouvrir Lumora) ;
+nom du site pour le repli cookies, toujours pas recu ; installeur a jour toujours pas
+construit (attend un Go explicite, regle 20).

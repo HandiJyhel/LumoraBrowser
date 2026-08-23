@@ -733,7 +733,30 @@ public sealed partial class MainWindow
 
         var row = bottomLayout ? BookmarksBottomRow : BookmarksBarRow;
         var otherHost = bottomLayout ? OtherBookmarksBottomHost : OtherBookmarksBarHost;
-        var available = row.ActualWidth - otherHost.ActualWidth - 24;
+        var constellationLabel = bottomLayout ? BookmarksBottomConstellationLabel : BookmarksBarConstellationLabel;
+        // Bug reel trouve le 2026-08-23 (favoris "avales" sans jamais passer par
+        // le chevron, signale par l'utilisateur puis reproduit a l'identique sur
+        // sa vraie fenetre ouverte en direct) : cette ligne ne retranchait QUE
+        // otherHost.ActualWidth et 24 (les 3 ColumnSpacing="8" de la Grid a 4
+        // colonnes) - elle oubliait la colonne 0 (le label "✦ Constellation",
+        // Auto, ~50-90px) ET le Padding gauche/droite de la Grid elle-meme
+        // (10+10=20px). L'espace disponible etait donc surevalue d'environ
+        // 70-110px (1-2 favoris icone-seule), ce qui faisait ajouter un favori
+        // (ou le chevron lui-meme) juste au-dela de la largeur REELLEMENT
+        // arrangee par la colonne "*" - element rogne (largeur coupee en 2) ou
+        // carrement hors-arrangement (BoundingRectangle vide en UI Automation),
+        // jamais visible a l'ecran malgre un calcul de comptage par ailleurs
+        // correct (le chevron affichait meme le bon nombre - juste invisible).
+        // Colonne 2 de la Grid (separateur vertical entre la barre et "Autres
+        // favoris") : Border Width="1" fixe dans le XAML - constante partagee
+        // ici plutot qu'une nouvelle lecture ActualWidth pour un pixel fixe.
+        const double separatorColumnWidth = 1d;
+        var available = row.ActualWidth
+            - row.Padding.Left - row.Padding.Right
+            - constellationLabel.ActualWidth
+            - separatorColumnWidth
+            - otherHost.ActualWidth
+            - 24;
         if (available <= 0)
         {
             return Math.Min(nodes.Count, 20);
@@ -745,7 +768,7 @@ public sealed partial class MainWindow
         // favoris ("option A" choisie sur maquette, demande explicite utilisateur).
         const double panelSpacing = 16d;
         var connectorSlotWidth = MeasureConstellationConnectorWidth() + panelSpacing * 2;
-        var overflowButtonReserve = metrics.BookmarksOverflowChipSize + panelSpacing;
+        var overflowButtonReserve = MeasureOverflowButtonWidth(metrics) + panelSpacing;
 
         var buttonsWidth = 0d;
         var count = 0;
@@ -793,6 +816,14 @@ public sealed partial class MainWindow
         return probe.DesiredSize.Width;
     }
 
+    // Meme motif de sonde deconnectee que MeasureBookmarkBarButtonWidth.
+    private double MeasureOverflowButtonWidth(UiDensityMetrics metrics)
+    {
+        var probe = CreateOverflowButtonVisual(metrics);
+        probe.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        return probe.DesiredSize.Width;
+    }
+
     // Repere visuel discret entre deux favoris de la barre : fait vivre le nom
     // "Constellation" comme un vrai motif (trajectoire de points) plutot que
     // comme une simple etiquette.
@@ -802,11 +833,16 @@ public sealed partial class MainWindow
     // invisible et n'apportait aucune respiration reelle entre les favoris.
     // Garde le motif (identite deja nommee dans le code) plutot que de le
     // retirer, mais avec un vrai poids visuel.
+    // Opacite rebaissee le 2026-08-23 (0.85 -> 0.6, taille inchangee) : retour
+    // utilisateur comparant a la barre Chrome, jugee plus "propre" - l'espace
+    // (panelSpacing, inchange) fait deja la respiration, l'opacite plus haute
+    // n'ajoutait que du bruit visuel a haute densite de favoris. Reste tres au-
+    // dessus du 0.3 juge invisible la fois precedente.
     private static TextBlock CreateConstellationConnector() => new()
     {
         Text = "✦",
         FontSize = 9,
-        Opacity = 0.85,
+        Opacity = 0.6,
         VerticalAlignment = VerticalAlignment.Center,
         IsHitTestVisible = false
     };
@@ -874,30 +910,57 @@ public sealed partial class MainWindow
         return button;
     }
 
-    private Button CreateBookmarksOverflowButton(IReadOnlyList<BookmarkNode> overflowNodes)
+    // Chevron de debordement fidele au COMPORTEMENT de Chrome (2026-08-23,
+    // demande explicite de l'utilisateur apres maquette validee) : neutre,
+    // sans chiffre, sans teinte accent - seul le nombre de favoris visibles
+    // dans la barre elle-meme differe de Chrome (Lumora reste plus aere,
+    // accepte par l'utilisateur), pas l'apparence/le comportement du "reste".
+    // Une version precedente (0.93.54.12-dev) avait ajoute une pastille
+    // teintee "» N" de sa propre initiative - retiree ici, l'utilisateur ne
+    // voulait pas d'enjolivure, juste le meme comportement que Chrome.
+    // Fabrique commune probe/bouton reel (meme principe que
+    // BookmarkButtonContent) : MeasureOverflowButtonWidth mesure exactement
+    // ce qui sera rendu, pas une approximation a part.
+    private static TextBlock CreateOverflowButtonContent() => new()
     {
-        var metrics = ResolveUiDensityMetrics(_uiDensity);
-        var button = new Button
+        Text = "»",
+        FontSize = 15,
+        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        VerticalAlignment = VerticalAlignment.Center
+    };
+
+    private Button CreateOverflowButtonVisual(UiDensityMetrics metrics)
+    {
+        return new Button
         {
-            Content = new TextBlock
-            {
-                Text = "\u00BB",
-                FontSize = 16,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                LineHeight = 17,
-                VerticalAlignment = VerticalAlignment.Center
-            },
+            Content = CreateOverflowButtonContent(),
             Style = (Style)RootShell.Resources["NovaBookmarkBarButtonStyle"],
             Height = metrics.BookmarksOverflowChipSize,
             MinHeight = metrics.BookmarksOverflowChipSize,
             Width = metrics.BookmarksOverflowChipSize,
             MinWidth = metrics.BookmarksOverflowChipSize,
             Padding = new Thickness(0),
-            CornerRadius = new CornerRadius(metrics.BookmarksOverflowChipCornerRadius),
-            Flyout = CreateBookmarksOverflowFlyout(overflowNodes)
+            // Centre reellement le "»" (2026-08-23) : NovaBookmarkBarButtonStyle
+            // fixe HorizontalContentAlignment="Left" (pense pour icone+texte),
+            // ce qui plaquait le glyphe contre le bord gauche d'un chip carre
+            // sans texte - un vrai defaut visuel, garde malgre le retour en
+            // arriere sur la couleur/le chiffre.
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            CornerRadius = new CornerRadius(metrics.BookmarksOverflowChipCornerRadius)
+            // Pas de Background/BorderBrush explicites : herite du Style
+            // (NovaBookmarkBarButtonBackgroundBrush/BorderBrush), exactement
+            // comme n'importe quelle autre puce de la barre - neutre, comme
+            // le petit ">>" gris de Chrome.
         };
+    }
+
+    private Button CreateBookmarksOverflowButton(IReadOnlyList<BookmarkNode> overflowNodes)
+    {
+        var metrics = ResolveUiDensityMetrics(_uiDensity);
+        var button = CreateOverflowButtonVisual(metrics);
+        button.Flyout = CreateBookmarksOverflowFlyout(overflowNodes);
         ApplyNovaControlAccessibility(button, $"Afficher {overflowNodes.Count} favori(s) supplémentaire(s)");
-        ToolTipService.SetToolTip(button, "Favoris supplémentaires");
+        ToolTipService.SetToolTip(button, $"{overflowNodes.Count} favori(s) supplémentaire(s)");
         return button;
     }
 
@@ -1112,8 +1175,12 @@ public sealed partial class MainWindow
 
     private static Color BookmarkAvatarColor(int hue)
     {
-        const double saturation = 0.72;
-        const double lightness = 0.68;
+        // Adouci le 2026-08-23 (retour utilisateur : pastilles trop vives/"bonbon"
+        // a cote d'une barre Chrome plus neutre, capture d'ecran comparative a
+        // l'appui) - depuis 0.72/0.68. Le texte reste lisible (foreground fixe
+        // fonce, voir BookmarkLetterAvatar) : seule l'intensite de fond baisse.
+        const double saturation = 0.58;
+        const double lightness = 0.62;
         var c = (1 - Math.Abs(2 * lightness - 1)) * saturation;
         var x = c * (1 - Math.Abs(hue / 60.0 % 2 - 1));
         var m = lightness - c / 2;

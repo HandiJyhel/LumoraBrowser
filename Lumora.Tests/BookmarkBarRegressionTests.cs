@@ -402,6 +402,9 @@ public sealed class BookmarkBarRegressionTests
     // 2026-08-22 (suite) : "option A" choisie sur maquette - garder le motif
     // "✦" mais reellement visible et espace (6px/opacite 0.3 -> 16px/opacite
     // 0.85), meme traitement sur les modules epingles (5px -> 12px).
+    // 2026-08-23 : opacite rebaissee a 0.6 (retour utilisateur, comparaison
+    // avec une barre Chrome jugee plus "propre") - l'espacement reel (16px,
+    // inchange) reste ce qui garantit la respiration, pas l'opacite du motif.
     [Fact]
     public void Espacement_barre_favoris_et_connecteur_sont_reellement_visibles()
     {
@@ -417,7 +420,7 @@ public sealed class BookmarkBarRegressionTests
         }
 
         Assert.Contains("FontSize = 9,", code, StringComparison.Ordinal);
-        Assert.Contains("Opacity = 0.85,", code, StringComparison.Ordinal);
+        Assert.Contains("Opacity = 0.6,", code, StringComparison.Ordinal);
         Assert.Contains("const double panelSpacing = 16d;", code, StringComparison.Ordinal);
     }
 
