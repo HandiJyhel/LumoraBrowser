@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "0.93.54.14-dev",
+    [string]$Version = "0.94.1.0-dev",
     [string]$CleanArtifactDir = "",
     [string]$OutputDirectory = "artifacts\installer"
 )
@@ -221,7 +221,7 @@ SHA256 : $setupHash
 Signature Sigstore : non signée pour ce build
 Signature Windows : non signée Authenticode
 Installation : dossier visible et modifiable ; par défaut sans privilège administrateur sous LOCALAPPDATA
-Contenu : application Lumora et modules intégrés inclus ; nom complet Lumora Browser ; logo LumoraApp.png embarqué avec rendu haute qualité ; options à cocher redessinées et visibles ; code d'installateur réorganisé en template propre ; WebView2 embarqué en mode Fixed Version (aucun téléchargement, autorisation App Container posée via icacls à l'installation) ; moteur Tor installable via une case à cocher (décochée par défaut), téléchargé depuis dist.torproject.org et vérifié par empreinte SHA256 épinglée dans le code de Lumora ; icône dédiée associée aux fichiers de sauvegarde .lum (HKCU uniquement, icône seule - aucune action au double-clic)
+Contenu : application Lumora et modules intégrés inclus ; nom complet Lumora Browser ; logo LumoraApp.png embarqué avec rendu haute qualité ; options à cocher redessinées et visibles ; code d'installateur réorganisé en template propre ; WebView2 embarqué en mode Fixed Version (aucun téléchargement, autorisation App Container posée via icacls à l'installation) ; moteur Tor installable via une case à cocher (décochée par défaut), téléchargé depuis dist.torproject.org et vérifié par empreinte SHA256 épinglée dans le code de Lumora ; icône dédiée associée aux fichiers de sauvegarde .lum (HKCU uniquement, icône seule - aucune action au double-clic) ; Lumora inscrit comme candidat navigateur auprès de Windows (StartMenuInternet/Capabilities/App Paths, HKCU uniquement) pour apparaître dans "Applications par défaut" au lieu d'obliger à chercher le .exe à la main ; liens ouverts depuis une autre app (Windows navigateur par défaut) désormais lus et ouverts par Lumora au lieu d'être ignorés
 Dépendances : installateur et application self-contained (runtime .NET embarqué dans chacun des deux) ; aucun prérequis système à installer au préalable, fonctionne sur un poste Windows vierge
 Profil : aucun profil embarqué ; aucun dossier de profil forcé au lancement
 Source build propre : $($cleanArtifact.FullName)

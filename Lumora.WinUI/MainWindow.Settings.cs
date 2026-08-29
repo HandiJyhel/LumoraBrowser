@@ -77,6 +77,15 @@ public sealed partial class MainWindow
 
     private void ApplyStartupPage()
     {
+        // Lien cliqué ailleurs dans Windows (Lumora navigateur par défaut) :
+        // prioritaire sur le mode de démarrage habituel - voir
+        // _pendingLaunchUrl (MainWindow.xaml.cs) et UrlLaunchArgs.cs.
+        if (!string.IsNullOrWhiteSpace(_pendingLaunchUrl))
+        {
+            AddTab(DisplayTitle(_pendingLaunchUrl), _pendingLaunchUrl, select: true);
+            return;
+        }
+
         var mode = _uiSettings.StartupMode;
         if (mode == "restore")
         {

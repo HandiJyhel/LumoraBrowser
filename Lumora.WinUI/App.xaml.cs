@@ -37,6 +37,13 @@ public partial class App : Application
         var webApp = appId is not null ? TryFindWebApp(appId) : null;
         var startInGuestMode = GuestLaunchArgs.IsGuestLaunch(commandLineArgs);
         var isIncognitoLaunch = IncognitoLaunchArgs.IsIncognitoLaunch(commandLineArgs, out _, out _, out _);
+        // Lien cliqué ailleurs dans Windows avec Lumora en navigateur par
+        // défaut (voir UrlLaunchArgs.cs) : ouvert comme onglet de démarrage
+        // par MainWindow (ApplyStartupPage, MainWindow.Settings.cs) plutôt
+        // que la page habituelle - seulement pour le lancement normal
+        // (jamais en Incognito/Invité/Appli web, non concernés par cette
+        // inscription registre).
+        var startupUrl = UrlLaunchArgs.TryParseUrl(commandLineArgs);
 
         // Doit être posé AVANT toute création de fenêtre : c'est ce qui évite
         // que le navigateur principal et chaque application web (même exe,
@@ -82,7 +89,7 @@ public partial class App : Application
             return;
         }
 
-        _window = new MainWindow(startInGuestMode);
+        _window = new MainWindow(startInGuestMode, startupUrl: startupUrl);
         WinUiRuntimeTrace.Write("MainWindow constructed");
         _window.Activate();
         WinUiRuntimeTrace.Write("MainWindow activated");
@@ -134,11 +141,38 @@ public partial class App : Application
     // de toucher la moindre fenêtre.
     private void OnExistingInstanceActivated(object? sender, AppActivationArguments args)
     {
+        var url = TryExtractLaunchUrl(args);
         _uiDispatcherQueue?.TryEnqueue(() =>
         {
             WinUiRuntimeTrace.Write("Redirected activation received, opening a new window");
-            MainWindow.OpenNewWindowFromExternalActivation();
+            MainWindow.OpenNewWindowFromExternalActivation(url);
         });
+    }
+
+    // Lien cliqué ailleurs pendant que Lumora tourne déjà (Windows relance un
+    // second process puis TryRedirectToExistingInstanceAsync le redirige
+    // ici) : l'URL voyage dans args.Data (Windows.ApplicationModel.Activation.
+    // ILaunchActivatedEventArgs.Arguments), jamais dans
+    // Environment.GetCommandLineArgs() de CE process (qui reste celui du
+    // tout premier lancement). Nom pleinement qualifié plutôt qu'un using
+    // (Windows.ApplicationModel.Activation.LaunchActivatedEventArgs entrerait
+    // sinon en conflit avec Microsoft.UI.Xaml.LaunchActivatedEventArgs déjà
+    // utilisé par OnLaunched ci-dessus).
+    private static string? TryExtractLaunchUrl(AppActivationArguments args)
+    {
+        try
+        {
+            if (args.Data is Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs launchArgs)
+            {
+                return UrlLaunchArgs.TryParseUrl(launchArgs.Arguments);
+            }
+        }
+        catch (Exception ex)
+        {
+            WinUiRuntimeTrace.Write($"Redirected launch URL parse skipped: {ex.GetType().Name}");
+        }
+
+        return null;
     }
 
     private static LumoraWebApp? TryFindWebApp(string appId)

@@ -336,18 +336,20 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Menu_demarrer_porte_le_profil_en_entete()
+    public void Menu_demarrer_porte_le_profil_en_pied_de_menu()
     {
+        // Remplace Menu_demarrer_porte_le_profil_en_entete (0.93.5.0-dev, profil
+        // en tete) : refonte "facon Windows 11" (0.94.0.0-dev, demande explicite
+        // utilisateur) - le compte descend en pied de menu, comme le compte en
+        // bas a gauche du vrai menu Demarrer de Windows 11, apres la recherche
+        // ET apres les vues Epingle/Toutes les tuiles/Recherche.
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
-        var menuStart = xaml.IndexOf("<StackPanel x:Name=\"ModulesFlyoutRoot\"", StringComparison.Ordinal);
         var searchBoxStart = xaml.IndexOf("x:Name=\"StartMenuSearchBox\"", StringComparison.Ordinal);
+        var profileButtonStart = xaml.IndexOf("x:Name=\"ProfileStatusButton\"", StringComparison.Ordinal);
 
-        Assert.True(menuStart >= 0, "ModulesFlyoutRoot introuvable.");
         Assert.True(searchBoxStart >= 0, "StartMenuSearchBox introuvable.");
-        Assert.True(searchBoxStart > menuStart, "Le profil doit precéder la recherche dans le menu Démarrer.");
-
-        var headerSection = xaml.Substring(menuStart, searchBoxStart - menuStart);
-        Assert.Contains("ProfileStatusButton", headerSection, StringComparison.Ordinal);
+        Assert.True(profileButtonStart >= 0, "ProfileStatusButton introuvable.");
+        Assert.True(profileButtonStart > searchBoxStart, "Le profil doit suivre la recherche dans le menu Démarrer (pied de menu, pas en-tete).");
     }
 
     [Fact]
@@ -370,17 +372,17 @@ public sealed class UsageModeVisualIdentityTests
     }
 
     [Fact]
-    public void Version_projet_est_alignee_sur_0_93_54_14()
+    public void Version_projet_est_alignee_sur_0_94_1_0()
     {
         var mainWindow = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
         var agents = ReadRepoFile("AGENTS.md");
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.93.54.14-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.93.54.14-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.93.54.14-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.93.54.14-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.1.0-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.94.1.0-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.94.1.0-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.1.0-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

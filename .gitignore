@@ -28,6 +28,7 @@ Lumora.WinUI/artifacts/
 
 # Configs locaux d'outils IA (personnels, pas partages projet)
 /.codex/
+/.codex-build/
 /.claude/settings.json
 /.claude/settings.local.json
 

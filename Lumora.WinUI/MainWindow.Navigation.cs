@@ -1082,6 +1082,31 @@ public sealed partial class MainWindow
         {
             NavigateFromAddressBox();
             e.Handled = true;
+            return;
+        }
+
+        // Popup fermé : Échap est le 2e signal sans ambiguïté d'abandon volontaire
+        // d'une édition en cours (voir RootPointerPressed, MainWindow.AddressSuggestions.cs)
+        // - même convention que Chrome/Firefox/Edge.
+        if (e.Key == VirtualKey.Escape)
+        {
+            CloseAddressSuggestions();
+            RevertAddressBarToSimplifiedDisplay();
+            CurrentTab()?.View?.Focus(FocusState.Pointer);
+            e.Handled = true;
+        }
+
+        // Tab est un 3e signal sans ambiguïté d'abandon volontaire d'une édition en
+        // cours (voir RootPointerPressed et Échap ci-dessus) : sans ce revert avant
+        // la perte de focus, AddressBox_LostFocus (MainWindow.AddressSuggestions.cs)
+        // la reprend de force car rien n'a explicitement clos la saisie - bug réel
+        // trouvé en revue de code le 2026-08-29 (Tab pour sortir de la barre restait
+        // sans effet pendant une édition). Pas de e.Handled : Tab doit continuer sa
+        // navigation normale vers le contrôle suivant.
+        if (e.Key == VirtualKey.Tab)
+        {
+            CloseAddressSuggestions();
+            RevertAddressBarToSimplifiedDisplay();
         }
     }
 

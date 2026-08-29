@@ -52,8 +52,51 @@ public sealed partial class MainWindow
     // exactement reste ouverte.
     private static readonly List<MainWindow> _liveInstances = new();
 
-    internal static void OpenNewWindowFromExternalActivation() =>
-        _liveInstances.LastOrDefault()?.OpenNewWindow();
+    // url non nul : lien cliqué ailleurs dans Windows pendant que Lumora
+    // tourne déjà (voir App.xaml.cs/OnExistingInstanceActivated) - ouvre un
+    // onglet dans la fenêtre la plus récente au lieu d'une fenêtre vierge,
+    // comme Chrome/Edge/Firefox pour ce même scénario.
+    internal static void OpenNewWindowFromExternalActivation(string? url = null)
+    {
+        var target = _liveInstances.LastOrDefault();
+        if (target is null) return;
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            target.OpenUrlInNewTab(url);
+        }
+        else
+        {
+            target.OpenNewWindow();
+        }
+    }
+
+    // Même garde que OpenNewWindow : ignore tant que le profil courant n'est
+    // pas déverrouillé (barre d'onglets pas encore prête).
+    private void OpenUrlInNewTab(string url)
+    {
+        if (LoginOverlay.Visibility == Visibility.Visible ||
+            SetupWizardOverlay.Visibility == Visibility.Visible)
+        {
+            return;
+        }
+
+        AddTab(DisplayTitle(url), url, select: true);
+        BringToForeground();
+    }
+
+    // Ramène cette fenêtre au premier plan pour un lien cliqué ailleurs -
+    // sans ça, l'onglet s'ouvrait silencieusement derrière les autres
+    // fenêtres si Lumora était minimisé ou en arrière-plan.
+    private void BringToForeground()
+    {
+        if (_appWindow?.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter &&
+            presenter.State == Microsoft.UI.Windowing.OverlappedPresenterState.Minimized)
+        {
+            presenter.Restore();
+        }
+        Activate();
+    }
 
     // Signalé une fois par fenêtre (MainWindow.Profile.cs/DismissLoginOverlay),
     // quand ses onglets sont prêts. IsBrowserReady est la version "état"

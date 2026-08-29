@@ -734,6 +734,87 @@ internal sealed class InstallerForm : Form
 
         SetStatus("Association de l'icône des sauvegardes .lum...", 97);
         RegisterLumFileIcon(lumIconPath);
+
+        SetStatus("Inscription comme navigateur disponible dans Windows...", 99);
+        RegisterAsDefaultBrowserCandidate(appExe, iconPath);
+    }
+
+    // Inscrit Lumora comme candidat navigateur dans le sélecteur Windows
+    // (Réglages > Applications > Applications par défaut > Navigateur web).
+    // Sans ces clés, Windows ignore totalement que Lumora existe : il
+    // retombe sur "Rechercher une autre application sur ce PC", qui force à
+    // pointer soi-même vers un .exe - bug signalé par l'utilisateur le
+    // 2026-08-28 (voir MEMORY.md) après avoir dû fouiller le dossier
+    // d'installation à la main. Uniquement HKCU (comme le reste de cet
+    // installateur, aucun privilège administrateur requis) : Windows accepte
+    // une inscription StartMenuInternet par utilisateur depuis Windows 8,
+    // le même mécanisme que Chrome pour une installation "cet utilisateur
+    // uniquement".
+    //
+    // La commande "%1" transmise par Windows à un clic de lien arrive côté
+    // app comme argument de ligne de commande brut - voir UrlLaunchArgs.cs
+    // (Lumora.WinUI) pour la lecture de cette URL au démarrage/à la relance.
+    private static void RegisterAsDefaultBrowserCandidate(string appExe, string iconPath)
+    {
+        const string progId = "LumoraHTML";
+        const string clientKeyPath = @"Software\Clients\StartMenuInternet\Lumora";
+        var icon = File.Exists(iconPath) ? iconPath : appExe;
+
+        using (var clientKey = Registry.CurrentUser.CreateSubKey(clientKeyPath))
+        {
+            clientKey?.SetValue(string.Empty, "Lumora Browser");
+            clientKey?.SetValue("LocalizedString", "Lumora Browser");
+
+            using (var iconKey = clientKey?.CreateSubKey("DefaultIcon"))
+            {
+                iconKey?.SetValue(string.Empty, $"{icon},0");
+            }
+
+            using (var openKey = clientKey?.CreateSubKey(@"shell\open\command"))
+            {
+                openKey?.SetValue(string.Empty, Quote(appExe));
+            }
+
+            using var capabilitiesKey = clientKey?.CreateSubKey("Capabilities");
+            capabilitiesKey?.SetValue("ApplicationName", "Lumora Browser");
+            capabilitiesKey?.SetValue("ApplicationIcon", $"{icon},0");
+            capabilitiesKey?.SetValue("ApplicationDescription", "Navigateur Lumora : confidentialité, sans publicité.");
+
+            using (var fileAssocKey = capabilitiesKey?.CreateSubKey("FileAssociations"))
+            {
+                fileAssocKey?.SetValue(".htm", progId);
+                fileAssocKey?.SetValue(".html", progId);
+            }
+
+            using (var urlAssocKey = capabilitiesKey?.CreateSubKey("URLAssociations"))
+            {
+                urlAssocKey?.SetValue("http", progId);
+                urlAssocKey?.SetValue("https", progId);
+            }
+        }
+
+        using (var registeredAppsKey = Registry.CurrentUser.CreateSubKey(@"Software\RegisteredApplications"))
+        {
+            registeredAppsKey?.SetValue("Lumora", $@"{clientKeyPath}\Capabilities");
+        }
+
+        using (var progIdKey = Registry.CurrentUser.CreateSubKey($@"Software\Classes\{progId}"))
+        {
+            progIdKey?.SetValue(string.Empty, "Document Lumora");
+            using var progIdIconKey = progIdKey?.CreateSubKey("DefaultIcon");
+            progIdIconKey?.SetValue(string.Empty, $"{icon},0");
+            using var progIdOpenKey = progIdKey?.CreateSubKey(@"shell\open\command");
+            progIdOpenKey?.SetValue(string.Empty, $"{Quote(appExe)} \"%1\"");
+        }
+
+        using (var appPathsKey = Registry.CurrentUser.CreateSubKey(
+            $@"Software\Microsoft\Windows\CurrentVersion\App Paths\{Path.GetFileName(appExe)}"))
+        {
+            appPathsKey?.SetValue(string.Empty, appExe);
+            appPathsKey?.SetValue("Path", Path.GetDirectoryName(appExe) ?? string.Empty);
+        }
+
+        SHChangeNotify(ShcneAssocChanged, ShcnfIdList, IntPtr.Zero, IntPtr.Zero);
     }
 
     // Icone dediee pour les fichiers de sauvegarde .lum (session "Compte et
@@ -784,11 +865,18 @@ internal sealed class InstallerForm : Form
             "$uninstallKey = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Lumora\"",
             "$lumExtKey = \"HKCU:\\Software\\Classes\\.lum\"",
             "$lumProgIdKey = \"HKCU:\\Software\\Classes\\Lumora.LumBackup\"",
+            "$startMenuInternetKey = \"HKCU:\\Software\\Clients\\StartMenuInternet\\Lumora\"",
+            "$htmlProgIdKey = \"HKCU:\\Software\\Classes\\LumoraHTML\"",
+            "$appPathsKey = \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\Lumora.WinUI.exe\"",
             "Remove-Item -LiteralPath $startMenuShortcut -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $desktopShortcut -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $lumExtKey -Force -ErrorAction SilentlyContinue",
             "Remove-Item -LiteralPath $lumProgIdKey -Recurse -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $startMenuInternetKey -Recurse -Force -ErrorAction SilentlyContinue",
+            "Remove-ItemProperty -LiteralPath \"HKCU:\\Software\\RegisteredApplications\" -Name \"Lumora\" -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $htmlProgIdKey -Recurse -Force -ErrorAction SilentlyContinue",
+            "Remove-Item -LiteralPath $appPathsKey -Force -ErrorAction SilentlyContinue",
             "if ($RemoveProfile -and (Test-Path $profileDir)) { Remove-Item -LiteralPath $profileDir -Recurse -Force }",
             "if (Test-Path $installRoot) { Remove-Item -LiteralPath $installRoot -Recurse -Force }"
         });

@@ -51,12 +51,11 @@ public sealed class UiDensityVisualIdentityTests
     }
 
     [Fact]
-    public void Densite_confortable_reprend_exactement_les_tailles_historiques()
+    public void Densite_confortable_garde_la_barre_adresse_non_rognante()
     {
         // "Confortable" doit rester un choix a zero regression pour qui le
-        // selectionne : les valeurs doivent correspondre aux anciennes
-        // tailles fixes (32px boutons, 72px ligne d'outils, 42px barre
-        // d'adresse, 36px puces de favoris) toujours documentees ici.
+        // selectionne : les tailles historiques restent, mais la barre
+        // d'adresse garde la hauteur utile necessaire au texte 18px SemiBold.
         var densityCode = ReadRepoFile("Lumora.WinUI", "MainWindow.UiDensity.cs");
 
         var comfortableIndex = densityCode.IndexOf("\"comfortable\" => new UiDensityMetrics(", StringComparison.Ordinal);
@@ -65,7 +64,8 @@ public sealed class UiDensityVisualIdentityTests
 
         Assert.Contains("IconButtonSize: 32", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("NavigationRowHeight: 72", comfortableBlock, StringComparison.Ordinal);
-        Assert.Contains("AddressBoxMinHeight: 42", comfortableBlock, StringComparison.Ordinal);
+        Assert.Contains("AddressBoxMinHeight: 46", comfortableBlock, StringComparison.Ordinal);
+        Assert.Contains("AddressBoxPadding: new Thickness(54, 4, 18, 4)", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("BookmarkChipHeight: 36", comfortableBlock, StringComparison.Ordinal);
     }
 

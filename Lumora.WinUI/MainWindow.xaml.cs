@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.93.54.14-dev";
+    internal const string Version = "0.94.1.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -120,6 +120,12 @@ public sealed partial class MainWindow : Window
     // au lieu de repasser par l'écran de connexion. Null pour toute fenêtre
     // lancée normalement (App.xaml.cs).
     private readonly MainWindow? _unlockSource;
+    // URL à ouvrir comme onglet de démarrage au lieu de la page habituelle -
+    // lien cliqué ailleurs dans Windows pendant que Lumora est le navigateur
+    // par défaut (voir UrlLaunchArgs.cs, App.xaml.cs). Null pour tout
+    // lancement normal. Consommé une seule fois par ApplyStartupPage
+    // (MainWindow.Settings.cs).
+    private readonly string? _pendingLaunchUrl;
     // Vrai tant que la page de demarrage (ApplyStartupPage, notamment la
     // restauration des onglets de la derniere session) n'a pas encore ete
     // appliquee. Trouve en usage reel le 2026-08-12 : ApplyStartupPage() etait
@@ -180,14 +186,16 @@ public sealed partial class MainWindow : Window
     private readonly HistoryPanelController _historyPanel;
     private readonly SemanticHistoryIndex _semanticIndex;
     private readonly ObservableCollection<CommandPaletteItem> _commandPaletteItems = new();
-    // Menu Demarrer (ModulesFlyout) : rail de categories (Epingles + sections)
-    // a gauche, volet detail a droite - refonte "maitre/detail" a la Windows 7
-    // (0.93.5.0-dev, remplace l'ancien bascule Epingles/Toutes-les-applications).
-    // Toutes ces vues viennent de StartMenuTileRegistry.All + _uiSettings,
-    // reconstruites ensemble par RebuildStartMenuViewModels() (MainWindow.StartMenu.cs).
-    private readonly ObservableCollection<StartMenuCategoryViewModel> _startMenuCategories = new();
+    // Menu Demarrer (ModulesFlyout) : accueil "Epingle" (grille) + "Recommande"
+    // (usage reel) - refonte "facon Windows 11" (0.94.0.0-dev, remplace le
+    // maitre/detail "a la Windows 7" du 0.93.5.0-dev). "Toutes les tuiles"
+    // (StartMenuAllTilesPanel) n'a pas de collection dediee ici - peuplee
+    // directement en StackPanel.Children, une source par groupe/section
+    // (RebuildStartMenuAllTiles, MainWindow.StartMenu.cs). Toutes ces vues
+    // viennent de StartMenuTileRegistry.All + _uiSettings, reconstruites
+    // ensemble par RebuildStartMenuViewModels() (MainWindow.StartMenu.cs).
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuPinnedTiles = new();
-    private readonly ObservableCollection<StartMenuTileViewModel> _startMenuDetailTiles = new();
+    private readonly ObservableCollection<StartMenuTileViewModel> _startMenuRecommendedTiles = new();
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuFilteredTiles = new();
     private bool _suppressTabSave = true;
     private readonly VaultStore _vault;
@@ -260,11 +268,12 @@ public sealed partial class MainWindow : Window
         Timeout = TimeSpan.FromSeconds(5)
     };
 
-    public MainWindow(bool startInGuestMode = false, MainWindow? unlockSource = null)
+    public MainWindow(bool startInGuestMode = false, MainWindow? unlockSource = null, string? startupUrl = null)
     {
         WinUiRuntimeTrace.Write("MainWindow constructor start");
         _pendingGuestLaunch = startInGuestMode;
         _unlockSource = unlockSource;
+        _pendingLaunchUrl = startupUrl;
         if (_pendingGuestLaunch)
         {
             GuestProcessLauncher.CleanupStaleSessionFolders();
@@ -369,6 +378,19 @@ public sealed partial class MainWindow : Window
         // Saisie clavier PIN + reset du timer de session
         Content.KeyDown      += RootKeyDown;
         Content.PointerMoved += (_, _) => ResetSessionTimer();
+        // Repris en profondeur le 2026-08-24 ("reprendre proprement plutot que
+        // patcher", session "tu te fous de ma gueule") : 3 causes distinctes de perte
+        // de focus non volontaire de la barre d'adresse trouvees dans la meme session
+        // (survol souris, alt-tab, fermeture du popup de suggestions), chacune
+        // patchee au coup par coup - sans garantie qu'une 4e n'existe pas. Remplace
+        // par un signal structurel unique et sans ambiguite : SEUL un vrai clic
+        // (bouton enfonce) ailleurs dans l'app abandonne une edition en cours dans la
+        // barre d'adresse (voir RootPointerPressed) - jamais un simple changement de
+        // focus, quelle qu'en soit la cause. `AddHandler(..., handledEventsToo: true)`
+        // plutot que `+=` : un clic sur un bouton/TextBox marque l'evenement gere
+        // avant qu'il ne remonte jusqu'ici, ce qui l'empecherait sinon d'atteindre ce
+        // handler.
+        Content.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(RootPointerPressed), true);
         // SystemEvents garde une reference statique forte vers ses abonnes : se
         // desabonner a la fermeture, sinon fuite de la fenetre + crash au prochain
         // verrouillage/veille Windows.
@@ -1426,16 +1448,34 @@ public sealed partial class MainWindow : Window
     // sur Microsoft.UI.Xaml.Controls.WebView2 dans cette version).
     private void BrowserHost_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
+        WinUiRuntimeTrace.Write($"BrowserHost_PointerEntered: AddressBox.FocusState={AddressBox.FocusState} skip={IsAddressBoxBeingEdited()}");
+        if (IsAddressBoxBeingEdited()) return;
         CurrentTab()?.View?.Focus(FocusState.Pointer);
     }
 
     private void BrowserView_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
+        WinUiRuntimeTrace.Write($"BrowserView_PointerEntered: AddressBox.FocusState={AddressBox.FocusState} skip={IsAddressBoxBeingEdited()}");
+        if (IsAddressBoxBeingEdited()) return;
         if (sender is WebView2 view)
         {
             view.Focus(FocusState.Pointer);
         }
     }
+
+    // Signale par l'utilisateur le 2026-08-24 (capture d'ecran a l'appui, texte
+    // effac au fil de la frappe) : ces deux handlers volaient TOUJOURS le focus
+    // clavier vers la page des que le pointeur souris entrait dans son
+    // perimetre - y compris pendant que l'utilisateur tapait dans la barre
+    // d'adresse avec la souris simplement posee sur la page (aucun clic
+    // necessaire, un simple tressaillement de souris/trackpad suffit a
+    // redeclencher PointerEntered). Une fois le focus vole, AddressBox_LostFocus
+    // (MainWindow.AddressSuggestions.cs) reinitialise le texte tape a l'adresse
+    // reelle de l'onglet - vide sur la page d'accueil - d'ou l'effacement.
+    // Diagnostique en conditions reelles (UIA, guide "verify") avant correction :
+    // reproduit la mecanique exacte via BrowserView_PointerEntered, confirme que
+    // le vol de focus n'est jamais garde par un focus deja pose ailleurs.
+    private bool IsAddressBoxBeingEdited() => AddressBox.FocusState != FocusState.Unfocused;
 
     private FrameworkElement? FindFirstFocusableDescendant(DependencyObject root)
     {
@@ -1637,11 +1677,12 @@ public sealed partial class MainWindow : Window
             AddressIdentityBadge.Visibility = collapseAddressIdentity ? Visibility.Collapsed : Visibility.Visible;
         }
 
+        var addressMetrics = ResolveUiDensityMetrics(_uiDensity);
         AddressBox.Padding = new Thickness(
-            collapseAddressIdentity ? 18 : 54,
-            8,
-            18,
-            8);
+            collapseAddressIdentity ? 18 : addressMetrics.AddressBoxPadding.Left,
+            addressMetrics.AddressBoxPadding.Top,
+            addressMetrics.AddressBoxPadding.Right,
+            addressMetrics.AddressBoxPadding.Bottom);
 
         if (NavigationToolbarToolsShell is not null)
         {

@@ -48,15 +48,34 @@ public sealed partial class MainWindow
         // écrivent dans la barre sans qu'elle ait le focus : pas de popup.
         if (AddressBox.FocusState == FocusState.Unfocused) return;
 
+        // Instrumentation (2026-08-24, diagnostic "curseur disparait, impossible
+        // d'ecrire" signale apres le correctif du vol de focus) : mesure le temps
+        // reellement passe dans UpdateAddressSuggestions, avec les VRAIES donnees
+        // (onglets/favoris/historique) - a servi a ecarter un blocage du thread UI
+        // (cause reelle = AddressBox_LostFocus, voir plus bas). Gardee (comme le
+        // "Diagnostic focus Win32" plus ancien, MainWindow.WindowChrome.cs) : cout
+        // nul hors LUMORA_TRACE_STARTUP=1, utile si ce type de symptome revient.
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         UpdateAddressSuggestions();
+        sw.Stop();
+        WinUiRuntimeTrace.Write($"AddressBox_TextChanged: longueur={AddressBox.Text?.Length ?? 0} UpdateAddressSuggestions={sw.ElapsedMilliseconds}ms popupOuvert={AddressSuggestionsPopup.IsOpen}");
     }
 
-    // Bascule vers l'URL complète pour l'édition dès que la barre reçoit le
-    // focus (clic, Tab, Ctrl+L...) - l'affichage au repos (DisplayAddressForBar,
-    // MainWindow.xaml.cs) est simplifié depuis le 2026-08-22 (domaine + chemin,
-    // sans requête). SelectAll() en plus : même convention que Chrome/Firefox/
-    // Edge, permet de retaper une adresse complète immédiatement sans effacer
-    // à la main.
+    // Bascule vers l'URL complète pour l'édition dès que la barre reçoit le focus
+    // (clic, Tab, Ctrl+L...) - l'affichage au repos (DisplayAddressForBar,
+    // MainWindow.xaml.cs) est simplifié depuis le 2026-08-22 (domaine + chemin, sans
+    // requête). SelectAll() en plus : même convention que Chrome/Firefox/Edge.
+    //
+    // Repris en profondeur le 2026-08-24 (3 correctifs au coup par coup dans la même
+    // session - survol, alt-tab, fermeture du popup de suggestions - sans garantie
+    // qu'une 4e cause n'existe pas) : ce handler n'écrase plus JAMAIS une édition en
+    // cours. La seule question posée est structurelle, pas "pourquoi le focus est-il
+    // revenu ?" : la barre affiche-t-elle encore exactement son état AU REPOS (le
+    // texte simplifié de la page réelle) ? Si oui, c'est un focus neuf → on bascule
+    // sur l'URL complète pour éditer. Si non, une édition était déjà en cours et a
+    // simplement été interrompue (alt-tab, effet de bord d'un Popup qui se ferme, ou
+    // toute autre cause pas encore rencontrée) → on la laisse intacte, sans avoir
+    // besoin de connaître la cause précise de l'interruption.
     private void AddressBox_GotFocus(object sender, RoutedEventArgs e)
     {
         var rawAddress = CurrentTab()?.Address;
@@ -65,16 +84,34 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (AddressBox.Text != rawAddress)
+        if (AddressBox.Text != DisplayAddressForBar(rawAddress))
         {
-            _suppressAddressSuggestions = true;
-            AddressBox.Text = rawAddress;
-            _suppressAddressSuggestions = false;
+            return;
         }
 
+        _suppressAddressSuggestions = true;
+        AddressBox.Text = rawAddress;
+        _suppressAddressSuggestions = false;
         AddressBox.SelectAll();
     }
 
+    // Ne touche plus au texte tapé (voir la note sur AddressBox_GotFocus) : une perte
+    // de focus, quelle qu'en soit la cause, ne signifie plus "l'utilisateur abandonne
+    // sa saisie". Seul un signal sans ambiguïté le fait desormais : un vrai clic
+    // ailleurs dans l'app (RootPointerPressed, MainWindow.xaml.cs) ou Échap
+    // (AddressBox_KeyDown, MainWindow.Navigation.cs) - les deux reecrivent le texte
+    // AVANT de faire perdre le focus, donc ce handler peut s'en servir comme signal :
+    // si le texte affiche represente encore une edition en cours au moment ou ce
+    // LostFocus se declenche, rien ne l'a explicitement abandonnee - la perte de
+    // focus est un pur accident technique (survol - deja bloque a la source pendant
+    // l'edition -, alt-tab, fermeture d'un popup de suggestions, ou une cause pas
+    // encore rencontree) : on reprend le focus pour que la frappe continue sans que
+    // l'utilisateur ait besoin de recliquer, jamais le contenu (deja protege par la
+    // regle structurelle de AddressBox_GotFocus). `DispatcherQueue.TryEnqueue` car un
+    // `Focus()` synchrone a l'interieur du handler LostFocus lui-meme peut etre
+    // ignore par WinUI (reentrance) - verifie en direct, la 1ere version de ce
+    // correctif tentait la reprise trop tot (avant la perte reelle, qui est
+    // asynchrone) et ne se declenchait jamais.
     private void AddressBox_LostFocus(object sender, RoutedEventArgs e)
     {
         // Un clic sur une suggestion retire d'abord le focus de la barre : ne pas
@@ -82,14 +119,27 @@ public sealed partial class MainWindow
         // l'affichage simplifié avant que la navigation choisie ait eu lieu.
         if (_addressSuggestionsPointerInside) return;
         ScheduleAddressSuggestionsClose();
-        RevertAddressBarToSimplifiedDisplay();
+
+        var rawAddress = CurrentTab()?.Address;
+        var stillEditing = !string.IsNullOrWhiteSpace(rawAddress) &&
+            AddressBox.Text != DisplayAddressForBar(rawAddress);
+
+        if (stillEditing)
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (AddressBox.FocusState == FocusState.Unfocused)
+                {
+                    AddressBox.Focus(FocusState.Programmatic);
+                }
+            });
+        }
     }
 
-    // Barre au repos (hors édition) : revient à l'affichage simplifié de la
-    // page réellement chargée, quoi que l'utilisateur ait tapé/laissé dans la
-    // barre - même convention que Chrome/Firefox/Edge (annuler une saisie non
-    // validée en cliquant ailleurs). Sans ça, un simple clic hors de la barre
-    // la laissait affichée en URL complète pour toujours.
+    // Barre au repos (hors édition) : revient à l'affichage simplifié de la page
+    // réellement chargée - même convention que Chrome/Firefox/Edge (annuler une
+    // saisie non validée). N'est plus appelée que sur un signal de sortie sans
+    // ambiguïté (RootPointerPressed, Échap) - jamais depuis AddressBox_LostFocus.
     private void RevertAddressBarToSimplifiedDisplay()
     {
         var address = CurrentTab()?.Address;
@@ -97,6 +147,28 @@ public sealed partial class MainWindow
 
         var displayAddress = DisplayAddressForBar(address);
         if (AddressBox.Text != displayAddress) AddressBox.Text = displayAddress;
+    }
+
+    // Seul declencheur restant d'un abandon volontaire de la saisie en cours dans la
+    // barre d'adresse (voir AddressBox_GotFocus/LostFocus) : un vrai clic (bouton de
+    // pointeur enfonce), n'importe ou ailleurs dans l'app, PENDANT que la barre est en
+    // cours d'edition. Abonne via `AddHandler(..., handledEventsToo: true)`
+    // (MainWindow.xaml.cs) pour voir tous les clics, meme ceux deja marques geres par
+    // un bouton/TextBox enfant. Chrome/Firefox/Edge se comportent pareil : cliquer
+    // ailleurs DANS le navigateur annule une saisie non validee, mais rien d'autre
+    // (survol, alt-tab, effets de bord internes) n'y touche plus.
+    private void RootPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (AddressBox.FocusState == FocusState.Unfocused && !AddressSuggestionsPopup.IsOpen) return;
+
+        if (e.OriginalSource is DependencyObject source &&
+            (IsDescendantOf(source, AddressBox) || IsDescendantOf(source, AddressSuggestionsSurface)))
+        {
+            return;
+        }
+
+        CloseAddressSuggestions();
+        RevertAddressBarToSimplifiedDisplay();
     }
 
     // Ferme le popup apres un court delai plutot qu'immediatement, pour laisser

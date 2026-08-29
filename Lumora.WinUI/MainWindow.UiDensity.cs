@@ -64,7 +64,7 @@ public sealed partial class MainWindow
         "comfortable" => new UiDensityMetrics(
             IconButtonSize: 32, ModulesButtonSize: 40,
             NavigationRowHeight: 72, NavigationToolbarPadding: new Thickness(12, 6, 12, 7),
-            AddressBoxMinHeight: 42, AddressBoxPadding: new Thickness(54, 8, 18, 8), AddressBoxCornerRadius: 22,
+            AddressBoxMinHeight: 46, AddressBoxPadding: new Thickness(54, 4, 18, 4), AddressBoxCornerRadius: 22,
             AddressIdentityBadgeSize: 30, AddressIdentityBadgeCornerRadius: 15,
             AddressIdentityBadgeMargin: new Thickness(10, 0, 0, 0), AddressIdentityIconSize: 12,
             BookmarksRowHeight: 60, BookmarksBottomRowHeight: 42,
@@ -78,7 +78,7 @@ public sealed partial class MainWindow
         "dense" => new UiDensityMetrics(
             IconButtonSize: 24, ModulesButtonSize: 32,
             NavigationRowHeight: 50, NavigationToolbarPadding: new Thickness(8, 3, 8, 4),
-            AddressBoxMinHeight: 32, AddressBoxPadding: new Thickness(44, 4, 14, 4), AddressBoxCornerRadius: 16,
+            AddressBoxMinHeight: 40, AddressBoxPadding: new Thickness(44, 2, 14, 2), AddressBoxCornerRadius: 16,
             AddressIdentityBadgeSize: 22, AddressIdentityBadgeCornerRadius: 11,
             AddressIdentityBadgeMargin: new Thickness(7, 0, 0, 0), AddressIdentityIconSize: 9,
             BookmarksRowHeight: 44, BookmarksBottomRowHeight: 34,
@@ -92,7 +92,7 @@ public sealed partial class MainWindow
         _ => new UiDensityMetrics(
             IconButtonSize: 28, ModulesButtonSize: 36,
             NavigationRowHeight: 60, NavigationToolbarPadding: new Thickness(10, 4, 10, 5),
-            AddressBoxMinHeight: 36, AddressBoxPadding: new Thickness(48, 6, 16, 6), AddressBoxCornerRadius: 18,
+            AddressBoxMinHeight: 44, AddressBoxPadding: new Thickness(48, 3, 16, 3), AddressBoxCornerRadius: 18,
             AddressIdentityBadgeSize: 26, AddressIdentityBadgeCornerRadius: 13,
             AddressIdentityBadgeMargin: new Thickness(9, 0, 0, 0), AddressIdentityIconSize: 10,
             BookmarksRowHeight: 52, BookmarksBottomRowHeight: 38,

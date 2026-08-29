@@ -59,17 +59,3 @@ public sealed record StartMenuTileViewModel(string Id, string Title, string Subt
 }
 
 public sealed record StartMenuSectionViewModel(string Title, string HeaderGlyph, IReadOnlyList<StartMenuTileViewModel> Tiles);
-
-// Entree du rail de categories (colonne de gauche du menu Demarrer, refonte
-// "maitre/detail" a la Windows 7 - Cle "Epingles" ou nom de section). La
-// selection courante est portee par MainWindow (_startMenuSelectedCategoryKey),
-// pas par ce record : IsSelected serait redondant avec ListView.SelectedItem.
-// FamilyKey (2026-08-10, "choses a revoir") : meme principe que
-// StartMenuTileViewModel ci-dessus - "Epingles" reste null (degrade neutre,
-// ce n'est pas une famille de contenu), les autres categories reprennent la
-// famille de leur section (StartMenuTileRegistry.ResolveFamilyKey). Avant
-// cette date, StartMenuCategoryTemplate (MainWindow.xaml) recyclait le meme
-// degrade pour toutes les categories - retour utilisateur : le rail semblait
-// "moins quali" que les cartes Epingles juste a cote, qui avaient deja leur
-// couleur par famille.
-public sealed record StartMenuCategoryViewModel(string Key, string Title, string Glyph, string? FamilyKey);

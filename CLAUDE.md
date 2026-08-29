@@ -16,7 +16,7 @@ Quand l'utilisateur commence une session ou un message par "salut" (ou une salut
 
 ## Politique de versionnement (mise a jour le 2026-07-27, remplace la regle du 2026-07-22)
 
-Palier courant : `0.93.0.0-dev` (chantier accessibilite handicap, demarre le 2026-07-27). Le premier (`0`) et le deuxieme (`93`) chiffre ne bougent que sur un changement de palier explicitement demande par l'utilisateur (nouvelle fonctionnalite globale majeure ou avancee importante) — ne jamais les monter de sa propre initiative.
+Palier courant : `0.94.0.0-dev` (chantier "Control panel and start menu" - refonte du panneau Reglages et du menu Demarrer, demarre le 2026-08-23, palier precedent `0.93.x` = accessibilite handicap). Le premier (`0`) et le deuxieme (`94`) chiffre ne bougent que sur un changement de palier explicitement demande par l'utilisateur (nouvelle fonctionnalite globale majeure ou avancee importante) — ne jamais les monter de sa propre initiative.
 
 A l'interieur d'un palier :
 - Ajout de quelque chose (fonctionnalite, module, nouvelle aide, etc.) → seul le **troisieme chiffre** bouge : `0.93.0.0-dev` → `0.93.1.0-dev` → `0.93.2.0-dev`, etc.

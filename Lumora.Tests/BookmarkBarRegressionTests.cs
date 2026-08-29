@@ -392,11 +392,11 @@ public sealed class BookmarkBarRegressionTests
     }
 
     [Fact]
-    public void Barre_adresse_passe_a_16px_par_defaut()
+    public void Barre_adresse_reste_a_18px_minimum()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
 
-        Assert.Contains("AddressBox.FontSize = largeText ? 18 : 16;", code, StringComparison.Ordinal);
+        Assert.Contains("AddressBox.FontSize = largeText ? 20 : 18;", code, StringComparison.Ordinal);
     }
 
     // 2026-08-22 (suite) : "option A" choisie sur maquette - garder le motif

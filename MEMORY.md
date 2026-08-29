@@ -23836,3 +23836,738 @@ symptome (un favori coupe en 2, pas juste "aucun chevron") qui a mene droit a la
 **Reste a faire** : confirmation utilisateur en conditions reelles (fermer/rouvrir Lumora) ;
 nom du site pour le repli cookies, toujours pas recu ; installeur a jour toujours pas
 construit (attend un Go explicite, regle 20).
+
+## 2026-08-23 (nouvelle session) — "Control panel and start menu" : nouveau palier 0.94, Reglages en rail a plat + recherche -> 0.94.0.0-dev
+
+Nouvelle session ouverte par l'utilisateur sous ce nom. Signalement en 2 points : le
+panneau Reglages est "trop fouilli/brouillon", le menu Demarrer "pas assez moderne"
+(visuel ET fonctionnement). Demande explicite d'autres propositions visuelles pour les
+deux, pas de Go d'emblee.
+
+**2 maquettes HTML publiees avant tout code** (artifacts, aucune ecriture dans le depot) :
+1. "Reglages & Demarrer v2" - constat concret tire du VRAI code (rail Reglages a 4 groupes
+   imbriques avant SettingsSectionOverview/Navigation/etc., ModulesFlyout explicitement
+   calque - commentaire du code lui-meme - sur "Windows 7, Panneau de configuration") +
+   2 pistes independantes par chantier (Reglages : "version recherche" vs "en fiches" ;
+   Demarrer : "grille d'accueil" vs "recherche d'abord").
+2. Apres choix utilisateur (Piste A pour les deux via AskUserQuestion) : "Reglages &
+   Demarrer, piste A" - meme direction detaillee avec le vrai contenu de Lumora (9 vraies
+   sections, vrais pinnes par defaut Bloqueur de pub+Coffre, vraie categorie Confidentialite
+   a 7 tuiles).
+
+**Go recu** ("go" + "tu vas modifier le 2e chiffre" - instruction explicite, nouveau
+palier). Ordre choisi par l'utilisateur via AskUserQuestion : Reglages d'abord, Demarrer
+dans un lot separe (pas fait cette session).
+
+**Reglages, Piste A implementee** (`MainWindow.xaml`, nouveau fichier
+`MainWindow.SettingsSearch.cs`) :
+- Rail de navigation aplati : les 4 Border groupes ("Navigation rapide"/"Espace
+  personnel"/"Travail quotidien"/"Donnees locales") fusionnes en UN SEUL Border avec les
+  9 RadioButton a plat (memes x:Name/Tag/Click/couleur d'icone, zero risque cote C#).
+- Recherche ajoutee (`SettingsSearchBox` + `SettingsSearchResultsPanel`, contenu
+  entoure d'un nouveau `SettingsSectionsHost` bascule Visible/Collapsed) : index statique
+  a la granularite section/sous-onglet (21 entrees a la main, PAS les ~105 TextBlocks de
+  description individuels - juge trop invasif/risque pour cette passe, voir plus bas) dans
+  `SettingsSearchIndex`. Trouve un reglage meme cache dans un sous-onglet (Mon
+  Lumora/Accessibilite/Confidentialite en ont chacun 5) et navigue en reutilisant tel quel
+  `SettingsNav_Click`/`AppearanceSubNav_Click`/`AccessibilitySubNav_Click`/
+  `PrivacySubNav_Click` existants (aucune logique de navigation dupliquee).
+- **Nettoyage des 105 paragraphes de description SOUS chaque interrupteur : PAS fait
+  cette session**, explicitement differe - certains sont en fait des messages d'etat
+  DYNAMIQUES (`SettingsPendingText`, `AvatarPendingText`, `AccessibilityRescueStatusText`...)
+  et pas de l'aide statique, melanger les deux dans un balayage mecanique aurait un vrai
+  risque de regression fonctionnelle. A faire controle par controle dans une prochaine
+  passe.
+
+**Verifie en reel** (skill verify, profil isole LUMORA_PROFILE_DIR, UIA) : app relancee,
+"Passer" sur l'ecran de bienvenue, "Menu Lumora" -> categorie "Lumora et profil" ->
+tuile "Parametres" (le Flyout `ModulesFlyout` s'est ouvert et a repondu a l'InvokePattern,
+comme le chevron favoris de la session precedente). Rail confirme a plat : exactement 9
+RadioButton trouves par UIA, aucun groupe. Recherche "loupe" (mot-cle qui n'existe QUE
+dans le sous-onglet Accessibilite > Aides a la lecture, pas dans le libelle de section
+visible) a bien fait remonter le bon resultat ; clic dessus a bascule le RadioButton
+"Accessibilite" ET le sous-onglet "Aides a la lecture" tous les deux `IsSelected=True` -
+preuve structurelle de la navigation cross-section/cross-sous-onglet.
+
+**Vrai bug d'accessibilite trouve EN verifiant** (pas en relisant le code) : les boutons
+de resultat generes (Button.Content = StackPanel de 2 TextBlock) remontaient un `Name`
+UIA VIDE - muet pour un lecteur d'ecran, alors que le contenu visuel etait la. Corrige
+avec `AutomationProperties.SetName(button, "Label, dans Chemin")` ; reverifie en reel,
+le nom est desormais correct. Notable dans un palier dont le theme est justement
+l'accessibilite handicap.
+
+Build MSBuild 0 erreur, 0 avertissement. `dotnet test` 860/860 verts (le test
+`Version_projet_est_alignee_sur_0_93_54_14` renomme + mis a jour vers `0_94_0_0`, memes
+4 fichiers verifies). Version `0.93.54.14-dev` -> `0.94.0.0-dev` (2e chiffre - instruction
+explicite de l'utilisateur, nouveau palier ; `CLAUDE.md` mis a jour en consequence,
+palier precedent 0.93.x = accessibilite handicap).
+
+**Why (methode)** : le panneau Reglages fait ~1400 lignes XAML avec 105 descriptions
+statiques ; plutot que de deviner une portee "tout faire d'un coup" et risquer de casser
+du texte d'etat dynamique deguise en description, la recherche + le rail plat (le coeur
+du reproche "fouilli avant meme d'atteindre un reglage") ont ete livres et verifies
+seuls, avec le nettoyage des paragraphes explicitement signale comme une passe separee.
+
+**Reste a faire** : nettoyage des paragraphes de description (Reglages, passe separee,
+control par controle) ; Demarrer Piste A (grille d'accueil + categories en puces) pas
+commence ; nom du site pour le repli cookies, toujours pas recu ; installeur a jour
+toujours pas construit (Go explicite requis, regle 20).
+
+## 2026-08-23 (suite) — Verification du 2e/3e chiffre + nettoyage des descriptions du panneau Reglages, controle par controle
+
+L'utilisateur s'est contredit d'un tour a l'autre sur le chiffre de version a bouger (2e
+au tour precedent, "c'etait le 3e chiffre" ensuite) - **verifie explicitement au lieu de
+trancher seul** (regle 2), en repetant les 2 etats possibles avant de toucher a quoi que
+ce soit. Reponse : garder `0.94.0.0-dev` (2e chiffre) tel quel, rien a annuler.
+
+**Nettoyage des descriptions livre**, exactement comme annonce (controle par controle,
+pas par balayage mecanique) : ~40 des 105 paragraphes convertis en
+`ToolTipService.ToolTip` sur le controle qu'ils expliquaient (ToggleSwitch/ComboBox/
+TextBox/Button), reparti sur 5 sections - Espace de travail (6), Mon Lumora (7),
+Accessibilite (11), Coffre et donnees (3), Confidentialite (13, la plus dense - Ads/
+Tracking/Connexion/Hygiene). Description partagee entre 2 interrupteurs (ex. autorisations
+Ctrl+K, fonctions du Coffre, popups/redirections) : posee sur les deux plutot que perdue
+du point de vue de l'un des deux.
+
+**~65 paragraphes explicitement laisses en l'etat** (choix delibere, pas un oubli) :
+- Cartes a plusieurs controles (Avatar, Fond d'ecran, Disposition Lumora, Ecran de
+  bienvenue) - pas de controle unique auquel accrocher une seule infobulle.
+- Liste des raccourcis clavier (Accessibilite > Navigation clavier) - contenu de
+  reference, pas une description d'interrupteur ; le cacher derriere un survol serait une
+  regression, pas une amelioration.
+- Bouton "Vider les donnees de navigation" (danger) et alertes similaires (Stockage) -
+  un avertissement avant une action destructrice reste visible par choix, pas par defaut.
+- Descriptions imbriquees dans des options de RadioButtons (profils de confort
+  Accessibilite, mode de demarrage) - autre motif structurel, pas visee par le reproche
+  "paragraphe sous un interrupteur".
+- Section Profils locaux et Stockage local : quasi aucune description de ce type trouvee
+  (verifie par grep cible, pas suppose).
+
+**Verifie en reel** (skill verify) : build 0 erreur, `dotnet test` 860/860 verts. Relance
++ UIA sur Confidentialite > Publicites : le paragraphe "Bloque les serveurs
+publicitaires..." n'existe plus DU TOUT dans l'arbre visible (confirmation directe du
+nettoyage, pas une supposition) ; `HelpText` UIA du ToggleSwitch reste vide, mais ce
+n'est pas une regression introduite ici - `ToolTipService.ToolTip` seul (sans
+`AutomationProperties.HelpText` explicite) est deja le motif utilise ailleurs dans cette
+meme UI (ex. boutons de pastille couleur du mode, bouton Menu Lumora) et se comporte
+pareil partout ; corriger cette limite plus generale serait un chantier a part, pas
+demande ici.
+
+Version inchangee (`0.94.0.0-dev`, purement une passe de nettoyage a l'interieur du meme
+palier).
+
+**Why** : re-verifier une instruction utilisateur qui se contredit d'un tour a l'autre
+avant d'agir evite un aller-retour de version inutile ; traiter le nettoyage controle par
+controle (comme annonce a l'avance) plutot que par regex global a permis de reperer et
+d'ecarter a bon escient les descriptions qui ne sont PAS de simples paragraphes
+redondants (avertissements de securite, listes de reference, cartes multi-controles).
+
+**Reste a faire** : Demarrer Piste A (grille d'accueil + categories en puces) pas
+commence ; nom du site pour le repli cookies, toujours pas recu ; installeur a jour
+toujours pas construit (Go explicite requis, regle 20).
+
+## 2026-08-23 (suite) — Demarrer refait "facon Windows 11" (remplace la piste pills+grille) -> toujours 0.94.0.0-dev
+
+Apres Go sur la piste "pills + grille", l'utilisateur a demande une presentation
+graphique AVANT code (comme d'habitude), puis a change de direction en la voyant :
+"tu vois comment est constitue le menu demarrer de Windows 11 ? Je veux a peu pres la
+meme chose." **2 maquettes HTML publiees avant tout code** (comme toujours) :
+
+1. "Demarrer, grille d'accueil" (piste pills+grille finalisee avec les VRAIES donnees du
+   registre) - en la construisant, correction trouvee sur ma propre maquette precedente :
+   **6 categories reelles, pas 5** (j'avais rate "Modules", 1 seule tuile) + la famille
+   "identity" (violet, `NovaTileFamilyIdentityBrush`) jamais montree avant.
+2. "Demarrer facon Windows 11" (nouvelle direction) - Epingle+Recommande par defaut,
+   lien "Toutes les tuiles" pour tout voir, profil descendu en pied de menu. Point de
+   contexte donne AVANT la maquette (pas apres) : Lumora avait deja ce principe exact
+   (bascule Epingles/Toutes les applications) avant le 0.93.5.0-dev, abandonne alors car
+   "obligeait a naviguer entre deux ecrans" - mais Lumora n'a que 23 tuiles (vs des
+   centaines d'applis Windows), donc "Toutes les tuiles" tient sur un seul ecran.
+   2 questions posees (AskUserQuestion) avant Go : A-Z strict ou familles colorees dans
+   "Toutes les tuiles" (**familles colorees**, confirme) ; remplace ou melange avec la
+   piste pills+grille (**remplace completement**, confirme).
+
+**Implemente et verifie en reel** (`MainWindow.xaml`, `MainWindow.StartMenu.cs`,
+`MainWindow.xaml.cs`, `Models/StartMenuTiles.cs`) :
+- Rail de categories + volet detail (0.93.5.0-dev, "a la Windows 7") entierement retire :
+  `StartMenuCategoryList`/`StartMenuCategoryTemplate`/`StartMenuRailAndDetail`/
+  `StartMenuCategoryViewModel`/`_startMenuSelectedCategoryKey` supprimes (aucune
+  reference restante, verifie par grep sur tout le depot).
+- Nouveau gabarit `StartMenuGridTileTemplate` (tuile carree 140x96, icone au-dessus du
+  titre) pour "Epingle" et "Toutes les tuiles" ; "Recommande" reutilise tel quel
+  l'ancien gabarit en ligne `StartMenuDetailTileTemplate` (deja la forme du vrai
+  "Recommande" de Windows 11).
+- **Vraie donnee branchee pour la premiere fois** : `StartMenuTileRegistry.TopTiles`/
+  `UsageScore`/`StartMenuTileUsage.RecordOpen` existaient depuis le 0.93.x mais
+  n'etaient JAMAIS appeles nulle part (verifie par grep avant de coder) - "Recommande"
+  aurait ete vide en permanence. `RecordStartMenuTileOpen` ajoute dans
+  `OpenStartMenuTile`, upsert dans `_uiSettings.StartMenuTileUsage` + `Save`.
+  Verifie en reel : ouvrir "Bloqueur de pub" puis rouvrir le menu le fait bien
+  apparaitre dans "Recommande".
+- "Toutes les tuiles" peuplee en code-behind (`RebuildStartMenuAllTiles`, un
+  `ItemsRepeater` par section du registre avec son en-tete colore) - meme motif que
+  `SettingsSearchResultsPanel` (session precedente, meme jour).
+- Profil deplace de l'en-tete vers le pied de menu (apres la recherche) - test existant
+  `Menu_demarrer_porte_le_profil_en_entete` renomme et sens de l'assertion inverse pour
+  refleter le nouveau choix explicite, plutot que casse silencieusement.
+- **Incident reel en cours de route (corrige avant de continuer)** : le premier jet de
+  `SectionHeaderGlyph` a ete ecrit avec des caracteres Unicode BRUTS au lieu de
+  l'echappement C# `\uXXXX` - exactement le piege deja documente dans
+  `StartMenuTileRegistry.cs` (incident du 2026-08-12, glyphe invisible a l'inspection
+  texte). Repere immediatement (`cat -A` montrait des sequences UTF-8 brutes au lieu de
+  `\uXXXX`), corrige via remplacement PowerShell cible plutot qu'ignore.
+
+Build MSBuild 0 erreur, 0 avertissement. `dotnet test` 860/860 verts (le test de
+placement du profil recrit, aucun autre touche). Verifie en reel (skill verify, mode
+invite - necessaire ici : le mode invite relance un PROCESS SEPARE, PID different,
+piege reel rencontre pendant la verification) : rail confirme disparu, "Epingle"
+affiche les 2 pinnes par defaut (Bloqueur de pub, Coffre) en tuiles carrees, lien
+"Toutes les tuiles" fonctionne et affiche les groupes par famille (Confidentialite
+rose, Navigation ambre, verifie visuellement par capture d'ecran reelle), lien retour
+fonctionne, profil bien en pied de menu ("Mode invite" visible en bas).
+
+Version inchangee (`0.94.0.0-dev`, meme palier, meme lot de refonte que les Reglages).
+
+**Why** : reperer le meme incident de glyphe brut qu'une session precedente avait deja
+documente comme piege - relire ses propres notes en ecrivant du code similaire evite de
+retomber dans un trou deja cartographie. Brancher `TopTiles`/`RecordOpen` (code mort
+depuis le 0.93.x) plutot que d'inventer une nouvelle mecanique de recommandation evite
+de dupliquer une logique deja ecrite et testee.
+
+**Reste a faire** : verification manuelle du glisser-epingler/desepingler par clic droit
+en usage reel (logique inchangee, mais pas repilotable via UIA - meme limite deja
+documentee sur les MenuFlyoutItem) ; nom du site pour le repli cookies, toujours pas
+recu ; installeur a jour toujours pas construit (Go explicite requis, regle 20).
+
+**Confirmation utilisateur reelle recue** (meme jour, apres livraison) : "J'ai vu ce que
+t'as fait, c'est deja pas mal au niveau du menu demarrer, c'est deja plus clair, plus
+lisible." Premier retour direct sur le rendu en conditions reelles (pas juste la
+verification UIA/capture faite cote Claude) - le point "reste a confirmer" du lot
+precedent est leve pour le Demarrer.
+
+## 2026-08-24 — Session "tu te fous de ma gueule" : barre d'adresse qui s'efface en tapant -> 0.94.0.1-dev
+
+Signalement avec capture d'ecran : texte de la barre d'adresse a peine visible, ET
+caracteres qui s'effacent tout seuls en pleine frappe ("Tintin" impossible a taper en
+entier, retombait a vide apres quelques lettres, a chaque tentative).
+
+**Vraie cause trouvee dans le code** (pas supposee) : `BrowserView_PointerEntered` ET
+`BrowserHost_PointerEntered` (`MainWindow.xaml.cs`) volaient INCONDITIONNELLEMENT le
+focus clavier vers la page (`view.Focus(FocusState.Pointer)`) des que le pointeur
+entrait dans la zone de contenu - sans jamais verifier si un champ de saisie (la barre
+d'adresse) etait deja en cours d'edition. Ce vol de focus avait ete ajoute
+volontairement (0.93.x, commentaire retrouve) pour un tout autre bug (la molette muette
+dans la page tant qu'on n'avait pas clique dedans), sans garde contre un focus deja pose
+ailleurs. Une fois le focus vole, `AddressBox_LostFocus` (deja existant, 0.93.54.6-dev)
+reinitialise le texte tape a l'adresse reelle de l'onglet - vide sur la page d'accueil -
+d'ou l'effacement : il suffit que la souris soit simplement posee sur la page (quasi tout
+l'ecran) pendant la frappe, un tressaillement de souris/trackpad suffisant a redeclencher
+le vol. Le texte "a peine visible" de la capture est tres probablement le meme incident
+capture en plein flash (les couleurs du theme Mode Neutre elles-memes sont correctes,
+verifiees dans `MainWindow.SettingsTheme.cs` - texte quasi blanc sur fond bleu marine).
+
+**Correctif** : garde ajoutee dans les deux handlers (`IsAddressBoxBeingEdited()`, teste
+`AddressBox.FocusState != FocusState.Unfocused`) - le vol de focus vers la page ne se
+declenche plus tant que la barre d'adresse est activement utilisee ; comportement
+inchange sinon (la molette continue de fonctionner des le survol quand on n'edite pas
+l'adresse).
+
+**Verification** : diagnostic initial fait en conditions reelles (skill verify, profil
+invite, PowerShell + UIA) - simulation de frappe caractere par caractere via
+`ValuePattern.SetValue` n'a PAS reproduit l'effacement (attendu : ce pattern ecrit le
+`Text` directement, sans jamais passer par un vrai survol souris) ; c'est la lecture du
+code (`BrowserView_PointerEntered`) qui a revele le mecanisme exact, confirme par
+relecture croisee avec `AddressBox_LostFocus`. Build MSBuild 0 erreur, `dotnet test`
+860/860 verts apres coup. **Confirmation visuelle finale du comportement (survol reel
+pendant la frappe) non repilotable via UIA dans cet environnement** - meme famille de
+limite deja documentee pour les Popups/Flyouts et les FileOpenPicker (l'injection
+souris/clavier synthetique reste refusee) : signale honnetement, a confirmer par
+l'utilisateur en usage normal.
+
+Version `0.94.0.0-dev` -> `0.94.0.1-dev` (**4e chiffre**, correctif d'un comportement
+deja cense fonctionner, meme palier "Control panel and start menu" en cours).
+
+## 2026-08-24 (suite) — "c'est pire" : 2e cause reelle trouvee (perte de focus OS = saisie effacee) -> 0.94.0.2-dev
+
+L'utilisateur a rouvert l'app en mode trace lui-meme apres le correctif precedent et a
+signale un symptome DIFFERENT/pire : "le curseur disparait et je peux plus ecrire au
+bout d'un moment". Consigne explicite : vrai diagnostic, vraie correction, pas de
+nouvelle question avant d'avoir cherche.
+
+**Methode** : lecture du VRAI `winui-runtime-trace.log` genere par l'utilisateur
+(`artifacts/tmp/winui-run/.../current/`) - rien d'exploitable dedans (aucune trace sur
+la barre d'adresse, aucune exception, juste le bruit "Diagnostic focus Win32" deja
+present identique dans des sessions bien anterieures a ce jour). Instrumentation
+ajoutee (`WinUiRuntimeTrace.Write` dans `AddressBox_GotFocus`/`LostFocus`/
+`TextChanged`, `BrowserView_PointerEntered`/`BrowserHost_PointerEntered`,
+`RootKeyDown`) - a servi a **ecarter** l'hypothese "moteur de suggestions trop lent sur
+gros historique" (55 caracteres tapes en direct, 0-8ms par frappe, aucun ralentissement
+- le vrai profil `default` de la machine n'a d'ailleurs presque pas de donnees :
+`bookmarks.lumora` 310 octets, aucun `history.lumora`).
+
+**Percee methodologique** : `ValuePattern.SetValue` (utilise jusque-la pour "taper")
+n'emet JAMAIS de vrai `PointerEntered`/`KeyDown` - `SendKeys` + `SetForegroundWindow`
+(sur le VRAI HWND recupere par UIA) le permettent enfin dans cet environnement, une
+fois la fenetre reellement mise au premier plan Win32 avant l'envoi.
+
+**Vraie cause n°2** (reproduite en direct, y compris par un evenement non scripte :
+l'utilisateur a lui-meme tape un message dans la fenetre de test pendant la
+manipulation, puis a change de fenetre - la barre s'est aussitot videe) :
+`AddressBox_LostFocus` (`MainWindow.AddressSuggestions.cs`) appelait
+`RevertAddressBarToSimplifiedDisplay()` sur N'IMPORTE QUELLE perte de focus, y compris
+un simple alt-tab/changement de fenetre Windows (la fenetre Lumora perd le focus OS,
+sans aucun clic DANS l'app) - jamais seulement un "clic ailleurs dans le navigateur"
+comme l'intention d'origine (0.93.54.6-dev) le supposait. Sur la page d'accueil,
+`DisplayAddressForBar` retourne une chaine VIDE : la saisie en cours etait donc
+purement perdue, sans aucun moyen de recuperation - bien plus genant que le simple
+retour a l'affichage simplifie prevu, et sans rapport avec le vol de focus au survol
+deja corrige (confirme : `skip=True` s'affichait bien dans le journal a ce moment-la,
+le vol de focus etait deja neutralise - c'est cette 2e cause, independante, qui restait
+visible une fois la 1ere masquee).
+
+**Correctif** : `_windowIsOsActive` (nouveau champ, suit `Window.Activated` /
+`WindowActivationState.Deactivated`) distingue desormais un vrai clic interne (revert
+inchange) d'un simple changement de fenetre (saisie preservee, rien n'est efface).
+`_addressBoxPreservedAfterWindowDeactivate` (drapeau a usage unique) empeche en plus le
+`GotFocus` suivant d'ecraser cette saisie preservee avec l'adresse reelle de l'onglet -
+sans ca, la preservation aurait ete annulee des le premier reclic dans la barre.
+Comportement desormais aligne sur Chrome/Firefox/Edge : revenir sur l'app apres un
+alt-tab laisse la saisie intacte, seul un vrai clic ailleurs DANS le navigateur
+l'efface.
+
+**Verifie en direct, cause et correctif confirmes par le MEME scenario reproductible**
+(profil invite, fenetre reellement minimisee puis restauree via Win32 - pas une
+simulation) : "tintin" tape -> minimisation 3s -> valeur toujours "tintin" -> restauration
++ reclic -> valeur toujours "tintin" (pas ecrasee par l'URL) -> suite de la frappe
+(".fr") -> "tintin.fr" correct, aucun blocage. Trace confirmee :
+`AddressBox_LostFocus windowOsActive=False` -> pas de revert, `AddressBox_GotFocus
+preserved=True` -> pas d'ecrasement.
+
+Instrumentation ajoutee GARDEE (cout nul hors `LUMORA_TRACE_STARTUP=1`, meme convention
+que le "Diagnostic focus Win32" plus ancien) plutot que retiree.
+
+Build MSBuild (Debug) : 0 erreur. `dotnet test` : 860/860 verts.
+Version `0.94.0.1-dev` -> `0.94.0.2-dev` (**4e chiffre**, 2e correctif distinct trouve
+dans la meme session de diagnostic).
+
+## 2026-08-24 (suite) — Toujours pas corrige signale par l'utilisateur, 3e cause reelle trouvee via SON journal -> 0.94.0.3-dev
+
+L'utilisateur a retest lui-meme en mode trace, a constate que "Tint" s'effacait TOUJOURS
+(le symptome original, mot pour mot), et a attribue ca aux onglets verticaux (son
+reglage habituel, different des tests precedents). Ton dur ("t'es un connard... travail
+a moitie") - pris au serieux, diagnostic repris sur SON journal reel, pas sur une
+nouvelle supposition.
+
+**Lecture du `winui-runtime-trace.log` genere par l'utilisateur lui-meme** (pas un test
+Claude) - sequence exacte trouvee :
+```
+RootKeyDown: key=T ... / TextChanged longueur=1 popupOuvert=True
+RootKeyDown: key=I ... / TextChanged longueur=2 popupOuvert=True
+RootKeyDown: key=N ... / TextChanged longueur=3 popupOuvert=True
+RootKeyDown: key=T ... / TextChanged longueur=4 popupOuvert=False   <- le popup se ferme ICI
+AddressBox_LostFocus: FocusState=Unfocused ... windowOsActive=True  <- 2ms plus tard
+```
+**3e cause, distincte des 2 precedentes** : "Tin" correspondait a un favori/historique
+REEL de l'utilisateur (popup de suggestions ouvert), "Tint" ne correspond plus a rien -
+`UpdateAddressSuggestions` ferme alors le popup (`AddressSuggestionsPopup.IsOpen =
+false`) en cours de frappe. Effet de bord WinUI : ce retrait de Popup peut faire perdre
+le focus de `AddressBox` sans AUCUN survol ni clic (confirme : aucune ligne
+`PointerEntered` autour de l'incident, et `windowOsActive=True` donc pas non plus
+l'alt-tab deja corrige) - juste le fait de fermer le popup. `AddressBox_LostFocus`
+prenait alors ca pour un blur volontaire et effacait la saisie : le symptome original
+("Tin" + 2e "t") rejoue a l'identique, independamment des onglets verticaux/horizontaux
+- **le vrai facteur commun aux essais reussis par l'utilisateur, jamais reproduits par
+Claude avant, c'est un VRAI profil avec des favoris/historique reels qui matchent "Tin"
+mais pas "Tint"** (les tests Claude precedents tournaient sur des profils invites/isoles
+quasi vides, ou le popup ne s'ouvrait jamais) - pas les onglets verticaux en soi.
+
+**Correctif** : `CloseSuggestionsPreservingAddressBoxFocus` (remplace l'appel direct a
+`CloseAddressSuggestions` dans la branche "0 resultat" de `UpdateAddressSuggestions`) -
+detecte si `AddressBox` avait le focus avant fermeture, pose un drapeau a usage unique
+(`_suppressNextAddressBoxLostFocusRevert`) pour empecher le `LostFocus` qui va suivre
+d'effacer la saisie, ET reprend explicitement le focus si jamais il a deja saute
+(`AddressBox.Focus(FocusState.Programmatic)`, en reutilisant le meme drapeau que la
+preservation alt-tab pour que le `GotFocus` associe ne l'ecrase pas non plus) - la
+frappe continue sans que l'utilisateur ait besoin de recliquer.
+
+**Verification** : build MSBuild 0 erreur, `dotnet test` 860/860 verts. Repro live
+(profil invite + candidat "tinlibre.example" fabrique expres pour matcher "Tin" mais
+pas "Tint", frappe reelle SendKeys caractere par caractere) interrompue par un VRAI
+verrouillage d'ecran Windows survenu pendant le test (LogonUI.exe detecte en cours
+d'execution - meme classe d'incident que documentee le 12/08, sans rapport avec le
+correctif) - **non reconfirme visuellement par une repro Claude complete cette fois**,
+mais le mecanisme est etabli directement depuis le journal REEL de l'utilisateur (pas
+une supposition), et le correctif cible exactement la ligne de code qui cause la
+sequence observee. A confirmer par l'utilisateur en usage normal.
+
+Version `0.94.0.2-dev` -> `0.94.0.3-dev` (**4e chiffre**, 3e correctif distinct trouve
+dans la meme session de diagnostic, meme bug rapporte par l'utilisateur).
+
+## 2026-08-24 (suite) — 0.94.0.3-dev insuffisant, le VRAI journal de l'utilisateur le prouve -> 0.94.0.4-dev
+
+L'utilisateur a retest 0.94.0.3-dev en mode trace (onglets verticaux) : "toujours le
+meme probleme... au bout du 3e caractere, soit ca s'efface, soit le curseur disparait".
+
+**Lecture du nouveau `winui-runtime-trace.log`** (genere par l'utilisateur, pas un test
+Claude) - la preuve exacte que le correctif precedent etait incomplet :
+```
+TextChanged longueur=3 popupOuvert=False
+AddressBox_LostFocus: ... suppressed=True        <- le drapeau anti-effacement A MARCHE
+                                                     (pas de "AddressBox_GotFocus" derriere !)
+... 2.8s plus tard, sans aucun rapport (drag favoris) ...
+AddressBox_GotFocus: FocusState=Unfocused preserved=False
+... encore plus tard, un survol de page ...
+BrowserView_PointerEntered: AddressBox.FocusState=Unfocused skip=False   <- skip=False cette fois
+AddressBox_LostFocus: ... suppressed=False        <- pas protege : efface pour de vrai
+```
+**Bug dans mon propre correctif 0.94.0.3-dev** : `CloseSuggestionsPreservingAddressBoxFocus`
+tentait de reprendre le focus juste APRES avoir ferme le popup, en lisant
+`AddressBox.FocusState` a cet instant precis - mais ce changement d'etat est
+ASYNCHRONE (pas synchrone avec la fermeture du Popup) : `FocusState` valait encore
+l'ancienne valeur (focus toujours actif) au moment du test, donc la condition
+`AddressBox.FocusState == FocusState.Unfocused` etait TOUJOURS fausse et la reprise de
+focus ne se declenchait JAMAIS. Le drapeau anti-effacement, lui, fonctionnait bien (la
+saisie n'etait plus effacee tout de suite) - mais le champ restait sans focus reel, sans
+curseur clignotant, jusqu'a ce qu'un evenement ulterieur (survol de page, plus protege
+puisque `AddressBox.FocusState` etait redevenu `Unfocused` entre-temps) finisse par
+effacer la saisie pour de bon. D'ou les 2 symptomes rapportes : "le curseur disparait"
+(vrai, le focus est reellement perdu et jamais repris) PUIS "ca s'efface" (le 2e coup,
+non protege).
+
+**Correctif** : la reprise de focus se fait desormais DANS `AddressBox_LostFocus`
+lui-meme (qui ne s'execute qu'apres la perte REELLE, garanti par definition de
+l'evenement), via `DispatcherQueue.TryEnqueue(() => AddressBox.Focus(...))` - jamais en
+amont dans `CloseSuggestionsPreservingAddressBoxFocus` qui se contente maintenant de
+poser le drapeau anti-effacement, rien d'autre.
+
+**Verifie en direct par repro reelle** (profil invite, candidat "tinlibre.example"
+fabrique pour matcher "Tin" mais pas "Tint", frappe SendKeys caractere par caractere,
+fenetre reellement au premier plan) : "T"->"Ti"->"Tin"->"Tint", focus reste sur
+"Adresse ou recherche" a CHAQUE etape (jamais perdu), valeur stable "Tint" 2s plus tard
+sans rien faire. Trace confirmee : `suppressed=True` suivi 7ms plus tard d'un
+`AddressBox_GotFocus preserved=True` - la reprise se declenche enfin.
+
+Build MSBuild (Debug) : 0 erreur. `dotnet test` : 860/860 verts.
+Version `0.94.0.3-dev` -> `0.94.0.4-dev` (**4e chiffre**, correction d'un correctif
+incomplet de la meme session).
+
+## 2026-08-24 (suite) — Reprise propre demandee par l'utilisateur, plus de patchs au coup par coup -> 0.94.0.5-dev
+
+L'utilisateur, apres 4 correctifs successifs sur le meme bug, a demande explicitement :
+"pourquoi pas reprendre tout depuis le debut et le refaire proprement au lieu d'essayer
+de patcher ?". Avis donne avant d'agir (question posee) : pas une reecriture complete
+(risque plus eleve pour un probleme localise), mais une **inversion de la logique** de
+`AddressBox_LostFocus` - au lieu de "j'efface sauf si je reconnais ce cas precis"
+(liste d'exceptions jamais garantie complete - 3 causes trouvees en une session), passer
+a "je n'efface JAMAIS par defaut, seul un signal SANS AMBIGUITE d'abandon volontaire le
+fait". Go recu.
+
+**Nouvelle architecture** (`MainWindow.AddressSuggestions.cs`, `MainWindow.xaml.cs`,
+`MainWindow.Navigation.cs`) :
+- `AddressBox_GotFocus` : ne bascule sur l'URL complete que si le texte affiche
+  correspond ENCORE exactement a l'affichage au repos (`DisplayAddressForBar`) - sinon
+  une edition etait deja en cours (interrompue par n'importe quelle cause, connue ou
+  pas) et n'est jamais ecrasee. Regle structurelle, plus besoin de drapeaux "a usage
+  unique" par cause.
+- `AddressBox_LostFocus` : ne touche plus JAMAIS au texte. Reprend seulement le focus
+  (`DispatcherQueue.TryEnqueue`) si le texte affiche represente encore une edition en
+  cours au moment ou CE LostFocus se declenche (donc rien ne l'a explicitement
+  abandonnee avant) - pour le confort (le curseur clignotant), jamais pour le contenu
+  (deja protege par la regle ci-dessus).
+- **Nouveau** : `RootPointerPressed` (`MainWindow.xaml.cs`, abonne via
+  `Content.AddHandler(PointerPressedEvent, ..., handledEventsToo: true)`) - SEUL
+  declencheur restant d'un abandon volontaire : un vrai clic (bouton enfonce)
+  n'importe ou ailleurs dans l'app pendant une edition en cours. Reutilise
+  `IsDescendantOf` (deja existant, `MainWindow.CommandPalette.cs`).
+- **Nouveau** : Echap (popup ferme) revient a l'affichage simplifie + rend le focus a
+  la page (`AddressBox_KeyDown`, `MainWindow.Navigation.cs`) - meme convention que
+  Chrome/Firefox/Edge, absent jusque-la hors contexte popup.
+- Code mort retire : `_windowIsOsActive` (+ l'abonnement `Activated`),
+  `_addressBoxPreservedAfterWindowDeactivate`, `_suppressNextAddressBoxLostFocusRevert`,
+  `CloseSuggestionsPreservingAddressBoxFocus` - tous remplaces par la regle
+  structurelle unique ci-dessus.
+
+**Incident reel en cours de route (corrige avant de continuer)** : 1ere version de la
+reprise de focus placee dans `CloseSuggestionsPreservingAddressBoxFocus` (avant meme la
+perte reelle) - **exactement le meme piege de timing que 0.94.0.3-dev**, verifie en
+direct (sondage focus toutes les 60ms sans reclic : `focus=''` en continu, la frappe
+suivante ne s'accrochait plus). Corrige en deplacant la reprise dans le VRAI
+`AddressBox_LostFocus` (seul endroit garantissant que la perte a deja eu lieu).
+
+**Verifie en direct, repro complete et reproductible** : "Tint" tape (popup se ferme au
+4e caractere) → focus reste sur la barre en continu (sondage toutes les 80ms, jamais
+vide) → suite de frappe "in" SANS reclic → "Tintin" correct. Alt-tab (minimiser/
+restaurer reel) → "Tintin" toujours intact. Echap (frappe reelle) → revient bien a vide
+(page d'accueil). **Non verifiable en direct** : le clic reel ailleurs (`RootPointer-
+Pressed`) - `mouse_event` (bouton souris synthetique) n'atteint pas l'app dans cet
+environnement (confirme : le bouton "Historique" vise n'a pas reagi, aucun panneau
+ouvert) - meme famille de limite deja documentee pour le survol. Verifie par relecture
+de code uniquement pour ce cas precis - a confirmer par l'utilisateur en usage reel.
+
+Build MSBuild (Debug) : 0 erreur. `dotnet test` : 860/860 verts.
+Version `0.94.0.4-dev` -> `0.94.0.5-dev` (**4e chiffre**, reprise structurelle du meme
+correctif, pas une nouvelle fonctionnalite).
+
+## 2026-08-24 (suite) — Qualite visuelle vs Chrome, "Option A" validee -> 0.94.0.6-dev
+
+Bug clavier confirme resolu par l'utilisateur. Nouvelle demande, 2 captures a l'appui
+(barre Lumora vs barre Chrome, onglets verticaux des 2 cotes) : "je veux la meme qualite
+que celle de Google". Maquette HTML publiee AVANT tout code (3 constats + 2 pistes,
+Option A "repolir la pilule actuelle" vs Option B "souder les icones a la pilule,
+structurel") - l'utilisateur a valide **Option A seule**.
+
+**Vraie cause du texte terne trouvee** (pas juste une supposition esthetique) :
+`AddressBox` avait bien `Foreground="{StaticResource NovaAddressForegroundBrush}"`
+(quasi blanc, #F2F5FA) mais ca ne suffit pas pour un `TextBox` WinUI - le texte edite
+n'est peint via `TemplateBinding Foreground` que dans certains etats ; les VisualStates
+standard "Normal"/"Focused"/"PointerOver" du template Fluent par defaut utilisent les
+cles de theme `TextControlForeground`/`TextControlForegroundFocused`/
+`TextControlForegroundPointerOver`, jamais redefinies dans ce depot (contrairement a
+`NovaControlForegroundBrush` pour les autres controles via
+`LumoraTheme.ApplySharedAppBrushes`) - piege WinUI3 connu, pas specifique a Lumora.
+
+**Correctif** : `TextBox.Resources` sur `AddressBox` (`MainWindow.xaml`) aliase ces 4
+cles vers `NovaAddressForegroundBrush`/`NovaTextMutedBrush` via `<StaticResource
+x:Key=... ResourceKey=.../>` - meme instance de brush (pas une copie), reste a jour a
+chaque changement de mode/theme sans code supplementaire (`SetBrush` mute `.Color` en
+place, verifie dans `LumoraTheme.cs`).
+
+**Verifie par pixel reel, pas par theorie** : capture d'ecran de la VRAIE barre (profil
+invite, URL longue tapee), pixel le plus lumineux de la zone de texte echantillonne par
+script = **R242 G245 B250** - correspond exactement a `NovaAddressForegroundBrush`.
+Capture visuelle envoyee a l'utilisateur pour confirmation. Build MSBuild 0 erreur,
+`dotnet test` 860/860 verts.
+
+Version `0.94.0.5-dev` -> `0.94.0.6-dev` (**4e chiffre**, correction visuelle du meme
+chantier barre d'adresse). Reste : Option B (souder les icones a la pilule) et l'icone
+de gauche contextuelle, non demandees pour l'instant.
+
+**Confirmation utilisateur reelle recue** (meme jour) : "Tout est bien corrigé, je peux
+vérifier" - le chantier barre d'adresse de cette session (0.94.0.1 a .6-dev : vol de
+focus au survol, alt-tab, popup de suggestions, timing de reprise, reprise structurelle,
+contraste du texte) est verifie et clos par l'utilisateur en conditions reelles, pas
+seulement par les verifications Claude en profil isole.
+
+## 2026-08-24 (suite) — "Tu te fous de ma gueule" (bis) : lettres illisibles + contenu
+tape errone, 2 pistes distinctes -> 0.94.0.7-dev
+
+L'utilisateur revient tres remonte : "on voit toujours rien... des petits bateaux... le
+tiers de la lettre". Diagnostic mene en plusieurs etapes, chacune avec preuve reelle :
+
+**1. Le "bug" reproduit par Claude au tour precedent etait de la contamination, pas un
+bug reel** : en testant la frappe rapide (SendKeys), un prefixe de caracteres etrangers
+("fvvrbgtbfrrb") apparaissait avant le texte envoye. Analyse du timing dans le journal :
+ces caracteres arrivaient avec un rythme irregulier (20ms a 800ms d'ecart) typique d'une
+vraie frappe humaine, contrairement au rythme uniforme et rapide de l'automatisation -
+signe que l'utilisateur tapait dans la meme fenetre de test pendant que Claude
+l'automatisait (deja vu une fois dans la session, "T'inquiete pas"). Un test refait dans
+la foulee, sans contamination, a produit un texte parfaitement correct malgre la meme
+vitesse de frappe.
+
+**2. MAIS un vrai bug de contenu persiste, confirme dans la VRAIE session utilisateur**
+(l'utilisateur a autorise l'inspection : "Ma session est ouverte, tu peux regarder") :
+lecture directe (UIA, lecture seule, aucun clic/frappe) de la valeur reelle du champ =
+`m=ooààikkkikicoil` (ou variante proche), confirmee stable a 2 lectures separees. **Pas
+un artefact d'affichage** - la donnee elle-meme, dans le vrai profil, contient ce texte
+incoherent. **Piege de capture reel rencontre en cours de route** (deja documente dans
+[[verifier-lapp-winui]]) : `CopyFromScreen` sur le rectangle UIA de la fenetre Lumora a
+d'abord capture la fenetre Claude Code elle-meme (Lumora n'etait pas au premier plan) -
+corrige en remettant Lumora au premier plan (lecture seule) avant une 2e capture, qui a
+confirme visuellement le meme texte. **Cause du contenu errone non trouvee** - il manque
+la sequence de touches reellement recues (le mode trace n'etait pas actif sur cette vraie
+session) et ce que l'utilisateur voulait taper au depart ; redemande a l'utilisateur mais
+pas encore obtenue.
+
+**3. Le "illisible" (independant du bug de contenu ci-dessus) - vraie cause trouvee et
+corrigee** : `AddressBox` n'avait AUCUNE `FontSize` ni `CharacterSpacing` explicites
+(taille de police WinUI par defaut ~14px, espacement par defaut) - des sequences de
+lettres a hampe fine (i/k/l), frequentes dans le texte errone ci-dessus, se collaient
+visuellement les unes aux autres a cette taille, rendant meme un texte "techniquement
+complet" (aucune lettre coupee, confirme par zoom x4) pratiquement illisible - exactement
+ce que l'utilisateur decrivait ("petits bateaux", "pas les yeux Superman"). **1ere
+hypothese (ClearType perdu a cause d'un `Background="Transparent"` sur le TextBox)
+testee et INFIRMEE** : fond rendu opaque, mesure quantitative de la nettete des bords
+(largeur de transition de luminance) + comparaison visuelle = aucune difference,
+changement annule. **2e hypothese confirmee visuellement** : `FontSize="17"` +
+`CharacterSpacing="12"` sur `AddressBox` - meme texte dense ("ikkikikkicoilm") capture
+avant/apres, nettement plus lisible, lettres bien separees. Contraste deja corrige
+reverifie au pixel (242,245,250, toujours bon).
+
+Build MSBuild (Debug) : 0 erreur. `dotnet test` : 860/860 verts.
+Version `0.94.0.6-dev` -> `0.94.0.7-dev` (**4e chiffre**, meme chantier).
+
+**Reste a faire** : la vraie cause du CONTENU errone (pas juste sa lisibilite) n'est
+toujours pas identifiee - a obtenir de l'utilisateur : ce qu'il voulait taper + une
+reproduction en mode trace pour voir la sequence de touches recues.
+
+## 2026-08-24 (suite) — Toujours illisible, meme un texte propre ("tu es un gros con") -> 0.94.0.8-dev
+
+L'utilisateur a explicitement ecarte la piste "contenu errone" ("on s'en fout de ce que
+je voulais taper") et fourni une capture decisive : il a tape lui-meme "tu es un gros
+con" (texte NORMAL, aucune lettre inhabituelle, aucun caractere errone) sur la toute
+derniere version (0.94.0.7-dev, mode trace) - et l'a trouve toujours illisible. Preuve
+importante : le probleme n'est PAS specifique aux sequences denses de i/k/l comme
+suppose au tour precedent, c'est un probleme de lisibilite GENERAL du champ.
+
+**Propre erreur reconnue** : `CharacterSpacing="12"` pose au tour precedent etait bien
+trop faible pour avoir un effet visible - cette propriete WinUI s'exprime en 1/1000
+d'em, donc 12 = 0.012em, un espacement quasi nul (~0.2px a 17px). Corrige :
+`FontSize="18"` (etait 17), `FontWeight="SemiBold"` (nouveau - le poids par defaut
+etait trop fin pour bien distinguer les lettres a hampe simple), `CharacterSpacing="30"`
+(0.03em, un espacement reellement visible cette fois).
+
+**Verifie avec la MEME phrase exacte que l'utilisateur** ("tu es un gros con", pas un
+texte de test different) pour une comparaison equitable : capture avant/apres, texte
+nettement plus gras et mieux espace, contraste repixel-verifie (242,245,250, toujours
+bon). Build MSBuild 0 erreur, `dotnet test` 860/860 verts.
+
+Version `0.94.0.7-dev` -> `0.94.0.8-dev` (**4e chiffre**, meme chantier).
+
+**Toujours en suspens** : le bug de CONTENU errone (`m=ooààikkkikicoil`) reste
+totalement irresolu - l'utilisateur a explicitement dit ne pas vouloir en discuter pour
+l'instant, focalise sur la lisibilite. A reprendre si/quand il revient dessus.
+
+## 2026-08-24 (suite) — "on n'a toujours pas les lettres en entier" -> 0.94.0.9-dev
+
+Nouvelle capture utilisateur (mode trace, tout dernier build). Lecture directe de la
+VRAIE session (autorisee : "Ma session est ouverte, tu peux regarder", lecture seule
+UIA) - valeur exacte du champ obtenue caractere par caractere avec code point :
+`m` (109), `l` (108) x4 -> **"mllll"**, litteralement. Pas du charabia : 5 caracteres
+reels, tres probablement une repetition clavier (touche "l" restee enfoncee). Le rendu
+visuel de 4 "l" identiques colles reste dur a distinguer meme bien espace - normal pour
+n'importe quel navigateur avec cette sequence precise.
+
+**Mais l'utilisateur maintient "on n'a toujours pas les lettres en entier"** - relu au
+pied de la lettre plutot que rediscute. Nouvelle hypothese mecanique, distincte des
+precedentes : le correctif du tour precedent (`FontSize="18"` + `FontWeight="SemiBold"`)
+a rendu le texte plus GRAND et plus GRAS sans agrandir le conteneur - `AddressBox`
+gardait `MinHeight="42"` et `Padding="54,8,18,8"` (16px de marge verticale), ne laissant
+que ~26px de hauteur utile pour une ligne de texte 18px SemiBold qui en demande
+typiquement 22-27px selon l'interlignage reel - marge quasi nulle, clipping plausible
+des jambages/hampes (g/j/p/q/y en bas, I/l/b/d/f en haut) tout juste introduit PAR le
+correctif precedent. Verifie : la ligne du Grid parent (`NavigationRow`, hauteur fixe
+72px) laisse ~47px de mou disponible avant `AddressBox` - largement assez pour agrandir
+`AddressBox` lui-meme sans toucher au reste de la barre d'outils.
+
+**Corrige** : `MinHeight="46"` (etait 42) + `Padding="54,4,18,4"` (etait 8,8 vertical) -
+zone de texte utile portee de 26px a 38px. Verifie par capture zoomee x3 avec un texte
+volontairement charge en jambages/hampes (`Illbdfgjpqy mllll`) : lettres pleines, aucun
+rognage visible en haut ni en bas. Contraste repixel-verifie (242,245,250). Capture
+large de toute la barre d'outils verifiee : aucune regression visuelle sur les boutons
+voisins (retour/avance/recharger, favoris/bouclier/coffre/historique/telechargements).
+
+**Piege de capture rencontre 2 fois de plus en cours de route** (meme famille que
+[[verifier-lapp-winui]]) : `SetForegroundWindow` sur la vraie fenetre de l'utilisateur a
+echoue silencieusement a 2 reprises (l'utilisateur interagissait activement avec Claude
+Code au meme moment) - `CopyFromScreen` a alors capture Claude Code lui-meme au lieu de
+Lumora. Corrige en verifiant `GetForegroundWindow() == hwnd` AVANT de capturer (boucle
+de 5 tentatives), plutot que de faire confiance a `SetForegroundWindow` seul.
+
+Build MSBuild (Debug) : 0 erreur. `dotnet test` : 860/860 verts.
+Version `0.94.0.8-dev` -> `0.94.0.9-dev` (**4e chiffre**, meme chantier).
+
+## 2026-08-25 — Capture utilisateur: caracteres encore rognés dans la barre d'adresse -> 0.94.0.10-dev
+
+L'utilisateur a fourni une capture decisive de la barre d'adresse avec une sequence de
+caracteres type `hhhhhhbl`: les lettres etaient toujours coupees verticalement, donc le
+probleme etait bien un rognage du rendu du `TextBox`, pas seulement une URL trop longue
+ou un manque de contraste.
+
+Cause trouvee apres relecture du runtime: le correctif `0.94.0.9-dev` avait bien pose
+`MinHeight="46"` et `Padding="54,4,18,4"` dans `MainWindow.xaml`, mais deux chemins
+reappliquaient ensuite les anciennes valeurs:
+- `ApplyUiDensity()` remettait les paliers `AddressBoxMinHeight`/`AddressBoxPadding`
+  historiques (`42/8`, `36/6`, `32/4` selon la densite).
+- `UpdateResponsiveChromeLayout()` reecrivait systematiquement le padding vertical a
+  `8`, quel que soit le palier de densite courant.
+
+Correctif: les trois paliers de densite donnent maintenant assez de hauteur utile au
+texte (`comfortable 46/4`, `standard 44/3`, `dense 40/2`), le recalcul responsive
+reprend les valeurs de `ResolveUiDensityMetrics(_uiDensity)` au lieu de constantes
+anciennes, et `ApplyAccessibilitySettings()` garde la barre d'adresse a `18px` minimum
+(`20px` en texte agrandi) pour eviter le retour a un texte trop fin.
+
+Verification: `dotnet test` vert (860/860) en dossier intermediaire `.codex-build`
+car `Lumora.Tests/obj` refusait l'ecriture dans cette session; `build-winui.cmd` vert
+avec MSBuild/Visual Studio (0 erreur, 0 avertissement). Le lancement de l'executable
+n'a pas ete fait, conformement a la regle projet demandant d'attendre une demande
+explicite.
+
+Note utilisateur apres correction: "tu es un genie" - soulagement comprehensible apres
+trois jours de lutte contre ce probleme de rognage de caracteres dans la barre
+d'adresse.
+
+Version `0.94.0.9-dev` -> `0.94.0.10-dev` (**4e chiffre**, correction du meme chantier
+barre d'adresse, ciblee sur le rognage vertical constate par capture utilisateur).
+
+## 2026-08-28 — Lumora invisible dans "Applications par defaut" Windows -> 0.94.1.0-dev
+
+L'utilisateur a essaye de definir Lumora comme navigateur par defaut dans Windows et
+s'est retrouve avec une boite de dialogue lui demandant de pointer manuellement vers un
+`.exe`, sans jamais retrouver l'executable dans le dossier d'installation.
+
+Diagnostic (avant tout code) : l'installateur (`scripts/installer/Program.cs.template`)
+n'ecrivait jamais les cles registre `Capabilities`/`StartMenuInternet` que Windows lit
+pour lister un navigateur - Lumora n'apparaissait donc jamais dans le selecteur, qui
+retombe sur "Rechercher une autre application sur ce PC" (le picker manuel constate).
+Second probleme trouve en meme temps : l'executable installe par defaut n'est pas a la
+racine de `%LocalAppData%\Programs\Lumora`, mais un niveau plus bas, dans `app\` -
+explique pourquoi une recherche manuelle a la racine echouait aussi.
+
+**Corrige, en 2 volets** (le second etait necessaire pour que le premier serve a
+quelque chose - sans lui, Windows relancerait Lumora sur un lien cliqué mais l'app
+ignorerait totalement l'URL) :
+- Installateur : nouvelle fonction `RegisterAsDefaultBrowserCandidate` (HKCU
+  uniquement, meme politique "sans admin" que le reste de l'installateur) qui pose
+  `Software\Clients\StartMenuInternet\Lumora` (+ `Capabilities`/`FileAssociations`
+  `.htm`/`.html`/`URLAssociations` `http`/`https`), `Software\RegisteredApplications`,
+  un ProgID `LumoraHTML` et une entree `App Paths`. Retrait symetrique ajoute dans le
+  script `uninstall.ps1` genere.
+- App : nouveau fichier pur `UrlLaunchArgs.cs` (meme famille que
+  `WebAppLaunchArgs.cs`/`GuestLaunchArgs.cs`) qui extrait une URL http(s) des arguments
+  de lancement - la commande enregistree est `"<exe>" "%1"`, donc Windows relance
+  Lumora avec l'URL en argument brut a chaque clic sur un lien externe. Cablee dans
+  `App.xaml.cs` (premier lancement ET relance redirigee vers une instance deja ouverte,
+  cas ou Lumora tourne deja - lit alors `AppActivationArguments.Data` via
+  `ILaunchActivatedEventArgs.Arguments`, une chaine unique contrairement a
+  `Environment.GetCommandLineArgs()`) et dans `MainWindow`
+  (`ApplyStartupPage`/`OpenUrlInNewTab`) : l'URL prend le pas sur la page de demarrage
+  habituelle et ramene la fenetre au premier plan si Lumora tournait deja en arriere-plan.
+
+**Piege trouve en verifiant** : le mode invite (`--guest`, utilise par habitude pour les
+verifications rapides sans profil) a son propre `EnterGuestMode()` qui vide et recree
+inconditionnellement les onglets sur `lumora://accueil` APRES `ApplyStartupPage()` -
+premiere verification en `--guest` donc silencieusement fausse-negative (l'URL etait
+bien lue puis ecrasee par ce reset specifique au mode invite, jamais declenche par
+Windows en usage reel : la commande enregistree ne passe jamais `--guest`). Reconnu et
+corrige en repassant par un lancement NORMAL avec un profil de test cree directement
+via le vrai code produit (`UserProfile.Create(name: "Test", password: null, pin: null)`
++ `.Save()`, DPAPI entropie `null` - meme convention que `UserProfile.Save`, differente
+de la recette generique `.lumora` de `verify` (entropie `"Lumora.WinUI.v1"`) - profil
+sans mot de passe = saute l'ecran de connexion, voir [[verifier-lapp-winui]]) : le
+journal de trace confirme une vraie navigation reseau vers l'URL de test
+(`Navigation vers https://...`, reponse HTTP 404 reelle - le domaine de test n'a
+simplement pas cette page), et `AddressBox.Value` lu par UIA affiche bien
+`example.com › lumora-default-browser-test`.
+
+**Capture d'ecran accidentelle** : `CopyFromScreen` a capture une fenetre Discord de
+l'utilisateur au lieu de Lumora (`SetForegroundWindow`/`Activate()` sans garantie -
+meme famille de piege que documente pour `0.94.0.9-dev` juste au-dessus, mais cette
+fois sans la boucle de verification `GetForegroundWindow()`). Fichier supprime
+immediatement sans en exploiter le contenu ; la lecture `AddressBox.Value` via UIA
+(fiable independamment du premier plan reel) a suffi comme preuve.
+
+Compilation verifiee sans jamais executer l'installateur genere (regle projet
+"installeur JAMAIS auto") : artefact "clean" factice construit a la main juste pour
+faire passer `dotnet publish` du projet Setup genere et confirmer que le nouveau code
+registre compile, jamais lance.
+
+Verification : build MSBuild (Debug) 0 erreur/0 avertissement ; `dotnet test` vert
+868/868 (8 nouveaux tests pour `UrlLaunchArgs`, lien de compilation ajoute dans
+`Lumora.Tests.csproj` comme pour `WebAppLaunchArgsTests`) ; lancement reel de l'exe
+fraichement compile (profil normal, sans mode invite) confirmant la navigation vers
+l'URL passee en argument.
+
+Version `0.94.0.10-dev` -> `0.94.1.0-dev` (**3e chiffre** : ajout d'une fonctionnalite,
+pas une micro-correction - inscription navigateur par defaut + lecture d'URL au
+lancement, jamais presents avant).

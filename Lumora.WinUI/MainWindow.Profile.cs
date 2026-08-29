@@ -1555,6 +1555,7 @@ public sealed partial class MainWindow
 
     private void RootKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        WinUiRuntimeTrace.Write($"RootKeyDown: key={e.Key} handled={e.Handled} addressBoxFocusState={AddressBox.FocusState}");
         ResetSessionTimer();
         if (e.Key == Windows.System.VirtualKey.K && IsControlKeyDown() &&
             LoginOverlay.Visibility != Visibility.Visible &&

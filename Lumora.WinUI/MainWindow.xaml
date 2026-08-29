@@ -1134,6 +1134,37 @@
                 </Button>
             </DataTemplate>
 
+            <!-- Tuile carree (0.94.0.0-dev, refonte Demarrer "facon Windows 11") :
+                 remplace la rangee icone+titre+sous-titre (StartMenuDetailTileTemplate
+                 ci-dessous, garde pour "Recommande" qui reste en ligne) pour "Epingle"
+                 et "Toutes les tuiles" - meme grille de reconnaissance visuelle qu'un
+                 vrai ecran d'accueil plutot qu'une liste de texte. Meme
+                 Button/ContextFlyout/couleur de famille que les autres gabarits, juste
+                 le contenu recompose en carte verticale. -->
+            <DataTemplate x:Key="StartMenuGridTileTemplate">
+                <Button Style="{StaticResource NovaPanelActionButtonStyle}"
+                        Width="140" Height="96"
+                        HorizontalContentAlignment="Center" VerticalAlignment="Top"
+                        Tag="{Binding Id}" Click="StartMenuTile_Click"
+                        AutomationProperties.Name="{Binding Title}">
+                    <Button.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="{Binding PinActionLabel}" Tag="{Binding Id}" Click="StartMenuTilePin_Click" />
+                        </MenuFlyout>
+                    </Button.ContextFlyout>
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <Grid Width="34" Height="34" HorizontalAlignment="Center">
+                            <Border CornerRadius="17" Background="{Binding FamilyKey, Converter={StaticResource StartMenuFamilyKeyToBrushConverter}, ConverterParameter={StaticResource NovaIdentityMarkBrush}}" />
+                            <FontIcon Glyph="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                      Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="11.5"
+                                   HorizontalAlignment="Center" TextAlignment="Center"
+                                   TextWrapping="Wrap" MaxLines="2" Width="120" />
+                    </StackPanel>
+                </Button>
+            </DataTemplate>
+
             <DataTemplate x:Key="StartMenuDetailTileTemplate">
                 <Button Style="{StaticResource NovaPanelActionButtonStyle}"
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
@@ -1159,50 +1190,6 @@
                 </Button>
             </DataTemplate>
 
-            <!-- Rail de categories (colonne de gauche) : Epingles + une entree
-                 par section du registre. Bouton pleine largeur a l'interieur
-                 d'un ListViewItem plutot qu'un ListViewItem stylise
-                 directement, pour garder le meme motif clic/tooltip que le
-                 reste du menu. Meme badge degrade que les tuiles pour rester
-                 coherent (0.93.5.0-dev). -->
-            <DataTemplate x:Key="StartMenuCategoryTemplate">
-                <!-- Chevron ajoute (2026-08-08, inspire du menu Freebox OS montre par
-                     l'utilisateur) : signale visuellement "ceci ouvre un sous-contenu",
-                     comme un menu en cascade classique - absent jusqu'ici, la ligne de
-                     categorie ne se distinguait pas d'un simple libelle.
-                     Couleur par famille + largeur corrigee (2026-08-10, "choses a
-                     revoir" - retour utilisateur : "la partie gauche a l'air beaucoup
-                     moins quali que la partie droite"). Deux defauts reels distincts
-                     dans CE rail, corriges ensemble : (1) le badge reutilisait tel
-                     quel le degrade neutre NovaIdentityMarkBrush pour TOUTES les
-                     categories, alors que les cartes Epingles juste a cote ont deja
-                     une couleur par famille (StartMenuActionTileTemplate/
-                     StartMenuDetailTileTemplate ci-dessus) - meme mecanisme applique
-                     ici (StartMenuCategoryViewModel.FamilyKey, resolu par
-                     StartMenuTileRegistry.ResolveFamilyKey depuis le nom de section,
-                     MainWindow.StartMenu.cs). "Epingles" garde volontairement le
-                     degrade neutre (FamilyKey null) : ce n'est pas une famille de
-                     contenu, c'est l'entree "marque" du menu. (2) Le texte etait
-                     tronque en ellipsis ("Lecture et co...", "Lumora et pr...") -
-                     TextTrimming retire, colonne du rail elargie de 40px en
-                     consequence (StartMenuRailAndDetail/ModulesFlyoutRoot). -->
-                <Grid ColumnSpacing="10" Padding="10,9" HorizontalAlignment="Stretch"
-                      AutomationProperties.Name="{Binding Title}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid Grid.Column="0" Width="26" Height="26">
-                        <Border CornerRadius="13" Background="{Binding FamilyKey, Converter={StaticResource StartMenuFamilyKeyToBrushConverter}, ConverterParameter={StaticResource NovaIdentityMarkBrush}}" />
-                        <FontIcon Glyph="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                  Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Grid>
-                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12.5" VerticalAlignment="Center" />
-                    <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                              Opacity="0.5" VerticalAlignment="Center" />
-                </Grid>
-            </DataTemplate>
         </Grid.Resources>
 
         <Grid.RowDefinitions>
@@ -1641,10 +1628,13 @@
                         IsHitTestVisible="False" />
                 <TextBox
                     x:Name="AddressBox"
-                    MinHeight="42"
+                    MinHeight="46"
                     MinWidth="220"
-                    Padding="54,8,18,8"
+                    Padding="54,4,18,4"
                     CornerRadius="22"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    CharacterSpacing="30"
                     Background="Transparent"
                     BorderBrush="{StaticResource NovaAddressBorderBrush}"
                     BorderThickness="1"
@@ -1659,7 +1649,26 @@
                     TextChanged="AddressBox_TextChanged"
                     GotFocus="AddressBox_GotFocus"
                     LostFocus="AddressBox_LostFocus"
-                    PlaceholderText="Aller vers un site ou lancer une recherche" />
+                    PlaceholderText="Aller vers un site ou lancer une recherche">
+                    <!-- Retour utilisateur (2026-08-24, Option A validee : "repolir la
+                         pilule actuelle") : le texte tape restait terne malgre
+                         Foreground="{StaticResource NovaAddressForegroundBrush}"
+                         ci-dessus - le TextBox WinUI par defaut ne peint PAS le texte
+                         edite via TemplateBinding Foreground pour tous ses etats, mais
+                         via les cles de theme standard TextControlForeground*
+                         (VisualState "Normal"/"Focused"/"PointerOver"), qui restaient
+                         sur leur valeur Fluent par defaut - jamais redefinies ici,
+                         contrairement a NovaControlForegroundBrush pour les autres
+                         controles (LumoraTheme.ApplySharedAppBrushes). Alias vers la
+                         MEME instance de brush (StaticResource, pas une copie) : reste
+                         a jour a chaque changement de mode/theme sans code supplementaire. -->
+                    <TextBox.Resources>
+                        <StaticResource x:Key="TextControlForeground" ResourceKey="NovaAddressForegroundBrush" />
+                        <StaticResource x:Key="TextControlForegroundFocused" ResourceKey="NovaAddressForegroundBrush" />
+                        <StaticResource x:Key="TextControlForegroundPointerOver" ResourceKey="NovaAddressForegroundBrush" />
+                        <StaticResource x:Key="TextControlForegroundDisabled" ResourceKey="NovaTextMutedBrush" />
+                    </TextBox.Resources>
+                </TextBox>
                 <!-- Les deux filets "reflet de verre" (haut blanc/bas ambre) ont
                      ete retires ici (2026-08-06, retour utilisateur : "coupee en
                      2 par un trait au milieu", trouve trop date sur une pilule
@@ -3315,7 +3324,13 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Navigation du centre Lumora -->
+                <!-- Navigation du centre Lumora - rail a plat (0.94.0.0-dev, refonte
+                     "Reglages, piste A" : remplace les 4 groupes empiles (Navigation
+                     rapide/Espace personnel/Travail quotidien/Donnees locales), retour
+                     utilisateur "trop fouillis" avant meme d'atteindre un reglage. Les 9
+                     entrees et leurs x:Name/Tag/Click/couleur d'icone sont inchanges - seul
+                     l'emballage (Border+TextBlock de groupe) disparait, la recherche du
+                     panneau de contenu remplace le rangement par categorie. -->
                 <Border Grid.RowSpan="2"
                         Grid.Column="0"
                         Margin="18,18,12,18"
@@ -3330,16 +3345,7 @@
                         </Border>
 
                         <Border Style="{StaticResource NovaPanelCardStyle}">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="Navigation rapide" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                <!-- Icones ajoutees le 2026-08-10 (chantier identite visuelle,
-                                     demande explicite utilisateur : nav du panneau Reglages en
-                                     texte seul jusqu'ici). Couleur par famille de sens, meme
-                                     principe qu'au Menu Demarrer, mappee par groupe de section
-                                     plutot que par entree individuelle : Navigation rapide =
-                                     neutre (vue d'ensemble = systeme), Espace personnel = ambre
-                                     (ce qui est a vous), Travail quotidien = cyan (outils),
-                                     Donnees locales = rose (protection). -->
+                            <StackPanel Spacing="2">
                                 <RadioButton x:Name="SettingsNavOverview"
                                              Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav" IsChecked="True"
@@ -3351,12 +3357,6 @@
                                         <TextBlock Text="Vue d'ensemble" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </RadioButton>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource NovaPanelCardStyle}">
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="Espace personnel" Opacity="0.6" FontSize="11" />
                                 <RadioButton x:Name="SettingsNavAppearance"
                                              Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
@@ -3366,6 +3366,39 @@
                                         <FontIcon Glyph="&#xE790;" FontFamily="Segoe MDL2 Assets" FontSize="15"
                                                   Foreground="{StaticResource NovaTileFamilyContentBrush}" />
                                         <TextBlock Text="Mon Lumora" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="SettingsNavNavigation"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
+                                             GroupName="SettingsNav"
+                                             AutomationProperties.Name="Espace de travail"
+                                             Click="SettingsNav_Click" Tag="navigation">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                                  Foreground="{StaticResource NovaTileFamilyToolsBrush}" />
+                                        <TextBlock Text="Espace de travail" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="SettingsNavPrivacy"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
+                                             GroupName="SettingsNav"
+                                             AutomationProperties.Name="Confidentialité"
+                                             Click="SettingsNav_Click" Tag="privacy">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                                  Foreground="{StaticResource NovaTileFamilyProtectionBrush}" />
+                                        <TextBlock Text="Confidentialité" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="SettingsNavVault"
+                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
+                                             GroupName="SettingsNav"
+                                             AutomationProperties.Name="Coffre et données"
+                                             Click="SettingsNav_Click" Tag="vault">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                                  Foreground="{StaticResource NovaTileFamilyProtectionBrush}" />
+                                        <TextBlock Text="Coffre et données" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="SettingsNavProfile"
@@ -3390,23 +3423,6 @@
                                         <TextBlock Text="Accessibilité" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </RadioButton>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource NovaPanelCardStyle}">
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="Travail quotidien" Opacity="0.6" FontSize="11" />
-                                <RadioButton x:Name="SettingsNavNavigation"
-                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
-                                             GroupName="SettingsNav"
-                                             AutomationProperties.Name="Espace de travail"
-                                             Click="SettingsNav_Click" Tag="navigation">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                                                  Foreground="{StaticResource NovaTileFamilyToolsBrush}" />
-                                        <TextBlock Text="Espace de travail" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </RadioButton>
                                 <RadioButton x:Name="SettingsNavStartup"
                                              Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
                                              GroupName="SettingsNav"
@@ -3416,34 +3432,6 @@
                                         <FontIcon Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="15"
                                                   Foreground="{StaticResource NovaTileFamilyToolsBrush}" />
                                         <TextBlock Text="Ouverture" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </RadioButton>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource NovaPanelCardStyle}">
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="Données locales" Opacity="0.6" FontSize="11" />
-                                <RadioButton x:Name="SettingsNavPrivacy"
-                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
-                                             GroupName="SettingsNav"
-                                             AutomationProperties.Name="Confidentialité"
-                                             Click="SettingsNav_Click" Tag="privacy">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <FontIcon Glyph="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                                                  Foreground="{StaticResource NovaTileFamilyProtectionBrush}" />
-                                        <TextBlock Text="Confidentialité" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </RadioButton>
-                                <RadioButton x:Name="SettingsNavVault"
-                                             Style="{StaticResource NovaSideRailNavRadioButtonStyle}"
-                                             GroupName="SettingsNav"
-                                             AutomationProperties.Name="Coffre et données"
-                                             Click="SettingsNav_Click" Tag="vault">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                                                  Foreground="{StaticResource NovaTileFamilyProtectionBrush}" />
-                                        <TextBlock Text="Coffre et données" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="SettingsNavStorage"
@@ -3493,6 +3481,20 @@
                                 </StackPanel>
                             </StackPanel>
                         </Border>
+
+                        <!-- Recherche de reglages (0.94.0.0-dev, "Reglages, piste A") : filtre
+                             par mot-cle a travers les 9 sections ET leurs sous-onglets caches
+                             (Mon Lumora/Accessibilite/Confidentialite en ont 5 chacun) - voir
+                             SettingsSearchIndex/SettingsSearchBox_TextChanged
+                             (MainWindow.SettingsSearch.cs). Non vide : SettingsSectionsHost se
+                             cache, SettingsSearchResultsPanel affiche les correspondances. -->
+                        <TextBox x:Name="SettingsSearchBox"
+                                 PlaceholderText="Rechercher un réglage..."
+                                 TextChanged="SettingsSearchBox_TextChanged"
+                                 AutomationProperties.Name="Rechercher un réglage" />
+                        <StackPanel x:Name="SettingsSearchResultsPanel" Spacing="8" Visibility="Collapsed" />
+
+                        <StackPanel x:Name="SettingsSectionsHost" Spacing="18">
 
                         <!-- Section : Vue d'ensemble -->
                         <StackPanel x:Name="SettingsSectionOverview" Spacing="14">
@@ -3570,18 +3572,14 @@
                                 <ComboBoxItem Content="Brave Search" Tag="brave" />
                                 <ComboBoxItem Content="Bing" Tag="bing" />
                             </ComboBox>
-                            <ToggleSwitch x:Name="AddressSuggestionsSwitch" Header="Suggestions dans la barre d'adresse" Toggled="AddressSuggestionsSwitch_Toggled" />
-                            <TextBlock Text="Pendant la frappe, propose vos onglets ouverts, favoris et pages déjà visitées. Calcul 100% local sur cet appareil : ce que vous tapez n'est jamais envoyé à un service de suggestions."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <ToggleSwitch x:Name="TranslationEnabledSwitch" Header="Proposer de traduire les pages" Toggled="TranslationEnabledSwitch_Toggled" />
-                            <TextBlock Text="Traduction neuronale locale (actuellement anglais vers français). Le modèle est téléchargé une seule fois puis la traduction se fait entièrement hors ligne, jamais de texte envoyé à un serveur."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <ToggleSwitch x:Name="SearchAssistEnabledSwitch" Header="Assistant IA pour preciser mes recherches" Toggled="SearchAssistEnabledSwitch_Toggled" />
-                            <TextBlock Text="Désactivé par défaut : nécessite un téléchargement unique d'environ 2,7 Go (modèle de langage local Phi-3-mini). Une fois téléchargée, la reformulation se fait hors ligne ; seule la requête finale que vous validez est envoyée à votre moteur de recherche, exactement comme aujourd'hui."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <ToggleSwitch x:Name="HistorySemanticSearchEnabledSwitch" Header="Recherche intelligente dans l'historique" Toggled="HistorySemanticSearchEnabledSwitch_Toggled" />
-                            <TextBlock Text="Retrouvez une page par son sens plutôt que par mot-clé exact (« cet article sur la fiscalité des indépendants »), même sans vous souvenir du titre ou du site. Désactivé par défaut : nécessite un téléchargement unique d'environ 120 Mo (modèle d'embedding local multilingual-e5-small). Une fois activé, le contenu texte des pages visitées est analysé et indexé localement (chiffré comme le reste de l'historique) ; rien n'est jamais envoyé à un serveur."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ToggleSwitch x:Name="AddressSuggestionsSwitch" Header="Suggestions dans la barre d'adresse" Toggled="AddressSuggestionsSwitch_Toggled"
+                                          ToolTipService.ToolTip="Pendant la frappe, propose vos onglets ouverts, favoris et pages déjà visitées. Calcul 100% local sur cet appareil : ce que vous tapez n'est jamais envoyé à un service de suggestions." />
+                            <ToggleSwitch x:Name="TranslationEnabledSwitch" Header="Proposer de traduire les pages" Toggled="TranslationEnabledSwitch_Toggled"
+                                          ToolTipService.ToolTip="Traduction neuronale locale (actuellement anglais vers français). Le modèle est téléchargé une seule fois puis la traduction se fait entièrement hors ligne, jamais de texte envoyé à un serveur." />
+                            <ToggleSwitch x:Name="SearchAssistEnabledSwitch" Header="Assistant IA pour preciser mes recherches" Toggled="SearchAssistEnabledSwitch_Toggled"
+                                          ToolTipService.ToolTip="Désactivé par défaut : nécessite un téléchargement unique d'environ 2,7 Go (modèle de langage local Phi-3-mini). Une fois téléchargée, la reformulation se fait hors ligne ; seule la requête finale que vous validez est envoyée à votre moteur de recherche, exactement comme aujourd'hui." />
+                            <ToggleSwitch x:Name="HistorySemanticSearchEnabledSwitch" Header="Recherche intelligente dans l'historique" Toggled="HistorySemanticSearchEnabledSwitch_Toggled"
+                                          ToolTipService.ToolTip="Retrouvez une page par son sens plutôt que par mot-clé exact (« cet article sur la fiscalité des indépendants »), même sans vous souvenir du titre ou du site. Désactivé par défaut : nécessite un téléchargement unique d'environ 120 Mo (modèle d'embedding local multilingual-e5-small). Une fois activé, le contenu texte des pages visitées est analysé et indexé localement (chiffré comme le reste de l'historique) ; rien n'est jamais envoyé à un serveur." />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Onglets" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
@@ -3610,14 +3608,17 @@
                             <ToggleSwitch x:Name="CommandPaletteEnabledSwitch"
                                           Header="Palette de commande Ctrl+K"
                                           Toggled="CommandPaletteEnabledSwitch_Toggled" />
+                            <!-- Description partagee par les 2 interrupteurs suivants (elle
+                                 expliquait leur EFFET COMBINE) : posee sur les deux plutot que
+                                 sur un seul, pour ne pas la perdre du point de vue de l'autre. -->
                             <ToggleSwitch x:Name="CommandPaletteWebPagesSwitch"
                                           Header="Autoriser Ctrl+K depuis les pages web"
-                                          Toggled="CommandPaletteContextSwitch_Toggled" />
+                                          Toggled="CommandPaletteContextSwitch_Toggled"
+                                          ToolTipService.ToolTip="Activez ces deux autorisations uniquement si vous voulez que Lumora intercepte Ctrl+K même quand une page ou un champ de texte a le focus." />
                             <ToggleSwitch x:Name="CommandPaletteTextFieldsSwitch"
                                           Header="Autoriser Ctrl+K pendant la saisie dans un champ"
-                                          Toggled="CommandPaletteContextSwitch_Toggled" />
-                            <TextBlock Text="Activez ces deux autorisations uniquement si vous voulez que Lumora intercepte Ctrl+K même quand une page ou un champ de texte a le focus."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="CommandPaletteContextSwitch_Toggled"
+                                          ToolTipService.ToolTip="Activez ces deux autorisations uniquement si vous voulez que Lumora intercepte Ctrl+K même quand une page ou un champ de texte a le focus." />
                         </StackPanel>
 
                         <!-- Section : Personnalisation -->
@@ -3734,7 +3735,8 @@
                             </ComboBox>
                             <TextBlock Text="Personnalité Lumora" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
                             <ComboBox x:Name="UsageModeCombo" Header="Mode d'usage" Width="280"
-                                      SelectionChanged="AppearanceOption_Changed">
+                                      SelectionChanged="AppearanceOption_Changed"
+                                      ToolTipService.ToolTip="Le mode d'usage adapte l'accueil Lumora et prépare la logique des futurs espaces de travail.">
                                 <ComboBoxItem Content="Neutre" Tag="neutral" />
                                 <ComboBoxItem Content="Équilibre" Tag="balanced" />
                                 <ComboBoxItem Content="Focus" Tag="focus" />
@@ -3743,8 +3745,6 @@
                                 <ComboBoxItem Content="Recherche" Tag="research" />
                                 <ComboBoxItem Content="Nuit" Tag="night" />
                             </ComboBox>
-                            <TextBlock Text="Le mode d'usage adapte l'accueil Lumora et prépare la logique des futurs espaces de travail."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <TextBlock Text="Couleur du mode d'usage" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
                             <TextBlock Text="Chaque mode garde sa propre teinte Lumora par défaut ; choisissez une couleur pour la remplacer sur ce mode uniquement (le second ton du dégradé est dérivé automatiquement). Réinitialiser revient à la teinte Lumora d'origine. Sans effet si le contraste élevé (Accessibilité) est actif."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
@@ -3925,7 +3925,8 @@
                                           Header="Masquer les favoris en interface compacte"
                                           Toggled="CompactModeHideBookmarksSwitch_Toggled" />
                             <ComboBox x:Name="UiDensityCombo" Header="Taille de l'interface" Width="260"
-                                      SelectionChanged="UiDensityCombo_SelectionChanged">
+                                      SelectionChanged="UiDensityCombo_SelectionChanged"
+                                      ToolTipService.ToolTip="Ajuste la taille des boutons de la barre d'outils, de la barre d'adresse, de la barre de favoris et de la barre du bas. Standard est la taille par défaut, proche des navigateurs courants ; Confortable garde les tailles historiques de Lumora ; Petit réduit au maximum l'espace pris par ces zones.">
                                 <ComboBoxItem Content="Confortable" Tag="comfortable" />
                                 <ComboBoxItem Content="Standard" Tag="standard" />
                                 <!-- "Dense" -> "Petit" (2026-08-08, retour utilisateur) : "dense" decrit un
@@ -3934,21 +3935,17 @@
                                      inchange (valeur stockee dans UiSettings, pas affichee). -->
                                 <ComboBoxItem Content="Petit" Tag="dense" />
                             </ComboBox>
-                            <TextBlock Text="Ajuste la taille des boutons de la barre d'outils, de la barre d'adresse, de la barre de favoris et de la barre du bas. Standard est la taille par défaut, proche des navigateurs courants ; Confortable garde les tailles historiques de Lumora ; Petit réduit au maximum l'espace pris par ces zones."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="FullScreenAutoHideChromeSwitch"
                                           Header="Masquer les barres en plein écran et les révéler au survol"
-                                          Toggled="FullScreenAutoHideChromeSwitch_Toggled" />
-                            <TextBlock Text="En plein écran, approchez la souris du haut pour les actions principales, ou du bord gauche pour retrouver le rail latéral."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="FullScreenAutoHideChromeSwitch_Toggled"
+                                          ToolTipService.ToolTip="En plein écran, approchez la souris du haut pour les actions principales, ou du bord gauche pour retrouver le rail latéral." />
                             <ComboBox x:Name="PersonalizationMotionCombo" Header="Animations et réactions" Width="280"
-                                      SelectionChanged="AppearanceOption_Changed">
+                                      SelectionChanged="AppearanceOption_Changed"
+                                      ToolTipService.ToolTip="Ce réglage module l'accueil, les effets lumineux et les réactions visuelles. L'option d'accessibilité Réduire les animations reste prioritaire.">
                                 <ComboBoxItem Content="Discret" Tag="subtle" />
                                 <ComboBoxItem Content="Lumineux" Tag="luminous" />
                                 <ComboBoxItem Content="Dynamique" Tag="dynamic" />
                             </ComboBox>
-                            <TextBlock Text="Ce réglage module l'accueil, les effets lumineux et les réactions visuelles. L'option d'accessibilité Réduire les animations reste prioritaire."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             </StackPanel>
 
                             <StackPanel x:Name="AppearanceGroupNewTab" Spacing="12" Visibility="Collapsed">
@@ -3965,23 +3962,20 @@
                             </ComboBox>
                             <ToggleSwitch x:Name="NewTabFocusSearchSwitch"
                                           Header="Placer le curseur dans la recherche du nouvel onglet"
-                                          Toggled="NewTabFocusSearchSwitch_Toggled" />
-                            <TextBlock Text="Désactivé par défaut pour éviter qu'une saisie de connexion ou de PIN se retrouve dans la page d'accueil."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="NewTabFocusSearchSwitch_Toggled"
+                                          ToolTipService.ToolTip="Désactivé par défaut pour éviter qu'une saisie de connexion ou de PIN se retrouve dans la page d'accueil." />
                             <ToggleSwitch x:Name="NewTabShortcutsSwitch"
                                           Header="Afficher les raccourcis"
-                                          Toggled="NewTabShortcutsSwitch_Toggled" />
-                            <TextBlock Text="Désactiver masque uniquement la liste des raccourcis déjà ajoutés. Le bouton d'ajout rapide (+) reste toujours disponible sur la page nouvel onglet."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="NewTabShortcutsSwitch_Toggled"
+                                          ToolTipService.ToolTip="Désactiver masque uniquement la liste des raccourcis déjà ajoutés. Le bouton d'ajout rapide (+) reste toujours disponible sur la page nouvel onglet." />
                             <TextBox x:Name="NewTabShortcutsBox"
                                      Header="Raccourcis"
                                      AcceptsReturn="True"
                                      TextWrapping="NoWrap"
                                      Height="120"
                                      PlaceholderText="Nom | https://exemple.com"
-                                     TextChanged="NewTabShortcutsBox_TextChanged" />
-                            <TextBlock Text="Un raccourci par ligne : Nom | URL."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                     TextChanged="NewTabShortcutsBox_TextChanged"
+                                     ToolTipService.ToolTip="Un raccourci par ligne : Nom | URL." />
                             </StackPanel>
 
                             <StackPanel x:Name="AppearanceGroupDiscovery" Spacing="12" Visibility="Collapsed">
@@ -4095,29 +4089,24 @@
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="AccessibilityHighContrastSwitch"
                                           Header="Contraste renforcé"
-                                          Toggled="AccessibilitySwitch_Toggled" />
-                            <TextBlock Text="Augmente les contrastes de la chrome Lumora, des panneaux et de la page d'accueil."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="AccessibilitySwitch_Toggled"
+                                          ToolTipService.ToolTip="Augmente les contrastes de la chrome Lumora, des panneaux et de la page d'accueil." />
                             <ToggleSwitch x:Name="AccessibilityLargeTextSwitch"
                                           Header="Texte plus lisible"
-                                          Toggled="AccessibilitySwitch_Toggled" />
-                            <TextBlock Text="Agrandit les textes de navigation, de commande et les messages importants."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="AccessibilitySwitch_Toggled"
+                                          ToolTipService.ToolTip="Agrandit les textes de navigation, de commande et les messages importants." />
                             <ToggleSwitch x:Name="AccessibilityReduceMotionSwitch"
                                           Header="Limiter les transitions visuelles"
-                                          Toggled="AccessibilitySwitch_Toggled" />
-                            <TextBlock Text="Agit surtout sur les transitions de survol de l'accueil et des contrôles internes."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="AccessibilitySwitch_Toggled"
+                                          ToolTipService.ToolTip="Agit surtout sur les transitions de survol de l'accueil et des contrôles internes." />
                             <ToggleSwitch x:Name="AccessibilityVisibleFocusSwitch"
                                           Header="Focus clavier plus visible"
-                                          Toggled="AccessibilitySwitch_Toggled" />
-                            <TextBlock Text="Renforce les contours visibles quand vous naviguez avec Tab, Entrée ou les flèches."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="AccessibilitySwitch_Toggled"
+                                          ToolTipService.ToolTip="Renforce les contours visibles quand vous naviguez avec Tab, Entrée ou les flèches." />
                             <ToggleSwitch x:Name="AccessibilityLargeTargetsSwitch"
                                           Header="Boutons plus grands"
-                                          Toggled="AccessibilitySwitch_Toggled" />
-                            <TextBlock Text="Agrandit les boutons de la barre de navigation (retour, avancer, recharger...) pour des cibles plus faciles à viser. Désactivé par défaut : la taille compacte reste la norme, cette aide est à votre choix."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="AccessibilitySwitch_Toggled"
+                                          ToolTipService.ToolTip="Agrandit les boutons de la barre de navigation (retour, avancer, recharger...) pour des cibles plus faciles à viser. Désactivé par défaut : la taille compacte reste la norme, cette aide est à votre choix." />
                             </StackPanel>
 
                             <StackPanel x:Name="AccessibilityGroupWebContent" Spacing="12" Visibility="Collapsed">
@@ -4126,44 +4115,37 @@
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="AccessibilityReduceBlueLightSwitch"
                                           Header="Réduire la lumière bleue"
-                                          Toggled="AccessibilitySwitch_Toggled" />
-                            <TextBlock Text="Teinte plus chaude sur les pages visitées, pensée pour la fatigue visuelle (usage prolongé, soirée) - à l'opposé du contraste renforcé, qui vise la basse vision et durcit volontairement l'affichage."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="AccessibilitySwitch_Toggled"
+                                          ToolTipService.ToolTip="Teinte plus chaude sur les pages visitées, pensée pour la fatigue visuelle (usage prolongé, soirée) - à l'opposé du contraste renforcé, qui vise la basse vision et durcit volontairement l'affichage." />
                             <ComboBox x:Name="AccessibilityTextSpacingCombo"
                                       Header="Espacement du texte des pages"
-                                      SelectionChanged="AccessibilityTextSpacingCombo_SelectionChanged">
+                                      SelectionChanged="AccessibilityTextSpacingCombo_SelectionChanged"
+                                      ToolTipService.ToolTip="Augmente l'espacement entre lettres, mots et lignes sur les pages visitées (recommandation d'accessibilité WCAG 1.4.12). Aide la dyslexie et la basse vision : un texte trop serré devient difficile à suivre ligne par ligne.">
                                 <ComboBoxItem Content="Normal" Tag="normal" />
                                 <ComboBoxItem Content="Confortable" Tag="comfortable" />
                                 <ComboBoxItem Content="Large" Tag="wide" />
                             </ComboBox>
-                            <TextBlock Text="Augmente l'espacement entre lettres, mots et lignes sur les pages visitées (recommandation d'accessibilité WCAG 1.4.12). Aide la dyslexie et la basse vision : un texte trop serré devient difficile à suivre ligne par ligne."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="AccessibilityColorBoostSwitch"
                                           Header="Renforcer les couleurs difficiles à distinguer"
-                                          Toggled="AccessibilityColorBoostSwitch_Toggled" />
-                            <TextBlock Text="Augmente la saturation et le contraste des pages visitées, utile à certains daltoniens quand des couleurs proches se confondent. Ce n'est pas une correction médicale ni une simulation exacte : pour un filtre de vision des couleurs complet, Windows propose ses propres Filtres de couleurs (Paramètres Windows > Accessibilité), qui s'appliquent à tout l'écran."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                                          Toggled="AccessibilityColorBoostSwitch_Toggled"
+                                          ToolTipService.ToolTip="Augmente la saturation et le contraste des pages visitées, utile à certains daltoniens quand des couleurs proches se confondent. Ce n'est pas une correction médicale ni une simulation exacte : pour un filtre de vision des couleurs complet, Windows propose ses propres Filtres de couleurs (Paramètres Windows > Accessibilité), qui s'appliquent à tout l'écran." />
                             </StackPanel>
 
                             <StackPanel x:Name="AccessibilityGroupReading" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Aides à la lecture" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
-                            <ToggleSwitch x:Name="ReadAloudEnabledSwitch" Header="Lire les pages à voix haute" Toggled="ReadAloudEnabledSwitch_Toggled" />
-                            <TextBlock Text="Ajoute un bouton dans la barre d'outils pour faire lire le texte de la page à voix haute (utile en cas de difficulté de lecture). Synthèse vocale 100% locale (Windows), aucun texte de page envoyé à un serveur externe."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <ToggleSwitch x:Name="ReadingLensEnabledSwitch" Header="Loupe de lecture" Toggled="ReadingLensEnabledSwitch_Toggled" />
-                            <TextBlock Text="Ajoute un bouton dans la barre d'outils qui capture la page dans un panneau zoomable, utile pour un captcha visuel déformé ou un texte minuscule. Aucune résolution automatique : une image locale agrandie, vous lisez et répondez vous-même."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <ToggleSwitch x:Name="ReadingGuideEnabledSwitch" Header="Guide de lecture immersif" Toggled="ReadingGuideEnabledSwitch_Toggled" />
-                            <TextBlock Text="Assombrit légèrement le reste de la page et garde une bande nette qui suit la lecture dans le viewport. Pratique pour ne pas perdre sa ligne sur les longs articles, tableaux ou formulaires denses."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
+                            <ToggleSwitch x:Name="ReadAloudEnabledSwitch" Header="Lire les pages à voix haute" Toggled="ReadAloudEnabledSwitch_Toggled"
+                                          ToolTipService.ToolTip="Ajoute un bouton dans la barre d'outils pour faire lire le texte de la page à voix haute (utile en cas de difficulté de lecture). Synthèse vocale 100% locale (Windows), aucun texte de page envoyé à un serveur externe." />
+                            <ToggleSwitch x:Name="ReadingLensEnabledSwitch" Header="Loupe de lecture" Toggled="ReadingLensEnabledSwitch_Toggled"
+                                          ToolTipService.ToolTip="Ajoute un bouton dans la barre d'outils qui capture la page dans un panneau zoomable, utile pour un captcha visuel déformé ou un texte minuscule. Aucune résolution automatique : une image locale agrandie, vous lisez et répondez vous-même." />
+                            <ToggleSwitch x:Name="ReadingGuideEnabledSwitch" Header="Guide de lecture immersif" Toggled="ReadingGuideEnabledSwitch_Toggled"
+                                          ToolTipService.ToolTip="Assombrit légèrement le reste de la page et garde une bande nette qui suit la lecture dans le viewport. Pratique pour ne pas perdre sa ligne sur les longs articles, tableaux ou formulaires denses." />
                             <ComboBox x:Name="ReadingGuideBandHeightCombo"
                                       Header="Hauteur de la bande de lecture"
-                                      SelectionChanged="ReadingGuideBandHeightCombo_SelectionChanged">
+                                      SelectionChanged="ReadingGuideBandHeightCombo_SelectionChanged"
+                                      ToolTipService.ToolTip="La bande suit le pointeur, les changements de focus et les grands déplacements clavier pour rester au bon niveau sans demander une nouvelle action.">
                                 <ComboBoxItem Content="Standard" Tag="160" />
                                 <ComboBoxItem Content="Large" Tag="220" />
                             </ComboBox>
-                            <TextBlock Text="La bande suit le pointeur, les changements de focus et les grands déplacements clavier pour rester au bon niveau sans demander une nouvelle action."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
                             </StackPanel>
 
                             <StackPanel x:Name="AccessibilityGroupKeyboard" Spacing="12" Visibility="Collapsed">
@@ -4261,22 +4243,22 @@
                                  VaultTotpFeatureToggle_Toggled/VaultPasskeyFeatureToggle_Toggled,
                                  MainWindow.VaultAccess.cs) - jamais appliqué sans confirmation. -->
                             <TextBlock Text="Fonctions du Coffre" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Désactiver une section la masque partout (fiche détaillée, accès rapide) sans rien supprimer : réactiver la fait réapparaître à l'identique." />
+                            <!-- Description partagee par les 2 interrupteurs suivants. -->
                             <ToggleSwitch x:Name="VaultTotpFeatureToggle"
                                           Header="Authentification à deux facteurs (TOTP)"
                                           OnContent="Activée" OffContent="Désactivée"
-                                          Toggled="VaultTotpFeatureToggle_Toggled" />
+                                          Toggled="VaultTotpFeatureToggle_Toggled"
+                                          ToolTipService.ToolTip="Désactiver une section la masque partout (fiche détaillée, accès rapide) sans rien supprimer : réactiver la fait réapparaître à l'identique." />
                             <ToggleSwitch x:Name="VaultPasskeyFeatureToggle"
                                           Header="Clés d'accès (Passkeys)"
                                           OnContent="Activées" OffContent="Désactivées"
-                                          Toggled="VaultPasskeyFeatureToggle_Toggled" />
+                                          Toggled="VaultPasskeyFeatureToggle_Toggled"
+                                          ToolTipService.ToolTip="Désactiver une section la masque partout (fiche détaillée, accès rapide) sans rien supprimer : réactiver la fait réapparaître à l'identique." />
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
                                     Margin="0,8,0,0" />
                             <TextBlock Text="Portefeuille" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Cartes stockées dans le même coffre. Remplissage uniquement sur clic explicite ; CVV jamais enregistré." />
-                            <Button Style="{StaticResource NovaButtonStyle}" Click="WalletMenu_Click" HorizontalAlignment="Left">
+                            <Button Style="{StaticResource NovaButtonStyle}" Click="WalletMenu_Click" HorizontalAlignment="Left"
+                                    ToolTipService.ToolTip="Cartes stockées dans le même coffre. Remplissage uniquement sur clic explicite ; CVV jamais enregistré.">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
                                     <TextBlock Text="Ouvrir le portefeuille" />
@@ -4699,11 +4681,10 @@
 
                             <!-- Bloqueur pub / trackers -->
                             <TextBlock Text="Pubs et trackers" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Bloque les serveurs publicitaires et de tracking avec des listes locales." />
                             <ToggleSwitch x:Name="NetworkBlockerSwitch"
                                          Header="Activer le bloqueur"
-                                         Toggled="NetworkBlockerSwitch_Toggled" />
+                                         Toggled="NetworkBlockerSwitch_Toggled"
+                                         ToolTipService.ToolTip="Bloque les serveurs publicitaires et de tracking avec des listes locales." />
                             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left">
                                 <Button x:Name="UpdatePrivacyListsButton"
                                         Content="Mettre à jour les listes maintenant"
@@ -4724,22 +4705,22 @@
 
                             <!-- Filtre cosmétique -->
                             <TextBlock Text="Masquage visuel" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Masque les emplacements publicitaires vides après filtrage réseau." />
                             <ToggleSwitch x:Name="CosmeticFilterSwitch"
                                          Header="Masquer les emplacements pub"
-                                         Toggled="CosmeticFilterSwitch_Toggled" />
+                                         Toggled="CosmeticFilterSwitch_Toggled"
+                                         ToolTipService.ToolTip="Masque les emplacements publicitaires vides après filtrage réseau." />
 
-                            <!-- Renforcement anti-publicité (0.77) : popups et détournements -->
+                            <!-- Renforcement anti-publicité (0.77) : popups et détournements ;
+                                 description partagee par les 2 interrupteurs suivants. -->
                             <TextBlock Text="Popups et redirections" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Text="Les popups automatiques et les détournements de clic vers des domaines publicitaires sont bloqués. Les fenêtres de connexion (Google, OAuth...) restent toujours autorisées."
-                                       Opacity="0.7" TextWrapping="Wrap" FontSize="12" Margin="0,2,0,6" />
                             <ToggleSwitch x:Name="PopupBlockerSwitch"
                                          Header="Bloquer les popups publicitaires et automatiques"
-                                         Toggled="PopupBlockerSwitch_Toggled" />
+                                         Toggled="PopupBlockerSwitch_Toggled"
+                                         ToolTipService.ToolTip="Les popups automatiques et les détournements de clic vers des domaines publicitaires sont bloqués. Les fenêtres de connexion (Google, OAuth...) restent toujours autorisées." />
                             <ToggleSwitch x:Name="StrictAdBlockSwitch"
                                          Header="Bloquer les redirections vers des domaines publicitaires"
-                                         Toggled="StrictAdBlockSwitch_Toggled" />
+                                         Toggled="StrictAdBlockSwitch_Toggled"
+                                         ToolTipService.ToolTip="Les popups automatiques et les détournements de clic vers des domaines publicitaires sont bloqués. Les fenêtres de connexion (Google, OAuth...) restent toujours autorisées." />
                             </StackPanel>
 
                             <StackPanel x:Name="PrivacyGroupTracking" Spacing="14" Visibility="Collapsed">
@@ -4747,27 +4728,24 @@
 
                             <!-- CNAME uncloaker -->
                             <TextBlock Text="CNAME cloaking" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Détecte les trackers cachés derrière un alias DNS." />
                             <ToggleSwitch x:Name="CnameUncloakerSwitch"
                                          Header="Détecter le CNAME cloaking"
-                                         Toggled="CnameUncloakerSwitch_Toggled" />
+                                         Toggled="CnameUncloakerSwitch_Toggled"
+                                         ToolTipService.ToolTip="Détecte les trackers cachés derrière un alias DNS." />
 
                             <!-- Anti-fuite WebRTC -->
                             <TextBlock Text="WebRTC" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Empêche les sites de révéler votre IP locale/publique réelle via WebRTC (utile même sans VPN actif). Nécessite un redémarrage de Lumora pour s'appliquer." />
                             <ToggleSwitch x:Name="WebRtcLeakProtectionSwitch"
                                          Header="Bloquer les fuites d'IP WebRTC"
-                                         Toggled="WebRtcLeakProtectionSwitch_Toggled" />
+                                         Toggled="WebRtcLeakProtectionSwitch_Toggled"
+                                         ToolTipService.ToolTip="Empêche les sites de révéler votre IP locale/publique réelle via WebRTC (utile même sans VPN actif). Nécessite un redémarrage de Lumora pour s'appliquer." />
 
                             <!-- Position fictive (geolocalisation) -->
                             <TextBlock Text="Géolocalisation" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Renvoie une position fixe aux sites qui demandent votre localisation (cartes, météo, recherche « près de moi ») au lieu de la position réelle de l'appareil. Sans effet sur le catalogue des services de streaming, qui se base sur l'adresse IP, pas sur cette API. Un site autorisé explicitement (onglet Site actuel) reçoit toujours la vraie position." />
                             <ToggleSwitch x:Name="GeolocationSpoofingSwitch"
                                          Header="Position fictive"
-                                         Toggled="GeolocationSpoofingSwitch_Toggled" />
+                                         Toggled="GeolocationSpoofingSwitch_Toggled"
+                                         ToolTipService.ToolTip="Renvoie une position fixe aux sites qui demandent votre localisation (cartes, météo, recherche « près de moi ») au lieu de la position réelle de l'appareil. Sans effet sur le catalogue des services de streaming, qui se base sur l'adresse IP, pas sur cette API. Un site autorisé explicitement (onglet Site actuel) reçoit toujours la vraie position." />
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -4781,19 +4759,17 @@
 
                             <!-- Anti-fingerprinting -->
                             <TextBlock Text="Empreinte du navigateur" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Ajoute un léger bruit à la lecture du Canvas, du WebGL et de l'AudioContext (les techniques de fingerprinting les plus courantes) pour rendre le pistage inter-sites plus difficile, sans casser l'affichage ni ralentir la navigation." />
                             <ToggleSwitch x:Name="FingerprintProtectionSwitch"
                                          Header="Brouiller l'empreinte du navigateur"
-                                         Toggled="FingerprintProtectionSwitch_Toggled" />
+                                         Toggled="FingerprintProtectionSwitch_Toggled"
+                                         ToolTipService.ToolTip="Ajoute un léger bruit à la lecture du Canvas, du WebGL et de l'AudioContext (les techniques de fingerprinting les plus courantes) pour rendre le pistage inter-sites plus difficile, sans casser l'affichage ni ralentir la navigation." />
 
                             <!-- Gestionnaire de consentement cookies -->
                             <TextBlock Text="Cookies" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Refuse les bandeaux compatibles quand cela ne casse pas le site." />
                             <ToggleSwitch x:Name="ConsentManagerSwitch"
                                          Header="Refuser automatiquement les cookies"
-                                         Toggled="ConsentManagerSwitch_Toggled" />
+                                         Toggled="ConsentManagerSwitch_Toggled"
+                                         ToolTipService.ToolTip="Refuse les bandeaux compatibles quand cela ne casse pas le site." />
                             </StackPanel>
 
                             <StackPanel x:Name="PrivacyGroupConnection" Spacing="14" Visibility="Collapsed">
@@ -4801,19 +4777,17 @@
 
                             <!-- HTTPS enforcer -->
                             <TextBlock Text="HTTPS" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Tente HTTPS avant HTTP quand le site le permet." />
                             <ToggleSwitch x:Name="HttpsEnforcerSwitch"
                                          Header="Forcer HTTPS"
-                                         Toggled="HttpsEnforcerSwitch_Toggled" />
+                                         Toggled="HttpsEnforcerSwitch_Toggled"
+                                         ToolTipService.ToolTip="Tente HTTPS avant HTTP quand le site le permet." />
 
                             <!-- SmartScreen : seule protection de cette page qui envoie des donnees a un tiers (Microsoft), contrairement au reste qui bloque/anonymise localement -->
                             <TextBlock Text="SmartScreen" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Protection Microsoft anti-phishing optionnelle. À la différence du reste de cette page (qui bloque ou anonymise en local), l'activer envoie les URL visitées à Microsoft. Désactivée par défaut." />
                             <ToggleSwitch x:Name="SmartScreenSwitch"
                                          Header="Activer SmartScreen (envoie les URL à Microsoft)"
-                                         Toggled="SmartScreenSwitch_Toggled" />
+                                         Toggled="SmartScreenSwitch_Toggled"
+                                         ToolTipService.ToolTip="Protection Microsoft anti-phishing optionnelle. À la différence du reste de cette page (qui bloque ou anonymise en local), l'activer envoie les URL visitées à Microsoft. Désactivée par défaut." />
                             </StackPanel>
 
                             <StackPanel x:Name="PrivacyGroupHygiene" Spacing="14" Visibility="Collapsed">
@@ -4821,27 +4795,24 @@
 
                             <!-- Anti-télémétrie -->
                             <TextBlock Text="Anti-télémétrie" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Bloque la mesure d'audience, le replay de session, les rapports de crash et les métriques produit des sites." />
                             <ToggleSwitch x:Name="TelemetryBlockerSwitch"
                                          Header="Bloquer la télémétrie"
-                                         Toggled="TelemetryBlockerSwitch_Toggled" />
+                                         Toggled="TelemetryBlockerSwitch_Toggled"
+                                         ToolTipService.ToolTip="Bloque la mesure d'audience, le replay de session, les rapports de crash et les métriques produit des sites." />
 
                             <!-- Nettoyage URL -->
                             <TextBlock Text="Nettoyage des URL" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Retire les paramètres de tracking avant navigation." />
                             <ToggleSwitch x:Name="ParameterCleanerSwitch"
                                          Header="Nettoyer les URL"
-                                         Toggled="ParameterCleanerSwitch_Toggled" />
+                                         Toggled="ParameterCleanerSwitch_Toggled"
+                                         ToolTipService.ToolTip="Retire les paramètres de tracking avant navigation." />
 
                             <!-- Sessions éphémères -->
                             <TextBlock Text="Sessions éphémères" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Purge les sessions au démarrage, sauf pour les sites que vous gardez connectés." />
                             <ToggleSwitch x:Name="SessionPurgeSwitch"
                                          Header="Purger les sessions au démarrage"
-                                         Toggled="SessionPurgeSwitch_Toggled" />
+                                         Toggled="SessionPurgeSwitch_Toggled"
+                                         ToolTipService.ToolTip="Purge les sessions au démarrage, sauf pour les sites que vous gardez connectés." />
                             <HyperlinkButton Content="Gérer les sites connectés"
                                              Click="SessionsManageLink_Click"
                                              HorizontalAlignment="Left"
@@ -4863,6 +4834,8 @@
                             </StackPanel>
                             <StackPanel x:Name="PrivacyWhitelistPanel" Spacing="6" />
                             </StackPanel>
+
+                        </StackPanel>
 
                         </StackPanel>
 
@@ -6454,15 +6427,137 @@
                 <Flyout x:Name="ModulesFlyout" Placement="TopEdgeAlignedLeft" FlyoutPresenterStyle="{StaticResource StartMenuFlyoutPresenterStyle}" Opening="ModulesFlyout_Opening">
                     <StackPanel x:Name="ModulesFlyoutRoot" Width="640" Spacing="0">
 
-                        <!-- En-tete profil (0.93.5.0-dev, deplace depuis la barre de statut basse) :
-                             photo + nom en tete du menu, comme un vrai menu demarrer Windows - clic
-                             ouvre le meme ProfileStatusFlyout qu'avant (deplace avec lui, aucune
-                             nouvelle logique de profil). -->
+                        <!-- En-tete : mark + recherche en direct (filtre la grille sur place,
+                             StartMenuSearchBox_TextChanged - ne delegue plus a la palette
+                             de commande separee) + fermeture -->
+                        <Grid ColumnSpacing="10" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <!-- Trace corrige (2026-08-12) : cet en-tete gardait encore
+                                 l'ancien symbole "carre a coin coupe", jamais mis a jour
+                                 quand le bouton Demarrer juste en dehors de ce volet est
+                                 passe a la goutte le 10/08 - les deux montraient donc 2
+                                 marques differentes a un clic d'intervalle. Meme trace que
+                                 ModulesButtonMark/LoginOverlay desormais. -->
+                            <Path Grid.Column="0" Width="24" Height="24" Stretch="Uniform"
+                                  Fill="{StaticResource NovaIdentityMarkBrush}"
+                                  Data="M32,10 C41,20 46,30 46,38 A14,14 0 1 1 18,38 C18,30 23,20 32,10 Z M35,15 L38,21.5 L45,24 L38,26.5 L35,33 L32,26.5 L25,24 L32,21.5 Z" />
+                            <TextBox Grid.Column="1" x:Name="StartMenuSearchBox"
+                                     Style="{StaticResource NovaCommandPaletteSearchBoxStyle}"
+                                     PlaceholderText="Rechercher un module, un favori, un site..."
+                                     TextChanged="StartMenuSearchBox_TextChanged"
+                                     AutomationProperties.Name="Rechercher un module, un favori, un site" />
+                            <Button Grid.Column="2" Style="{StaticResource NovaChromeIconButtonStyle}"
+                                    ToolTipService.ToolTip="Fermer" AutomationProperties.Name="Fermer le menu" Click="ModulesFlyoutCloseButton_Click">
+                                <SymbolIcon Symbol="Cancel" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Refonte "facon Windows 11" (0.94.0.0-dev, demande explicite
+                             utilisateur) : remplace le maitre/detail "a la Windows 7" du
+                             0.93.5.0-dev (rail de categories + volet detail) par le meme
+                             principe que le vrai menu Demarrer de Windows 11 - Epingle en
+                             grille + Recommande par defaut, un lien "Toutes les tuiles"
+                             pour tout voir (regroupe par famille de couleur plutot qu'un
+                             A-Z strict - Lumora n'a que ~23 tuiles, l'A-Z de Windows sert a
+                             gerer des centaines d'applis). Lumora avait deja ce principe
+                             (bascule Epingles/Toutes les applications) avant le 0.93.5.0-dev,
+                             abandonne alors car "obligeait a naviguer entre deux ecrans" -
+                             mais avec un seul lien de bascule (pas un vrai second ecran a
+                             chercher) et si peu de tuiles, le compromis est different. -->
+                        <StackPanel x:Name="StartMenuHome" Spacing="18">
+                            <ScrollViewer MaxHeight="420" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Spacing="18">
+                                    <StackPanel Spacing="10">
+                                        <Grid>
+                                            <TextBlock Text="Épinglé" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="12" Opacity="0.72" HorizontalAlignment="Left" />
+                                            <HyperlinkButton Content="Toutes les tuiles ›" Padding="0" HorizontalAlignment="Right"
+                                                             Click="StartMenuShowAllTiles_Click"
+                                                             AutomationProperties.Name="Afficher toutes les tuiles" />
+                                        </Grid>
+                                        <ItemsRepeater x:Name="StartMenuPinnedGrid" ItemTemplate="{StaticResource StartMenuGridTileTemplate}">
+                                            <ItemsRepeater.Layout>
+                                                <UniformGridLayout Orientation="Horizontal" MinItemWidth="140" MinItemHeight="96" MinColumnSpacing="8" MinRowSpacing="8" />
+                                            </ItemsRepeater.Layout>
+                                        </ItemsRepeater>
+                                        <TextBlock x:Name="StartMenuPinnedEmptyText"
+                                                   Text="Aucune tuile épinglée. Clic droit sur une tuile, dans « Toutes les tuiles », pour l'ajouter ici."
+                                                   Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                   TextWrapping="Wrap"
+                                                   Visibility="Collapsed" />
+                                    </StackPanel>
+
+                                    <!-- Recommande (0.94.0.0-dev) : premier vrai usage de
+                                         StartMenuTileRegistry.TopTiles/UsageScore, ecrits des le
+                                         0.93.x mais jamais branches a un affichage - RecordOpen
+                                         desormais appele depuis OpenStartMenuTile
+                                         (MainWindow.StartMenu.cs). Gabarit en ligne (pas la grille
+                                         carree ci-dessus) : c'est deja la forme du "Recommande"
+                                         de Windows 11 (icone+nom+"ouvert recemment"). -->
+                                    <StackPanel x:Name="StartMenuRecommendedSection" Spacing="10">
+                                        <TextBlock Text="Recommandé" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="12" Opacity="0.72" />
+                                        <ItemsRepeater x:Name="StartMenuRecommendedList" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}">
+                                            <ItemsRepeater.Layout>
+                                                <UniformGridLayout Orientation="Horizontal" MaximumRowsOrColumns="2" MinItemWidth="278" MinItemHeight="46" />
+                                            </ItemsRepeater.Layout>
+                                        </ItemsRepeater>
+                                        <TextBlock x:Name="StartMenuRecommendedEmptyText"
+                                                   Text="Rien à recommander pour l'instant : ouvrez quelques modules, ils apparaîtront ici."
+                                                   Style="{StaticResource NovaPanelDescriptionStyle}"
+                                                   TextWrapping="Wrap"
+                                                   Visibility="Collapsed" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
+
+                        <!-- Toutes les tuiles : visible apres clic sur le lien ci-dessus,
+                             remplace StartMenuHome. Peuplee en code-behind
+                             (RebuildStartMenuAllTiles, MainWindow.StartMenu.cs) - un groupe
+                             par section du registre (meme motif de contenu genere en C#
+                             que SettingsSearchResultsPanel, MainWindow.SettingsSearch.cs). -->
+                        <StackPanel x:Name="StartMenuAllTiles" Spacing="14" Visibility="Collapsed">
+                            <HyperlinkButton Content="‹ Retour aux épingles" Padding="0" HorizontalAlignment="Left"
+                                             Click="StartMenuBackToHome_Click" />
+                            <ScrollViewer MaxHeight="420" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel x:Name="StartMenuAllTilesPanel" Spacing="16" />
+                            </ScrollViewer>
+                        </StackPanel>
+
+                        <!-- Recherche en direct : liste plate triee par score (meme forme
+                             que ScoreCommandPaletteItem), visible uniquement pendant une
+                             recherche active - remplace StartMenuHome/StartMenuAllTiles le
+                             temps de la recherche. -->
+                        <ScrollViewer x:Name="StartMenuFilteredScrollViewer" MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Spacing="12" Width="600">
+                                <ItemsRepeater x:Name="StartMenuFilteredList"
+                                              Visibility="Collapsed"
+                                              ItemTemplate="{StaticResource StartMenuActionTileTemplate}">
+                                    <ItemsRepeater.Layout>
+                                        <UniformGridLayout Orientation="Horizontal" MaximumRowsOrColumns="2" MinItemWidth="278" MinItemHeight="46" />
+                                    </ItemsRepeater.Layout>
+                                </ItemsRepeater>
+                                <TextBlock x:Name="StartMenuNoResultsText"
+                                           Text="Aucun résultat"
+                                           Style="{StaticResource NovaPanelDescriptionStyle}"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Pied de menu (0.94.0.0-dev) : profil descendu depuis l'en-tete,
+                             a la place du compte en bas a gauche de Windows 11. Meme bouton/
+                             ProfileStatusFlyout qu'avant, deplace tel quel - aucune nouvelle
+                             logique de profil. Pas d'equivalent "Eteindre" (Windows) : Lumora
+                             est un navigateur, la fermeture vit deja dans le bouton "Fermer"
+                             de l'en-tete ci-dessus. -->
+                        <Border Height="1" Margin="0,16,0,12" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
                         <Button x:Name="ProfileStatusButton"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
                                 Padding="10,10"
-                                Margin="0,0,0,12"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 CornerRadius="12"
@@ -6470,12 +6565,12 @@
                                 AutomationProperties.Name="Profil Lumora"
                                 Click="ProfileStatusButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="12">
-                                <Ellipse x:Name="ProfileStatusAvatar" Width="38" Height="38" Visibility="Collapsed">
+                                <Ellipse x:Name="ProfileStatusAvatar" Width="32" Height="32" Visibility="Collapsed">
                                     <Ellipse.Fill>
                                         <ImageBrush x:Name="ProfileStatusAvatarBrush" Stretch="UniformToFill" />
                                     </Ellipse.Fill>
                                 </Ellipse>
-                                <TextBlock x:Name="ProfileStatusText" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Opacity="0.92" />
+                                <TextBlock x:Name="ProfileStatusText" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" Opacity="0.92" />
                             </StackPanel>
                             <Button.Flyout>
                                 <Flyout x:Name="ProfileStatusFlyout" Placement="TopEdgeAlignedRight">
@@ -6544,124 +6639,6 @@
                                 </Flyout>
                             </Button.Flyout>
                         </Button>
-
-                        <!-- En-tete : mark + recherche en direct (filtre la grille sur place,
-                             StartMenuSearchBox_TextChanged - ne delegue plus a la palette
-                             de commande separee) + fermeture -->
-                        <Grid ColumnSpacing="10" Margin="0,0,0,14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <!-- Trace corrige (2026-08-12) : cet en-tete gardait encore
-                                 l'ancien symbole "carre a coin coupe", jamais mis a jour
-                                 quand le bouton Demarrer juste en dehors de ce volet est
-                                 passe a la goutte le 10/08 - les deux montraient donc 2
-                                 marques differentes a un clic d'intervalle. Meme trace que
-                                 ModulesButtonMark/LoginOverlay desormais. -->
-                            <Path Grid.Column="0" Width="24" Height="24" Stretch="Uniform"
-                                  Fill="{StaticResource NovaIdentityMarkBrush}"
-                                  Data="M32,10 C41,20 46,30 46,38 A14,14 0 1 1 18,38 C18,30 23,20 32,10 Z M35,15 L38,21.5 L45,24 L38,26.5 L35,33 L32,26.5 L25,24 L32,21.5 Z" />
-                            <TextBox Grid.Column="1" x:Name="StartMenuSearchBox"
-                                     Style="{StaticResource NovaCommandPaletteSearchBoxStyle}"
-                                     PlaceholderText="Rechercher un module, un favori, un site..."
-                                     TextChanged="StartMenuSearchBox_TextChanged"
-                                     AutomationProperties.Name="Rechercher un module, un favori, un site" />
-                            <Button Grid.Column="2" Style="{StaticResource NovaChromeIconButtonStyle}"
-                                    ToolTipService.ToolTip="Fermer" AutomationProperties.Name="Fermer le menu" Click="ModulesFlyoutCloseButton_Click">
-                                <SymbolIcon Symbol="Cancel" />
-                            </Button>
-                        </Grid>
-
-                        <!-- Rail de categories (gauche) + volet detail (droite) : refonte
-                             maitre/detail 0.93.5.0-dev (a la Windows 7, Panneau de configuration
-                             en vue categories), demande explicite de l'utilisateur pour remplacer
-                             l'ancien bascule Epingles-par-defaut/Toutes-les-applications qui
-                             obligeait a naviguer entre deux ecrans. "Epingles" est desormais une
-                             categorie comme les autres, toujours en tete du rail, selectionnee par
-                             defaut a l'ouverture (ModulesFlyout_Opening) - comme un vrai menu
-                             demarrer (Windows/GNOME), on y revient a chaque ouverture. -->
-                        <Grid x:Name="StartMenuRailAndDetail" ColumnSpacing="14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="232" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <ListView x:Name="StartMenuCategoryList"
-                                      Grid.Column="0"
-                                      SelectionMode="Single"
-                                      ItemTemplate="{StaticResource StartMenuCategoryTemplate}"
-                                      SelectionChanged="StartMenuCategoryList_SelectionChanged"
-                                      AutomationProperties.Name="Catégories du menu Démarrer">
-                                <!-- Categorie active mise en avant (2026-08-08, "vraiment tres beau") :
-                                     cles de ressource standard reprises par le ControlTemplate par
-                                     defaut de ListViewItem (Windows App SDK) - pas de retemplating
-                                     complet, juste les couleurs de l'etat selectionne, sur les memes
-                                     brushes "accent" deja correctes en tout theme et en Contraste
-                                     renforce (consolidation du meme jour, MainWindow.SettingsTheme.cs). -->
-                                <ListView.Resources>
-                                    <StaticResource x:Key="ListViewItemBackgroundSelected" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
-                                    <StaticResource x:Key="ListViewItemBackgroundSelectedPointerOver" ResourceKey="NovaChromeButtonAccentBackgroundBrush" />
-                                    <StaticResource x:Key="ListViewItemForegroundSelected" ResourceKey="NovaChromeButtonAccentForegroundBrush" />
-                                </ListView.Resources>
-                            </ListView>
-
-                            <Border Grid.Column="1" Width="1" HorizontalAlignment="Left"
-                                    Background="{ThemeResource SystemControlForegroundBaseLowBrush}" />
-
-                            <!-- x:Name pose ici expres (correctif molette defensif, meme motif que
-                                 SettingsPanel_RootWheelDiagnostics/MainWindow.xaml.cs:489-566) : ce
-                                 flyout bascule maintenant entre 2 contenus (rail+detail / recherche),
-                                 le meme genre de changement dynamique qui avait fait "s'arreter" la
-                                 molette sur Parametres apres un moment. -->
-                            <ScrollViewer x:Name="StartMenuDetailScrollViewer" Grid.Column="1" Margin="14,0,0,0"
-                                          MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel Spacing="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon x:Name="StartMenuDetailTitleIcon" FontFamily="Segoe MDL2 Assets" FontSize="12" Opacity="0.7" />
-                                        <TextBlock x:Name="StartMenuDetailTitleText" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="13" />
-                                    </StackPanel>
-
-                                    <!-- Tuiles epinglees (clic droit / appui long sur n'importe quelle
-                                         tuile -> Epingler/Desepingler, dans n'importe quelle categorie) :
-                                         visible uniquement quand la categorie Epingles est selectionnee. -->
-                                    <StackPanel x:Name="StartMenuPinnedSection" Spacing="8">
-                                        <ItemsRepeater x:Name="StartMenuPinnedRow" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}" />
-                                        <TextBlock x:Name="StartMenuPinnedEmptyText"
-                                                   Text="Aucune tuile épinglée. Clic droit sur une tuile, dans n'importe quelle catégorie, pour l'ajouter ici."
-                                                   Style="{StaticResource NovaPanelDescriptionStyle}"
-                                                   TextWrapping="Wrap"
-                                                   Visibility="Collapsed" />
-                                    </StackPanel>
-
-                                    <!-- Tuiles de la categorie selectionnee (source unique
-                                         StartMenuTileRegistry.All) : visible pour toute categorie autre
-                                         qu'Epingles. -->
-                                    <ItemsRepeater x:Name="StartMenuDetailList" ItemTemplate="{StaticResource StartMenuDetailTileTemplate}" />
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Grid>
-
-                        <!-- Recherche en direct : liste plate triee par score (meme forme
-                             que ScoreCommandPaletteItem), visible uniquement pendant une
-                             recherche active - remplace le rail+detail ci-dessus le temps
-                             de la recherche (StartMenuRailAndDetail.Visibility=Collapsed). -->
-                        <ScrollViewer x:Name="StartMenuFilteredScrollViewer" MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel Spacing="12" Width="600">
-                                <ItemsRepeater x:Name="StartMenuFilteredList"
-                                              Visibility="Collapsed"
-                                              ItemTemplate="{StaticResource StartMenuActionTileTemplate}">
-                                    <ItemsRepeater.Layout>
-                                        <UniformGridLayout Orientation="Horizontal" MaximumRowsOrColumns="2" MinItemWidth="278" MinItemHeight="46" />
-                                    </ItemsRepeater.Layout>
-                                </ItemsRepeater>
-                                <TextBlock x:Name="StartMenuNoResultsText"
-                                           Text="Aucun résultat"
-                                           Style="{StaticResource NovaPanelDescriptionStyle}"
-                                           Visibility="Collapsed" />
-                            </StackPanel>
-                        </ScrollViewer>
                     </StackPanel>
                 </Flyout>
             </Button.Flyout>

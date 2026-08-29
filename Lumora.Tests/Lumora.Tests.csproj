@@ -62,6 +62,7 @@
     <Compile Include="..\Lumora.WinUI\Sessions\SessionKeepAdvisor.cs" Link="Product\SessionKeepAdvisor.cs" />
     <Compile Include="..\Lumora.WinUI\Sessions\SessionDomainFamilies.cs" Link="Product\SessionDomainFamilies.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\WebAppLaunchArgs.cs" Link="Product\WebAppLaunchArgs.cs" />
+    <Compile Include="..\Lumora.WinUI\UrlLaunchArgs.cs" Link="Product\UrlLaunchArgs.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\WebAppIdentity.cs" Link="Product\WebAppIdentity.cs" />
     <Compile Include="..\Lumora.WinUI\IncognitoLaunchArgs.cs" Link="Product\IncognitoLaunchArgs.cs" />
     <Compile Include="..\Lumora.WinUI\IncognitoProcessLauncher.cs" Link="Product\IncognitoProcessLauncher.cs" />

@@ -188,13 +188,9 @@ public sealed partial class MainWindow
 
         var mainFontSize = largeText ? 16 : 14;
         var smallFontSize = largeText ? 14 : 12;
-        // Taille dediee, plus grande que mainFontSize (2026-08-22, demande
-        // explicite utilisateur avec capture d'ecran a l'appui : une URL
-        // dense en parametres de tracking devenait illisible a 14px). Garde
-        // le meme ecart de 2px que mainFontSize entre etat normal et "Texte
-        // agrandi", pour que ce reglage reste utile meme une fois la base
-        // relevee.
-        AddressBox.FontSize = largeText ? 18 : 16;
+        // Taille dediee, plus grande que mainFontSize (2026-08-22), gardee
+        // a 18px minimum pour rester lisible avec les hampes fines de l'URL.
+        AddressBox.FontSize = largeText ? 20 : 18;
         CommandPaletteSearchBox.FontSize = mainFontSize;
         CommandPaletteHintText.FontSize = smallFontSize;
         StatusText.FontSize = smallFontSize;
