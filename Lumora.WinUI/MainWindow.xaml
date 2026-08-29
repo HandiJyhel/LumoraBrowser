@@ -1134,16 +1134,24 @@
                 </Button>
             </DataTemplate>
 
-            <!-- Tuile carree (0.94.0.0-dev, refonte Demarrer "facon Windows 11") :
-                 remplace la rangee icone+titre+sous-titre (StartMenuDetailTileTemplate
-                 ci-dessous, garde pour "Recommande" qui reste en ligne) pour "Epingle"
-                 et "Toutes les tuiles" - meme grille de reconnaissance visuelle qu'un
-                 vrai ecran d'accueil plutot qu'une liste de texte. Meme
-                 Button/ContextFlyout/couleur de famille que les autres gabarits, juste
-                 le contenu recompose en carte verticale. -->
-            <DataTemplate x:Key="StartMenuGridTileTemplate">
+            <!-- Tuile compacte (0.94.2.0-dev, remplace StartMenuGridTileTemplate
+                 140x96) : Epingle ET les familles de "Toutes les tuiles" (desormais
+                 toujours visibles, plus de clic separe) partagent ce meme gabarit
+                 reduit - la densite est le point de tout ce chantier, pas de raison
+                 d'avoir 2 tailles differentes pour la meme idee de tuile. Structure
+                 identique a l'ancien gabarit (juste redimensionne : 104x76, badge
+                 26px, texte 10.5) : Button/ContextFlyout/couleur de famille
+                 inchanges. Largeur du texte alignee sur le contenu REEL disponible
+                 (104 - Padding 12+12 de NovaPanelActionButtonStyle = 80), pas sur la
+                 largeur du bouton - bug trouve en verifiant (libelles tronques des
+                 2 cotes, ex. "Bloqueur de pub" -> "loqueur de pu", la largeur
+                 fixee au bouton entier debordait du contenu reellement dispo).
+                 TextTrimming en filet pour un mot seul trop long pour 2 lignes
+                 (ex. "Telechargements") : ellipse propre plutot qu'un debordement
+                 clippe au milieu du mot. -->
+            <DataTemplate x:Key="StartMenuChipTileTemplate">
                 <Button Style="{StaticResource NovaPanelActionButtonStyle}"
-                        Width="140" Height="96"
+                        Width="104" Height="76"
                         HorizontalContentAlignment="Center" VerticalAlignment="Top"
                         Tag="{Binding Id}" Click="StartMenuTile_Click"
                         AutomationProperties.Name="{Binding Title}">
@@ -1152,15 +1160,15 @@
                             <MenuFlyoutItem Text="{Binding PinActionLabel}" Tag="{Binding Id}" Click="StartMenuTilePin_Click" />
                         </MenuFlyout>
                     </Button.ContextFlyout>
-                    <StackPanel Spacing="8" HorizontalAlignment="Center">
-                        <Grid Width="34" Height="34" HorizontalAlignment="Center">
-                            <Border CornerRadius="17" Background="{Binding FamilyKey, Converter={StaticResource StartMenuFamilyKeyToBrushConverter}, ConverterParameter={StaticResource NovaIdentityMarkBrush}}" />
-                            <FontIcon Glyph="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                        <Grid Width="26" Height="26" HorizontalAlignment="Center">
+                            <Border CornerRadius="13" Background="{Binding FamilyKey, Converter={StaticResource StartMenuFamilyKeyToBrushConverter}, ConverterParameter={StaticResource NovaIdentityMarkBrush}}" />
+                            <FontIcon Glyph="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
-                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="11.5"
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="10.5"
                                    HorizontalAlignment="Center" TextAlignment="Center"
-                                   TextWrapping="Wrap" MaxLines="2" Width="120" />
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" Width="80" />
                     </StackPanel>
                 </Button>
             </DataTemplate>
@@ -6456,35 +6464,29 @@
                             </Button>
                         </Grid>
 
-                        <!-- Refonte "facon Windows 11" (0.94.0.0-dev, demande explicite
-                             utilisateur) : remplace le maitre/detail "a la Windows 7" du
-                             0.93.5.0-dev (rail de categories + volet detail) par le meme
-                             principe que le vrai menu Demarrer de Windows 11 - Epingle en
-                             grille + Recommande par defaut, un lien "Toutes les tuiles"
-                             pour tout voir (regroupe par famille de couleur plutot qu'un
-                             A-Z strict - Lumora n'a que ~23 tuiles, l'A-Z de Windows sert a
-                             gerer des centaines d'applis). Lumora avait deja ce principe
-                             (bascule Epingles/Toutes les applications) avant le 0.93.5.0-dev,
-                             abandonne alors car "obligeait a naviguer entre deux ecrans" -
-                             mais avec un seul lien de bascule (pas un vrai second ecran a
-                             chercher) et si peu de tuiles, le compromis est different. -->
+                        <!-- Piste A (0.94.2.0-dev, remplace le lien "Toutes les tuiles" du
+                             0.94.0.0-dev) : retour utilisateur compare au vrai Demarrer de
+                             Windows 11 - "2 tuiles a l'ouverture, vingt et une de plus
+                             planquees derriere un clic", panneau percu comme vide alors que
+                             le contenu existe deja. Les 4 familles restent desormais
+                             toujours visibles sous Epingle/Recommande, plus de clic ni de
+                             second ecran a chercher. Tuiles compactees
+                             (StartMenuChipTileTemplate, 96x72 au lieu de 140x96, y compris
+                             pour Epingle) pour que tout tienne sans exploser la hauteur du
+                             volet - badges ronds colores conserves (identite Lumora que
+                             Windows n'a pas), juste redimensionnes. -->
                         <StackPanel x:Name="StartMenuHome" Spacing="18">
-                            <ScrollViewer MaxHeight="420" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                            <ScrollViewer MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel Spacing="18">
                                     <StackPanel Spacing="10">
-                                        <Grid>
-                                            <TextBlock Text="Épinglé" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="12" Opacity="0.72" HorizontalAlignment="Left" />
-                                            <HyperlinkButton Content="Toutes les tuiles ›" Padding="0" HorizontalAlignment="Right"
-                                                             Click="StartMenuShowAllTiles_Click"
-                                                             AutomationProperties.Name="Afficher toutes les tuiles" />
-                                        </Grid>
-                                        <ItemsRepeater x:Name="StartMenuPinnedGrid" ItemTemplate="{StaticResource StartMenuGridTileTemplate}">
+                                        <TextBlock Text="Épinglé" Style="{StaticResource NovaPanelSectionTitleStyle}" FontSize="12" Opacity="0.72" HorizontalAlignment="Left" />
+                                        <ItemsRepeater x:Name="StartMenuPinnedGrid" ItemTemplate="{StaticResource StartMenuChipTileTemplate}">
                                             <ItemsRepeater.Layout>
-                                                <UniformGridLayout Orientation="Horizontal" MinItemWidth="140" MinItemHeight="96" MinColumnSpacing="8" MinRowSpacing="8" />
+                                                <UniformGridLayout Orientation="Horizontal" MinItemWidth="104" MinItemHeight="76" MinColumnSpacing="8" MinRowSpacing="8" />
                                             </ItemsRepeater.Layout>
                                         </ItemsRepeater>
                                         <TextBlock x:Name="StartMenuPinnedEmptyText"
-                                                   Text="Aucune tuile épinglée. Clic droit sur une tuile, dans « Toutes les tuiles », pour l'ajouter ici."
+                                                   Text="Aucune tuile épinglée. Clic droit sur une tuile, plus bas, pour l'ajouter ici."
                                                    Style="{StaticResource NovaPanelDescriptionStyle}"
                                                    TextWrapping="Wrap"
                                                    Visibility="Collapsed" />
@@ -6510,27 +6512,22 @@
                                                    TextWrapping="Wrap"
                                                    Visibility="Collapsed" />
                                     </StackPanel>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </StackPanel>
 
-                        <!-- Toutes les tuiles : visible apres clic sur le lien ci-dessus,
-                             remplace StartMenuHome. Peuplee en code-behind
-                             (RebuildStartMenuAllTiles, MainWindow.StartMenu.cs) - un groupe
-                             par section du registre (meme motif de contenu genere en C#
-                             que SettingsSearchResultsPanel, MainWindow.SettingsSearch.cs). -->
-                        <StackPanel x:Name="StartMenuAllTiles" Spacing="14" Visibility="Collapsed">
-                            <HyperlinkButton Content="‹ Retour aux épingles" Padding="0" HorizontalAlignment="Left"
-                                             Click="StartMenuBackToHome_Click" />
-                            <ScrollViewer MaxHeight="420" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel x:Name="StartMenuAllTilesPanel" Spacing="16" />
+                                    <!-- Categories (ex-"Toutes les tuiles" derriere un clic,
+                                         0.94.2.0-dev) : toujours visibles, plus de bascule.
+                                         Peuplee en code-behind (RebuildStartMenuCategories,
+                                         MainWindow.StartMenu.cs) - un groupe par section du
+                                         registre (meme motif de contenu genere en C# que
+                                         SettingsSearchResultsPanel, MainWindow.SettingsSearch.cs). -->
+                                    <StackPanel x:Name="StartMenuCategoriesPanel" Spacing="16" />
+                                </StackPanel>
                             </ScrollViewer>
                         </StackPanel>
 
                         <!-- Recherche en direct : liste plate triee par score (meme forme
                              que ScoreCommandPaletteItem), visible uniquement pendant une
-                             recherche active - remplace StartMenuHome/StartMenuAllTiles le
-                             temps de la recherche. -->
+                             recherche active - remplace StartMenuHome le temps de la
+                             recherche. -->
                         <ScrollViewer x:Name="StartMenuFilteredScrollViewer" MaxHeight="480" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Spacing="12" Width="600">
                                 <ItemsRepeater x:Name="StartMenuFilteredList"

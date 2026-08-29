@@ -24663,3 +24663,62 @@ bascule `ReleaseVersion` ne change aucun des scripts de packaging (toujours inde
 le compteur interne `0.94.1.0-dev`), et [[demande-installeur-signale-viabilite]] cadre
 la generation d'un installeur comme un signal distinct a ne jamais declencher de ma
 propre initiative - laisse en attente d'une demande explicite ulterieure.
+
+## 2026-08-29 (suite) — Menu Demarrer "Piste A" : familles toujours visibles -> 0.94.2.0-dev
+
+L'utilisateur a montre 2 captures reelles (Demarrer Windows 11 vs Menu Lumora,
+`ModulesFlyout`) et demande un avis : "tu trouves pas qu'on pourrait ameliorer [...]
+un peu pas tres pratique et un peu moche". Avant tout code, 2 maquettes HTML montrees
+en artefact (Piste A - badges colores Lumora conserves mais compactes, familles
+toujours visibles ; Piste B - calque Windows quasi a l'identique, icones plates,
+cartes-categorie). Diagnostic chiffre a l'appui (lu dans le vrai code avant de
+proposer quoi que ce soit) : 2 tuiles epinglees + 2 recommandees a l'ouverture contre
+une dizaine chez Windows dans le meme espace ; tuiles `140x96px` ; 21 des ~23 tuiles
+existantes deja bien rangees mais planquees derriere le lien "Toutes les tuiles"
+(1 clic de plus que Windows). Avis donne : Piste A recommandee (corrige le vrai
+probleme - tout montrer d'un coup - sans sacrifier les badges colores qui distinguent
+Lumora). Utilisateur confirme Piste A, "go" recu.
+
+**Implemente** (`MainWindow.xaml`, `MainWindow.StartMenu.cs`, `MainWindow.xaml.cs`) :
+- Nouveau gabarit `StartMenuChipTileTemplate` (104x76, badge rond 26px, texte 10.5) qui
+  remplace `StartMenuGridTileTemplate` (140x96, supprime, plus aucune reference) - utilise
+  desormais pour Epingle ET pour les familles (meme tuile partout, la densite etant le
+  point de tout ce chantier).
+- Suppression complete du 2e ecran "Toutes les tuiles" (`StartMenuAllTiles`,
+  `HyperlinkButton "Toutes les tuiles ›"`, `StartMenuShowAllTiles_Click`,
+  `StartMenuBackToHome_Click`, `_startMenuShowAllTiles`) : les 4 familles
+  (`StartMenuCategoriesPanel`, ex-`StartMenuAllTilesPanel`, peuplee par
+  `RebuildStartMenuCategories`, ex-`RebuildStartMenuAllTiles`) s'affichent desormais
+  toujours dans le meme volet, sous Epingle/Recommande. `RebuildStartMenuViewModels`
+  simplifie en consequence (plus de branche Home/AllTiles, appelle les 2 rebuilds
+  d'un coup hors recherche).
+- Version `0.94.1.0-dev` -> `0.94.2.0-dev` (**3e chiffre**, ajout/refonte dans le
+  palier "Control panel and start menu" en cours) - MainWindow.xaml.cs, AGENTS.md,
+  build-clean-test-artifact.ps1, build-installer.ps1, test d'alignement renomme/mis a
+  jour.
+
+**Bug reel trouve en verifiant** (capture d'ecran reelle, mode invite, apres avoir
+contourne l'ecran de verrouillage du VRAI profil sans y toucher) : libelles tronques
+des 2 cotes ("Bloqueur de pub" -> "loqueur de pu", "Loupe de lecture" -> "oupe de
+lectur") - la largeur de `TextBlock` (84px) etait calee sur la largeur du BOUTON
+(96px) plutot que sur le contenu reellement disponible une fois le `Padding="12,0"`
+de `NovaPanelActionButtonStyle` retire (96 - 24 = 72px, plus etroit que 84 -> le
+texte centre debordait et se faisait clipper symetriquement par le
+`ContentPresenter`). Corrige : bouton elargi a 104px, texte a 80px (104-24=80, marge
+de securite), `TextTrimming="CharacterEllipsis"` ajoute en filet pour un mot seul
+trop long pour 2 lignes (ex. "Telechargements"). 2e capture reelle confirme tous les
+libellés lisibles, plus aucun troncage.
+
+Verifie en reel (mode invite, apres avoir evite le vrai profil verrouille de
+l'utilisateur) : capture d'ecran confirmant Epingle + Recommande + 4 familles
+(Modules, Lecture et contenu, Confidentialite au moins visible en partie) toutes
+affichees sans aucun clic supplementaire ; clic sur une tuile de categorie ("Notes")
+confirme fermer le flyout et declencher l'action (meme comportement qu'avant, cablage
+`Click="StartMenuTile_Click"` inchange). Build 0 erreur/0 avertissement, tests
+868/868 verts avant ET apres le correctif de troncage.
+
+**Pas fait / laisse en l'etat** : la section "Modules" (1 seule tuile "Tous les
+modules") reste une categorie a 1 element avec son propre en-tete - un peu sparse
+visuellement mais fidele au registre reel, pas touche (decision de contenu, pas un
+bug de rendu). Piste B (calque Windows) pas implementee, ecartee par le choix de
+l'utilisateur.

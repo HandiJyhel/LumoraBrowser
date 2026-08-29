@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.1.0-dev";
+    internal const string Version = "0.94.2.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -186,14 +186,16 @@ public sealed partial class MainWindow : Window
     private readonly HistoryPanelController _historyPanel;
     private readonly SemanticHistoryIndex _semanticIndex;
     private readonly ObservableCollection<CommandPaletteItem> _commandPaletteItems = new();
-    // Menu Demarrer (ModulesFlyout) : accueil "Epingle" (grille) + "Recommande"
+    // Menu Demarrer (ModulesFlyout) : "Epingle" (grille) + "Recommande"
     // (usage reel) - refonte "facon Windows 11" (0.94.0.0-dev, remplace le
-    // maitre/detail "a la Windows 7" du 0.93.5.0-dev). "Toutes les tuiles"
-    // (StartMenuAllTilesPanel) n'a pas de collection dediee ici - peuplee
-    // directement en StackPanel.Children, une source par groupe/section
-    // (RebuildStartMenuAllTiles, MainWindow.StartMenu.cs). Toutes ces vues
-    // viennent de StartMenuTileRegistry.All + _uiSettings, reconstruites
-    // ensemble par RebuildStartMenuViewModels() (MainWindow.StartMenu.cs).
+    // maitre/detail "a la Windows 7" du 0.93.5.0-dev), Categories toujours
+    // visibles depuis le 0.94.2.0-dev (StartMenuCategoriesPanel, plus de clic
+    // "Toutes les tuiles" separe). Categories n'a pas de collection dediee
+    // ici - peuplee directement en StackPanel.Children, une source par
+    // groupe/section (RebuildStartMenuCategories, MainWindow.StartMenu.cs).
+    // Toutes ces vues viennent de StartMenuTileRegistry.All + _uiSettings,
+    // reconstruites ensemble par RebuildStartMenuViewModels()
+    // (MainWindow.StartMenu.cs).
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuPinnedTiles = new();
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuRecommendedTiles = new();
     private readonly ObservableCollection<StartMenuTileViewModel> _startMenuFilteredTiles = new();

@@ -25,19 +25,22 @@ namespace Lumora.WinUI;
 // second ecran a chercher) et regroupe par famille de couleur plutot qu'un
 // A-Z strict (confirme par l'utilisateur) : Lumora n'a que ~23 tuiles, pas
 // besoin de l'A-Z qui sert Windows a gerer des centaines d'applications.
+//
+// Piste A 0.94.2.0-dev (retour utilisateur : compare au vrai Demarrer de
+// Windows 11, "2 tuiles a l'ouverture, vingt et une de plus planquees
+// derriere un clic" - panneau percu comme vide) : le lien "Toutes les
+// tuiles" et son second ecran disparaissent, les 4 familles s'affichent
+// desormais toujours sous Epingle/Recommande dans le meme volet. Voir aussi
+// StartMenuChipTileTemplate (MainWindow.xaml) pour la tuile compactee qui
+// rend ca possible sans exploser la hauteur du panneau.
 public sealed partial class MainWindow
 {
     private string _startMenuQuery = string.Empty;
-    // Comme un vrai menu demarrer (Windows/GNOME), on revient toujours sur
-    // l'accueil (Epingle + Recommande) a chaque ouverture, meme si
-    // l'utilisateur avait laisse "Toutes les tuiles" ouvert la fois d'avant.
-    private bool _startMenuShowAllTiles;
 
     private void ModulesFlyout_Opening(object sender, object e)
     {
         StartMenuSearchBox.Text = string.Empty;
         _startMenuQuery = string.Empty;
-        _startMenuShowAllTiles = false;
         // Re-rattache explicitement a chaque ouverture (idempotent, garde par
         // les HashSet internes) : le filet generique (HookAutomaticPointerFocus/
         // FlyoutPointerSupport_Opened, MainWindow.xaml.cs) le fait deja sur
@@ -47,18 +50,6 @@ public sealed partial class MainWindow
         // generique et couvre ModulesFlyoutRoot sans code dedie ici - voir
         // HookWheelFallbackRoot dans MainWindow.xaml.cs.
         AttachScrollViewerPointerSupport(ModulesFlyoutRoot);
-        RebuildStartMenuViewModels();
-    }
-
-    private void StartMenuShowAllTiles_Click(object sender, RoutedEventArgs e)
-    {
-        _startMenuShowAllTiles = true;
-        RebuildStartMenuViewModels();
-    }
-
-    private void StartMenuBackToHome_Click(object sender, RoutedEventArgs e)
-    {
-        _startMenuShowAllTiles = false;
         RebuildStartMenuViewModels();
     }
 
@@ -124,10 +115,10 @@ public sealed partial class MainWindow
         RebuildStartMenuViewModels();
     }
 
-    // Point d'entree unique : bascule entre recherche / accueil (Epingle +
-    // Recommande) / Toutes les tuiles. Appelee a l'ouverture du flyout, apres
-    // un epingler/desepingler, a chaque frappe dans la recherche et sur les
-    // 2 liens de bascule.
+    // Point d'entree unique : bascule entre recherche et accueil (Epingle +
+    // Recommande + Categories, toujours toutes visibles depuis le
+    // 0.94.2.0-dev). Appelee a l'ouverture du flyout, apres un
+    // epingler/desepingler et a chaque frappe dans la recherche.
     private void RebuildStartMenuViewModels()
     {
         StartMenuPinnedGrid.ItemsSource = _startMenuPinnedTiles;
@@ -149,7 +140,6 @@ public sealed partial class MainWindow
             foreach (var vm in matches) _startMenuFilteredTiles.Add(vm);
 
             StartMenuHome.Visibility = Visibility.Collapsed;
-            StartMenuAllTiles.Visibility = Visibility.Collapsed;
             StartMenuFilteredScrollViewer.Visibility = Visibility.Visible;
             StartMenuFilteredList.Visibility = Visibility.Visible;
             StartMenuNoResultsText.Visibility = _startMenuFilteredTiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -158,18 +148,10 @@ public sealed partial class MainWindow
 
         StartMenuFilteredScrollViewer.Visibility = Visibility.Collapsed;
         StartMenuNoResultsText.Visibility = Visibility.Collapsed;
+        StartMenuHome.Visibility = Visibility.Visible;
 
-        StartMenuHome.Visibility = _startMenuShowAllTiles ? Visibility.Collapsed : Visibility.Visible;
-        StartMenuAllTiles.Visibility = _startMenuShowAllTiles ? Visibility.Visible : Visibility.Collapsed;
-
-        if (_startMenuShowAllTiles)
-        {
-            RebuildStartMenuAllTiles();
-        }
-        else
-        {
-            RebuildStartMenuHome();
-        }
+        RebuildStartMenuHome();
+        RebuildStartMenuCategories();
     }
 
     // Accueil : Epingle (grille carree) + Recommande (usage reel, plus
@@ -200,19 +182,20 @@ public sealed partial class MainWindow
         StartMenuRecommendedEmptyText.Visibility = hasRecommended ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    // "Toutes les tuiles" : un groupe par section du registre, chacun avec
-    // son en-tete colore et sa propre grille - regroupement par famille
+    // Categories (ex-"Toutes les tuiles" derriere un clic, toujours visibles
+    // depuis le 0.94.2.0-dev) : un groupe par section du registre, chacun
+    // avec son en-tete colore et sa propre grille - regroupement par famille
     // plutot qu'un A-Z strict (confirme par l'utilisateur, echelle de Lumora
     // bien plus petite que le catalogue Windows). Peuple directement en
     // StackPanel.Children (meme motif que SettingsSearchResultsPanel,
     // MainWindow.SettingsSearch.cs) : pas d'ObservableCollection unique ici,
     // chaque groupe a sa propre source figee au moment de la construction.
-    private void RebuildStartMenuAllTiles()
+    private void RebuildStartMenuCategories()
     {
-        StartMenuAllTilesPanel.Children.Clear();
+        StartMenuCategoriesPanel.Children.Clear();
 
         var pinnedIds = _uiSettings.PinnedStartMenuTileIds;
-        var template = (DataTemplate)RootShell.Resources["StartMenuGridTileTemplate"];
+        var template = (DataTemplate)RootShell.Resources["StartMenuChipTileTemplate"];
 
         foreach (var sectionName in StartMenuTileRegistry.All.Select(t => t.Section).Distinct())
         {
@@ -243,8 +226,8 @@ public sealed partial class MainWindow
                 Layout = new UniformGridLayout
                 {
                     Orientation = Orientation.Horizontal,
-                    MinItemWidth = 140,
-                    MinItemHeight = 96,
+                    MinItemWidth = 104,
+                    MinItemHeight = 76,
                     MinColumnSpacing = 8,
                     MinRowSpacing = 8
                 }
@@ -253,7 +236,7 @@ public sealed partial class MainWindow
             var group = new StackPanel { Spacing = 10 };
             group.Children.Add(header);
             group.Children.Add(repeater);
-            StartMenuAllTilesPanel.Children.Add(group);
+            StartMenuCategoriesPanel.Children.Add(group);
         }
     }
 
