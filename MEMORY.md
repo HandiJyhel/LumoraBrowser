@@ -24571,3 +24571,67 @@ l'URL passee en argument.
 Version `0.94.0.10-dev` -> `0.94.1.0-dev` (**3e chiffre** : ajout d'une fonctionnalite,
 pas une micro-correction - inscription navigateur par defaut + lecture d'URL au
 lancement, jamais presents avant).
+
+## 2026-08-29 — Session "Verification" : rattrapage de 2 sessions non commitees, nettoyage avant release 1.0
+
+Demande de l'utilisateur : avis sur l'opportunite de couper la release 1.0, puis (Go
+recu) nettoyer le code, batir un executable de dev comme d'habitude, avant d'envisager
+la release. Avis donne d'abord : encore trop tot (travail non commite, palier 0.94 tout
+juste demarre, propre jugement de l'utilisateur le 28/08 comme quoi ce n'est pas encore
+le cas, punch-list du 01/08 jamais reprise, test reel longue duree pas termine) - le Go
+a suivi malgre cet avis, execution en respectant le reste du plan (dev exe avant toute
+bascule `ReleaseVersion`).
+
+**Decouverte en verifiant l'etat du depot** : les 2 sessions precedentes ("Control panel
+and start menu" du 23/08, "Navigateur par defaut Windows" du 28/08 - toutes deux deja
+documentees plus haut dans ce fichier) n'avaient **jamais ete commitees** (27 fichiers
+modifies/nouveaux dans l'arbre de travail depuis 6 jours). Rien de perdu (build et tests
+deja verifies a l'epoque), mais signale explicitement avant de commiter. Egalement
+decouvert : la branche de travail (`feature/refonte-coffre-0-79-1`, nom obsolete d'un
+chantier bien anterieur) n'avait jamais ete fusionnee dans `main`, 13 commits d'ecart.
+Question posee a l'utilisateur (AskUserQuestion) : fusionner dans `main` - reponse oui.
+
+**Revue de code avant commit** (`/code-review` medium sur le diff) : 2 trouvailles
+confirmees et corrigees -
+1. Bug reel : `AddressBox_KeyDown` (`MainWindow.Navigation.cs`) ne gerait pas la touche
+   Tab - `AddressBox_LostFocus` (`MainWindow.AddressSuggestions.cs`) reprenait le focus
+   de force pendant une edition en cours faute d'un signal d'abandon volontaire (meme
+   famille que Echap/clic ailleurs, deja geres). Corrige en ajoutant Tab comme 3e signal
+   (revert de l'affichage avant la perte de focus, sans marquer `e.Handled` pour laisser
+   la navigation clavier normale se faire).
+2. Nom de test trompeur : `Version_projet_est_alignee_sur_0_94_0_10` verifiait en fait
+   `0.94.1.0-dev` - renomme.
+
+**Verification reelle du correctif Tab** : tentative via UIA + `PostMessage`
+(WM_KEYDOWN/WM_KEYUP, `VK_TAB`) en mode invite, adresse editee puis Tab envoye. Resultat
+ambigu/non concluant - le journal de trace confirme que le Tab atteint bien l'app
+(`RootKeyDown: key=Tab handled=False`) et que le focus quitte bien la barre un court
+instant, mais un rebond inexplique ramene ensuite le focus sur la barre avec le texte
+brut (ni l'edition ni l'affichage simplifie) - tres probablement un artefact de
+l'injection clavier synthetique dans cet environnement (deja documente comme non fiable
+dans le skill `verify`), pas forcement le comportement reel d'un vrai Tab materiel.
+**Point non confirme en conditions 100% reelles** - correctif construit par analogie
+stricte avec le chemin Echap/clic-ailleurs deja verifie et fonctionnel ; a re-tester par
+l'utilisateur en usage normal (Tab pendant une edition de la barre d'adresse).
+
+**Commit unique** regroupant les 2 sessions + les 2 correctifs (`1863719`, "Reglages
+rail a plat + recherche, Demarrer facon Windows 11, navigateur par defaut Windows
+(0.94.0.0 a .1.0-dev)") - choix d'un seul commit plutot qu'un decoupage par fichier
+(risque d'un decoupage errone sur des diffs partages entre les 2 chantiers superieur au
+benefice d'un historique plus fin, meme convention deja vue sur ce depot pour des
+commits multi-fonctionnalites). `.codex-build/` (cache de build d'outil) ajoute au
+`.gitignore` au passage. `Screenshots/220826/` (captures personnelles) et
+`.codex-build/` volontairement laisses hors du commit.
+
+Fusion `main` (fast-forward propre, `main` n'avait aucun commit propre) puis suppression
+de l'ancienne branche `feature/refonte-coffre-0-79-1`. Aucun remote configure - tout
+reste local, rien publie.
+
+Build final (apres correctifs) : 0 erreur/0 avertissement, tests 868/868 verts.
+Executable de dev regenere via `scripts/run-winui.ps1` (build Debug + copie vers le
+dossier stable `artifacts/tmp/winui-run/.../current/`, lance automatiquement par le
+script sur le profil reel de l'utilisateur) - confirme actif et reactif (PID verifie).
+
+**Pas encore fait** : bascule de `ReleaseVersion` (`null` -> `"1.0.0"`) et coupe de la
+release proprement dite - volontairement laisse en attente de la validation de
+l'utilisateur sur ce build de dev, conformement au plan qu'il avait lui-meme approuve.
