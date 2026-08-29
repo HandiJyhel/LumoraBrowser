@@ -24722,3 +24722,33 @@ modules") reste une categorie a 1 element avec son propre en-tete - un peu spars
 visuellement mais fidele au registre reel, pas touche (decision de contenu, pas un
 bug de rendu). Piste B (calque Windows) pas implementee, ecartee par le choix de
 l'utilisateur.
+
+## 2026-08-29 (suite) — Premier installateur reellement versionne 1.0.0 genere
+
+Suite logique de la session : l'utilisateur demande "il y a quoi a faire pour faire
+la release", reponse donnee sous forme de checklist (pas d'action). Correction d'un
+point errone note dans [[version-release-distincte-version-dev]] la veille : pas
+besoin de brancher `ReleaseVersion` dans les scripts de packaging, `-Version` est deja
+un parametre libre de `build-clean-test-artifact.ps1`/`build-installer.ps1` (consomme
+comme `<Version>` MSBuild du projet installateur, accepte "1.0.0" sans forme
+particuliere - verifie en lisant `Convert-ToSetupProjectVersion`, dont la regex ne
+matche de toute facon jamais le format `X.Y.Z.W-dev` actuel, passthrough silencieux
+depuis toujours). "Go" recu sur la question explicite posee ("tu veux que je genere
+cet installeur maintenant ?").
+
+**Genere** (jamais lance, regle du projet - checksums generes automatiquement par les
+2 scripts) :
+- `build-clean-test-artifact.ps1 -Version "1.0.0"` -> build Release self-contained
+  propre, `artifacts\clean-test\Lumora-1.0.0-win-x64-clean-20260829-161208\`.
+- `build-installer.ps1 -Version "1.0.0"` -> `artifacts\installer\LumoraSetup-1.0.0-win-x64.exe`
+  (~525 Mo), SHA256 `77a609c6f211088f15cb18de72335b6957b35af767525ea61956303a652e51f5`.
+  Runtime WebView2 Fixed Version deja prepare depuis le 31/07 (`Lumora.WinUI\FixedRuntime\150.0.4078.105\`),
+  pas eu besoin de relancer `prepare-webview2-fixedversion.ps1`.
+- Build 0 erreur, aucune verification reelle de l'installateur lui-meme faite par moi
+  (jamais lance, comme toujours) - reste a l'utilisateur.
+
+**Pas fait, signale explicitement** : 4 anciens installateurs de sessions precedentes
+(0.93.37.2-dev a 0.93.54.1-dev, ~525-550 Mo chacun) trainent toujours dans
+`artifacts\installer\` - pas supprimes de ma propre initiative (suppression jamais
+automatique, voir [[tutoiement-et-installeur]]), a nettoyer si l'utilisateur le
+demande. Toujours pas de depot GitHub public - cette release reste strictement locale.
