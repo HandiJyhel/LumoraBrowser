@@ -49,7 +49,7 @@ public sealed partial class MainWindow : Window
     // propos affiche alors "Version de developpement * {Version}" comme
     // aujourd'hui) ; a renseigner ("1.0.0") au moment precis de couper une
     // vraie release, pour que l'ecran A propos n'affiche plus que ce numero.
-    internal const string? ReleaseVersion = null;
+    internal const string? ReleaseVersion = "1.0.0";
     // 64 -> 40 (round 3, 2026-08-12) : retour utilisateur avec capture d'ecran
     // d'un vrai rail Edge reduit a l'appui - notre grille 2x2 de 4 icones
     // n'existait que pour loger 4 boutons d'action dans le rail. Ces 4

@@ -24635,3 +24635,31 @@ script sur le profil reel de l'utilisateur) - confirme actif et reactif (PID ver
 **Pas encore fait** : bascule de `ReleaseVersion` (`null` -> `"1.0.0"`) et coupe de la
 release proprement dite - volontairement laisse en attente de la validation de
 l'utilisateur sur ce build de dev, conformement au plan qu'il avait lui-meme approuve.
+
+**Suite (meme jour, "go" recu sans attendre de retour explicite sur le build de dev)** :
+`ReleaseVersion` bascule `null` -> `"1.0.0"` (`MainWindow.xaml.cs`). Seul effet reel
+dans le code actuel : l'ecran A propos (`ApplyVersionDisplay()`) affiche desormais
+"Version 1.0.0" au lieu de "Version de developpement * 0.94.1.0-dev" - `ReleaseVersion`
+n'est reference nulle part ailleurs (ni scripts de build/installeur, ni titre de
+fenetre qui reste `Lumora {Version}` avec le compteur interne, ni manifeste). Rebuild +
+tests relances : 0 erreur, 868/868 toujours verts. Executable de dev redeploye
+(`run-winui.ps1`, nouveau PID).
+
+**Verification reelle partielle** : le redeploiement est tombe sur le vrai profil
+verrouille de l'utilisateur (ecran PIN "Bonjour, HJ-ADM") - jamais tente de le
+deverrouiller, bascule immediate en mode invite (aucun identifiant reel touche).
+Ensuite, navigation UIA jusqu'a l'ecran A propos abandonnee apres plusieurs tentatives
+(bouton "A propos" localise dans le code XAML - ligne ~5868, dans un panneau Modules
+distinct du menu Demarrer ModulesFlyout deja documente - mais jamais atteint en
+pilotage reel, chemin de navigation UI pas retrouve dans le temps raisonnable) :
+verification par lecture de code uniquement pour ce point precis (logique symetrique
+a `AboutVersionText.Text = Version`, deja fonctionnelle depuis des mois). **A confirmer
+visuellement par l'utilisateur** (Menu Lumora -> Modules -> A propos). Fenetre de test
+(mode invite) refermee pour ne pas laisser une session invite ouverte a la place de
+l'utilisateur.
+
+Generation d'un installeur/artefact de release proprement dit **pas fait** - la
+bascule `ReleaseVersion` ne change aucun des scripts de packaging (toujours indexes sur
+le compteur interne `0.94.1.0-dev`), et [[demande-installeur-signale-viabilite]] cadre
+la generation d'un installeur comme un signal distinct a ne jamais declencher de ma
+propre initiative - laisse en attente d'une demande explicite ulterieure.
