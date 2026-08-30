@@ -25477,3 +25477,48 @@ avant la prochaine release, menee par lui-meme via `/code-review ultra`
 declencher - je ne peux pas le faire a sa place). Ce bug de gel reste donc
 **non corrige** a ce stade ; l'hypothese ci-dessus et l'instrumentation
 restent disponibles pour la prochaine fois qu'il se reproduit.
+
+## 2026-08-31 — Correctif du gel confirme en direct, 7e release 1.0.0 -> 0.94.5.5-dev
+
+Rebondissement sur la meme session : l'utilisateur a refuse le test sur
+Debug (raison de timing deja actee) mais a accepte un test sur un vrai build
+**Release self-contained** (`scripts\build-clean-test-artifact.ps1`, pas un
+simple `/t:Build` - celui-ci echoue silencieusement en Release sur ce depot,
+`WindowsAppSDKSelfContained=true` exige un vrai `/t:Publish` sinon
+"No frameworks were found" a l'execution, piege note pour la prochaine fois).
+
+**Correctif implemente** : `MainWindow.FocusRecovery.cs` (nouveau) -
+`Window.Activated` n'avait aucun gestionnaire ; a la reactivation, si aucun
+element ne tient le focus (`FocusManager.GetFocusedElement`), le focus est
+retabli explicitement sur l'onglet actif. Ne touche pas au focus si un
+element l'a deja (barre d'adresse en cours d'edition, etc.) - pas de vol de
+focus intempestif sur un simple alt-tab.
+
+**Verifie en direct par l'utilisateur** sur ce build Release trace, profil
+reel : le meme scenario (ChatGPT + connexion Google) ne reproduit plus le
+gel - favoris/nouvel onglet/Ctrl+T fonctionnent normalement apres. Pas une
+preuve formelle par trace (le gel n'a pas ete instrumente au moment exact ou
+il aurait du se produire), mais premiere confirmation en conditions reelles
+que ca fonctionne, contrairement a avant.
+
+Version `0.94.5.4-dev` -> `0.94.5.5-dev` (**4e chiffre**, correctif de bug
+reel). 4 fichiers alignes ensemble (test dedie `Version_projet_est_alignee_sur_0_94_5_5`
+dans `UsageModeVisualIdentityTests.cs`) : `MainWindow.xaml.cs`, `AGENTS.md`,
+`build-clean-test-artifact.ps1`, `build-installer.ps1`. Build 0 erreur,
+871/871 tests verts. Commit `f93f1e3`.
+
+**7e release 1.0.0** demandee dans la foulee, une fois le correctif
+confirme. Meme protocole que d'habitude : worktree jetable (`C:\lumora100`,
+detache sur `f93f1e3`), runtime WebView2 Fixed Version (`150.0.4078.105`,
+gitignore) copie a la main dans le worktree, `ReleaseVersion` mis a "1.0.0"
+UNIQUEMENT dans ce worktree (jamais commite - verifie apres coup, `git
+status` propre et `ReleaseVersion = null` toujours en place dans le depot
+principal). Artefact propre + installateur generes depuis le worktree.
+
+Nouveau SHA256 : `3eec31f7f7c2612c417e92bbb96462d9b1f577f1527a6951b00d9bc55927de84`.
+Verifie deux fois (sortie du script + `sha256sum` independant apres copie
+dans le depot). Ancien `LumoraSetup-1.0.0-win-x64.exe` (+ son
+`.VERIFICATION.txt`) **supprime**, pas renomme - meme consigne que la 6e
+release. Worktree supprime apres coup (`git worktree remove --force`).
+
+Jamais lance par moi (comme toujours).
