@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.5.4-dev";
+    internal const string Version = "0.94.5.5-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -480,6 +480,9 @@ public sealed partial class MainWindow : Window
         RegisterAccessibilityContextAccelerators();
         RegisterAccessibilityRescueAccelerators();
         RegisterAccessibilityKeyboardShortcuts();
+        // Diagnostic gel post-connexion Google (2026-08-30) : voir
+        // MainWindow.FocusRecovery.cs pour le detail de l'hypothese.
+        RegisterFocusRecoveryOnActivation();
         // L'accélérateur est porté par la racine (toute la fenêtre). Son infobulle
         // automatique « Ctrl+K » resterait collée car le WebView2 avale l'événement de
         // sortie du pointeur → on la désactive.

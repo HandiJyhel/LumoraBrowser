@@ -42,6 +42,12 @@ public sealed partial class MainWindow
         var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
         accelerator.Invoked += (_, args) =>
         {
+            // Instrumentation temporaire (diagnostic gel post-connexion Google,
+            // 2026-08-30) : confirme si l'accelerateur est meme declenche, et
+            // l'etat des deux overlays qui peuvent l'avaler silencieusement.
+            WinUiRuntimeTrace.Write(
+                $"Accelerator {modifiers}+{key} invoked, LoginOverlay={LoginOverlay.Visibility}, SetupWizardOverlay={SetupWizardOverlay.Visibility}");
+
             // Ne pas intercepter pendant la connexion au profil ou l'assistant
             // de creation : ces ecrans ont leur propre logique de clavier.
             if (LoginOverlay.Visibility == Visibility.Visible ||

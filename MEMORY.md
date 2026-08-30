@@ -25386,3 +25386,94 @@ dans le depot). Les 4 anciens `LumoraSetup-1.0.0-*.exe` (+ leurs
 apres coup (`git worktree remove --force`).
 
 Jamais lance par moi (comme toujours).
+
+## 2026-08-30 (suite) — Session "release qui freeze" : gel post-connexion Google sur ChatGPT, cause non confirmee mais logique du navigateur disculpee
+
+Nouveau signalement, sur l'installateur du jour (`07dce7e`, contient deja tous
+les correctifs favoris/notifications/titre de la session precedente) : apres
+connexion reussie a ChatGPT via Google, plus moyen d'ajouter aux favoris NI
+d'ouvrir un nouvel onglet - "tout est fige" selon l'utilisateur (pas juste ces
+deux boutons).
+
+**Protocole de diagnostic** (nouveau, en plus du pilotage UIA deja etabli) :
+avec l'accord de l'utilisateur a chaque fois, `dotnet-dump collect` sur le
+process fige en conditions reelles, analyse via SOS (`clrthreads`,
+`clrstack`, `dumpasync`, `dumpobj` sur l'instance `MainWindow` et ses
+champs), instantane supprime immediatement apres lecture (meme regle que les
+dumps precedents de la session du 2026-08-30 plus haut).
+
+**Ecarte avec preuves directes** (pas de suppositions) :
+- Pas de deadlock : le thread d'interface est simplement dans la boucle de
+  messages native (`Application.Start`), tous les autres threads au repos
+  standard .NET. `dumpasync` ne trouve aucune tache en attente.
+- Pas d'exception non geree (le gestionnaire global `App.UnhandledException`
+  n'a rien log­ge, et le process etait toujours vivant - une exception non geree
+  sur le thread UI aurait normalement termine le process).
+- Pas le verrou de reentrance `_bookmarkDialogOpen` (relu directement en
+  memoire via `dumpobj` : `false`).
+- Pas un reliquat de plein ecran (`_contentFullScreenCore` : `null` - le
+  point signale le 2026-08-30 plus haut comme "meme famille de risque,
+  jamais verifie" a donc ete verifie ici, et n'est pas en cause cette fois).
+- Pas le popup de suggestions d'adresse (`AddressSuggestionsPopup`,
+  `IsLightDismissEnabled=False`) bloque ouvert - absent de l'arbre UIA au
+  moment du test.
+- **Ni un bug de logique dans le code des favoris ou du nouvel onglet** :
+  piloter les boutons par UI Automation (`InvokePattern.Invoke()`, qui
+  contourne la souris) fait fonctionner les DEUX a 100 % sur le process
+  fige lui-meme - 2 nouveaux onglets crees et rendus reellement dans
+  l'arbre visuel, et le circuit complet favoris (etoile -> flyout ->
+  `ContentDialog` "Ajouter aux favoris" -> bouton "Enregistrer") va
+  jusqu'a reecrire `bookmarks.lumora` sur le disque (verifie par horodatage
+  de fichier avant/apres). Piege methodologique rencontre en route : cliquer
+  "Nouvel onglet" change l'onglet ACTIF (`AddTab(..., select: true)`), donc
+  tester les favoris juste apres teste par erreur l'onglet `lumora://accueil`
+  fraichement cree (`IsWebUrl` refuse ce schema, d'ou un premier faux
+  negatif "les favoris ne sauvegardent rien" - corrige en reselectionnant
+  l'onglet ChatGPT avant de retester).
+
+**Ce qui reste confirme comme reel** (par l'utilisateur, a la main, en conditions
+reelles, PAS reproductible par ce pilotage) : le clic souris reel sur les
+boutons de la barre d'outils ET le raccourci clavier Ctrl+T (accelerateur
+global, meme geste que `NewTabMenu_Click`) ne font RIEN, alors qu'un clic
+reel DANS le contenu web (scroll, lien ChatGPT) fonctionne normalement au
+meme moment. Donc : ni la logique de l'app, ni le moteur web du site ne sont
+en cause - seule la reception du clic/de la touche par le "cadre" natif
+WinUI (barre d'outils, onglets, accelerateurs sur `Content`) est affectee,
+jamais le contenu WebView2 lui-meme.
+
+**Hypothese retenue (non confirmee par trace live, l'utilisateur a refuse le
+test sur build Debug - raisonnement juste : timing potentiellement different
+de la Release pour ce genre de bug)** : Lumora est une appli WinUI native qui
+incruste WebView2 seulement pour le contenu - deux systemes d'entree
+distincts assembles, contrairement a un navigateur "tout en un" (Chrome,
+Edge) ou toute l'UI ET le contenu partagent le meme moteur/systeme d'entree.
+La fenetre de connexion Google est elle-meme un onglet WebView2 separe qui
+s'ouvre puis se ferme seule (`window.close()`) - la reprise de main du cadre
+WinUI (focus clavier pour les accelerateurs, hit-test pour les clics de la
+barre d'outils) a ce moment precis est le point de couture le plus probable
+pour ce genre de regression, meme si non prouve par un journal en direct
+cette fois.
+
+**Instrumentation ajoutee, gardee dans le depot (non commitee), accord
+explicite de l'utilisateur pour la garder** : 3 `WinUiRuntimeTrace.Write(...)`
+temporaires (gardes par `LUMORA_TRACE_STARTUP=1`, aucun risque en usage
+normal) -
+`MainWindow.AccessibilityKeyboardShortcuts.cs` (`RegisterGlobalAccelerator`,
+log l'etat de `LoginOverlay`/`SetupWizardOverlay` a chaque accelerateur
+declenche), `MainWindow.Navigation.cs` (`AddNewBlankTab`),
+`MainWindow.Bookmarks.cs` (`AddBookmarkButton_Click`, log l'etat de
+`_bookmarkDialogOpen`). Build Debug avec ces traces tente une fois : gel
+original NON reproduit (l'utilisateur a ferme la fenetre avant meme
+d'atteindre l'etape de connexion Google, interrompu par une boite de
+dialogue "Securite Windows" du pare-feu sans rapport confirme avec le gel
+d'origine - probablement due au nouveau chemin d'exe du build Debug). Un 2e
+lancement Debug propose mais l'utilisateur a explicitement refuse d'aller
+plus loin sur Debug, pour la raison de timing ci-dessus.
+
+**Decision de l'utilisateur pour la suite** : ne pas insister sur ce bug
+precis maintenant. A la place, passe qualite plus large sur tout le code
+avant la prochaine release, menee par lui-meme via `/code-review ultra`
+(revue cloud multi-agents sur la branche, facturee, l'utilisateur doit la
+declencher - je ne peux pas le faire a sa place). Ce bug de gel reste donc
+**non corrige** a ce stade ; l'hypothese ci-dessus et l'instrumentation
+restent disponibles pour la prochaine fois qu'il se reproduit.

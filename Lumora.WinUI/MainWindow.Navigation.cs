@@ -36,6 +36,9 @@ public sealed partial class MainWindow
     // Mode horizontal inchange (comportement existant : fin de liste).
     private void AddNewBlankTab()
     {
+        // Instrumentation temporaire (diagnostic gel post-connexion Google,
+        // 2026-08-30) : confirme si le clic/raccourci atteint bien ce point.
+        WinUiRuntimeTrace.Write("AddNewBlankTab invoked");
         var previousActive = CurrentTab();
         var newTab = AddTab("Nouvel onglet", "lumora://accueil", select: true);
         if (_verticalTabsEnabled && previousActive is not null)
