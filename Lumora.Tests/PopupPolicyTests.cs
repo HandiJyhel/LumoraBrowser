@@ -193,4 +193,28 @@ public class PopupPolicyTests
             PopupVerdict.BlockPendingUserChoice,
             Decide("https://wikipedia.org/", isUserInitiated: true, openerUnderAdPressure: false));
     }
+
+    [Theory]
+    [InlineData("https://drive.google.com/drive/my-drive", "https://www.youtube.com/")]
+    [InlineData("https://www.youtube.com/", "https://myaccount.google.com/")]
+    public void SelecteurApplicationsGoogleYoutube_Autorise(string opener, string popup)
+    {
+        // 0.94.4 : sélecteur d'applications Google (drive.google.com,
+        // myaccount.google.com...) vers YouTube, et inversement - deux
+        // domaines juridiquement distincts mais un seul produit du point de
+        // vue de l'utilisateur. Retour utilisateur : un vrai clic dessus
+        // restait auparavant en attente de choix comme un site inconnu.
+        Assert.Equal(PopupVerdict.Allow, Decide(popup, isUserInitiated: true, opener: opener));
+    }
+
+    [Fact]
+    public void SelecteurApplicationsGoogleYoutube_ExigeUnGesteReel()
+    {
+        // La tolérance Google/YouTube ne dispense pas des gardes déjà en
+        // place : un "popup" YouTube non déclenché par un clic reste bloqué
+        // comme n'importe quel automatique.
+        Assert.Equal(
+            PopupVerdict.BlockAutomatic,
+            Decide("https://www.youtube.com/", isUserInitiated: false, opener: "https://drive.google.com/drive/my-drive"));
+    }
 }

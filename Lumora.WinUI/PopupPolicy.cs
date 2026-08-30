@@ -80,7 +80,7 @@ public static class PopupPolicy
         // Le site garde le droit d'ouvrir SES propres pages (lecteur vidéo,
         // page de détail...) sans jamais passer par l'attente de choix
         // ci-dessous : seul le cross-domaine est ambigu.
-        if (IsSameRootSite(popupHost, openerHost))
+        if (IsSameRootSite(popupHost, openerHost) || IsCrossDomainSameProduct(popupHost, openerHost))
             return PopupVerdict.Allow;
 
         // Site sous pression publicitaire : le clic est très probablement
@@ -100,6 +100,38 @@ public static class PopupPolicy
     private static bool IsSameRootSite(string popupHost, string openerHost) =>
         popupHost.Length > 0 && openerHost.Length > 0 &&
         SiteRelocationStore.RootOf(popupHost).Equals(SiteRelocationStore.RootOf(openerHost), StringComparison.OrdinalIgnoreCase);
+
+    // Paires de domaines juridiquement distincts mais qui forment un seul et
+    // même produit du point de vue de l'utilisateur (rachat historique :
+    // YouTube reste sur youtube.com, jamais migré sous google.com). Retour
+    // utilisateur (0.94.4) : le sélecteur d'applications Google (une page
+    // *.google.com) vers YouTube tombait dans "site cross-domaine inconnu" et
+    // restait en attente d'un choix explicite - un vrai clic entre deux
+    // produits du même éditeur n'est pas un détournement. Liste volontairement
+    // courte et à double sens (A→B et B→A) : n'étendre qu'après un nouveau
+    // signalement concret, jamais par anticipation.
+    private static readonly (string A, string B)[] KnownCrossDomainSameProduct =
+    [
+        ("google.com", "youtube.com"),
+    ];
+
+    private static bool IsCrossDomainSameProduct(string popupHost, string openerHost)
+    {
+        if (popupHost.Length == 0 || openerHost.Length == 0)
+            return false;
+
+        var popupRoot = SiteRelocationStore.RootOf(popupHost);
+        var openerRoot = SiteRelocationStore.RootOf(openerHost);
+        foreach (var (a, b) in KnownCrossDomainSameProduct)
+        {
+            var matchesForward = popupRoot.Equals(a, StringComparison.OrdinalIgnoreCase) && openerRoot.Equals(b, StringComparison.OrdinalIgnoreCase);
+            var matchesBackward = popupRoot.Equals(b, StringComparison.OrdinalIgnoreCase) && openerRoot.Equals(a, StringComparison.OrdinalIgnoreCase);
+            if (matchesForward || matchesBackward)
+                return true;
+        }
+
+        return false;
+    }
 
     // Hôtes des grands fournisseurs d'identité (match exact ou sous-domaine).
     // Les régies publicitaires ne servent pas d'OAuth depuis ces domaines : le

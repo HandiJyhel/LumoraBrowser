@@ -24854,3 +24854,144 @@ l'original, aucune re-preparation necessaire).
 installateur embarque generalement un horodatage/GUID de build qui varie a chaque
 generation meme a code source strictement identique. Le code source, lui, est
 garanti identique (meme commit exact). Jamais lance par moi (comme toujours).
+
+## 2026-08-30 (suite) — Gel EN DIRECT capture (dump memoire) + detection d'onglet non-reactif
+
+L'utilisateur a retrouve le gel (bug 2/3) en conditions reelles, sur YouTube cette
+fois (pas seulement Drive), pendant une session de test bien apres le travail
+ci-dessus. Process encore vivant sur la machine au moment ou il l'a signale :
+occasion rare de capturer l'etat exact plutot que de deviner apres coup.
+
+**Instantane pris en direct** (`rundll32 comsvcs.dll,MiniDump ... full`, sur
+accord explicite de l'utilisateur vu la sensibilite - session Google en memoire ;
+fichier supprime immediatement apres analyse) puis analyse avec `dotnet-dump`
+(installe pour l'occasion) :
+- Les 25 threads du processus Lumora.WinUI.exe etaient tous **sains et en
+  attente normale** au moment du gel - y compris le thread d'interface (STA),
+  simplement dans l'attente native du prochain message (`Application.Start` /
+  boucle de messages), aucune pile ne montrant un blocage dans du code de
+  l'application.
+- Conclusion : le gel n'est PAS un deadlock dans le code C# de Lumora. Le
+  probleme vit dans le moteur web embarque (WebView2/Chromium) lui-meme pour
+  CET onglet precis - rendu via un processus separe (architecture multi-
+  processus standard de Chromium), pendant que Lumora autour reste sain.
+- Effet de bord decouvert en marge : le chemin de module charge (`clrmodules`)
+  montrait `C:\Users\Handi-Jyhel\AppData\Local\Programs\Lumora\app\
+  Lumora.WinUI.dll`, mais le PDB embarque referencait `C:\lumora100\...` - le
+  binaire actuellement installe chez l'utilisateur est celui reconstruit dans
+  la session precedente (meme code source que le premier 1.0.0, aucun risque),
+  pas l'original du 29/08. L'utilisateur a du lancer lui-meme l'installeur de
+  rebuild trouve dans `artifacts\installer\`.
+
+**Ajoute a 0.94.3.0-dev suite a ce diagnostic** (maquette Artifact validee par
+"go" avant code) : detection de moteur non-reactif via l'evenement WebView2
+`CoreWebView2.ProcessFailed` (kind `RenderProcessUnresponsive`), jamais ecoute
+jusqu'ici alors qu'il existe depuis toujours dans le SDK. Nouvelle barre
+`TabUnresponsiveBar` (`MainWindow.xaml`, meme famille que `SiteMovedBar` etc.,
+`Grid.Row="10"` - libre, verifie avant usage) avec 2 actions : "Attendre"
+(masque juste la barre) et "Fermer l'onglet" (reutilise `CloseTab()`, deja
+verifie sans appel bloquant vers le moteur de l'onglet quitte). Abonnement fait
+via une **closure capturant directement le `BrowserTabState`** au moment de
+`BrowserView_CoreWebView2Initialized` plutot qu'un dictionnaire par
+`CoreWebView2` (piege deja documente, voir [[pieges-webview2-evenements]]) - le
+tab est ainsi retrouve sans jamais comparer de reference WinRT. Build 0 erreur,
+tests 868/868 verts.
+
+**Non verifie en conditions reelles malgre 2 tentatives** : une page locale
+programmee pour boucler indefiniment (avant chargement, puis apres 2s
+d'interactivite) n'a JAMAIS declenche `ProcessFailed` en 60-90s d'attente. Piste
+la plus probable : le detecteur Chromium de page non-reactive se declenche
+typiquement quand le navigateur ENVOIE un evenement d'entree (clic) au moteur
+et n'obtient pas d'accuse de reception - pas par minuterie passive seule. Le
+pilotage UIA de cette session ne peut pas cliquer DANS le contenu web (noeuds
+`ControlType.Document` elagues), donc ne peut pas fournir cette precondition -
+limite ajoutee a `verify/SKILL.md`. Reste a confirmer par l'utilisateur en
+usage reel (cliquer sur la page figee, PUIS regarder si la barre apparait)
+plutot que par une nouvelle tentative de pilotage automatise ici.
+
+**Mesures de performance reelles faites en parallele** (meme demande utilisateur,
+"programme le plus fluide et econome possible" sans symptome precis fourni) :
+demarrage < 1s, **CPU strictement plat (0% mesurable) sur 25s d'inactivite**
+une fois l'assistant de premier lancement termine (les animations "respirantes"
+`RepeatBehavior="Forever"` du `WelcomeOverlay` expliquaient le ~6% CPU mesure
+AVANT la fin de cet assistant - pas un cout permanent). Memoire au repos, profil
+frais, zero onglet utilisateur : ~300 Mo cote Lumora + ~600-700 Mo repartis sur
+6 a 13 processus `msedgewebview2.exe` (architecture multi-processus Chromium,
+hors de portee du code de Lumora). Point a re-verifier plus tard : le nombre de
+processus WebView2 est passe de 6 a 13 juste en terminant l'assistant, sans
+qu'aucun onglet utilisateur ne soit ouvert - pas encore explique.
+
+## 2026-08-30 (suite) — VRAI BUG TROUVE : le clic YouTube depuis Google ne "gelait" pas, il etait retenu en attente -> 0.94.5.0-dev
+
+L'utilisateur a teste le correctif de gel (ci-dessus) : plus de gel cette fois,
+mais le symptome original persistait sous une forme differente et jusque-la mal
+comprise - cliquer sur YouTube depuis le selecteur d'applications Google ne
+faisait "rien". Diagnostic base sur relecture ciblee de `PopupPolicy.cs` (deja
+lu en detail plus tot dans la session) plutot que sur une nouvelle hypothese en
+l'air.
+
+**Cause reelle** : `youtube.com` et `google.com` sont deux domaines juridiquement
+distincts (YouTube jamais migre sous google.com apres son rachat). Le clic sur
+la tuile YouTube depuis une page `*.google.com` est donc traite par
+`PopupPolicy.Decide` comme un "vrai clic vers un domaine cross-site totalement
+inconnu" (regle 0.84.0.6) - ni domaine publicitaire, ni fournisseur d'identite
+connu, ni meme racine de site -> `BlockPendingUserChoice` : la fenetre est
+retenue plutot qu'ouverte, avec seulement un message discret en bas de fenetre
+et une petite icone (`PopupRecoveryButton`, badge rouge) dans la barre d'outils
+comme recours. Rien d'affiche par defaut, aucun crash - de la, l'impression de
+"il ne se passe rien".
+
+**Corrige** : nouvelle notion `IsCrossDomainSameProduct` dans `PopupPolicy.cs`
+(liste explicite et courte, meme esprit que `KnownIdentityProviderHosts`) :
+`google.com` <-> `youtube.com` reconnus comme un seul produit du point de vue
+utilisateur, dans les deux sens, uniquement sur un vrai geste utilisateur (les
+gardes existants - `isUserInitiated`, plafond par geste - s'appliquent toujours
+en amont, rien contourne). **Verifie par test unitaire** (`PopupPolicyTests.cs`,
+3 nouveaux cas : Drive->YouTube, YouTube->compte Google, et confirmation que
+sans geste reel ca reste `BlockAutomatic`) plutot que par pilotage UIA - le clic
+dans le contenu web reste hors de portee de ce pilotage (deja documente), mais
+ici la logique pure est entierement testable sans avoir besoin d'un vrai
+navigateur. 871/871 tests verts (868 + 3).
+
+Le bug de gel (WebView2 `ProcessFailed`, section precedente) et celui-ci sont
+donc bien **deux causes distinctes** confondues dans le retour initial de
+l'utilisateur - la barre "onglet ne repond plus" reste utile pour le premier,
+mais ne concerne pas le second.
+
+- Version `0.94.4.0-dev` -> `0.94.5.0-dev` (**3e chiffre**, correctif de fond,
+  pas une micro-correction : nouvelle regle de politique avec sa propre
+  couverture de test). 4 fichiers synchronises + test d'alignement, comme les
+  bumps precedents de la session.
+
+## 2026-08-30 (suite) — 2e release 1.0.0, avec les correctifs de la session
+
+"Go" recu pour livrer une release 1.0.0 incluant l'ensemble du travail dev de
+la session (onboarding avatar/verrouillage, indicateur de force, Coffre allege,
+barre anti-gel, correctif YouTube/Google) - a la difference du rebuild du
+matin meme (qui reproduisait volontairement le 1.0.0 d'origine SANS ces
+ajouts), celle-ci est un vrai nouveau contenu sous la meme etiquette 1.0.0.
+
+**Erreur commise et signalee immediatement** : reconstruit cette fois depuis le
+depot principal (`G:\...\LumoraBrowser`) au lieu d'un worktree isole comme le
+matin - `build-installer.ps1` ecrit toujours au meme nom
+`LumoraSetup-1.0.0-win-x64.exe`, donc **l'installateur original du 29/08 a ete
+ecrase sans avoir ete renomme avant**, contrairement a la precaution prise le
+matin meme. Gravite reelle nulle (une copie strictement identique au code
+source de l'original existait deja a cote, generee la veille), mais signale
+explicitement comme un manquement a la regle
+[[tutoiement-et-installeur]] plutot que minimise.
+
+**Nettoyage demande explicitement par l'utilisateur ensuite** ("la release la
+plus propre") : suppression, apres accord donne sur question posee, de 4 vieux
+installateurs de sessions dev passees (0.93.37.2 a 0.93.54.1-dev, ~530-550 Mo
+chacun, >2 Go au total) et du doublon de la veille
+(`LumoraSetup-1.0.0-win-x64-rebuild-20260830.exe`, devenu obsolete). Dossier
+`artifacts\installer\` ne contient plus que
+`LumoraSetup-1.0.0-win-x64.exe` (SHA256 `bd51447bbdaa36873d6fc8d76cf90b1870539998271dbbd0f1e6b0a49a355f5f`)
++ son `.VERIFICATION.txt`. Jamais lance par moi (comme toujours).
+
+**A retenir pour la prochaine fois** : quand `build-installer.ps1` doit
+regenerer un 1.0.0 alors qu'un 1.0.0 existe deja sur disque, renommer ou
+deplacer l'existant AVANT de lancer le build (comme fait le matin via un
+worktree isole) - ne jamais compter sur le nom de sortie par defaut pour
+eviter un ecrasement silencieux.

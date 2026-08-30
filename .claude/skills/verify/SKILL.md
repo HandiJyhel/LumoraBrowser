@@ -95,6 +95,19 @@ PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationCl
 - Un `RadioButton` (ex. items de nav `SettingsNav*`) n'a pas d'`InvokePattern` -
   utiliser `SelectionItemPattern.Select()` a la place (`GetCurrentPattern`
   renvoie "Modele non pris en charge" sur `InvokePattern` sinon).
+- `CoreWebView2.ProcessFailed(RenderProcessUnresponsive)` **ne se declenche pas
+  sur une page qui boucle en silence, sans interaction** (teste le 2026-08-30,
+  page locale figee en boucle 60-90s des le chargement puis apres 2s
+  d'interactivite : aucun evenement recu dans les deux cas). Le detecteur de
+  page non-reactive de Chromium se declenche typiquement quand le navigateur
+  ENVOIE un evenement d'entree (clic, touche) au moteur et n'obtient pas
+  d'accuse de reception dans le delai - pas par simple minuterie passive. Or
+  **le clic dans le contenu web (DOM) est hors de portee de ce pilotage UIA**
+  (noeuds `ControlType.Document` elagues, cf. plus haut) : impossible de
+  fournir cette precondition depuis ce pilotage. Verifier ce genre de detection
+  demande soit un vrai clic humain sur la page pendant qu'elle boucle, soit
+  d'appeler `CoreWebView2.ExecuteScriptAsync` (hors de portee sans point
+  d'entree deja expose par l'app) pour simuler la sequence.
 - `PasswordBox.GetCurrentPattern(ValuePattern.Pattern).SetValue(...)` **echoue
   toujours** dans WinUI3 (`Erreur non reconnue`, cote runtime XAML - le pattern
   est annonce comme supporte par `GetSupportedPatterns()` mais `SetValue` est

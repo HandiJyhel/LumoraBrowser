@@ -91,6 +91,7 @@ public sealed partial class MainWindow
         WalletFillBar.Visibility = Visibility.Collapsed;
         SuggestPasswordBar.Visibility = Visibility.Collapsed;
         HideSiteNotFoundBar();
+        HideTabUnresponsiveBar();
         _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
         _pendingGeneratedPassword = null;
 
@@ -413,6 +414,13 @@ public sealed partial class MainWindow
         // (chantier identite visuelle, 2026-08-10) - voir
         // MainWindow.PageContextMenu.cs.
         sender.CoreWebView2.ContextMenuRequested += CoreWebView2_ContextMenuRequested;
+
+        // Moteur qui ne repond plus (0.94.3.0-dev, retour utilisateur : gel complet
+        // apres usage de Google Drive/YouTube). `tab` est capture par fermeture ici,
+        // jamais retrouve par la suite via ReferenceEquals(CoreWebView2) (piege deja
+        // documente, voir pieges-webview2-evenements) : cette closure porte
+        // directement le bon BrowserTabState, sans dictionnaire ni comparaison.
+        sender.CoreWebView2.ProcessFailed += (core, args) => CoreWebView2_ProcessFailed(tab, args);
 
         // Scripts privacy + passkeys + capture d'identifiants : chaque moteur reçoit
         // les siens (un WebView2 par onglet). Attendus avant la navigation ci-dessous :
@@ -1499,6 +1507,55 @@ public sealed partial class MainWindow
         SuggestPasswordBar.Visibility = Visibility.Collapsed;
         _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
         _pendingGeneratedPassword = null;
+    }
+
+    // ── Onglet qui ne repond plus (0.94.3.0-dev) ─────────────────────────────
+    // WebView2 detecte deja qu'un moteur precis (celui d'UN onglet) ne repond
+    // plus - Lumora n'ecoutait jusqu'ici jamais ce signal, laissant l'onglet
+    // fige sans recours visible. "Attendre" masque juste la barre ; rien ne
+    // garantit qu'elle ne revienne pas si le meme moteur se signale a nouveau
+    // non-reactif plus tard (WebView2 n'expose aucun evenement "redevenu
+    // reactif").
+    private void CoreWebView2_ProcessFailed(BrowserTabState tab, CoreWebView2ProcessFailedEventArgs args)
+    {
+        if (args.ProcessFailedKind != CoreWebView2ProcessFailedKind.RenderProcessUnresponsive)
+        {
+            return;
+        }
+
+        WinUiRuntimeTrace.Write($"ProcessFailed: onglet {tab.Id} ({tab.Title}) - {args.ProcessFailedKind}");
+
+        // Onglet plus ouvert entre-temps, ou plus l'onglet actif : rien a montrer
+        // maintenant. Si c'est un onglet d'arriere-plan qui redevient actif plus
+        // tard sans avoir recupere, il restera simplement fige silencieusement -
+        // limite connue, moins grave que l'etat actuel (aucun recours du tout).
+        if (!_tabs.Contains(tab) || CurrentTab()?.Id != tab.Id)
+        {
+            return;
+        }
+
+        _unresponsiveTab = tab;
+        TabUnresponsiveText.Text = $"« {tab.Title} » ne répond plus";
+        TabUnresponsiveBar.Visibility = Visibility.Visible;
+    }
+
+    private void HideTabUnresponsiveBar()
+    {
+        _unresponsiveTab = null;
+        TabUnresponsiveBar.Visibility = Visibility.Collapsed;
+    }
+
+    private void TabUnresponsiveWait_Click(object sender, RoutedEventArgs e) =>
+        HideTabUnresponsiveBar();
+
+    private void TabUnresponsiveClose_Click(object sender, RoutedEventArgs e)
+    {
+        var tab = _unresponsiveTab;
+        HideTabUnresponsiveBar();
+        if (tab is not null && _tabs.Contains(tab))
+        {
+            CloseTab(tab);
+        }
     }
 
     private static bool IsFederatedIdentityIntermediary(string? uri)

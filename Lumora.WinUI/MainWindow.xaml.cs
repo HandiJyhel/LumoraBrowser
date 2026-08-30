@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.3.0-dev";
+    internal const string Version = "0.94.5.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -208,6 +208,7 @@ public sealed partial class MainWindow : Window
     private (string Origin, string Username, string Password, string LoginUrl, string Label)? _pendingCredential;
     private IReadOnlyList<VaultCredential> _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
     private string? _pendingGeneratedPassword;
+    private BrowserTabState? _unresponsiveTab;
     private readonly List<PasskeyEntry> _passkeys = new();
     private UserProfile? _userProfile;
     private UserProfile? _pendingUserProfile;

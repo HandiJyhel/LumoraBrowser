@@ -3108,6 +3108,34 @@
                     </Grid>
                 </Border>
 
+                <!-- Onglet dont le moteur (WebView2) ne repond plus (0.94.3.0-dev,
+                     retour utilisateur : gel complet apres usage de Google Drive/
+                     YouTube, obligeant a fermer tout Lumora). S'appuie sur
+                     CoreWebView2.ProcessFailed(RenderProcessUnresponsive) - signal deja
+                     fourni par WebView2, jamais ecoute jusqu'ici. "Fermer l'onglet"
+                     reutilise CloseTab(), deja verifie sans appel bloquant vers le
+                     moteur de l'onglet quitte (voir MainWindow.Navigation.cs). -->
+                <Border x:Name="TabUnresponsiveBar" Grid.Row="10" Visibility="Collapsed"
+                        Background="{StaticResource NovaWarningSurfaceBrush}"
+                        BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeBrush}"
+                        Padding="10,6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Glyph="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                            <TextBlock x:Name="TabUnresponsiveText" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="Les autres onglets restent utilisables normalement." Opacity="0.68" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Button x:Name="TabUnresponsiveWait" Grid.Column="2" Content="Attendre" Click="TabUnresponsiveWait_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
+                        <Button x:Name="TabUnresponsiveClose" Grid.Column="3" Content="Fermer l'onglet" Click="TabUnresponsiveClose_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
+                    </Grid>
+                </Border>
+
                 <!-- 0.78.3.1 : les navigations publicitaires/parasites sont
                      bloquees silencieusement (statut + bouclier), plus de barre
                      « Continuer quand meme ». Une adresse tapee dans la barre
