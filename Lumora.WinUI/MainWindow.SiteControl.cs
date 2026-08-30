@@ -339,7 +339,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private void CoreWebView2_PermissionRequested(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)
+    private void CoreWebView2_PermissionRequested(BrowserTabState tab, CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)
     {
         if (!Uri.TryCreate(args.Uri, UriKind.Absolute, out var uri) ||
             string.IsNullOrWhiteSpace(uri.Host))
@@ -361,23 +361,26 @@ public sealed partial class MainWindow
         }
         else if (permissionKey == "notifications")
         {
-            // Repli explicite (2026-08-22, retour utilisateur : boîte de dialogue
-            // Windows native vue sur Twitch, jamais rencontrée sur Chrome). Sans
-            // règle de site, une demande "notifications" non tranchée (état par
-            // défaut ci-dessous, `return` sans toucher args.State) est déléguée par
-            // WebView2 à la boîte de dialogue SYSTÈME de permission Windows au lieu
-            // d'un bandeau interne au navigateur - contrairement à caméra/micro/
-            // géolocalisation, qui restent gérés par le bandeau WebView2 par défaut
-            // (comportement inchangé, `return` plus bas). Bloquer silencieusement
-            // par défaut évite cette fenêtre Windows, à l'image du défaut anti-spam
-            // désormais standard sur Chrome/Edge/Firefox pour les notifications non
-            // sollicitées. Le réglage par site (Autoriser/Bloquer/Demander, panneau
-            // du site) reste le moyen d'activer explicitement un site précis.
-            args.State = CoreWebView2PermissionState.Deny;
-            DispatcherQueue.TryEnqueue(() =>
+            // 0.94.5.4-dev, retour utilisateur : le refus silencieux ci-dessous
+            // (seule reponse jusque-la pour "Demander", l'etat par defaut) faisait
+            // que le mot "Demander" du panneau du site ne demandait en realite
+            // jamais rien. Remplace par un vrai bandeau maison (voir
+            // NotificationPermissionBar) qui pose la question sans jamais passer
+            // par la fenetre systeme Windows - celle qui avait deja surpris un
+            // utilisateur sur Twitch, jamais rencontree sur Chrome/Edge, et qui
+            // motivait a l'origine (2026-08-22) le refus silencieux par defaut.
+            // Seul le cas ou l'onglet demandeur n'est PAS l'onglet actif garde
+            // l'ancien comportement (refus silencieux, sans regle enregistree) :
+            // le bandeau appartient a la page visible, comme les autres bandeaux
+            // de Lumora (TabUnresponsiveBar, SiteNotFoundBar...).
+            if (!_tabs.Contains(tab) || CurrentTab()?.Id != tab.Id)
             {
-                UpdateStatusText($"Notifications bloquées par défaut pour {rootDomain} (réglable dans le panneau du site).", announce: false);
-            });
+                args.State = CoreWebView2PermissionState.Deny;
+                return;
+            }
+
+            var deferral = args.GetDeferral();
+            DispatcherQueue.TryEnqueue(() => ShowNotificationPermissionBar(tab, rootDomain, args, deferral));
             return;
         }
         else
@@ -389,6 +392,76 @@ public sealed partial class MainWindow
         {
             UpdateStatusText($"{SitePermissionPolicy.StateLabel(state)} : {permissionKey} pour {rootDomain}.", announce: false);
         });
+    }
+
+    private void ShowNotificationPermissionBar(
+        BrowserTabState tab,
+        string rootDomain,
+        CoreWebView2PermissionRequestedEventArgs args,
+        Windows.Foundation.Deferral deferral)
+    {
+        // Un seul bandeau actif a la fois (meme logique que TabUnresponsiveBar) :
+        // une demande precedente non tranchee est levee sans choix enregistre,
+        // exactement comme si l'utilisateur avait quitte la page sans repondre.
+        CompletePendingNotificationRequest(CoreWebView2PermissionState.Default);
+
+        _pendingNotificationTab = tab;
+        _pendingNotificationRootDomain = rootDomain;
+        _pendingNotificationArgs = args;
+        _pendingNotificationDeferral = deferral;
+
+        NotificationPermissionText.Text = $"{rootDomain} souhaite vous envoyer des notifications";
+        NotificationPermissionBar.Visibility = Visibility.Visible;
+    }
+
+    // Termine proprement (ou pas du tout, si aucune demande n'est en attente)
+    // la deferral en cours. Ne laisse jamais la promesse JS du site (celle de
+    // Notification.requestPermission()) en attente indefinie.
+    private void CompletePendingNotificationRequest(CoreWebView2PermissionState state)
+    {
+        if (_pendingNotificationDeferral is null) return;
+
+        _pendingNotificationArgs!.State = state;
+        _pendingNotificationDeferral.Complete();
+        _pendingNotificationDeferral = null;
+        _pendingNotificationArgs = null;
+        _pendingNotificationTab = null;
+        _pendingNotificationRootDomain = null;
+    }
+
+    // Masque le bandeau sans repondre explicitement pour l'utilisateur : la
+    // demande reste "Demander" pour la prochaine fois (Default, jamais Allow/
+    // Deny enregistre). Appele quand la page qui a demande est quittee.
+    private void HideNotificationPermissionBar()
+    {
+        NotificationPermissionBar.Visibility = Visibility.Collapsed;
+        CompletePendingNotificationRequest(CoreWebView2PermissionState.Default);
+    }
+
+    private void NotificationPermissionAllow_Click(object sender, RoutedEventArgs e) =>
+        RespondToNotificationPermissionBar(SitePermissionPolicy.Allow, CoreWebView2PermissionState.Allow);
+
+    private void NotificationPermissionBlock_Click(object sender, RoutedEventArgs e) =>
+        RespondToNotificationPermissionBar(SitePermissionPolicy.Block, CoreWebView2PermissionState.Deny);
+
+    private void RespondToNotificationPermissionBar(string permissionState, CoreWebView2PermissionState webViewState)
+    {
+        if (_pendingNotificationRootDomain is not { } rootDomain) return;
+
+        SitePermissionPolicy.SetState(_uiSettings.SitePermissions, rootDomain, "notifications", permissionState);
+        SaveUiSettings();
+        UpdateStatusText($"{SitePermissionPolicy.StateLabel(permissionState)} : notifications pour {rootDomain}.");
+
+        NotificationPermissionBar.Visibility = Visibility.Collapsed;
+        CompletePendingNotificationRequest(webViewState);
+
+        // Si le Centre du site de ce meme domaine est ouvert, refleter le choix
+        // fait depuis le bandeau dans le menu deroulant Permissions.
+        if (SiteControlPanel.Visibility == Visibility.Visible &&
+            string.Equals(SiteControlTitleText.Text, rootDomain, StringComparison.OrdinalIgnoreCase))
+        {
+            RenderSitePermissions(rootDomain);
+        }
     }
 
     private string BuildShieldSiteSummary(string domain)

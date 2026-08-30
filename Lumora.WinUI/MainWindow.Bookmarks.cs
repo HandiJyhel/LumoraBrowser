@@ -61,11 +61,18 @@ public sealed partial class MainWindow
         AddBookmarkFlyout.Hide();
         try
         {
-            var address = NormalizeAddress(AddressBox.Text);
-            if (!BookmarkStore.IsWebUrl(address) && CurrentTab() is { } currentTab)
-            {
-                address = NormalizeAddress(currentTab.Address);
-            }
+            // L'adresse REELLE de l'onglet (suivie par Lumora, mise a jour par
+            // BrowserCore_SourceChanged) est desormais prioritaire sur le texte
+            // affiche dans la barre - celui-ci n'est qu'un champ d'affichage/
+            // edition qui peut ne plus refleter la page courante (bug reel
+            // 2026-08-30 : la barre affichait le TITRE de la page, "Normalise"
+            // en une recherche DuckDuckGo valide - qui passait alors le test
+            // IsWebUrl et empechait le repli sur l'adresse reelle de tourner).
+            // AddressBox.Text ne sert plus qu'en dernier recours, si aucun
+            // onglet actif n'est connu.
+            var address = CurrentTab() is { } currentTab
+                ? NormalizeAddress(currentTab.Address)
+                : NormalizeAddress(AddressBox.Text);
 
             if (!BookmarkStore.IsWebUrl(address))
             {

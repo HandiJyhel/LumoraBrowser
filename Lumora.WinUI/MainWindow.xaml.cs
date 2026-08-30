@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.5.2-dev";
+    internal const string Version = "0.94.5.4-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -49,7 +49,15 @@ public sealed partial class MainWindow : Window
     // propos affiche alors "Version de developpement * {Version}" comme
     // aujourd'hui) ; a renseigner ("1.0.0") au moment precis de couper une
     // vraie release, pour que l'ecran A propos n'affiche plus que ce numero.
-    internal const string? ReleaseVersion = "1.0.0";
+    // Remis a `null` (0.94.5.4-dev) : trouve en vrai lors du test live du
+    // bandeau notifications - la fenetre affichait encore "Lumora 1.0.0" sur
+    // un build DEV, alors qu'aucune release n'est en cours de decoupe. Restait
+    // a "1.0.0" sans interruption depuis le commit 96fa77a (premiere release)
+    // faute d'avoir ete remis a `null` juste apres : tous les builds dev
+    // depuis cette date (titre ET ecran A propos) affichaient donc le numero
+    // public au lieu du compteur dev. A ne renseigner ("1.0.0") que dans le
+    // commit/worktree precis qui sert a produire un vrai installateur.
+    internal const string? ReleaseVersion = null;
     // 64 -> 40 (round 3, 2026-08-12) : retour utilisateur avec capture d'ecran
     // d'un vrai rail Edge reduit a l'appui - notre grille 2x2 de 4 icones
     // n'existait que pour loger 4 boutons d'action dans le rail. Ces 4
@@ -209,6 +217,17 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<VaultCredential> _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
     private string? _pendingGeneratedPassword;
     private BrowserTabState? _unresponsiveTab;
+    // Bandeau "ce site souhaite envoyer des notifications" (0.94.5.4-dev,
+    // retour utilisateur : le reglage "Demander" du panneau du site ne
+    // demandait jamais rien, refus silencieux systematique). Un seul actif a
+    // la fois, comme TabUnresponsiveBar - la deferral doit toujours etre
+    // completee (Allow/Bloquer explicite, ou Default si la page est quittee
+    // sans reponse) pour ne jamais laisser la promesse JS du site en attente
+    // indefiniment.
+    private BrowserTabState? _pendingNotificationTab;
+    private string? _pendingNotificationRootDomain;
+    private CoreWebView2PermissionRequestedEventArgs? _pendingNotificationArgs;
+    private Windows.Foundation.Deferral? _pendingNotificationDeferral;
     private readonly List<PasskeyEntry> _passkeys = new();
     private UserProfile? _userProfile;
     private UserProfile? _pendingUserProfile;
@@ -298,7 +317,12 @@ public sealed partial class MainWindow : Window
 
         InitializeComponent();
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");
-        Title = $"Lumora {Version}";
+        // Le titre de fenetre affichait toujours le compteur dev interne, meme
+        // sur une vraie release (ReleaseVersion n'etait applique qu'a l'ecran A
+        // propos, voir ApplyVersionDisplay) - bug reel trouve le 2026-08-30 en
+        // inspectant une instance en cours ("Lumora 0.94.5.2-dev" au lieu de
+        // "Lumora 1.0.0"). Meme regle que l'ecran A propos desormais.
+        Title = $"Lumora {ReleaseVersion ?? Version}";
         UpdateAddressIdentityChrome(string.Empty);
         InitializeOpenPanelsTaskbar();
 

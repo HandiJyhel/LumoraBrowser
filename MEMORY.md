@@ -25236,3 +25236,128 @@ Nouveau SHA256 : `4f0215292403e11c566880657659847d959f3fabbc9c6e1aab299380c6d4a9
 (l'actuel + 3 renommes "avant-correctif(s)-..."). Nettoyage toujours pas fait
 de ma propre initiative - propose a l'utilisateur, jamais tranche seul.
 Jamais lance par moi (comme toujours).
+
+## 2026-08-30 (suite) — Nouveau protocole de test : instance ouverte de l'utilisateur, pilotee en direct -> 2 vrais bugs trouves -> 0.94.5.3-dev
+
+Frustration justifiee de l'utilisateur ("tu commences a te foutre de ma
+gueule") : plusieurs choses fonctionnaient avant les releases et plus
+maintenant, signale via l'impossibilite de mettre claude.ai en favoris.
+Nouveau protocole propose par l'utilisateur et accepte explicitement : il
+laisse une instance ouverte, je teste chaque fonction dessus en pilotage UIA
+avant de coder un correctif, plutot que deviner puis attendre son retour
+apres coup. Limite reconfirmee avant de commencer : je peux piloter toute
+l'interface PROPRE de Lumora (barre d'outils, favoris, parametres) mais
+toujours pas cliquer DANS le contenu web.
+
+**Bug 1 - Favoris cassE, confirmE par capture d'ecran** : le clic sur l'etoile
+"Ajouter aux favoris" (le bouton lui-meme, PAS un souci d'ouverture de
+flyout - il s'ouvre bien) menait a un dialogue proposant d'enregistrer une
+**recherche DuckDuckGo sur le titre de la page** au lieu de la vraie adresse
+de claude.ai. Cause : `AddBookmarkButton_Click` lisait `AddressBox.Text` en
+priorite - qui, "au repos" (pas en cours d'edition), contient le texte
+SIMPLIFIE (breadcrumb "domaine › chemin", feature "adresse simplifiee"
+0.93.54.6-dev) et non une vraie URL. `NormalizeAddress` transforme alors ce
+texte en une recherche (comportement normal pour un texte libre), qui passe
+le test `IsWebUrl` et empeche le repli deja prevu vers `currentTab.Address`
+de se declencher. Corrige : `currentTab.Address` (l'adresse reelle suivie par
+Lumora) est desormais prioritaire, `AddressBox.Text` releguee en tout dernier
+recours (aucun onglet actif connu). Seul autre usage de
+`NormalizeAddress(AddressBox.Text)` dans le code (`NavigateFromAddressBox`)
+verifie et laisse tel quel : contexte different, la barre y est legitimement
+en cours d'edition.
+
+**Bug 2 - Titre de fenetre, trouve en marge** : la fenetre affichait
+"Lumora 0.94.5.2-dev" au lieu de "Lumora 1.0.0" alors qu'il s'agissait d'une
+vraie release - `Title = $"Lumora {Version}"` n'a jamais tenu compte de
+`ReleaseVersion` (qui n'etait applique qu'a l'ecran A propos, voir
+`ApplyVersionDisplay`). Corrige en reutilisant la meme regle
+(`ReleaseVersion ?? Version`). Probablement present depuis la toute premiere
+release du 29/08, pas une regression du jour.
+
+Build 0 erreur, 871/871 tests verts. Version `0.94.5.2-dev` -> `0.94.5.3-dev`
+(**4e chiffre**, 2 correctifs de bugs reels).
+
+## 2026-08-30 (suite) — Notifications par site : fonctionnalite deja presente, pas un bug
+
+Signalement utilisateur : sur claude.ai, impossible de refuser/gerer la
+demande de notifications du site - "le navigateur ne gere pas les
+notifications des differents sites". Verification en direct sur l'instance
+ouverte (meme protocole que ci-dessus) avant tout code :
+
+- `CoreWebView2_PermissionRequested` (`MainWindow.SiteControl.cs`) bloque
+  deja les notifications par defaut tant qu'aucune regle de site n'existe
+  (regle posee le 2026-08-22, evite la boite de dialogue Windows native).
+  La boite "Activer les notifications" vue par l'utilisateur venait du
+  contenu web de claude.ai lui-meme, pas de Lumora.
+- Un vrai reglage par site existe deja : icone bouclier -> "Centre du site"
+  -> section Permissions -> ligne Notifications (Demander/Autoriser/
+  Bloquer), construite dynamiquement via `SitePermissionPolicy.KnownPermissions`.
+  Confirme visible en direct par capture d'ecran sur claude.ai.
+- Teste en direct via UIA (pas seulement lu dans le code) : ComboBox
+  "Notifications pour claude.ai" bascule de "Demander" a "Bloque" des le
+  clic, et `ui-settings.lumora` du profil reel (`profiles\handijyhel\
+  navigation\`) est bien reecrit au meme instant (`SaveUiSettings` ->
+  `_uiSettings.Save(_profile.UiSettingsFile)`) : le reglage persiste
+  reellement sur disque, pas seulement en memoire.
+
+Conclusion : pas un bug, pas de code touche. Ecart de decouvrabilite
+uniquement - l'utilisateur n'avait pas trouve l'emplacement du reglage.
+Reglage laisse a "Bloque" pour claude.ai suite au test (correspond a la
+demande initiale de l'utilisateur), a confirmer avec lui s'il souhaite le
+garder ainsi ou revenir a "Demander" par defaut.
+
+## 2026-08-30 (suite) — Vrai bug notifications trouve par l'utilisateur : "Demander" ne demandait jamais rien -> bandeau NotificationPermissionBar, 0.94.5.4-dev
+
+L'utilisateur a corrige ma conclusion precedente : il avait deja vu le
+panneau Permissions, le vrai souci est qu'aucune fenetre n'apparait jamais
+quand un site demande la permission, meme regle sur "Demander". Relecture
+du code : confirme un vrai bug de comportement, pas juste de decouvrabilite.
+
+**Cause** : dans `CoreWebView2_PermissionRequested`, la branche
+`permissionKey == "notifications"` (ajoutee le 2026-08-22 pour eviter la
+fenetre systeme Windows vue sur Twitch) refusait TOUJOURS silencieusement
+des que l'etat du site n'etait ni Allow ni Block - y compris l'etat par
+defaut "Demander". Le mot "Demander" du panneau ne demandait donc jamais
+rien pour les notifications specifiquement (contrairement a camera/micro/
+localisation, ou "Demander" laisse WebView2 afficher son propre bandeau).
+
+**Correctif** : maquette approuvee avant code (bandeau "X souhaite vous
+envoyer des notifications" / Bloquer / Autoriser, meme gabarit visuel que
+TabUnresponsiveBar). Implemente via `args.GetDeferral()` + nouveau
+`NotificationPermissionBar` (MainWindow.xaml) : le refus silencieux
+n'intervient plus que si la demande vient d'un onglet non visible (cas
+rare, comportement inchange dans ce seul cas). Le type reel renvoye par
+`GetDeferral()` sous la projection WinRT utilisee par WinUI3 (TFM
+net8.0-windows10.x) est `Windows.Foundation.Deferral`, PAS
+`Microsoft.Web.WebView2.Core.CoreWebView2Deferral` (celui-ci n'existe que
+dans la variante "lib_manual" .NET classique/WinForms/WPF du SDK WebView2) -
+piege trouve a la compilation (CS0246), verifie par lecture des metadonnees
+du DLL projete (`Microsoft.Web.WebView2.Core.Projection.dll`) plutot que
+suppose.
+
+**Verifie en direct** (pas seulement lu dans le code), via un serveur HTTP
+local jetable (`localhost:8931`) servant une page de test qui appelle
+`Notification.requestPermission()` au chargement, pilotee par UIA sur un
+lancement `--guest` (contourne l'assistant premier lancement, principe deja
+documente) :
+- Le bandeau apparait avec le bon texte des la demande du site.
+- Clic "Autoriser" : bandeau disparait, deferral completee.
+- Rechargement de la meme page : bandeau ne reapparait PAS (regle "Allow"
+  deja enregistree, exactement le comportement promis dans la maquette -
+  "plus jamais redemande ensuite").
+- Bloquer non re-teste isolement (meme methode que Autoriser, deja verifiee
+  cote persistance disque via le test ComboBox du Centre du site plus haut).
+
+**Bonus trouve pendant ce test live** : la fenetre affichait "Lumora 1.0.0"
+sur un simple build DEV. Cause : `ReleaseVersion` (const nullable, cense
+rester `null` hors decoupe de release) etait reste bloque a "1.0.0" depuis
+le commit de la toute premiere release (`96fa77a`, jamais remis a `null`
+ensuite) - donc TOUS les builds dev depuis cette date (titre ET ecran A
+propos) affichaient le numero public au lieu du compteur dev interne, sans
+qu'aucun retour utilisateur ne l'ait signale jusqu'ici. Remis a `null`.
+
+Build 0 erreur, 871/871 tests verts (renommage du test d'alignement de
+version uniquement, aucun test dedie a ce bandeau - meme convention que
+TabUnresponsiveBar, verification par UIA plutot qu'unitaire). Version
+`0.94.5.3-dev` -> `0.94.5.4-dev` (**4e chiffre**, correctif de comportement
++ correctif de regression ReleaseVersion).

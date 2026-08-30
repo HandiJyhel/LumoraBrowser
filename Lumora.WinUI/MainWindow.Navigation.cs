@@ -92,6 +92,7 @@ public sealed partial class MainWindow
         SuggestPasswordBar.Visibility = Visibility.Collapsed;
         HideSiteNotFoundBar();
         HideTabUnresponsiveBar();
+        HideNotificationPermissionBar();
         _pendingAutoFillCandidates = Array.Empty<VaultCredential>();
         _pendingGeneratedPassword = null;
 
@@ -235,6 +236,15 @@ public sealed partial class MainWindow
     // 2026-08-19).
     private void CloseTab(BrowserTabState state, bool rememberInClosedHistory = true)
     {
+        // La demande de notifications pendante appartenait a cet onglet : la
+        // deferral doit etre completee ici, sinon la promesse JS du site reste
+        // en attente indefiniment (l'onglet et son CoreWebView2 disparaissent
+        // juste apres).
+        if (_pendingNotificationTab?.Id == state.Id)
+        {
+            HideNotificationPermissionBar();
+        }
+
         // Fermer un onglet qui fait partie de la vue divisee la fait disparaitre :
         // pas de sens de garder un split a un seul volet, on repasse en vue simple.
         if (IsTabInSplitView(state.Id))
@@ -410,7 +420,10 @@ public sealed partial class MainWindow
         sender.CoreWebView2.SourceChanged += (_, _) => BrowserCore_SourceChanged(tab);
         sender.CoreWebView2.FaviconChanged += async (_, _) => await CaptureFaviconForTabAsync(tab);
         sender.CoreWebView2.DownloadStarting += CoreWebView2_DownloadStarting;
-        sender.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
+        // `tab` capture par fermeture (0.94.5.4-dev), meme raison que les
+        // abonnements voisins : le bandeau de demande de notifications a
+        // besoin de savoir a quel onglet repondre (masquage si on le quitte).
+        sender.CoreWebView2.PermissionRequested += (core, args) => CoreWebView2_PermissionRequested(tab, core, args);
         // `tab` capture par fermeture, meme raison que les abonnements voisins
         // (2026-08-30) : le seul usage de TabForCore dans ce gestionnaire
         // (verification que les messages newtab_* viennent bien de
@@ -613,6 +626,7 @@ public sealed partial class MainWindow
             // La proposition de carte appartient à la page quittée.
             WalletFillBar.Visibility = Visibility.Collapsed;
             HideSiteNotFoundBar();
+            HideNotificationPermissionBar();
             _currentPageDomain = ExtractDomain(args.Uri);
             StatusText.Text = $"Chargement: {DisplayTitle(args.Uri)}";
         }
