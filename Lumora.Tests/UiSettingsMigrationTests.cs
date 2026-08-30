@@ -27,16 +27,19 @@ public class UiSettingsMigrationTests
         Assert.Equal(UiSettings.CurrentSchemaVersion, settings.SchemaVersion);
     }
 
-    // Fonctions optionnelles du Coffre (0.93.48) : activées par défaut pour ne
-    // rien changer au comportement existant tant que personne n'a rien
-    // désactivé explicitement dans Paramètres > Coffre.
+    // Fonctions optionnelles du Coffre : désactivées par défaut depuis
+    // 0.94.3.0-dev (retour utilisateur - la plupart des gens ne s'en servent
+    // jamais, remplace le "activées par défaut" de 0.93.48 ci-dessous).
+    // N'affecte que les profils qui n'ont encore jamais écrit ce champ ;
+    // Save_puis_Load_preserve_la_desactivation... ci-dessous couvre déjà la
+    // persistance d'une valeur explicite.
     [Fact]
-    public void Default_active_les_sections_totp_et_passkey_du_coffre()
+    public void Default_desactive_les_sections_totp_et_passkey_du_coffre()
     {
         var settings = UiSettings.Default();
 
-        Assert.True(settings.VaultTotpFeatureEnabled);
-        Assert.True(settings.VaultPasskeyFeatureEnabled);
+        Assert.False(settings.VaultTotpFeatureEnabled);
+        Assert.False(settings.VaultPasskeyFeatureEnabled);
     }
 
     [Fact]

@@ -153,6 +153,8 @@ public sealed partial class MainWindow
         VaultTotpFeatureToggle.IsOn = _uiSettings.VaultTotpFeatureEnabled;
         VaultPasskeyFeatureToggle.IsOn = _uiSettings.VaultPasskeyFeatureEnabled;
         _vaultFeatureTogglesSyncing = false;
+        VaultTotpExplainerBorder.Visibility = _uiSettings.VaultTotpFeatureEnabled ? Visibility.Visible : Visibility.Collapsed;
+        VaultPasskeyExplainerBorder.Visibility = _uiSettings.VaultPasskeyFeatureEnabled ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void VaultTotpFeatureToggle_Toggled(object sender, RoutedEventArgs e)
@@ -173,6 +175,7 @@ public sealed partial class MainWindow
 
         _uiSettings.VaultTotpFeatureEnabled = desired;
         _uiSettings.Save(_profile.UiSettingsFile);
+        VaultTotpExplainerBorder.Visibility = desired ? Visibility.Visible : Visibility.Collapsed;
         RefreshVaultPanel();
         UpdateStatusText(desired
             ? "Authentification à deux facteurs réactivée dans le Coffre."
@@ -197,6 +200,7 @@ public sealed partial class MainWindow
 
         _uiSettings.VaultPasskeyFeatureEnabled = desired;
         _uiSettings.Save(_profile.UiSettingsFile);
+        VaultPasskeyExplainerBorder.Visibility = desired ? Visibility.Visible : Visibility.Collapsed;
         RefreshVaultPanel();
         UpdateStatusText(desired
             ? "Clés d'accès réactivées dans le Coffre."

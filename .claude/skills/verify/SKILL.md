@@ -81,7 +81,29 @@ PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationCl
 - Captures : `System.Drawing` CopyFromScreen du `BoundingRectangle` de la fenetre.
 - Faire tout le flux **en une seule commande** : le process WinUI/WebView2 s'est
   deja arrete de facon aleatoire dans cet environnement (0.73/0.74, non reproduit
-  en 0.75).
+  en 0.75 ; **reconfirme le 2026-08-30, 0.94.3.0-dev** : plusieurs lancements se
+  sont arretes silencieusement - aucun crash Windows, aucun rapport WER, aucune
+  ligne `UNHANDLED` dans `winui-runtime-trace.log` - au bout de 30 a 90s environ,
+  y compris SANS la moindre interaction. Ne pas prendre ca pour un bug applicatif
+  sans avoir d'abord verifie qu'un flux tenu dans un seul appel survit bien de
+  bout en bout ; entre deux appels separes, ne jamais supposer qu'un process
+  lance precedemment est toujours celui qu'on retrouve - tuer les instances
+  orphelines (`Get-Process Lumora.WinUI | Stop-Process -Force`) avant un nouveau
+  lancement, et ne jamais faire confiance a `Get-Process -Name ... | Select
+  -First 1` quand plusieurs lancements de test se sont accumules : ca peut
+  retrouver une fenetre perimee d'un lancement precedent plutot que l'actuel).
+- Un `RadioButton` (ex. items de nav `SettingsNav*`) n'a pas d'`InvokePattern` -
+  utiliser `SelectionItemPattern.Select()` a la place (`GetCurrentPattern`
+  renvoie "Modele non pris en charge" sur `InvokePattern` sinon).
+- `PasswordBox.GetCurrentPattern(ValuePattern.Pattern).SetValue(...)` **echoue
+  toujours** dans WinUI3 (`Erreur non reconnue`, cote runtime XAML - le pattern
+  est annonce comme supporte par `GetSupportedPatterns()` mais `SetValue` est
+  refuse), protection anti-lecture/ecriture de mot de passe par automation.
+  Confirme le 2026-08-30 sur `CreatePasswordBox`. Aucun contournement trouve
+  dans cet environnement (l'injection clavier synthetique est deja refusee par
+  ailleurs) - signaler explicitement a l'utilisateur qu'un champ mot de passe
+  ne peut pas etre verifie en saisie live, et s'appuyer sur la logique en amont/
+  aval (deja testee unitairement si possible) plutot que d'insister.
 - **Aucun `AutomationId` explicite** sur la quasi-totalite des controles (boutons,
   TextBox, ToggleSwitch...) : matcher par `Name` (le `Content`/`Header` visible,
   ou l'`AutomationProperties.Name` explicite quand pose) plutot que par

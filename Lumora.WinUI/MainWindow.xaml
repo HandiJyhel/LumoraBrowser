@@ -4257,11 +4257,27 @@
                                           OnContent="Activée" OffContent="Désactivée"
                                           Toggled="VaultTotpFeatureToggle_Toggled"
                                           ToolTipService.ToolTip="Désactiver une section la masque partout (fiche détaillée, accès rapide) sans rien supprimer : réactiver la fait réapparaître à l'identique." />
+                            <!-- Explication en clair (0.94.3.0-dev, demande utilisateur) : visible
+                                 seulement pendant que la fonction est activee - pas de mur de texte
+                                 pour qui n'en veut pas. Visibilite pilotee dans RefreshVaultSettingsUi
+                                 et les deux gestionnaires Toggled (MainWindow.VaultAccess.cs). -->
+                            <Border x:Name="VaultTotpExplainerBorder"
+                                    Background="{StaticResource NovaInfoSurfaceBrush}" CornerRadius="7"
+                                    Padding="10,7" Visibility="Collapsed">
+                                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.9"
+                                           Text="Un code à usage unique, généré par une application comme Lumora, à saisir en plus du mot de passe. Utile si quelqu'un devine ou vole votre mot de passe : il lui manquera encore ce code, renouvelé toutes les 30 secondes." />
+                            </Border>
                             <ToggleSwitch x:Name="VaultPasskeyFeatureToggle"
                                           Header="Clés d'accès (Passkeys)"
                                           OnContent="Activées" OffContent="Désactivées"
                                           Toggled="VaultPasskeyFeatureToggle_Toggled"
                                           ToolTipService.ToolTip="Désactiver une section la masque partout (fiche détaillée, accès rapide) sans rien supprimer : réactiver la fait réapparaître à l'identique." />
+                            <Border x:Name="VaultPasskeyExplainerBorder"
+                                    Background="{StaticResource NovaInfoSurfaceBrush}" CornerRadius="7"
+                                    Padding="10,7" Visibility="Collapsed">
+                                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.9"
+                                           Text="Remplace le mot de passe par votre empreinte, votre visage ou le code de votre appareil. Rien à retenir ni à taper, mais utilisable seulement depuis un appareil que vous avez déjà approuvé." />
+                            </Border>
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
                                     Margin="0,8,0,0" />
                             <TextBlock Text="Portefeuille" Style="{StaticResource NovaPanelSectionTitleStyle}" />
@@ -7660,7 +7676,27 @@
                             <TextBox x:Name="ProfileNameBox" Header="Prénom ou pseudo"
                                      PlaceholderText="Jean" MaxLength="32" />
                             <PasswordBox x:Name="CreatePasswordBox" Header="Mot de passe (min. 12 caractères + 1 spécial)"
-                                         PlaceholderText="••••••••••••" />
+                                         PlaceholderText="••••••••••••"
+                                         PasswordChanged="CreatePasswordBox_PasswordChanged" />
+                            <!-- Indicateur de force (0.94.3.0-dev, demande utilisateur) : purement
+                                 indicatif, en plus de la regle stricte deja imposee a la validation
+                                 (IsAccountPasswordStrongEnough, MainWindow.Profile.cs) - ne bloque
+                                 rien, aide juste a viser mieux que le minimum. -->
+                            <StackPanel x:Name="PasswordStrengthPanel" Spacing="4" Visibility="Collapsed" Margin="0,-6,0,0">
+                                <Grid ColumnSpacing="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border x:Name="PasswordStrengthBar0" Grid.Column="0" Height="4" CornerRadius="2" Background="{StaticResource NovaChromeStrokeBrush}" />
+                                    <Border x:Name="PasswordStrengthBar1" Grid.Column="1" Height="4" CornerRadius="2" Background="{StaticResource NovaChromeStrokeBrush}" />
+                                    <Border x:Name="PasswordStrengthBar2" Grid.Column="2" Height="4" CornerRadius="2" Background="{StaticResource NovaChromeStrokeBrush}" />
+                                    <Border x:Name="PasswordStrengthBar3" Grid.Column="3" Height="4" CornerRadius="2" Background="{StaticResource NovaChromeStrokeBrush}" />
+                                </Grid>
+                                <TextBlock x:Name="PasswordStrengthLabel" FontSize="11.5" />
+                            </StackPanel>
                             <PasswordBox x:Name="ConfirmPasswordBox" Header="Confirmer le mot de passe"
                                          PlaceholderText="••••••••" />
                             <!-- Profil sans mot de passe (2026-08-13) : choix permanent, assume par
@@ -7955,7 +7991,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         </StackPanel>
 
                         <!-- Indicateur d'etape -->
-                        <TextBlock x:Name="WizardStepIndicator" Text="Etape 1 / 6"
+                        <TextBlock x:Name="WizardStepIndicator" Text="Etape 1 / 8"
                                    HorizontalAlignment="Center" Opacity="0.5"
                                    FontSize="12" Margin="0,0,0,20" />
 
@@ -8100,8 +8136,63 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                             </Border>
                         </StackPanel>
 
-                        <!-- Etape 5 : Resume et confirmation -->
+                        <!-- Etape 5 : Photo de profil (ajoutee 0.94.3.0-dev, demande utilisateur :
+                             "tous les petits parametrages de base devraient etre demandes
+                             directement". Reutilise le meme mecanisme differe que le panneau
+                             Compte (_pendingAvatarSourcePath/_pendingAvatarRemoval,
+                             ApplyPendingAvatarChange() appele dans FinishWizard) : aucune
+                             logique dupliquee, juste une previsualisation dediee a l'assistant. -->
                         <StackPanel x:Name="WizardStep5" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Une photo de profil ?" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Facultatif : elle s'affichera à côté de votre nom. Vous pourrez la changer à tout moment dans Paramètres."
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <Grid HorizontalAlignment="Center" Width="88" Height="88">
+                                <Ellipse>
+                                    <Ellipse.Fill>
+                                        <ImageBrush x:Name="WizardAvatarPreviewBrush" Stretch="UniformToFill" />
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <FontIcon x:Name="WizardAvatarPlaceholder" Glyph="&#xE77B;"
+                                          FontFamily="Segoe MDL2 Assets" FontSize="30"
+                                          Foreground="{StaticResource NovaBrandChipMutedBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                <Button x:Name="WizardChangeAvatarButton" Content="Choisir une photo..."
+                                        Style="{StaticResource NovaButtonPrimaryStyle}"
+                                        Click="WizardChangeAvatarButton_Click" />
+                                <Button x:Name="WizardRemoveAvatarButton" Content="Retirer"
+                                        Style="{StaticResource NovaButtonStyle}" Visibility="Collapsed"
+                                        Click="WizardRemoveAvatarButton_Click" />
+                            </StackPanel>
+                            <TextBlock x:Name="WizardAvatarPendingText" TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="12" Opacity="0.6" Visibility="Collapsed" />
+                        </StackPanel>
+
+                        <!-- Etape 6 : Verrouillage automatique (ajoutee 0.94.3.0-dev) : meme
+                             reglage que SessionTimeoutCombo (Parametres > Compte), memes valeurs,
+                             simplement pose des l'assistant au lieu de rester a decouvrir. -->
+                        <StackPanel x:Name="WizardStep6" Spacing="14" Visibility="Collapsed">
+                            <TextBlock Text="Verrouille ta session" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Après combien d'inactivité Lumora doit-il se reverrouiller automatiquement ?"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <ComboBox x:Name="WizardSessionTimeoutCombo"
+                                      Header="Verrouillage automatique de la session"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="WizardSessionTimeoutCombo_SelectionChanged">
+                                <ComboBoxItem Content="Jamais" Tag="0" />
+                                <ComboBoxItem Content="10 minutes" Tag="10" />
+                                <ComboBoxItem Content="1 heure" Tag="60" />
+                                <ComboBoxItem Content="5 heures" Tag="300" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Etape 7 : Resume et confirmation -->
+                        <StackPanel x:Name="WizardStep7" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Vous etes pret !" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
                             <TextBlock Text="Lumora est configuré. Vous pouvez modifier ces réglages à tout moment dans le Centre Lumora."
@@ -8117,6 +8208,10 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                     <TextBlock x:Name="WizardSummaryUsage"
                                                FontSize="13" TextWrapping="Wrap" />
                                     <TextBlock x:Name="WizardSummaryModules"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="WizardSummaryAvatar"
+                                               FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="WizardSummaryLock"
                                                FontSize="13" TextWrapping="Wrap" />
                                     <TextBlock Text="Protection de la vie privée activée"
                                                FontSize="13" TextWrapping="Wrap" />

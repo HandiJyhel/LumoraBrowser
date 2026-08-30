@@ -24752,3 +24752,105 @@ cet installeur maintenant ?").
 `artifacts\installer\` - pas supprimes de ma propre initiative (suppression jamais
 automatique, voir [[tutoiement-et-installeur]]), a nettoyer si l'utilisateur le
 demande. Toujours pas de depot GitHub public - cette release reste strictement locale.
+
+## 2026-08-30 — Retours post-release 1.0.0 : onboarding, force du mot de passe, Coffre moins charge -> 0.94.3.0-dev
+
+Premiers retours de l'utilisateur apres avoir installe et utilise reellement la
+release 1.0.0 (celle-ci non touchee, reste `1.0.0` - tout le travail se fait sur la
+version DEV comme convenu). Quatre demandes, plus deux bugs signales. Maquettes
+publiees en Artifact avant tout code (diagnostic + 3 propositions visuelles), "Go"
+recu sur l'ensemble.
+
+**Implemente et verifie en reel (profil de test isole, UIA) :**
+- Assistant premier lancement (`MainWindow.SetupWizard.cs`, 6 -> 8 etapes) : nouvelle
+  etape "Une photo de profil ?" (reutilise le flux differe existant
+  `_pendingAvatarSourcePath`/`ApplyPendingAvatarChange`, `MainWindow.Avatar.cs`, avec
+  sa propre previsualisation) et nouvelle etape "Verrouille ta session" (memes
+  valeurs que `SessionTimeoutCombo` : Jamais/10 min/1h/5h). Resume final (etape 8/8)
+  complete avec les 2 nouvelles lignes. Verifie en reel : capture d'ecran de chacune
+  des 8 etapes, y compris le resume, tout conforme.
+- Indicateur de force du mot de passe (creation de compte, `CreatePasswordBox`) :
+  reutilise `PasswordHealthAnalyzer.EvaluateStrength` (deja utilise par le Bilan de
+  sante du Coffre, jamais reinvente) et les helpers `StrengthBrush`/`StrengthLabel`
+  existants (`MainWindow.VaultPanel.cs`) - barre a 4 segments rouge/orange/vert sous
+  le champ, mise a jour a chaque frappe (`PasswordChanged`), masquee si le champ est
+  vide. **Non verifiable visuellement en reel** : `PasswordBox.ValuePattern.SetValue`
+  est rejete par WinUI3 par conception (`Erreur non reconnue`, protection anti-vol de
+  mot de passe via automation) - confirme dans cet environnement, pas seulement pour
+  les mots de passe reels. Confiance basee sur la logique reutilisee (deja testee) et
+  le succes de compilation ; a confirmer par l'utilisateur en usage reel.
+- Gestionnaire de mots de passe (`Parametres > Coffre et donnees`) : la double
+  authentification (TOTP) et les cles d'acces (Passkeys) passent de "activees par
+  defaut" a "desactivees par defaut" (`UiSettings.VaultTotpFeatureEnabled`/
+  `VaultPasskeyFeatureEnabled`, defaut `false`) - n'affecte que les profils qui n'ont
+  encore jamais ecrit ce champ, un profil deja existant garde sa valeur enregistree.
+  Une explication en clair (`Border` avec `NovaInfoSurfaceBrush`) apparait desormais
+  sous chaque interrupteur UNIQUEMENT quand il est active. Verifie en reel : capture
+  confirmant les 2 interrupteurs a "Desactivee(s)" par defaut sur un profil neuf, sans
+  aucun texte d'explication visible ; le parcours d'annulation (mot de passe refuse au
+  ContentDialog de confirmation) a aussi ete verifie reel (statut "Changement annule",
+  interrupteur revient a l'etat precedent) - la reussite du parcours (mot de passe
+  entre puis confirme -> explication qui apparait) n'a PAS pu etre verifiee pour la
+  meme raison que ci-dessus (impossible de saisir dans un `PasswordBox` via UIA), mais
+  le cablage est visible et symetrique au parcours d'annulation deja confirme.
+
+**Diagnostic pose, PAS resolu** (points 2 et 3 du retour utilisateur : gel complet du
+navigateur apres connexion Google + navigation sur Drive, et gel a l'ouverture d'un
+nouvel onglet, obligeant a fermer/rouvrir) : lecture statique complete de
+`CredentialService`, `CoreWebView2_WebResourceRequested`, `NetworkBlockerModule`,
+`MainWindow.LoginDiagnostics.cs` - rien de concluant trouve (le piege deja documente
+`Dictionary<CoreWebView2,...>` est deja evite ici via comparaison par id d'onglet ;
+pas de `.Wait()`/`.Result` synchrone trouve dans tout `Lumora.WinUI`). Aucune
+reproduction reelle possible sans les identifiants Google reels de l'utilisateur.
+Question posee et restee sans reponse a ce stade : le gel du nouvel onglet (point 3)
+faisait-il partie du MEME episode de gel que Google Drive, ou un episode separe ?
+Reste a instrumenter (`WinUiRuntimeTrace`) si/quand ca se reproduit.
+
+**Effet de bord decouvert pendant la verification, PAS un bug applicatif** : dans cet
+environnement d'agent (sandbox), un `Lumora.WinUI.exe` lance via `Start-Process`
+s'arrete silencieusement (sans crash Windows, aucun rapport WER, aucune ligne
+`UNHANDLED` dans `WinUiRuntimeTrace`) au bout d'un temps variable (~30 a 90s), y
+compris sans la moindre interaction utilisateur - deja documente comme piege connu de
+cet environnement precis (voir `verify/SKILL.md`, "le process WinUI/WebView2 s'est
+deja arrete de facon aleatoire..."), pas lie au code de Lumora. Contournement qui a
+marche : faire tenir tout un scenario de verification (lancement + navigation +
+capture) dans un SEUL appel powershell plutot que d'enchainer plusieurs appels
+separes.
+
+- Version `0.94.2.0-dev` -> `0.94.3.0-dev` (**3e chiffre**, 3 ajouts dans le meme
+  palier "Control panel and start menu") - `MainWindow.xaml.cs`, `AGENTS.md`,
+  `build-clean-test-artifact.ps1`, `build-installer.ps1`, test d'alignement mis a
+  jour. Build 0 erreur, tests 868/868 verts.
+
+## 2026-08-30 (suite) — Regeneration a l'identique de l'installateur 1.0.0
+
+Demande explicite de l'utilisateur en cours de session ("je veux que tu me refasses
+un exécutable en release 1.0.0"). Question clarifiee avant d'agir : le nouvel
+executable devait-il rester identique au premier 1.0.0 (sans les 3 ajouts dev du
+jour, encore a 0.94.3.0-dev) ou les inclure sous l'etiquette 1.0.0 ? Reponse :
+identique - conforme a la regle de separation dev/release deja posee cette session.
+
+Le premier installateur 1.0.0 (29/08) avait ete construit depuis le commit
+`a35937a` (le suivant, `5d4953d`, n'etant qu'un journal MEMORY.md sans code ;
+`3b9106c` ajoute seulement `README.md` apres coup). Reconstruction faite depuis un
+**git worktree isole** sur ce meme commit (`git worktree add ... a35937a --detach`),
+jamais depuis le repertoire de travail principal (qui contient les modifications dev
+non commitees du jour) - aucun risque de melange ni de perte.
+
+**Piege rencontre** : le premier worktree cree dans le scratchpad (chemin profond,
+~180 caracteres avant meme le sous-dossier de build) a fait echouer `mt.exe`
+(`WindowsAppSDK.manifest ... Le chemin d'acces specifie est introuvable`, MSB3073) -
+classique limite de longueur de chemin Windows sur un outil ancien non "long path
+aware". Corrige en recreant le worktree a la racine (`C:\lumora100`, chemin court).
+Piege secondaire : `Lumora.WinUI\FixedRuntime\150.0.4078.105\` (runtime WebView2
+Fixed Version) est gitignore - absent d'un worktree fraichement clone. Copie
+manuelle depuis le depot principal avant de relancer le build (memes fichiers que
+l'original, aucune re-preparation necessaire).
+
+**Resultat** : `LumoraSetup-1.0.0-win-x64-rebuild-20260830.exe` (dans
+`artifacts\installer\`, a cote de l'original jamais supprime ni ecrase - regle
+[[tutoiement-et-installeur]]). SHA256 different de l'original
+(`986fa2bb...` vs `77a609c6...`) - attendu, pas un signe de contenu different : un
+installateur embarque generalement un horodatage/GUID de build qui varie a chaque
+generation meme a code source strictement identique. Le code source, lui, est
+garanti identique (meme commit exact). Jamais lance par moi (comme toujours).

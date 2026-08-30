@@ -234,16 +234,23 @@ internal sealed class UiSettings
     public List<StartMenuTileUsage> StartMenuTileUsage { get; set; } = [];
     // Visibilité des sections TOTP / Passkey dans le Coffre (0.93.48, retour
     // utilisateur : quelqu'un qui utilise déjà une autre appli de 2FA/passkeys
-    // n'a pas à se coltiner ces sections dans chaque fiche). Activées par
-    // défaut (comportement inchangé pour tout le monde). Changer l'un ou
+    // n'a pas à se coltiner ces sections dans chaque fiche). Changer l'un ou
     // l'autre redemande le mot de passe/PIN du profil, comme l'ouverture du
     // Coffre (voir VaultTotpFeatureToggle_Toggled/VaultPasskeyFeatureToggle_Toggled,
     // MainWindow.VaultAccess.cs) - jamais un simple interrupteur muet.
     // Désactiver ne supprime jamais rien du fichier du coffre : réactiver fait
     // tout réapparaître à l'identique, y compris sur les fiches qui avaient
     // déjà des données au moment de la désactivation.
-    public bool VaultTotpFeatureEnabled { get; set; } = true;
-    public bool VaultPasskeyFeatureEnabled { get; set; } = true;
+    // Désactivées par défaut depuis 0.94.3.0-dev (remplace "activées par défaut
+    // pour tout le monde" ci-dessus, retour utilisateur : la plupart des gens ne
+    // s'en servent jamais, panneau "Fonctions du Coffre" trop chargé par défaut) -
+    // restent activables en un clic, avec désormais une explication en clair
+    // affichée dès l'activation (Border sous chaque interrupteur, MainWindow.xaml).
+    // Les profils créés avant ce palier gardent la valeur déjà enregistrée dans
+    // leur ui-settings.lumora (true) : ce nouveau défaut ne s'applique qu'aux
+    // profils qui n'ont encore jamais écrit ce champ.
+    public bool VaultTotpFeatureEnabled { get; set; }
+    public bool VaultPasskeyFeatureEnabled { get; set; }
 
     // Préférences du générateur de mots de passe du coffre, partagées entre le
     // dialogue "Nouvel identifiant" et la barre de suggestion automatique.

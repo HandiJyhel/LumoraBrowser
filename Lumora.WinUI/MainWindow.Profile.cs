@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Lumora.WinUI.PasswordManager;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -42,6 +43,40 @@ public sealed partial class MainWindow
 
         error = string.Empty;
         return true;
+    }
+
+    // Indicateur de force en direct (0.94.3.0-dev, demande utilisateur : "un
+    // indicateur de force, tu sais comme sur certains sites... rouge/orange/
+    // vert"). Purement indicatif - ne bloque rien, la regle stricte ci-dessus
+    // reste seule responsable de la validation. Reutilise StrengthBrush/
+    // StrengthLabel (MainWindow.VaultPanel.cs), deja branches sur
+    // PasswordHealthAnalyzer.EvaluateStrength : un seul et meme critere de
+    // robustesse partout dans l'app (coffre et creation de compte).
+    private void CreatePasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        var password = CreatePasswordBox.Password;
+        if (string.IsNullOrEmpty(password))
+        {
+            PasswordStrengthPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        PasswordStrengthPanel.Visibility = Visibility.Visible;
+        var litCount = PasswordHealthAnalyzer.EvaluateStrength(password) switch
+        {
+            PasswordStrength.Strong => 4,
+            PasswordStrength.Medium => 3,
+            _ => 1,
+        };
+        var litBrush = StrengthBrush(password);
+        var emptyBrush = (Brush)Application.Current.Resources["NovaChromeStrokeBrush"];
+        var bars = new[] { PasswordStrengthBar0, PasswordStrengthBar1, PasswordStrengthBar2, PasswordStrengthBar3 };
+        for (var i = 0; i < bars.Length; i++)
+        {
+            bars[i].Background = i < litCount ? litBrush : emptyBrush;
+        }
+        PasswordStrengthLabel.Text = "Force du mot de passe : " + StrengthLabel(password);
+        PasswordStrengthLabel.Foreground = litBrush;
     }
 
     // ── Système de profil ────────────────────────────────────────────────────

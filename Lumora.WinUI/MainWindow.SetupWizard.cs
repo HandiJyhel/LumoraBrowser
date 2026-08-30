@@ -18,6 +18,10 @@ public sealed partial class MainWindow
         SelectWizardTabsOrientation();
         SelectWizardUsageMode(_uiSettings.UsageMode);
         SelectWizardModules();
+        ResetPendingAvatarChange();
+        RefreshWizardAvatarUi();
+        WizardAvatarPendingText.Visibility = Visibility.Collapsed;
+        SelectWizardSessionTimeout();
         _suppressUiSettingsSave = false;
         UpdateWizardStep();
         SetupWizardOverlay.Visibility = Visibility.Visible;
@@ -25,17 +29,19 @@ public sealed partial class MainWindow
 
     private void UpdateWizardStep()
     {
-        WizardStepIndicator.Text = $"Étape {_wizardStep + 1} / 6";
+        WizardStepIndicator.Text = $"Étape {_wizardStep + 1} / 8";
         WizardStep0.Visibility = _wizardStep == 0 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep1.Visibility = _wizardStep == 1 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep2.Visibility = _wizardStep == 2 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep3.Visibility = _wizardStep == 3 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep4.Visibility = _wizardStep == 4 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep5.Visibility = _wizardStep == 5 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep6.Visibility = _wizardStep == 6 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep7.Visibility = _wizardStep == 7 ? Visibility.Visible : Visibility.Collapsed;
         WizardPrevButton.IsEnabled = _wizardStep > 0;
-        WizardNextButton.Content = _wizardStep == 5 ? "Terminer" : "Suivant";
+        WizardNextButton.Content = _wizardStep == 7 ? "Terminer" : "Suivant";
 
-        if (_wizardStep == 5)
+        if (_wizardStep == 7)
         {
             WizardSummarySearch.Text = "Moteur de recherche : " + _uiSettings.SearchEngine switch
             {
@@ -50,6 +56,16 @@ public sealed partial class MainWindow
             WizardSummaryModules.Text = _uiSettings.PinnedModuleIds.Count == 0
                 ? "Modules visibles : aucun module impose"
                 : "Modules visibles : " + string.Join(", ", _uiSettings.PinnedModuleIds.Select(ModuleDisplayName));
+            WizardSummaryAvatar.Text = "Photo de profil : "
+                + (HasPendingAvatarChange() ? (_pendingAvatarRemoval ? "aucune" : "ajoutée") : (FindAvatarFile() is null ? "aucune" : "déjà en place"));
+            WizardSummaryLock.Text = "Verrouillage automatique : " + _uiSettings.SessionTimeoutMinutes switch
+            {
+                0   => "jamais",
+                10  => "après 10 minutes",
+                60  => "après 1 heure",
+                300 => "après 5 heures",
+                var m => $"après {m} minutes",
+            };
         }
     }
 
@@ -64,7 +80,7 @@ public sealed partial class MainWindow
 
     private void WizardNextButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_wizardStep < 5)
+        if (_wizardStep < 7)
         {
             _wizardStep++;
             UpdateWizardStep();
@@ -72,6 +88,86 @@ public sealed partial class MainWindow
         else
         {
             FinishWizard();
+        }
+    }
+
+    // Etape 5 (photo de profil) : reutilise le flux existant du panneau Compte
+    // (_pendingAvatarSourcePath/_pendingAvatarRemoval, MainWindow.Avatar.cs),
+    // juste avec sa propre previsualisation puisque le panneau Compte n'est
+    // pas visible pendant l'assistant.
+    private void RefreshWizardAvatarUi()
+    {
+        var pendingPath = !_pendingAvatarRemoval ? _pendingAvatarSourcePath : null;
+        var shownPath = pendingPath ?? (_pendingAvatarRemoval ? null : FindAvatarFile());
+        if (shownPath is null)
+        {
+            WizardAvatarPreviewBrush.ImageSource = null;
+            WizardAvatarPlaceholder.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            WizardAvatarPreviewBrush.ImageSource = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(shownPath, UriKind.Absolute));
+            WizardAvatarPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        WizardRemoveAvatarButton.Visibility = shownPath is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private async void WizardChangeAvatarButton_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.PicturesLibrary;
+        foreach (var ext in AvatarExtensions) picker.FileTypeFilter.Add(ext);
+
+        var file = await picker.PickSingleFileAsync();
+        if (file is null) return;
+
+        try
+        {
+            _pendingAvatarSourcePath = file.Path;
+            _pendingAvatarRemoval = false;
+            RefreshWizardAvatarUi();
+            WizardAvatarPendingText.Text = "Photo prête, elle sera enregistrée à la fin de l'assistant.";
+            WizardAvatarPendingText.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            WizardAvatarPendingText.Text = $"Erreur lors de l'aperçu de l'image : {ex.Message}";
+            WizardAvatarPendingText.Visibility = Visibility.Visible;
+        }
+    }
+
+    private void WizardRemoveAvatarButton_Click(object sender, RoutedEventArgs e)
+    {
+        _pendingAvatarSourcePath = null;
+        _pendingAvatarRemoval = true;
+        RefreshWizardAvatarUi();
+        WizardAvatarPendingText.Text = "Aucune photo ne sera enregistrée.";
+        WizardAvatarPendingText.Visibility = Visibility.Visible;
+    }
+
+    // Etape 6 (verrouillage automatique) : meme reglage que SessionTimeoutCombo
+    // (Parametres > Compte), pose ici en plus pour ne pas rester a decouvrir.
+    private void SelectWizardSessionTimeout()
+    {
+        foreach (var item in WizardSessionTimeoutCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag?.ToString() == _uiSettings.SessionTimeoutMinutes.ToString())
+            {
+                WizardSessionTimeoutCombo.SelectedItem = item;
+                return;
+            }
+        }
+        WizardSessionTimeoutCombo.SelectedIndex = 0;
+    }
+
+    private void WizardSessionTimeoutCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        if (WizardSessionTimeoutCombo.SelectedItem is ComboBoxItem item &&
+            int.TryParse(item.Tag?.ToString(), out var minutes))
+        {
+            _uiSettings.SessionTimeoutMinutes = minutes;
         }
     }
 
@@ -221,6 +317,7 @@ public sealed partial class MainWindow
 
     private void FinishWizard()
     {
+        ApplyPendingAvatarChange();
         _uiSettings.SetupWizardCompleted = true;
         _uiSettings.Save(_profile.UiSettingsFile);
         SetupWizardOverlay.Visibility = Visibility.Collapsed;
