@@ -25361,3 +25361,28 @@ version uniquement, aucun test dedie a ce bandeau - meme convention que
 TabUnresponsiveBar, verification par UIA plutot qu'unitaire). Version
 `0.94.5.3-dev` -> `0.94.5.4-dev` (**4e chiffre**, correctif de comportement
 + correctif de regression ReleaseVersion).
+
+## 2026-08-30 (suite) — 6e release 1.0.0 : commit + worktree jetable, anciens installateurs supprimes (pas renommes)
+
+Demande explicite : nouvelle release 1.0.0 avec toutes les modifications du
+jour (favoris, titre, bandeau notifications, correctif ReleaseVersion),
+suppression des anciens installateurs (plus de renommage cette fois - la
+demande est de les jeter, pas de les garder en trace).
+
+Commit `df5476f` (tout le delta depuis `5ae3e29`, 10 fichiers). Build fait
+depuis un **worktree jetable** (`C:\lumora100`, chemin court pour `mt.exe`,
+detache sur `df5476f`) plutot que dans le repertoire de travail principal -
+lecon tiree du bug ReleaseVersion trouve plus haut : `ReleaseVersion` a ete
+mis a "1.0.0" UNIQUEMENT dans ce worktree (jamais commite, jamais visible
+dans le repo principal - verifie apres coup : `git status` propre,
+`ReleaseVersion = null` toujours en place dans le repo principal). Runtime
+WebView2 Fixed Version copie a la main dans le worktree (gitignore).
+
+Nouveau SHA256 : `e4dcdc0125036e60067a31d166600b5537b45e592ff3977534a322eabe765225`.
+Verifie deux fois (sortie du script + `sha256sum` independant apres copie
+dans le depot). Les 4 anciens `LumoraSetup-1.0.0-*.exe` (+ leurs
+`.VERIFICATION.txt`) ont ete **supprimes**, pas renommes -
+`artifacts\installer\` ne contient plus que le nouveau. Worktree supprime
+apres coup (`git worktree remove --force`).
+
+Jamais lance par moi (comme toujours).
