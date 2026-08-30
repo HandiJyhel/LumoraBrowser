@@ -17,9 +17,9 @@ namespace Lumora.WinUI;
 // logique de clic droit reinventee a la main : seule la presentation change.
 public sealed partial class MainWindow
 {
-    private void CoreWebView2_ContextMenuRequested(object? sender, CoreWebView2ContextMenuRequestedEventArgs args)
+    private void CoreWebView2_ContextMenuRequested(BrowserTabState tab, CoreWebView2ContextMenuRequestedEventArgs args)
     {
-        if (sender is not CoreWebView2 core || TabForCore(core) is not { } tab || tab.View is not { } view)
+        if (!_tabs.Contains(tab) || tab.View is not { } view)
         {
             return;
         }

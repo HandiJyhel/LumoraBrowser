@@ -14,8 +14,8 @@ public sealed partial class MainWindow
     // passer par le script Lumora prévu. Les seules sources dignes de
     // confiance sont celles attestées par WebView2 : e.Source (l'URL réelle
     // du document qui a posté le message, impossible à mentir côté JS) et
-    // l'adresse logique que Lumora suit lui-même pour chaque onglet
-    // (TabForCore(...).Address, jamais dérivée d'une donnée web).
+    // l'adresse logique que Lumora suit lui-même pour chaque onglet (tab.Address,
+    // capturé par fermeture à l'abonnement - jamais dérivée d'une donnée web).
     private static string? OriginFromSource(string? source)
     {
         if (string.IsNullOrWhiteSpace(source)) return null;
@@ -28,8 +28,9 @@ public sealed partial class MainWindow
         return isDefaultPort ? $"{uri.Scheme}://{uri.Host}" : $"{uri.Scheme}://{uri.Host}:{uri.Port}";
     }
 
-    private async void BrowserCore_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    private async void BrowserCore_WebMessageReceived(BrowserTabState tab, CoreWebView2WebMessageReceivedEventArgs e)
     {
+        var core = tab.View?.CoreWebView2;
         try
         {
             var json = JsonNode.Parse(e.WebMessageAsJson);
@@ -46,17 +47,16 @@ public sealed partial class MainWindow
             // pouvoir etre declenches par un site web quelconque qui appellerait
             // directement window.chrome.webview.postMessage : seule la page
             // d'accueil interne de Lumora (lumora://accueil, chargee via
-            // NavigateToString) est legitime pour les envoyer.
+            // NavigateToString) est legitime pour les envoyer. `tab` vient
+            // directement de l'abonnement (BrowserView_CoreWebView2Initialized),
+            // plus besoin de le retrouver via TabForCore (piege deja documente,
+            // corrige 2026-08-30).
             var isNewTabMessage = type is "newtab_add_shortcut" or "newtab_edit_shortcut" or "newtab_delete_shortcut"
                 or "newtab_personalize" or "newtab_modules" or "newtab_mode_intro_dismiss"
                 or "newtab_mode_quick_note" or "newtab_mode_action";
-            if (isNewTabMessage)
+            if (isNewTabMessage && !tab.Address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase))
             {
-                var originTab = TabForCore(sender as CoreWebView2);
-                if (originTab is null || !originTab.Address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
+                return;
             }
 
             if (type == "nova.loginDiagnostic")
@@ -88,25 +88,25 @@ public sealed partial class MainWindow
 
             if (type == "lumora.annotation")
             {
-                HandleReaderAnnotationMessage(sender as CoreWebView2, obj);
+                HandleReaderAnnotationMessage(core, obj);
                 return;
             }
 
             if (type == "nova.payment.form")
             {
-                HandlePaymentFormDetected(sender as CoreWebView2);
+                HandlePaymentFormDetected(tab);
                 return;
             }
 
             if (type == "nova.fullscreenExit")
             {
-                HandleContentFullScreenExitSignal(sender as CoreWebView2);
+                HandleContentFullScreenExitSignal(core);
                 return;
             }
 
             if (type == "nova.consentHandled")
             {
-                HandleConsentHandledMessage(sender as CoreWebView2, e.Source, obj["method"]?.GetValue<string>());
+                HandleConsentHandledMessage(core, e.Source, obj["method"]?.GetValue<string>());
                 return;
             }
 

@@ -403,10 +403,11 @@ public sealed partial class MainWindow
     // Un champ carte est apparu sur la page ACTIVE : proposer le portefeuille.
     // La barre n'affiche aucune donnée de carte ; coffre verrouillé, on propose
     // quand même (le déverrouillage se fait au clic).
-    private void HandlePaymentFormDetected(CoreWebView2? core)
+    private void HandlePaymentFormDetected(BrowserTabState tab)
     {
-        if (_isGuestMode || core is null) return;
-        if (TabForCore(core) is not { } tab || !IsActiveView(tab.View)) return;
+        // `tab` vient directement de l'abonnement (BrowserCore_WebMessageReceived,
+        // corrige 2026-08-30) - plus de TabForCore ici (piege deja documente).
+        if (_isGuestMode || !IsActiveView(tab.View)) return;
         if (!_vault.IsLocked && _vault.ListCards().Count == 0) return;
 
         WalletFillBar.Visibility = Visibility.Visible;

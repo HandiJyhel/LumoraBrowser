@@ -475,7 +475,9 @@ public sealed partial class MainWindow
         {
             _pendingStartupPageApply = false;
             _suppressTabSave = true;
+            WinUiRuntimeTrace.Write("DismissLoginOverlay: ApplyStartupPage start");
             ApplyStartupPage();
+            WinUiRuntimeTrace.Write("DismissLoginOverlay: ApplyStartupPage end");
             _suppressTabSave = false;
         }
         RefreshProfileSettings();
@@ -1478,7 +1480,10 @@ public sealed partial class MainWindow
             // quand même la connexion réussir (le mot de passe du PROFIL est correct) mais on
             // prévient : sinon le Coffre paraîtrait juste "vide" sans explication (bug réel
             // trouvé le 2026-08-19).
-            if (!_vault.EnsureUnlockedWith(pw))
+            // Sur Task.Run comme VerifyPassword ci-dessus (2026-08-30) : EnsureUnlockedWith
+            // refait sa propre dérivation Argon2id, volontairement lente - appelée en direct
+            // ici, elle bloquait le thread d'interface ("écran noir" systématique signalé).
+            if (!await Task.Run(() => _vault.EnsureUnlockedWith(pw)))
             {
                 UpdateStatusText("Connecté, mais le coffre n'a pas pu être déverrouillé automatiquement (mot de passe du coffre différent).", notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.ActionAborted);
             }
@@ -1671,7 +1676,15 @@ public sealed partial class MainWindow
             if (ok)
             {
                 // Le PIN déverrouille aussi le coffre (si le déverrouillage PIN est activé).
-                _vault.UnlockWithPin(pin);
+                // Sur Task.Run comme VerifyPin ci-dessus : UnlockWithPin refait sa propre
+                // dérivation Argon2id (volontairement lente, résistance GPU/ASIC) - appelée
+                // en direct ici, elle bloquait le thread d'interface le temps du calcul
+                // (retour utilisateur 2026-08-30 : "écran noir" systématique à chaque
+                // déverrouillage). Pareil pour EnsureUnlockedWith au mot de passe, voir
+                // LoginButton_Click.
+                WinUiRuntimeTrace.Write("PIN: UnlockWithPin start");
+                await Task.Run(() => _vault.UnlockWithPin(pin));
+                WinUiRuntimeTrace.Write("PIN: UnlockWithPin end");
                 DismissLoginOverlay();
             }
             else

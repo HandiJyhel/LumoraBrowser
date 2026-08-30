@@ -58,6 +58,9 @@ internal sealed class InstallerForm : Form
     private readonly LumoraOptionCheckBox _desktopShortcutCheckBox = new();
     private readonly LumoraOptionCheckBox _startMenuShortcutCheckBox = new();
     private readonly LumoraOptionCheckBox _torCheckBox = new();
+    // Mise a jour detectee (app ou profil deja presents) : adapte le titre et
+    // la valeur par defaut de "_cleanProfileCheckBox" - voir le constructeur.
+    private bool _isUpdate;
     // Case "Lancer maintenant" deplacee sur la page Terminee (2026-08-19) :
     // decider de lancer l'app APRES l'installation, pas avant, evite la
     // redondance de deux cases "lancer" a des moments differents.
@@ -89,7 +92,6 @@ internal sealed class InstallerForm : Form
 
     public InstallerForm()
     {
-        Text = "Installation de Lumora Browser";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.None;
         MaximizeBox = false;
@@ -100,12 +102,25 @@ internal sealed class InstallerForm : Form
         ForeColor = LumoraPalette.Foreground;
         Font = LumoraTypography.Text(10f);
 
-        var defaultInstallRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Programs",
-            "Lumora");
+        var localAppDataForDetection = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var defaultInstallRoot = Path.Combine(localAppDataForDetection, "Programs", "Lumora");
 
-        BuildTitleBar();
+        // Detection "mise a jour" (2026-08-30, retour utilisateur) : une
+        // installation existante (l'app deja copiee) OU un profil local deja
+        // present suffit - soit signale la meme chose (Lumora deja utilise ici),
+        // et il ne faut jamais se fier a un seul des deux (l'app peut avoir ete
+        // desinstallee sans -RemoveProfile, ou l'inverse). Purement pour adapter
+        // le texte/les valeurs par defaut de l'ecran suivant - ne change aucun
+        // comportement d'installation en lui-meme.
+        var existingAppDetected = File.Exists(Path.Combine(defaultInstallRoot, "app", "Lumora.WinUI.exe"));
+        var existingProfileDetected = Directory.Exists(Path.Combine(localAppDataForDetection, "Lumora", "profiles"))
+            && Directory.EnumerateFileSystemEntries(Path.Combine(localAppDataForDetection, "Lumora", "profiles")).Any();
+        _isUpdate = existingAppDetected || existingProfileDetected;
+
+        var windowTitle = _isUpdate ? "Mise à jour de Lumora Browser" : "Installation de Lumora Browser";
+        Text = windowTitle;
+
+        BuildTitleBar(windowTitle);
         var sidebar = BuildSidebar();
         Controls.Add(sidebar);
 
@@ -124,7 +139,7 @@ internal sealed class InstallerForm : Form
         GoToPage(0);
     }
 
-    private void BuildTitleBar()
+    private void BuildTitleBar(string windowTitle)
     {
         var titleBar = new Panel
         {
@@ -136,7 +151,7 @@ internal sealed class InstallerForm : Form
 
         var titleText = new Label
         {
-            Text = "Installation de Lumora Browser",
+            Text = windowTitle,
             AutoSize = false,
             Location = new Point(16, 11),
             Size = new Size(420, 20),
@@ -300,7 +315,9 @@ internal sealed class InstallerForm : Form
 
         var title = new Label
         {
-            Text = "Bienvenue dans l'assistant d'installation de Lumora Browser",
+            Text = _isUpdate
+                ? "Bienvenue dans l'assistant de mise à jour de Lumora Browser"
+                : "Bienvenue dans l'assistant d'installation de Lumora Browser",
             AutoSize = false,
             Location = new Point(24, 20),
             Size = new Size(contentWidth, 44),
@@ -309,7 +326,12 @@ internal sealed class InstallerForm : Form
         };
         page.Controls.Add(title);
 
-        AddSectionLine(page, "Cet assistant va installer Lumora Browser sur votre ordinateur. Il est recommandé de fermer toutes les autres applications avant de continuer.", 70, LumoraPalette.BodyText, height: 40);
+        AddSectionLine(
+            page,
+            _isUpdate
+                ? "Une installation ou un profil Lumora existe déjà sur cet ordinateur. Cet assistant va mettre à jour l'application ; vos données sont conservées sauf si vous cochez le contraire à l'étape suivante."
+                : "Cet assistant va installer Lumora Browser sur votre ordinateur. Il est recommandé de fermer toutes les autres applications avant de continuer.",
+            70, LumoraPalette.BodyText, height: 40);
         AddSectionLine(page, "Navigateur local, modules intégrés, aucune donnée personnelle n'est copiée dans l'installateur.", 114, LumoraPalette.BodyText, height: 40);
 
         var divider = new Panel
@@ -403,10 +425,16 @@ internal sealed class InstallerForm : Form
         };
         page.Controls.Add(optionsTitle);
 
-        ConfigureCheckBox(_cleanProfileCheckBox, "Installation propre : supprimer le profil installé précédent", new Point(20, 248), new Size(contentWidth - 20, 26), true);
-        ConfigureCheckBox(_desktopShortcutCheckBox, "Raccourci Bureau", new Point(20, 276), new Size(contentWidth - 20, 26), true);
-        ConfigureCheckBox(_startMenuShortcutCheckBox, "Raccourci Menu Démarrer", new Point(20, 304), new Size(contentWidth - 20, 26), true);
-        ConfigureCheckBox(_torCheckBox, "Installer et activer Tor (anonymat réseau)", new Point(20, 332), new Size(contentWidth - 20, 26), false);
+        // Case sur 2 lignes (hauteur 40 au lieu de 26) : le texte doit rester
+        // explicite sur ce qu'il efface (favoris, mots de passe, historique) -
+        // ancien libelle "Installation propre" trop vague, cf. bug ci-dessus.
+        // Cochee par defaut UNIQUEMENT si aucune installation/profil existant
+        // n'est detecte (rien a perdre) ; decochee par defaut en mise a jour,
+        // maintenant que la case fait vraiment ce qu'elle dit (2026-08-30).
+        ConfigureCheckBox(_cleanProfileCheckBox, "Effacer aussi mon profil (favoris, mots de passe, historique) — repartir de zéro", new Point(20, 248), new Size(contentWidth - 20, 40), !_isUpdate);
+        ConfigureCheckBox(_desktopShortcutCheckBox, "Raccourci Bureau", new Point(20, 290), new Size(contentWidth - 20, 26), true);
+        ConfigureCheckBox(_startMenuShortcutCheckBox, "Raccourci Menu Démarrer", new Point(20, 318), new Size(contentWidth - 20, 26), true);
+        ConfigureCheckBox(_torCheckBox, "Installer et activer Tor (anonymat réseau)", new Point(20, 346), new Size(contentWidth - 20, 26), false);
         page.Controls.Add(_cleanProfileCheckBox);
         page.Controls.Add(_desktopShortcutCheckBox);
         page.Controls.Add(_startMenuShortcutCheckBox);
@@ -415,7 +443,7 @@ internal sealed class InstallerForm : Form
         AddSectionLine(
             page,
             "Masque ton adresse IP réelle en faisant transiter le trafic par le réseau Tor. Ralentit la navigation : reste décoché par défaut. Sans cette case, le bouton Tor de la fenêtre Incognito proposera de l'installer plus tard.",
-            360, LumoraPalette.MutedForeground, height: 60, fontSize: 8.5f, left: 56, width: contentWidth - 56);
+            374, LumoraPalette.MutedForeground, height: 60, fontSize: 8.5f, left: 56, width: contentWidth - 56);
 
         return page;
     }
@@ -628,7 +656,7 @@ internal sealed class InstallerForm : Form
             _primaryButton.Enabled = true;
             _progressBar.Visible = false;
             _statusLabel.Visible = false;
-            MessageBox.Show(this, ex.Message, "Installation de Lumora Browser", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -640,7 +668,15 @@ internal sealed class InstallerForm : Form
         var installRoot = Path.GetFullPath(options.InstallRoot);
         var appDir = Path.Combine(installRoot, "app");
         var newAppDir = Path.Combine(installRoot, "_new_app");
-        var profileDir = Path.Combine(localAppData, "Lumora", "installed-profile");
+        // Corrige 2026-08-30 : "installed-profile" n'a jamais ete le vrai dossier
+        // de profil de Lumora (voir Models/ProfilePaths.cs, LumoraProfilePaths.
+        // ProfilesRoot() -> "%LocalAppData%\Lumora\profiles\<id>") - ce dossier
+        // n'existant jamais, "Installation propre" et le -RemoveProfile de
+        // l'desinstallateur (WriteUninstaller ci-dessous, meme variable) ne
+        // supprimaient jamais rien, silencieusement, depuis toujours. Vise
+        // maintenant la vraie racine (tous les profils locaux, coherent avec
+        // l'intention "repartir de zero" plutot qu'un seul profil suppose).
+        var profileDir = Path.Combine(localAppData, "Lumora", "profiles");
         var startMenuDir = Path.Combine(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Lumora");
         var startMenuShortcut = Path.Combine(startMenuDir, "Lumora.lnk");
         var desktopShortcut = Path.Combine(desktopDir, "Lumora.lnk");

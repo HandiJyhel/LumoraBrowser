@@ -24995,3 +24995,244 @@ regenerer un 1.0.0 alors qu'un 1.0.0 existe deja sur disque, renommer ou
 deplacer l'existant AVANT de lancer le build (comme fait le matin via un
 worktree isole) - ne jamais compter sur le nom de sortie par defaut pour
 eviter un ecrasement silencieux.
+
+## 2026-08-30 (suite) -- Ecran noir systematique au deverrouillage : cause reelle trouvee (Argon2id synchrone sur le thread UI) -> 0.94.5.1-dev
+
+Nouveau signalement plus grave que les precedents : "toute l'application fige,
+meme les Parametres" - different du gel WebView2 deja traite (qui n'affectait
+qu'un onglet et son moteur). Diagnostic fait via le raccourci
+"Lumora (mode trace).cmd" cree sur le Bureau de l'utilisateur (lance
+l'installation REELLE avec `LUMORA_TRACE_STARTUP=1`, profil reel donc) plutot
+que via un profil de test isole - necessaire ici puisque le probleme ne se
+produit qu'en usage reel avec vrai deverrouillage.
+
+**Trouve dans le journal** : un trou de 16 secondes sans aucune ligne entre la
+fin de la saisie du code PIN et la creation du premier `WebView2`. Confirme
+"a chaque demarrage" par l'utilisateur (pas juste au premier lancement post-
+install).
+
+**Cause reelle, dans le code** : `MainWindow.Profile.cs`, deux endroits ou le
+deverrouillage du Coffre appelle une derivation Argon2id (`VaultStore.DeriveKey`,
+65536 KiB / 3 iterations / 4 threads - volontairement lente, resistance GPU/
+ASIC) **directement sur le thread d'interface**, alors que la verification du
+PIN/mot de passe juste avant est deja correctement mise sur `Task.Run` :
+- `PinPad_Click` : `_vault.UnlockWithPin(pin)` appele en direct apres
+  `await Task.Run(() => _userProfile.VerifyPin(pin))`.
+- `LoginButton_Click` : meme schema avec `_vault.EnsureUnlockedWith(pw)` apres
+  `VerifyPassword`.
+La derivation se refaisait donc une 2e fois (verif + deverrouillage = 2x
+Argon2id) et la seconde bloquait bel et bien tout l'affichage le temps du
+calcul - correspond exactement au symptome "ecran noir, plus rien ne repond,
+meme les Parametres" (rendu WinUI entier gele pendant un calcul synchrone sur
+son propre thread).
+
+**Corrige** : les deux appels passes sur `Task.Run`, comme leur verification
+voisine. Points de mesure ajoutes (`WinUiRuntimeTrace.Write`) autour de
+`UnlockWithPin` et de `ApplyStartupPage`/`RestoreTabSession` pour voir au
+prochain test si le trou de 16s se resorbe ou se deplace ailleurs (WebView2
+Environment au tout premier lancement, restauration de session...). Build 0
+erreur, 871/871 tests verts.
+
+**Mis a jour en place pour test immediat** (sur accord explicite, PAS un
+nouvel installeur) : fichiers de
+`C:\Users\Handi-Jyhel\AppData\Local\Programs\Lumora\app\` remplaces
+directement par un nouveau build propre - aucune donnee/profil touche. Le
+raccourci "Lumora (mode trace).cmd" du Bureau permet de retester avec le
+journal actif sans manipulation supplementaire.
+
+- Version `0.94.5.0-dev` -> `0.94.5.1-dev` (**4e chiffre**, vraie micro-
+  correction cette fois, pas un ajout de regle/fonctionnalite).
+
+## 2026-08-30 (suite) — 3e release 1.0.0, avec le correctif ecran noir
+
+"Go" recu pour livrer ce correctif dans une nouvelle release. **Precaution
+appliquee cette fois** (lecon de la 2e release, section precedente) :
+l'installateur existant renomme AVANT le build
+(`LumoraSetup-1.0.0-win-x64-avant-correctif-ecran-noir.exe`) au lieu d'etre
+laisse s'ecraser silencieusement. Nouveau
+`LumoraSetup-1.0.0-win-x64.exe` genere a partir de l'artefact propre deja
+construit pour la mise a jour en place ci-dessus (memes fichiers, aucune
+reconstruction inutile). SHA256 :
+`d8d6ff546bc3bb91007da6a9aa5f442f4d351b127e175473496cb240f664596b`. Jamais
+lance par moi (comme toujours). L'ancien fichier renomme reste dans
+`artifacts\installer\` en attente d'une decision de l'utilisateur (supprimer
+ou garder) - pas supprime de ma propre initiative.
+
+## 2026-08-30 (suite) — "Installation propre" n'a jamais rien supprime : cause trouvee + mode "mise a jour" ajoute a l'installateur
+
+Retour utilisateur sur une capture d'ecran de l'installateur : la case
+"Installation propre : supprimer le profil installé précédent" n'a jamais
+supprime son profil, malgre plusieurs installations avec cette case cochee.
+Il a aussi propose d'ajouter un mode "mise a jour" distinct, meme si la
+release reste toujours etiquetee 1.0.0.
+
+**Cause reelle trouvee dans `scripts\installer\Program.cs.template`** : la
+variable `profileDir` visait `%LocalAppData%\Lumora\installed-profile` - un
+dossier que l'app n'a JAMAIS utilise. Le vrai dossier (voir
+`Models/ProfilePaths.cs`, `LumoraProfilePaths.ProfilesRoot()`) est
+`%LocalAppData%\Lumora\profiles\<id>`. Le dossier vise n'existant jamais, la
+suppression ne trouvait rien a faire, silencieusement, depuis toujours. Meme
+variable partagee avec `WriteUninstaller` -> le `-RemoveProfile` du
+desinstallateur avait exactement le meme bug.
+
+**Corrige** : `profileDir` vise maintenant la vraie racine des profils.
+
+**Mode "mise a jour" ajoute** (maquette Artifact validee avant code) :
+detection au demarrage de l'installateur (app deja copiee OU profil existant
+dans `Lumora\profiles`) -> titre de fenetre et texte de la page "Bienvenue"
+adaptes ("Mise à jour de..." au lieu de "Installation de..."). Important
+surtout maintenant que la case fonctionne vraiment : elle a ete reformulee
+sans ambiguite ("Effacer aussi mon profil (favoris, mots de passe,
+historique) — repartir de zéro") et son etat par defaut depend desormais du
+contexte - cochee seulement si rien n'existe encore a perdre, decochee des
+qu'une installation ou un profil est detecte. Sans cette adaptation, corriger
+le bug seul aurait transforme une case inoffensive-mais-cassee en case
+reellement destructrice cochee par defaut.
+
+**Limite de verification assumee** : l'installateur (WinForms, positions
+pixel fixes) a ete verifie par **compilation reelle** uniquement
+(`build-installer.ps1`, 2 essais, dossier de sortie jetable a chaque fois,
+nettoye ensuite) - jamais lance, comme l'exige la regle du projet. Le
+decalage de mise en page (case sur 2 lignes au lieu d'1, controles suivants
+decales de +14px en consequence) est verifie par calcul, pas visuellement :
+a confirmer par l'utilisateur au premier vrai lancement de l'installateur.
+
+**Pas encore packagee en installeur reel** : ce correctif vit dans le
+template source, verifie seulement par des builds de test jetables
+(dossiers de sortie temporaires, supprimes). Aucun nouveau
+`LumoraSetup-1.0.0-win-x64.exe` genere pour ce correctif a ce stade - attend
+une demande explicite de l'utilisateur, comme les fois precedentes.
+
+## 2026-08-30 (suite) — 4e release 1.0.0, avec le correctif de l'installateur inclus
+
+Question de l'utilisateur sur un "installeur propre a nous" restee vague meme
+apres clarification demandee - abandonnee de son propre chef ("c'etait pour
+passer la limite"). Demande claire ensuite : generer un vrai installeur
+1.0.0 avec tout dedans, proprement (leçon des fois precedentes appliquee).
+
+Ancien `LumoraSetup-1.0.0-win-x64.exe` (qui n'avait que le correctif ecran
+noir, pas encore celui de l'installateur) renomme en
+`LumoraSetup-1.0.0-win-x64-avant-correctif-installeur.exe` avant de generer
+le nouveau - toujours a partir du meme artefact propre deja construit
+(`Lumora-1.0.0-win-x64-clean-20260830-171204`, code app inchange depuis).
+Nouveau SHA256 : `4ed428a0a3373f0a5b79a41f90da853fd73feaf4f2832f191f014b6190f1d6ca`.
+
+`artifacts\installer\` contient maintenant 3 fichiers `LumoraSetup-1.0.0-*.exe`
+(l'actuel + 2 renommes "avant-correctif-..."). Nettoyage pas fait de ma propre
+initiative - a proposer/demander a l'utilisateur. Jamais lance par moi (comme
+toujours).
+
+## 2026-08-30 (suite) — Consigne : plus aucune release avant que le depot soit correct. Vrai bug trouve : TabForCore -> 0.94.5.2-dev
+
+Consigne explicite et ferme de l'utilisateur, frustration justifiee apres
+plusieurs releases qui laissaient encore des bugs reels : **je ne touche plus
+qu'au depot** (code) jusqu'a nouvel ordre - aucune nouvelle release/installeur
+tant qu'il n'a pas dit que c'est bon.
+
+**Nouveau signalement** : connexion Google depuis claude.ai (site tiers, pas
+Google lui-meme) reste bloquee "ça cherche" apres la tentative de connexion.
+Meme protocole de diagnostic que les fois precedentes : process encore vivant
+-> instantane pris (accord donne), analyse, supprime immediatement. Meme
+conclusion que les 2 fois precedentes : tous les threads de Lumora.WinUI.exe
+sains, thread d'interface simplement en attente normale du message pump - pas
+un deadlock dans le code C#.
+
+**Cette fois, cause reelle trouvee par lecture cibree** (pas par le dump) :
+`BrowserCore_WindowCloseRequested` utilisait `TabForCore(core)` -
+`ReferenceEquals` sur un wrapper `CoreWebView2` - **piege deja documente**
+dans ce meme depot ([[pieges-webview2-evenements]]) mais reintroduit ici sans
+etre revu. Quand un site (la fenetre de connexion Google ouverte en popup,
+notamment) appelle `window.close()` apres une connexion reussie, ce lookup
+peut echouer silencieusement -> `CloseTab` n'est jamais appele -> la popup ne
+se ferme jamais -> le site d'origine (claude.ai) reste a attendre
+indefiniment la fin du flux. Correspond exactement au symptome "ça cherche".
+
+**Corrige** : `WindowCloseRequested` capture maintenant directement le
+`BrowserTabState` par fermeture (au moment de l'abonnement dans
+`BrowserView_CoreWebView2Initialized`, ou `tab` est deja connu), au lieu de le
+retrouver plus tard par comparaison de reference. Meme correctif applique par
+coherence a 2 autres abonnements du meme bloc qui avaient exactement le meme
+defaut (`DocumentTitleChanged`, `SourceChanged` - titre/adresse d'onglet
+pouvant rater une mise a jour silencieusement) ; `FaviconChanged` simplifie en
+ligne (appelle directement `CaptureFaviconForTabAsync(tab)`).
+
+**Pas touche, signale pour plus tard** : `TabForCore` a encore 4 usages
+ailleurs avec potentiellement le meme defaut -
+`CoreWebView2_NewWindowRequested` (MainWindow.Navigation.cs, pour lier une
+popup a son onglet parent), `MainWindow.PageContextMenu.cs`,
+`MainWindow.Wallet.cs`, et `MainWindow.WebMessaging.cs` (celui-ci gate une
+verification de securite - un site tiers ne doit pas pouvoir declencher les
+messages `newtab_*` reserves a la page d'accueil - fail-closed donc pas
+dangereux si ça echoue, juste casse). Pas corriges maintenant : portee plus
+large, risque de regression plus eleve sans avoir lu chaque methode en
+entier - a traiter dans une passe dediee plutot qu'en marge de ce correctif.
+
+Build 0 erreur, 871/871 tests verts. Version `0.94.5.1-dev` -> `0.94.5.2-dev`
+(**4e chiffre**, correctif de bug reel).
+
+## 2026-08-30 (suite) — Les 4 usages de TabForCore corriges en entier (demande explicite, "correctement")
+
+L'utilisateur a releve que je n'avais nomme que 3 des 4 endroits signales -
+demande de les corriger tous, "correctement" (lire chaque methode en entier
+avant de toucher, pas de raccourci).
+
+**Les 4, tous corriges** :
+1. `CoreWebView2_NewWindowRequested` (parentTab d'un popup) - `parentTab`
+   capture par fermeture, `TabForCore(sender)` supprime.
+2. `CoreWebView2_ContextMenuRequested` (menu contextuel) - `tab` capture par
+   fermeture.
+3. `HandlePaymentFormDetected` (Wallet.cs) - accepte directement
+   `BrowserTabState tab` au lieu de `CoreWebView2?` + lookup interne.
+4. `BrowserCore_WebMessageReceived` (garde anti-usurpation des messages
+   `newtab_*`) - `tab` capture par fermeture ; en cascade, ses 4 sous-
+   gestionnaires (`HandleReaderAnnotationMessage`, `HandlePaymentFormDetected`,
+   `HandleContentFullScreenExitSignal`, `HandleConsentHandledMessage`) audites
+   un par un : les 3 premiers utilisaient deja `core` directement (proprietes/
+   methodes, pas de lookup - sans danger) ou une correspondance par URI deja
+   correcte (`HandleConsentHandledMessage`, deja un exemple canonique du bon
+   pattern, commentaire explicite a l'appui) ; seul `HandlePaymentFormDetected`
+   avait le meme defaut, corrige au point 3.
+
+**`TabForCore` (la methode elle-meme) supprimee** : plus aucun appelant apres
+ces 4 corrections - laissee en place, quelqu'un (moi y compris, plus tard)
+aurait fini par la reutiliser par erreur. Piste separee reperee en marge et
+PAS touchee : `HandleContentFullScreenExitSignal` compare `_contentFullScreenCore`
+via `ReferenceEquals` - meme famille de risque, mais pas un `TabForCore` et
+deja marque "idempotent" par un commentaire existant qui savait deja que la
+comparaison pouvait ne pas matcher. A verifier separement si un jour un bug de
+sortie plein ecran est signale.
+
+Build 0 erreur, 871/871 tests verts (inchange, ce correctif ne touche que la
+fiabilite d'identification d'onglet, aucune nouvelle logique testable
+isolement).
+
+**Test de fumee en direct tente, non concluant** : lancement + navigation +
+nouvel onglet via pilotage UIA, process disparu deux fois au meme point
+(juste apres le mode invite) sans qu'aucune ligne "UNHANDLED" n'apparaisse
+dans le journal de trace (actif, verifie) ni qu'aucun evenement de
+plantage/gel Windows ne soit enregistre - meme signature que la disparition
+environnementale deja documentee plusieurs fois cette session (non liee au
+code), mais un processus orphelin a aussi ete retrouve encore vivant apres
+qu'un test l'ait cru mort (`tasklist` l'a vu, pas ma requete UIA) : la
+detection de "processus disparu" utilisee dans ce pilotage n'est donc pas
+totalement fiable non plus. Aucune preuve d'une regression liee a ces
+correctifs, mais pas de confirmation visuelle complete non plus - a confirmer
+par l'utilisateur en usage reel.
+
+## 2026-08-30 (suite) — 5e release 1.0.0, l'utilisateur juge le depot pret
+
+Demande explicite de refaire la release avec tout ce qui a ete fait -
+l'utilisateur leve lui-meme la pause posee plus tot ("plus de release tant
+que le depot n'est pas correct"), c'est son appreciation a faire, pas la
+mienne. Ancien `LumoraSetup-1.0.0-win-x64.exe` renomme
+(`LumoraSetup-1.0.0-win-x64-avant-correctifs-tabforcore.exe`) avant de
+generer le nouveau - le code app ayant change depuis le dernier artefact
+propre (correctifs TabForCore), rebuild complet fait (pas de reutilisation
+d'un ancien artefact cette fois).
+
+Nouveau SHA256 : `4f0215292403e11c566880657659847d959f3fabbc9c6e1aab299380c6d4a91c`.
+
+`artifacts\installer\` contient maintenant 4 fichiers `LumoraSetup-1.0.0-*.exe`
+(l'actuel + 3 renommes "avant-correctif(s)-..."). Nettoyage toujours pas fait
+de ma propre initiative - propose a l'utilisateur, jamais tranche seul.
+Jamais lance par moi (comme toujours).

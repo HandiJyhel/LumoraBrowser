@@ -202,8 +202,15 @@ public sealed partial class MainWindow
     private BrowserTabState? TabForView(WebView2? view) =>
         view is null ? null : _tabs.FirstOrDefault(tab => ReferenceEquals(tab.View, view));
 
-    private BrowserTabState? TabForCore(CoreWebView2? core) =>
-        core is null ? null : _tabs.FirstOrDefault(tab => ReferenceEquals(tab.View?.CoreWebView2, core));
+    // TabForCore(CoreWebView2? core) supprimee le 2026-08-30 : ReferenceEquals sur
+    // un wrapper CoreWebView2 est un piege documente (pieges-webview2-evenements)
+    // qui echoue silencieusement meme sur le bon onglet - cause reelle du bug
+    // "fenetre de connexion Google qui ne se ferme jamais" (WindowCloseRequested)
+    // et de 5 autres points muets du meme genre, tous corriges. Ne plus jamais
+    // retrouver un onglet par ReferenceEquals(CoreWebView2) : capturer le
+    // BrowserTabState par fermeture au moment de l'abonnement (voir
+    // BrowserView_CoreWebView2Initialized), ou faire correspondre par id
+    // d'onglet / URI attestee (e.Source), jamais par identite d'objet.
 
     private bool IsActiveView(WebView2? view) =>
         view is not null && ReferenceEquals(_browserView, view);
@@ -392,14 +399,35 @@ public sealed partial class MainWindow
         try { sender.CoreWebView2.Settings.IsReputationCheckingRequired = _uiSettings.SmartScreenEnabled; }
         catch { }
 
-        sender.CoreWebView2.DocumentTitleChanged += BrowserCore_DocumentTitleChanged;
-        sender.CoreWebView2.SourceChanged += BrowserCore_SourceChanged;
-        sender.CoreWebView2.FaviconChanged += BrowserCore_FaviconChanged;
+        // Les 3 abonnements suivants capturent `tab` directement par fermeture,
+        // pour la meme raison que WindowCloseRequested plus bas : TabForCore
+        // (ReferenceEquals sur CoreWebView2) est un piege deja documente
+        // (pieges-webview2-evenements) qui echoue silencieusement - titre,
+        // favicon et adresse de l'onglet pouvaient donc rater une mise a jour
+        // sans aucun signe visible (2026-08-30, audit suite au bug de fermeture
+        // de fenetre de connexion Google ci-dessous).
+        sender.CoreWebView2.DocumentTitleChanged += (core, _) => BrowserCore_DocumentTitleChanged(tab, core);
+        sender.CoreWebView2.SourceChanged += (_, _) => BrowserCore_SourceChanged(tab);
+        sender.CoreWebView2.FaviconChanged += async (_, _) => await CaptureFaviconForTabAsync(tab);
         sender.CoreWebView2.DownloadStarting += CoreWebView2_DownloadStarting;
         sender.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
-        sender.CoreWebView2.WebMessageReceived += BrowserCore_WebMessageReceived;
+        // `tab` capture par fermeture, meme raison que les abonnements voisins
+        // (2026-08-30) : le seul usage de TabForCore dans ce gestionnaire
+        // (verification que les messages newtab_* viennent bien de
+        // lumora://accueil) echouait silencieusement, fail-closed - la garde
+        // marchait donc "par accident" (elle refusait quand elle n'aurait pas
+        // du), mais aurait pu tout aussi bien laisser passer un faux negatif
+        // sur un autre onglet legitime.
+        sender.CoreWebView2.WebMessageReceived += (_, args) => BrowserCore_WebMessageReceived(tab, args);
         sender.CoreWebView2.WebResourceResponseReceived += CoreWebView2_WebResourceResponseReceived;
-        sender.CoreWebView2.WindowCloseRequested += BrowserCore_WindowCloseRequested;
+        // `tab` capture directement ici, jamais retrouve par la suite via
+        // TabForCore/ReferenceEquals(CoreWebView2) - piege deja documente
+        // (pieges-webview2-evenements), et c'est exactement ce que faisait ce
+        // point precis avant correction (2026-08-30, retour utilisateur :
+        // fenetre de connexion Google - claude.ai notamment - qui ne se
+        // fermait jamais toute seule apres connexion reussie, site d'origine
+        // reste bloque en attente).
+        sender.CoreWebView2.WindowCloseRequested += (_, _) => BrowserCore_WindowCloseRequested(tab);
         sender.CoreWebView2.ContainsFullScreenElementChanged += BrowserCore_ContainsFullScreenElementChanged;
 
         // Interception réseau pour le bloqueur de pubs/trackers
@@ -407,13 +435,18 @@ public sealed partial class MainWindow
         sender.CoreWebView2.WebResourceRequested += CoreWebView2_WebResourceRequested;
 
         // Popups / target=_blank / window.open : ouvrir dans un onglet Lumora au lieu
-        // d'une fenêtre parasite non contrôlée.
-        sender.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+        // d'une fenêtre parasite non contrôlée. `tab` capture par fermeture (meme
+        // raison que WindowCloseRequested plus haut) : CoreWebView2_NewWindowRequested
+        // retrouvait jusqu'ici l'onglet parent via TabForCore(sender), qui echoue
+        // silencieusement (piege deja documente, pieges-webview2-evenements) -
+        // corrige 2026-08-30, audit suite au bug de fermeture de fenetre de connexion.
+        sender.CoreWebView2.NewWindowRequested += (core, args) => CoreWebView2_NewWindowRequested(tab, core, args);
 
         // Menu contextuel (clic droit) restylise a l'identite Lumora
         // (chantier identite visuelle, 2026-08-10) - voir
-        // MainWindow.PageContextMenu.cs.
-        sender.CoreWebView2.ContextMenuRequested += CoreWebView2_ContextMenuRequested;
+        // MainWindow.PageContextMenu.cs. `tab` capture par fermeture, meme raison
+        // que ci-dessus (2026-08-30).
+        sender.CoreWebView2.ContextMenuRequested += (_, args) => CoreWebView2_ContextMenuRequested(tab, args);
 
         // Moteur qui ne repond plus (0.94.3.0-dev, retour utilisateur : gel complet
         // apres usage de Google Drive/YouTube). `tab` est capture par fermeture ici,
@@ -486,9 +519,9 @@ public sealed partial class MainWindow
         }
     }
 
-    private void BrowserCore_DocumentTitleChanged(object? sender, object e)
+    private void BrowserCore_DocumentTitleChanged(BrowserTabState tab, CoreWebView2 core)
     {
-        if (sender is not CoreWebView2 core || TabForCore(core) is not { } tab)
+        if (!_tabs.Contains(tab))
         {
             return;
         }
@@ -499,14 +532,6 @@ public sealed partial class MainWindow
             var sourceAddress = tab.View?.Source?.ToString() ?? tab.Address;
             var addressForTab = BookmarkStore.IsWebUrl(sourceAddress) ? sourceAddress : tab.Address;
             UpdateTab(tab, title, addressForTab, updateHeaderOnly: true);
-        }
-    }
-
-    private async void BrowserCore_FaviconChanged(object? sender, object e)
-    {
-        if (sender is CoreWebView2 core && TabForCore(core) is { } tab)
-        {
-            await CaptureFaviconForTabAsync(tab);
         }
     }
 
@@ -782,14 +807,14 @@ public sealed partial class MainWindow
         NavigateTabView(tab, httpUrl);
     }
 
-    private void BrowserCore_SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs args)
+    private void BrowserCore_SourceChanged(BrowserTabState tab)
     {
         if (_isProgrammaticNavigation)
         {
             return;
         }
 
-        if (sender is not CoreWebView2 core || TabForCore(core) is not { } tab)
+        if (!_tabs.Contains(tab))
         {
             return;
         }
@@ -1364,7 +1389,9 @@ public sealed partial class MainWindow
 
     private bool RestoreTabSession()
     {
+        WinUiRuntimeTrace.Write("RestoreTabSession: start");
         var session = TabSession.Load(_profile.TabsFile, _profile.LegacyTabsFile);
+        WinUiRuntimeTrace.Write($"RestoreTabSession: TabSession.Load termine, {session.Tabs.Count} onglet(s)");
         if (session.Tabs.Count == 0)
         {
             return false;
@@ -1420,20 +1447,26 @@ public sealed partial class MainWindow
         return _tabs.FirstOrDefault(tab => tab.Id == id);
     }
 
-    private async void CoreWebView2_NewWindowRequested(CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
+    // `parentTab` capture par fermeture au moment de l'abonnement
+    // (BrowserView_CoreWebView2Initialized, ou l'onglet est deja connu) - jamais
+    // retrouve ici via TabForCore(sender), qui echoue silencieusement (piege deja
+    // documente, pieges-webview2-evenements ; corrige 2026-08-30). Avant ce
+    // correctif, un lookup rate laissait simplement `parentTab` a null : le popup
+    // s'ouvrait quand meme, mais sans lien vers son onglet d'origine (pression
+    // publicitaire et retour au parent a la fermeture tous les deux silencieusement
+    // desactives pour ce popup precis).
+    private async void CoreWebView2_NewWindowRequested(BrowserTabState parentTab, CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
     {
         RecordLoginDiagnosticForNavigation(sender.Source, "new-window-requested", args.Uri, args.IsUserInitiated ? "user-initiated" : "not-user-initiated");
-
-        var parentTab = TabForCore(sender);
 
         // Popups indésirables (popunder automatique, clic détourné vers un domaine
         // publicitaire, rafale sur un même geste) : bloquées AVANT toute création
         // d'onglet. Politique pure dans PopupPolicy ; les fenêtres
         // d'authentification passent toujours.
-        var popupVerdict = DecidePopupVerdict(args.Uri, sender.Source, args.IsUserInitiated, parentTab?.Id);
+        var popupVerdict = DecidePopupVerdict(args.Uri, sender.Source, args.IsUserInitiated, parentTab.Id);
         if (popupVerdict != PopupVerdict.Allow)
         {
-            ReportBlockedPopup(popupVerdict, args.Uri, sender.Source, parentTab?.Id);
+            ReportBlockedPopup(popupVerdict, args.Uri, sender.Source, parentTab.Id);
             args.Handled = true;
             return;
         }
@@ -1453,7 +1486,7 @@ public sealed partial class MainWindow
             // (postMessage). Une fenêtre restée en arrière-plan est une fenêtre que
             // l'utilisateur ne voit jamais - bug réel constaté le 2026-08-19 (Deliveroo).
             var popupTab = AddTab(PopupTabTitle(uri), uri, select: true, createViewWhenSelected: false);
-            if (parentTab is not null)
+            if (_tabs.Contains(parentTab))
             {
                 _popupParentTabIds[popupTab.Id] = parentTab.Id;
                 _navHealth.RegisterPopupOpened(parentTab.Id, DateTimeOffset.Now);
@@ -1665,9 +1698,9 @@ public sealed partial class MainWindow
                path.Contains("modal", StringComparison.Ordinal);
     }
 
-    private void BrowserCore_WindowCloseRequested(object? sender, object e)
+    private void BrowserCore_WindowCloseRequested(BrowserTabState tab)
     {
-        if (sender is CoreWebView2 core && TabForCore(core) is { } tab)
+        if (_tabs.Contains(tab))
         {
             CloseTab(tab);
         }
