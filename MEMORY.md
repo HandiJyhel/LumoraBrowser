@@ -26040,3 +26040,43 @@ seul) : micro-correctif. Version `0.94.7.2-dev` -> `0.94.7.3-dev` (**4e
 chiffre**). 5 fichiers alignes (test
 `Version_projet_est_alignee_sur_0_94_7_3`). Build 0 erreur, 872/872 tests
 verts apres le bump. Rien de committe (l'utilisateur commit lui-meme).
+
+## 2026-08-31 (suite) — 8e release 1.0.0 : tout le delta de la session commite, installateur regenere
+
+Demande explicite : "tu vas faire la release 1.0.0". Tout le travail de
+cette session (et de la session precedente "lock dev only", jamais
+committee non plus) etait encore non committe - **commit `9d1d560`** (25
+fichiers, lien externe differe/Incognito telechargements+video/veille
+onglets/reconciliation toolbar + audit "Nettoyage" complet + optimisation
+R2R, detail dans les entrees ci-dessus).
+
+**Meme protocole que les 7 releases precedentes**, applique a l'identique :
+worktree jetable (`C:\lumora100`, chemin court pour `mt.exe`, detache sur
+`9d1d560`), runtime WebView2 Fixed Version (`150.0.4078.105`, gitignore)
+copie a la main dans le worktree, `ReleaseVersion` mis a `"1.0.0"`
+**UNIQUEMENT dans ce worktree** - verifie apres coup : `git status` propre
+dans le depot principal, `ReleaseVersion = null` toujours en place. Artefact
+propre (`build-clean-test-artifact.ps1 -Version "1.0.0"`) puis installateur
+(`build-installer.ps1 -Version "1.0.0"`) generes depuis le worktree, tous
+deux 0 erreur.
+
+**Verifie en direct** (skill `verify`, profil isole jetable) - l'executable
+de l'artefact propre (jamais l'installateur lui-meme) : titre de fenetre
+confirme `"Lumora 1.0.0"` (pas un numero de dev), navigation reelle vers un
+site externe reussie (`https://example.com`, `NavigationCompleted
+isSuccess=True`), aucune ligne `UNHANDLED` dans le journal, demarrage rapide
+maintenu (~485ms de `App constructor start` a `MainWindow constructed`,
+coherent avec le gain R2R deja mesure).
+
+SHA256 installateur : `b1d28993d6d114a142f33a2502e8a0b12d6eb3704e847949866bc77fbe59d5f0`
+(SHA256 executable applicatif :
+`c48ed3043f4d3787dfb80a1b3f55a3f735c1b76e29e3ab84ee6c196f03cce187`).
+Verifies deux fois chacun (sortie des scripts + `sha256sum` independant,
+avant ET apres copie dans le depot principal - 4 verifications au total,
+toutes identiques). Ancien `LumoraSetup-1.0.0-win-x64.exe` (+ son
+`.VERIFICATION.txt`) **supprime**, pas renomme - meme consigne que les
+releases precedentes. Anciens manifestes `.sha256` (texte, historique)
+laisses en place, seul le gros binaire est remplace. Worktree supprime
+apres coup (`git worktree remove --force`) - confirme absent du disque.
+
+Jamais lance par moi (comme toujours).
