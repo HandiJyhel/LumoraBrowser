@@ -23,6 +23,12 @@ internal sealed class UiSettings
 
     public bool BookmarksBarVisible { get; set; } = true;
     public string BookmarksBarPosition { get; set; } = "top";
+    // Mode d'affichage du contenu du gestionnaire de favoris (2026-08-31,
+    // session "gestion des favoris") : "icons" (grille de vignettes,
+    // comportement historique, defaut inchange), "list" (une ligne compacte
+    // par favori) ou "details" (ligne + colonne adresse/info, plus lisible
+    // pour reperer une URL precise parmi beaucoup de favoris).
+    public string BookmarkViewMode { get; set; } = "icons";
     public bool VerticalTabsEnabled { get; set; }
     public string TabStripPosition { get; set; } = "top";
     public bool VerticalTabsCompact { get; set; }

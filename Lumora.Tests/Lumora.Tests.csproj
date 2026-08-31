@@ -73,6 +73,7 @@
     <Compile Include="..\Lumora.WinUI\WebApps\IcoWriter.cs" Link="Product\IcoWriter.cs" />
     <Compile Include="..\Lumora.WinUI\HorizontalDragReorderMath.cs" Link="Product\HorizontalDragReorderMath.cs" />
     <Compile Include="..\Lumora.WinUI\AdjacentMoveMath.cs" Link="Product\AdjacentMoveMath.cs" />
+    <Compile Include="..\Lumora.WinUI\BookmarkDropMath.cs" Link="Product\BookmarkDropMath.cs" />
     <Compile Include="..\Lumora.WinUI\FaviconQuality.cs" Link="Product\FaviconQuality.cs" />
     <Compile Include="..\Lumora.WinUI\Credentials\CredentialCsv.cs" Link="Product\CredentialCsv.cs" />
     <Compile Include="..\Lumora.WinUI\NewTabMarkup.cs" Link="Product\NewTabMarkup.cs" />

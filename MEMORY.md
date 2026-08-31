@@ -26080,3 +26080,92 @@ laisses en place, seul le gros binaire est remplace. Worktree supprime
 apres coup (`git worktree remove --force`) - confirme absent du disque.
 
 Jamais lance par moi (comme toujours).
+
+## 2026-08-31 (suite) — Session "gestion des favoris" : glisser-déposer réel, "Déplacer vers…", modes d'affichage
+
+Nouvelle session, nommée par l'utilisateur. Constat de départ (retour direct,
+après la 8e release 1.0.0) : "la gestion des favoris est à chier" - jusqu'ici
+on ne pouvait que créer/renommer un dossier et déplacer un favori d'UN cran
+parmi ses frères (`BookmarkStore.MoveNodeAdjacent`/`ReorderNode`,
+`MainWindow.BookmarksFlyouts.cs`) - **aucun moyen de ranger un favori DANS un
+dossier** n'existait, ni par glisser ni par menu. Maquette montrée d'abord
+(canvas Claude Design, 4 écrans : arborescence hiérarchique, glisser "dans"
+un dossier, menu "Déplacer vers…", sélection multiple) avant tout code,
+conformément à la règle. `Go` donné, puis demande explicite de 3 ajouts :
+glisser-déposer, menu contextuel, modes d'affichage liste/détaillé (clarifié
+par question : façon Explorateur Windows - Icônes/Liste/Détails).
+
+**Uniquement sur la branche dev, rien touché côté release** (contrainte
+explicite de l'utilisateur en début de session).
+
+**1. `BookmarkStore.MoveNode(movedId, newParentId)`** (`Models/Bookmarks.cs`) :
+nouvelle méthode de déplacement DANS un dossier différent (`ReorderNode`
+existant ne gérait que le réordonnancement entre frères du même parent).
+Refuse racine/cycle (`IsDescendantOfMoved`, remonte la chaîne `ParentId`)
+silencieusement, comme les méthodes voisines déjà en place.
+
+**2. Glisser-déposer réel dans la grille de favoris** (nouveau fichier
+`MainWindow.BookmarksGridDragDrop.cs` + `BookmarkDropMath.cs`, pur/testé) :
+même architecture que le glisser de la barre (`MainWindow.BookmarksDragDrop.cs`,
+suivi manuel du pointeur, capture sur le PANNEAU jamais sur le
+`ListViewItem` - même piège documenté que `Button`, voir
+[[pieges-webview2-evenements]]) - cablage par `ContainerContentChanging` +
+`AddHandler(..., handledEventsToo: true)` sur chaque conteneur recyclé.
+Survol du centre d'une vignette-dossier = ranger dedans (surbrillance sur
+`ContentTemplateRoot`), survol du bord = reordonner - portée volontairement
+limitée aux enfants directs du dossier ouvert (atteindre un dossier ailleurs
+passe par "Déplacer vers…", pas de glisser cross-panneau vers l'arborescence
+de gauche - simplification assumée pour limiter le risque après les 3 rounds
+déjà vécus sur le glisser de la barre).
+
+**3. "Déplacer vers…"** (nouveau fichier `MainWindow.BookmarksMoveTo.cs`) :
+réutilise le picker "dossier + fil d'ariane" déjà éprouvé de l'ajout/édition
+de favori (`BuildBookmarkFolderChoices`) plutôt qu'un nouvel arbre dédié -
+simplification délibérée par rapport à la maquette (mini-arbre visuel), pour
+rester sur du code déjà testé. Câblé au menu contextuel (nouvel item, en plus
+de "Déplacer avant/après") et à un nouveau bouton toolbar ("Déplacer vers…").
+
+**4. Modes d'affichage Icônes/Liste/Détails** (nouveau fichier
+`MainWindow.BookmarksViewMode.cs`, `UiSettings.BookmarkViewMode` persisté) :
+3 `RadioButton` (`NovaSubTabRadioButtonStyle`, réutilisé) permutent
+`BookmarksList.ItemsPanel`/`ItemTemplate` entre 3 `DataTemplate` nommés
+(`MainWindow.xaml`). Pas de colonne "date d'ajout" en mode Détails : cette
+donnée n'existe pas dans le format de stockage actuel, l'inventer aurait été
+trompeur - colonne "Adresse" à la place (donnée réelle).
+
+**Bug réel trouvé PAR la vérification réelle, pas en relecture** : la barre
+d'outils du panneau (déjà chargée, 9 boutons) débordait hors fenêtre une fois
+"Déplacer vers…" + les 3 radios ajoutés à côté - "Liste"/"Détails" invisibles,
+coupés par le bord de fenêtre (capture d'écran à l'appui, fenêtre pourtant
+large). Corrigé en regroupant Vider/Importer/Exporter/Retrouver les icônes
+dans un menu "Plus" (`MenuFlyout`) - la piste de décluttering déjà proposée
+(et jamais tranchée) lors de la présentation des maquettes, confirmée
+nécessaire ici par un vrai test, pas juste une préférence esthétique.
+
+**Vérifié en réel** (skill `verify`, profil invité isolé, tout le flux dans
+des appels PowerShell/UIA groupés vu l'instabilité des popups entre deux
+appels séparés) : création de 2 dossiers de test, ajout d'un favori réel
+(`example.com`), **"Déplacer vers…" confirmé de bout en bout** (dialogue +
+ComboBox + déplacement réel vérifié via `BookmarkNode.ParentId` changé et
+compteurs de dossiers mis à jour), **3 modes d'affichage confirmés** par la
+géométrie réelle des lignes/vignettes (tuile ~136×104 en Icônes, ligne pleine
+largeur ~60px en Liste, +22px de décalage en Détails = en-tête "Nom/Adresse"
+apparu) et capture d'écran. Barre d'outils re-vérifiée après le correctif :
+tout tient, plus rien de coupé. Aucune ligne `UNHANDLED` dans le journal sur
+toute la session de vérification.
+
+**Non vérifiable dans cet environnement** (limitation déjà documentée, pas
+spécifique à ce code) : l'ouverture d'un `MenuFlyoutItem` par clic droit
+(l'entrée "Déplacer vers…" du menu contextuel n'a pas pu être testée en
+direct) et le geste de glisser-déposer lui-même (injection pointeur
+synthétique refusée). Les deux s'appuient sur le même code déjà exercé
+autrement (le test source `BookmarkManagementRegressionTests.cs` couvre le
+câblage, `BookmarkDropMathTests.cs` couvre la logique pure de cible de
+dépôt) - signalé explicitement à l'utilisateur plutôt que deviné.
+
+Build 0 erreur/0 avertissement, 884/884 tests verts (12 nouveaux : 7
+`BookmarkDropMathTests` + 5 `BookmarkManagementRegressionTests`).
+Version `0.94.7.3-dev` -> `0.94.8.0-dev` (**3e chiffre**, ajout de
+fonctionnalité - 5 fichiers alignés, test
+`Version_projet_est_alignee_sur_0_94_8_0`). Rien de committé (l'utilisateur
+commit lui-même).

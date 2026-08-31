@@ -340,6 +340,85 @@ public sealed class BookmarkStore
         return true;
     }
 
+    // Deplacement DANS un dossier different (2026-08-31, "gestion des favoris
+    // a chier" - jusqu'ici ReorderNode ne savait que reordonner ENTRE FRERES
+    // DU MEME PARENT ; aucun moyen de ranger un favori DANS un dossier
+    // n'existait, ni par glisser ni par menu). Toujours ajoute en DERNIERE
+    // position parmi les enfants du nouveau parent - un ReorderNode
+    // (deja teste) peut affiner la position ensuite si besoin.
+    // Refuse silencieusement (retourne false, comme ReorderNode/RemoveNode) :
+    // - movedId absent ou racine (une racine n'a pas de parent a changer) ;
+    // - newParentId absent ou n'est pas un dossier ;
+    // - newParentId == movedId (un noeud ne peut pas devenir son propre
+    //   parent) ;
+    // - newParentId est un DESCENDANT de movedId (deplacer "Voyages" dans
+    //   "Voyages/Vols" creerait un cycle - IsDescendantOfMoved remonte la
+    //   chaine ParentId depuis newParentId jusqu'a une racine, en cherchant
+    //   movedId sur le trajet).
+    public bool MoveNode(string movedId, string newParentId)
+    {
+        var nodes = AllNodes();
+        var moved = nodes.FirstOrDefault(node => node.Id == movedId);
+        if (moved is null || moved.IsRoot)
+        {
+            return false;
+        }
+
+        var newParent = nodes.FirstOrDefault(node => node.Id == newParentId);
+        if (newParent is null || newParent.Kind != BookmarkKind.Folder || newParent.Id == movedId)
+        {
+            return false;
+        }
+
+        if (IsDescendantOfMoved(nodes, newParentId, movedId))
+        {
+            return false;
+        }
+
+        if (moved.ParentId.Equals(newParentId, StringComparison.Ordinal))
+        {
+            // Deja dans ce dossier : rien a faire (evite un aller-retour
+            // disque inutile et une position "en dernier" surprenante pour
+            // un favori qui n'a en realite pas bouge).
+            return true;
+        }
+
+        var index = nodes.FindIndex(node => node.Id == movedId);
+        nodes[index] = moved with
+        {
+            ParentId = newParentId,
+            Position = NextPosition(nodes, newParentId)
+        };
+        WriteNodes(nodes);
+        return true;
+    }
+
+    // Vrai si candidateId EST movedId ou l'un de ses descendants (remonte la
+    // chaine ParentId depuis candidateId). Utilise par MoveNode pour refuser
+    // tout deplacement qui creerait un cycle (dossier depose dans son propre
+    // sous-dossier).
+    private static bool IsDescendantOfMoved(IReadOnlyList<BookmarkNode> nodes, string candidateId, string movedId)
+    {
+        var currentId = candidateId;
+        while (!string.IsNullOrEmpty(currentId))
+        {
+            if (currentId == movedId)
+            {
+                return true;
+            }
+
+            var current = nodes.FirstOrDefault(node => node.Id == currentId);
+            if (current is null)
+            {
+                return false;
+            }
+
+            currentId = current.ParentId;
+        }
+
+        return false;
+    }
+
     // Alternative au glisser (2026-08-14, demande explicite utilisateur apres
     // plusieurs echecs reels du glisser-deposer malgre 3 correctifs bases sur
     // de la documentation officielle puis une trace reelle - voir MEMORY.md) :

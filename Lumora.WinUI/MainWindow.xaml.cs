@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.7.3-dev";
+    internal const string Version = "0.94.8.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -164,6 +164,8 @@ public sealed partial class MainWindow : Window
     private bool _compactModeEnabled;
     private string _tabStripPosition = "top";
     private string _bookmarksBarPosition = "top";
+    // "icons" | "list" | "details" - voir MainWindow.BookmarksViewMode.cs.
+    private string _bookmarkViewMode = "icons";
     // Taille de l'interface (boutons de la barre d'outils, ligne d'outils,
     // barre d'adresse, barre de favoris) : "comfortable" | "standard" |
     // "dense", voir MainWindow.UiDensity.cs. Reglage independant du Mode

@@ -41,6 +41,15 @@ public sealed partial class MainWindow
             _ => "top"
         };
 
+    // "icons" | "list" | "details" - voir MainWindow.BookmarksViewMode.cs.
+    private static string NormalizeBookmarkViewMode(string? value) =>
+        value?.Trim().ToLowerInvariant() switch
+        {
+            "list" => "list",
+            "details" => "details",
+            _ => "icons"
+        };
+
     private static bool UsesVerticalTabRail(string tabStripPosition) =>
         tabStripPosition is "left" or "right";
 
@@ -609,6 +618,8 @@ public sealed partial class MainWindow
                     ? (_uiSettings.VerticalTabsEnabled ? "left" : "top")
                     : _uiSettings.TabStripPosition);
             _bookmarksBarPosition = NormalizeBookmarksBarPosition(_uiSettings.BookmarksBarPosition);
+            _bookmarkViewMode = NormalizeBookmarkViewMode(_uiSettings.BookmarkViewMode);
+            ApplyBookmarkViewMode();
             _verticalTabsEnabled = UsesVerticalTabRail(_tabStripPosition);
             _uiDensity = NormalizeUiDensity(_uiSettings.UiDensity);
             _verticalTabsCompact = _uiSettings.VerticalTabsCompact;

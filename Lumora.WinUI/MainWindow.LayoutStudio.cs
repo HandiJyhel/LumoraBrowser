@@ -164,6 +164,7 @@ public sealed partial class MainWindow
 
         _uiSettings.BookmarksBarVisible = BookmarksBarSwitch.IsOn;
         _uiSettings.BookmarksBarPosition = _bookmarksBarPosition;
+        _uiSettings.BookmarkViewMode = _bookmarkViewMode;
         _uiSettings.VerticalTabsEnabled = _verticalTabsEnabled;
         _uiSettings.TabStripPosition = _tabStripPosition;
         _uiSettings.UiDensity = _uiDensity;

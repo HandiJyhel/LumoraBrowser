@@ -153,6 +153,32 @@ PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationCl
   souvent le `TextBlock` interne (pas invocable) : `TryGetCurrentPattern` sur ce
   noeud echoue ("Modele non pris en charge") - remonter au parent avec
   `TreeWalker.GetParent` jusqu'a trouver un noeud qui supporte `InvokePattern`.
+  Meme ambiguite sur les boutons custom de l'app (icone+texte dans un
+  `StackPanel`) : le `Button` lui-meme a un `Name` VIDE, le libelle vit sur un
+  `ControlType.Text` enfant - chercher par Name+Type=Text puis remonter au
+  parent Button. A l'inverse, le bouton PRIMARY/CLOSE d'un `ContentDialog`
+  (`PrimaryButtonText`/`CloseButtonText`) porte le libelle DIRECTEMENT comme
+  son propre `Name` (pas de Text enfant) - chercher par Name+Type=Button
+  directement pour celui-la (2026-08-31, session "gestion des favoris" : un
+  bouton "Deplacer ici" introuvable via la 1ere methode a fait perdre du temps
+  avant de tester la 2e).
+- Le contenu deroulant d'un `ComboBox` (ses `ListItem`) n'est PAS un
+  descendant de la fenetre principale dans l'arbre UIA - une marche
+  `Children` depuis la fenetre (meme profonde) ne le trouve jamais, y compris
+  juste apres `ExpandCollapsePattern.Expand()`. Chercher plutot depuis
+  `AutomationElement.RootElement.FindAll(TreeScope.Subtree, ...)` avec une
+  condition `ProcessIdProperty` (et eventuellement `ControlTypeProperty` /
+  `NameProperty`) : le popup existe bien, juste ailleurs dans l'arbre complet
+  du bureau, meme processus (2026-08-31).
+- Un `ContentDialog`/petit popup ouvert par un bouton de la barre d'outils
+  ("Ajouter aux favoris", etc.) peut lui-meme etre un `Button.Flyout` (menu
+  rapide) plutot que le dialogue final attendu - verifier le contenu du
+  popup obtenu (walk complet) avant de chercher plus loin les champs
+  attendus (ComboBox/TextBox) : ils peuvent vivre dans un 2e niveau
+  (bouton DANS ce 1er popup) plutot que directement derriere le premier clic
+  (2026-08-31, "Ajouter aux favoris" ouvre d'abord un petit flyout avec
+  "Ajouter cette page aux favoris"/"Gerer les favoris", le vrai dialogue
+  ContentDialog "Ajouter aux favoris" n'apparait qu'apres un 2e clic).
 - `CopyFromScreen` avec le `BoundingRectangle` UIA peut capturer une **autre
   fenetre reelle du bureau** (deja vu : capture qui montre la session Claude Code
   elle-meme) si la fenetre Lumora n'est pas au premier plan - les rectangles UIA

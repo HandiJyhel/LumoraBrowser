@@ -927,6 +927,76 @@
                 <Setter Property="CornerRadius" Value="18" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaCompanionStrokeBrush}" />
             </Style>
+            <!-- Modes d'affichage du contenu du gestionnaire de favoris
+                 (2026-08-31, session "gestion des favoris" - jusqu'ici seule
+                 une grille de vignettes existait). BookmarksList.ItemTemplate
+                 et ItemsPanel sont permutes en code selon _bookmarkViewMode -
+                 voir MainWindow.BookmarksViewMode.cs. -->
+            <ItemsPanelTemplate x:Key="BookmarkIconsItemsPanelTemplate">
+                <ItemsWrapGrid Orientation="Horizontal" ItemWidth="148" ItemHeight="116" />
+            </ItemsPanelTemplate>
+            <ItemsPanelTemplate x:Key="BookmarkRowsItemsPanelTemplate">
+                <ItemsStackPanel Orientation="Vertical" />
+            </ItemsPanelTemplate>
+
+            <DataTemplate x:Key="BookmarkIconsItemTemplate">
+                <Border Width="136" Height="104" Padding="12" CornerRadius="10"
+                        Background="{StaticResource NovaChromeButtonBackgroundBrush}"
+                        BorderBrush="{StaticResource NovaChromeButtonBorderBrush}"
+                        BorderThickness="1">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="30" Height="30" HorizontalAlignment="Center">
+                            <Image Width="26" Height="26" Source="{Binding IconImageUri}" Visibility="{Binding IconImageVisibility}" />
+                            <FontIcon Glyph="{Binding IconGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="22" Visibility="{Binding IconGlyphVisibility}" />
+                        </Grid>
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12.5"
+                                   TextTrimming="CharacterEllipsis" TextAlignment="Center"
+                                   HorizontalAlignment="Stretch" MaxLines="1" />
+                        <TextBlock Text="{Binding Detail}" Opacity="0.6" FontSize="10.5"
+                                   TextTrimming="CharacterEllipsis" TextAlignment="Center"
+                                   HorizontalAlignment="Stretch" MaxLines="1" />
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+
+            <!-- "Liste" : une ligne compacte par favori (icone + titre), plus
+                 simple a parcourir/reordonner qu'une grille quand un dossier
+                 en contient beaucoup - demande explicite utilisateur. -->
+            <DataTemplate x:Key="BookmarkListItemTemplate">
+                <Grid Padding="8,6" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="22" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0" Width="18" Height="18">
+                        <Image Width="16" Height="16" Source="{Binding IconImageUri}" Visibility="{Binding IconImageVisibility}" />
+                        <FontIcon Glyph="{Binding IconGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="15" Visibility="{Binding IconGlyphVisibility}" />
+                    </Grid>
+                    <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </Grid>
+            </DataTemplate>
+
+            <!-- "Détails" : meme ligne que "Liste" + colonne adresse/info,
+                 alignee sur l'en-tete BookmarkDetailsHeaderRow (plus bas dans
+                 ce fichier, panneau favoris) - pas de colonne date : aucune
+                 date d'ajout n'est encore suivie dans le format de stockage
+                 des favoris (Models/Bookmarks.cs), inventer une valeur aurait
+                 ete trompeur. -->
+            <DataTemplate x:Key="BookmarkDetailsItemTemplate">
+                <Grid Padding="8,6" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="22" />
+                        <ColumnDefinition Width="280" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0" Width="18" Height="18">
+                        <Image Width="16" Height="16" Source="{Binding IconImageUri}" Visibility="{Binding IconImageVisibility}" />
+                        <FontIcon Glyph="{Binding IconGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="15" Visibility="{Binding IconGlyphVisibility}" />
+                    </Grid>
+                    <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding Detail}" Opacity="0.65" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </Grid>
+            </DataTemplate>
             <Style x:Key="NovaPanelActionButtonStyle" TargetType="Button" BasedOn="{StaticResource NovaCompactButtonStyle}">
                 <Setter Property="MinHeight" Value="36" />
                 <Setter Property="Padding" Value="12,0" />
@@ -3194,13 +3264,13 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <Grid ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
@@ -3216,11 +3286,7 @@
                         <!-- Barre d'actions reorganisee par frequence d'usage (2026-08-10,
                              "choses a revoir" - retour utilisateur : garder les 7 actions
                              d'origine, juste mieux rangees qu'une seule rangee plate de
-                             boutons texte). Icones ajoutees pour un reperage plus rapide,
-                             "Vider" isole avec une marge de groupe et une teinte danger
-                             (NovaDangerBrush, meme convention semantique que la pastille
-                             de robustesse du Coffre juste a cote dans cette meme session)
-                             car c'est la seule action irreversible sur TOUS les favoris. -->
+                             boutons texte). Icones ajoutees pour un reperage plus rapide. -->
                         <Button Grid.Column="1" Style="{StaticResource NovaButtonStyle}" Click="NewBookmarkFolderButton_Click">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <SymbolIcon Symbol="NewFolder" />
@@ -3245,39 +3311,84 @@
                                 <TextBlock Text="Supprimer sélection" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="5" Margin="12,0,0,0"
-                                Style="{StaticResource NovaButtonDangerStyle}"
-                                ToolTipService.ToolTip="Supprime TOUS les favoris, pas seulement ce dossier"
-                                Click="ClearBookmarksButton_Click">
+                        <!-- "Plus d'actions" (2026-08-31, session "gestion des favoris") :
+                             regroupe Vider/Importer/Exporter/Retrouver les icônes, qui ne
+                             fait plus tenir la barre d'outils une fois "Déplacer vers…" et
+                             la bascule Icônes/Liste/Détails ajoutées à côté - débordement
+                             réel constaté (skill verify), pas juste une préférence
+                             esthétique. "Vider" garde sa teinte danger (NovaDangerBrush,
+                             seule action irréversible sur TOUS les favoris) via son
+                             Foreground, faute de style de fond dédié dans un MenuFlyoutItem. -->
+                        <Button Grid.Column="5" Margin="12,0,0,0" Style="{StaticResource NovaButtonStyle}"
+                                ToolTipService.ToolTip="Vider, importer, exporter, retrouver les icônes">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <SymbolIcon Symbol="Delete" />
-                                <TextBlock Text="Vider" />
+                                <SymbolIcon Symbol="More" />
+                                <TextBlock Text="Plus" />
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <MenuFlyoutItem Text="Importer" Click="ImportMenu_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <SymbolIcon Symbol="Import" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Exporter" Click="ExportHtmlButton_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <SymbolIcon Symbol="Save" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Retrouver les icônes" Click="RefreshMissingIconsButton_Click"
+                                                    ToolTipService.ToolTip="Retente de récupérer l'icône des favoris qui n'en ont pas">
+                                        <MenuFlyoutItem.Icon>
+                                            <SymbolIcon Symbol="Refresh" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Vider" Click="ClearBookmarksButton_Click"
+                                                    Foreground="{StaticResource NovaDangerBrush}"
+                                                    ToolTipService.ToolTip="Supprime TOUS les favoris, pas seulement ce dossier">
+                                        <MenuFlyoutItem.Icon>
+                                            <SymbolIcon Symbol="Delete" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                        <!-- "Déplacer vers…" (2026-08-31, session "gestion des
+                             favoris") : repli clavier/accessible au glisser-
+                             deposer pour ranger la sélection dans un dossier -
+                             voir MainWindow.BookmarksMoveTo.cs. -->
+                        <Button Grid.Column="6" Margin="12,0,0,0" Style="{StaticResource NovaButtonStyle}" Click="MoveSelectionButton_Click"
+                                ToolTipService.ToolTip="Ranger la sélection dans un autre dossier">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <SymbolIcon Symbol="MoveToFolder" />
+                                <TextBlock Text="Déplacer vers…" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="6" Margin="12,0,0,0" Style="{StaticResource NovaButtonStyle}" Click="ImportMenu_Click">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <SymbolIcon Symbol="Import" />
-                                <TextBlock Text="Importer" />
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="7" Style="{StaticResource NovaButtonStyle}" Click="ExportHtmlButton_Click">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <SymbolIcon Symbol="Save" />
-                                <TextBlock Text="Exporter" />
-                            </StackPanel>
-                        </Button>
-                        <!-- Favoris importes sans icone (import navigateur trop ancien,
-                             ou favicon absente de la base source) : cette action retente
-                             une recuperation directe (favicon.ico du site) sans attendre
-                             une revisite naturelle - demande explicite utilisateur,
-                             2026-08-22. -->
-                        <Button Grid.Column="8" Margin="12,0,0,0" Style="{StaticResource NovaButtonStyle}" Click="RefreshMissingIconsButton_Click"
-                                ToolTipService.ToolTip="Retente de récupérer l'icône des favoris qui n'en ont pas">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <SymbolIcon Symbol="Refresh" />
-                                <TextBlock Text="Retrouver les icônes" />
-                            </StackPanel>
-                        </Button>
+                        <!-- Icônes / Liste / Détails (2026-08-31) : bascule
+                             d'affichage du contenu du dossier courant - voir
+                             MainWindow.BookmarksViewMode.cs. -->
+                        <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="2"
+                                    VerticalAlignment="Center" Margin="12,0,0,0">
+                            <RadioButton x:Name="BookmarkViewModeIconsRadio"
+                                         Style="{StaticResource NovaSubTabRadioButtonStyle}"
+                                         GroupName="BookmarkViewMode" IsChecked="True" Tag="icons"
+                                         Content="Icônes"
+                                         AutomationProperties.Name="Affichage en grille de vignettes"
+                                         Checked="BookmarkViewModeRadio_Checked" />
+                            <RadioButton x:Name="BookmarkViewModeListRadio"
+                                         Style="{StaticResource NovaSubTabRadioButtonStyle}"
+                                         GroupName="BookmarkViewMode" Tag="list"
+                                         Content="Liste"
+                                         AutomationProperties.Name="Affichage en liste compacte"
+                                         Checked="BookmarkViewModeRadio_Checked" />
+                            <RadioButton x:Name="BookmarkViewModeDetailsRadio"
+                                         Style="{StaticResource NovaSubTabRadioButtonStyle}"
+                                         GroupName="BookmarkViewMode" Tag="details"
+                                         Content="Détails"
+                                         AutomationProperties.Name="Affichage détaillé avec adresse"
+                                         Checked="BookmarkViewModeRadio_Checked" />
+                        </StackPanel>
                     </Grid>
 
                     <TextBox
@@ -3286,51 +3397,45 @@
                         TextChanged="BookmarksSearchBox_TextChanged"
                         PlaceholderText="Rechercher dans les favoris..." />
 
-                    <!-- Grille de vignettes plutot que liste de lignes de texte
-                         (2026-08-10, "choses a revoir" - retour utilisateur : les
-                         favoris sont consultes en vitesse et reconnus par leur icone,
-                         pas lus comme du texte ; comparaison faite par l'utilisateur
-                         avec le gestionnaire Chrome, juge "tres moche"). ItemsWrapGrid
-                         en ItemsPanel plutot qu'un changement de type de controle
-                         (ListView -> GridView) : conserve a l'identique tout le
-                         code-behind existant (SelectAll/SelectedItems/
-                         ShowBookmarkListContextMenu(ListView...)) qui dependait
-                         specifiquement du type ListView. -->
+                    <!-- En-tete du mode "Détails" (2026-08-31) : colonnes
+                         alignees sur BookmarkDetailsItemTemplate ci-dessus
+                         (22 + 280 + *). Masque en dehors de ce mode - voir
+                         MainWindow.BookmarksViewMode.cs. -->
+                    <Grid x:Name="BookmarkDetailsHeaderRow" Grid.Row="2" ColumnSpacing="10"
+                          Padding="8,0" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="22" />
+                            <ColumnDefinition Width="280" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" Text="Nom" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+                        <TextBlock Grid.Column="2" Text="Adresse" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+                    </Grid>
+
+                    <!-- Grille de vignettes par defaut (2026-08-10, "choses a
+                         revoir" - retour utilisateur : les favoris sont
+                         consultes en vitesse et reconnus par leur icone, pas
+                         lus comme du texte). Modes "Liste"/"Détails" ajoutes
+                         le 2026-08-31 (demande explicite) : ItemsPanel et
+                         ItemTemplate sont permutes en code selon
+                         _bookmarkViewMode (MainWindow.BookmarksViewMode.cs) -
+                         ItemsPanel reste un ItemsPanelTemplate (jamais un
+                         changement de type de controle ListView -> GridView),
+                         tout le code-behind existant
+                         (SelectAll/SelectedItems/
+                         ShowBookmarkListContextMenu(ListView...)) continue de
+                         dependre specifiquement du type ListView. -->
                     <ListView
                         x:Name="BookmarksList"
-                        Grid.Row="2"
+                        Grid.Row="3"
                         SelectionMode="Extended"
+                        ItemsPanel="{StaticResource BookmarkIconsItemsPanelTemplate}"
+                        ItemTemplate="{StaticResource BookmarkIconsItemTemplate}"
+                        ContainerContentChanging="BookmarksList_ContainerContentChanging"
                         DoubleTapped="BookmarksList_DoubleTapped"
                         RightTapped="BookmarksList_RightTapped"
                         SelectionChanged="BookmarksList_SelectionChanged"
-                        KeyDown="BookmarksList_KeyDown">
-                        <ListView.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <ItemsWrapGrid Orientation="Horizontal" ItemWidth="148" ItemHeight="116" />
-                            </ItemsPanelTemplate>
-                        </ListView.ItemsPanel>
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Border Width="136" Height="104" Padding="12" CornerRadius="10"
-                                        Background="{StaticResource NovaChromeButtonBackgroundBrush}"
-                                        BorderBrush="{StaticResource NovaChromeButtonBorderBrush}"
-                                        BorderThickness="1">
-                                    <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Grid Width="30" Height="30" HorizontalAlignment="Center">
-                                            <Image Width="26" Height="26" Source="{Binding IconImageUri}" Visibility="{Binding IconImageVisibility}" />
-                                            <FontIcon Glyph="{Binding IconGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="22" Visibility="{Binding IconGlyphVisibility}" />
-                                        </Grid>
-                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12.5"
-                                                   TextTrimming="CharacterEllipsis" TextAlignment="Center"
-                                                   HorizontalAlignment="Stretch" MaxLines="1" />
-                                        <TextBlock Text="{Binding Detail}" Opacity="0.6" FontSize="10.5"
-                                                   TextTrimming="CharacterEllipsis" TextAlignment="Center"
-                                                   HorizontalAlignment="Stretch" MaxLines="1" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                        KeyDown="BookmarksList_KeyDown" />
                 </Grid>
             </Grid>
 

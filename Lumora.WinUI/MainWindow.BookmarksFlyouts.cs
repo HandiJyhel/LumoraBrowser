@@ -68,6 +68,12 @@ public sealed partial class MainWindow
         }
     }
 
+    private async void BookmarkContextMoveTo_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: BookmarkNode node }) return;
+        await MoveBookmarkNodesAsync(new[] { node });
+    }
+
     // En-tete discret du dossier de favoris ouvert depuis la barre :
     // contrairement a AddLumoraMenuHeader (utilise ailleurs - historique,
     // groupes d'onglets, Studio Lumora, et le menu contextuel des favoris),
@@ -175,6 +181,19 @@ public sealed partial class MainWindow
             };
             moveAfterItem.Click += BookmarkContextMoveAfter_Click;
             flyout.Items.Add(moveAfterItem);
+
+            // "D\u00E9placer vers\u2026" (2026-08-31, session "gestion des favoris") :
+            // contrairement aux deux entr\u00E9es ci-dessus (un cran parmi les
+            // freres du meme parent), celle-ci range le favori/dossier DANS
+            // n'importe quel autre dossier - voir MainWindow.BookmarksMoveTo.cs.
+            var moveToItem = new MenuFlyoutItem
+            {
+                Text = "D\u00E9placer vers\u2026",
+                Tag = node,
+                Icon = new SymbolIcon(Symbol.MoveToFolder)
+            };
+            moveToItem.Click += BookmarkContextMoveTo_Click;
+            flyout.Items.Add(moveToItem);
 
             flyout.Items.Add(new MenuFlyoutSeparator());
 
