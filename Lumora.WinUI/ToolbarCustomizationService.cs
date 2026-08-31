@@ -132,14 +132,35 @@ internal class ToolbarCustomizationService
     }
 
     /// <summary>
-    /// Charge l'ordre sauvegardé depuis UiSettings.
-    /// Si absent, utilise l'ordre par défaut.
+    /// Charge l'ordre sauvegardé depuis UiSettings. Si absent, utilise l'ordre
+    /// par défaut. Piège réel trouvé le 2026-08-31 (retour utilisateur, bouton
+    /// "Verrouiller maintenant" invisible sur un profil réel déjà personnalisé) :
+    /// un ordre sauvegardé était utilisé TEL QUEL, sans jamais reconsidérer
+    /// GetDefaultButtonOrder() - un bouton ajouté au produit APRÈS que
+    /// l'utilisateur ait déjà réorganisé sa barre restait invisible pour
+    /// toujours, silencieusement, même une fois ajouté à la liste par défaut.
+    /// Réconciliation ci-dessous : tout bouton connu absent de l'ordre
+    /// sauvegardé est ajouté en fin de liste, sans jamais toucher l'ordre/les
+    /// boutons déjà personnalisés par l'utilisateur.
     /// </summary>
     private void LoadOrder()
     {
         if (_settings.ToolbarButtonOrder != null && _settings.ToolbarButtonOrder.Count > 0)
         {
             _buttonOrder = new List<string>(_settings.ToolbarButtonOrder);
+            var reconciled = false;
+            foreach (var knownId in GetDefaultButtonOrder())
+            {
+                if (!_buttonOrder.Contains(knownId))
+                {
+                    _buttonOrder.Add(knownId);
+                    reconciled = true;
+                }
+            }
+            if (reconciled)
+            {
+                SaveOrder();
+            }
         }
         else
         {
@@ -228,6 +249,7 @@ internal class ToolbarCustomizationService
             "VaultQuickAccessButton",
             "HistoryToolbarButton",
             "DownloadsIndicatorButton",
+            "LockNowButton",
             "ReaderModeButton",
             "NotesModuleButton",
             "ReadAloudButton",

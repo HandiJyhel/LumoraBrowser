@@ -483,6 +483,7 @@ public sealed partial class MainWindow
         RefreshProfileSettings();
         UpdateProfileStatus();
         InitSessionTimer();
+        InitTabSuspensionTimer();
         InitRssTimer();
         UpdateRssBadge();
         // Meme raison que ActivateTab/EnsureTabViewReadyAsync (voir leurs commentaires) :
@@ -499,6 +500,14 @@ public sealed partial class MainWindow
         _ = MigrateAndClearBrowserPasswordsAsync();
         if (!_isGuestMode && !_uiSettings.SetupWizardCompleted)
             ShowSetupWizard();
+
+        // Lien externe reçu pendant que la fenêtre était verrouillée (voir
+        // _deferredExternalUrl, MainWindow.xaml.cs) : rouvert maintenant. Si
+        // SetupWizardOverlay vient de s'afficher juste au-dessus (ShowSetupWizard
+        // ci-dessus), FlushDeferredExternalUrl re-diffère tout seul le lien -
+        // c'est alors FinishWizard/FinishWizardAfterImportAsync
+        // (MainWindow.SetupWizard.cs) qui le rouvriront à la fin de l'assistant.
+        FlushDeferredExternalUrl();
 
         // Signal "cette fenetre a ses onglets prets" (restauration de session
         // comprise) - utilise par MainWindow.TabDetach.cs pour savoir quand
@@ -575,6 +584,13 @@ public sealed partial class MainWindow
         ShowLoginPanel(_userProfile.HasPinLogin ? "pin" : "password");
         LoginStatusText.Text = statusMessage;
         ShowLoginOverlayChrome();
+
+        // Met aussi en pause les onglets inactifs (2026-08-31, retour utilisateur -
+        // voir MainWindow.TabSuspension.cs) : un seul geste, deux effets, que le
+        // verrouillage vienne du bouton manuel, du raccourci, du minuteur
+        // d'inactivite OU d'un evenement systeme (veille/verrouillage Windows) -
+        // tous passent par cette meme methode.
+        SuspendEligibleTabs(manual: true);
     }
 
     private bool IsAnyTabPlayingAudio() =>

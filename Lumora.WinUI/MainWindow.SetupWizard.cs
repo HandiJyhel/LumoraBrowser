@@ -215,6 +215,7 @@ public sealed partial class MainWindow
         SetupWizardOverlay.Visibility = Visibility.Collapsed;
         ApplyUiSettings();
         RefreshNovaHomePages();
+        FlushDeferredExternalUrl();
 
         var dialog = new ContentDialog
         {
@@ -323,6 +324,7 @@ public sealed partial class MainWindow
         SetupWizardOverlay.Visibility = Visibility.Collapsed;
         ApplyUiSettings();
         RefreshNovaHomePages();
+        FlushDeferredExternalUrl();
     }
 
     private static string UsageModeDisplayName(string? usageMode) =>

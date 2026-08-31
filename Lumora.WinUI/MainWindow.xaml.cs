@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.5.5-dev";
+    internal const string Version = "0.94.7.3-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -134,6 +134,13 @@ public sealed partial class MainWindow : Window
     // lancement normal. Consommé une seule fois par ApplyStartupPage
     // (MainWindow.Settings.cs).
     private readonly string? _pendingLaunchUrl;
+    // Lien externe (Google/terminal/etc.) reçu pendant que cette fenêtre est
+    // verrouillée (LoginOverlay ou SetupWizardOverlay visible) - voir
+    // OpenUrlInNewTab (MainWindow.NewWindow.cs). Vidé et rouvert par
+    // DismissLoginOverlay (MainWindow.Profile.cs) dès que le déverrouillage
+    // se termine. Pas readonly, contrairement à _pendingLaunchUrl : reçu
+    // après la construction de la fenêtre, pas au lancement.
+    private string? _deferredExternalUrl;
     // Vrai tant que la page de demarrage (ApplyStartupPage, notamment la
     // restauration des onglets de la derniere session) n'a pas encore ete
     // appliquee. Trouve en usage reel le 2026-08-12 : ApplyStartupPage() etait
@@ -342,6 +349,7 @@ public sealed partial class MainWindow : Window
             ["VaultQuickAccessButton"] = VaultQuickAccessButton,
             ["HistoryToolbarButton"] = HistoryToolbarButton,
             ["DownloadsIndicatorButton"] = DownloadsIndicatorButton,
+            ["LockNowButton"] = LockNowButton,
             ["ReaderModeButton"] = ReaderModeButton,
             ["NotesModuleButton"] = NotesModuleButton,
             ["ReadAloudButton"] = ReadAloudButton,
@@ -427,24 +435,43 @@ public sealed partial class MainWindow : Window
         // MainWindow.NewWindow.cs) tant qu'elle est ouverte.
         _liveInstances.Add(this);
         Closed += (_, _) => _liveInstances.Remove(this);
-        // Session invite : _profile.ProfileDir est le dossier ephemere pose par
-        // GuestProcessLauncher (voir _pendingGuestLaunch/EnterGuestMode). Un vrai
-        // profil ne doit JAMAIS voir son dossier supprime ici - garde explicite
-        // sur _isGuestMode, qui ne devient vrai que via ce chemin invite.
-        // Fermer chaque WebView2 explicitement AVANT de supprimer : sans ca, le
-        // process moteur Chromium peut garder ses fichiers (Cache, LevelDB...)
-        // verrouilles quelques instants apres le Closed de la fenetre WinUI, et
-        // Directory.Delete echoue silencieusement (meme piege que
-        // LumoraIncognitoWindow, qui ferme deja tab.View avant de supprimer son
-        // dossier de session - verifie en conditions reelles : sans cette fermeture
-        // explicite, le dossier invite survivait bel et bien a la fermeture).
+        // Fuite reelle trouvee en audit (2026-08-31, session "Nettoyage") : cette
+        // fenetre n'est PAS forcement le dernier MainWindow du process - plusieurs
+        // fenetres coexistent (_liveInstances, "Nouvelle fenetre") sur le meme
+        // process/thread UI. Avant ce correctif, fermer une fenetre parmi
+        // plusieurs (pas la derniere) ne fermait AUCUN moteur WebView2 (le bloc
+        // ci-dessous ne s'executait que pour _isGuestMode) ni n'arretait aucun
+        // des minuteurs de cette fenetre (session, RSS, mise en veille des
+        // onglets, plein ecran...) - tout continuait de tourner indefiniment en
+        // arriere-plan, invisible, jusqu'a la fermeture complete de Lumora.
+        // Desormais inconditionnel : fermeture des vues + arret des minuteurs
+        // pour TOUTE fenetre qui se ferme, invite ou non.
         Closed += (_, _) =>
         {
-            if (!_isGuestMode) return;
             foreach (var tab in _tabs)
             {
                 try { tab.View?.Close(); } catch { }
             }
+            _sessionTimer?.Stop();
+            _rssTimer?.Stop();
+            _tabSuspensionTimer?.Stop();
+            _fullScreenTopChromeHideTimer?.Stop();
+            _verticalTabsRailAutoHideTimer?.Stop();
+            _contentFullScreenWatchdogTimer?.Stop();
+            _addressSuggestionsCloseGraceTimer?.Stop();
+            _noteSaveTimer?.Stop();
+            _totpTimer?.Stop();
+        };
+        // Session invite : _profile.ProfileDir est le dossier ephemere pose par
+        // GuestProcessLauncher (voir _pendingGuestLaunch/EnterGuestMode). Un vrai
+        // profil ne doit JAMAIS voir son dossier supprime ici - garde explicite
+        // sur _isGuestMode, qui ne devient vrai que via ce chemin invite. Les vues
+        // sont deja fermees ci-dessus (desormais inconditionnel) avant que ce
+        // second handler ne s'execute - meme ordre qu'avant, juste separe du
+        // nettoyage general pour ne pas melanger "invite" et "toute fenetre".
+        Closed += (_, _) =>
+        {
+            if (!_isGuestMode) return;
             DeleteGuestSessionDirectoryWithRetry(_profile.ProfileDir);
         };
         var commandPaletteAccelerator = new KeyboardAccelerator
@@ -579,11 +606,18 @@ public sealed partial class MainWindow : Window
     // ResetProfileButton_Click/MainWindow.Profile.cs) - resultat ignore ici :
     // nettoyage best-effort d'un dossier ephemere, jamais critique pour
     // l'utilisateur contrairement a une reinitialisation de profil demandee
-    // explicitement.
+    // explicitement. Jete sur Task.Run (2026-08-31, audit nettoyage) : le
+    // Closed de cette fenetre est synchrone, et les 15 tentatives x 200ms
+    // (jusqu'a 3s) gelaient le thread UI pendant la fermeture de la session
+    // invite - meme piege que celui corrige au meme moment sur la fenetre
+    // Incognito (LumoraIncognitoWindow.xaml.cs).
     private static void DeleteGuestSessionDirectoryWithRetry(string path)
     {
-        try { RetryDelete.TryDeleteDirectory(path, maxAttempts: 15, delayMs: 200, out _); }
-        catch { /* best-effort : ne jamais faire echouer la fermeture de fenetre pour ca */ }
+        _ = Task.Run(() =>
+        {
+            try { RetryDelete.TryDeleteDirectory(path, maxAttempts: 15, delayMs: 200, out _); }
+            catch { /* best-effort : ne jamais faire echouer la fermeture de fenetre pour ca */ }
+        });
     }
 
     public void InitializeBrowserSurface()

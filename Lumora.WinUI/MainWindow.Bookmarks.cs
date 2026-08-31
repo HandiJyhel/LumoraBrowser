@@ -53,10 +53,6 @@ public sealed partial class MainWindow
 
     private async void AddBookmarkButton_Click(object sender, RoutedEventArgs e)
     {
-        // Instrumentation temporaire (diagnostic gel post-connexion Google,
-        // 2026-08-30) : confirme si le clic atteint bien ce point et l'etat du
-        // verrou de reentrance.
-        WinUiRuntimeTrace.Write($"AddBookmarkButton_Click invoked, _bookmarkDialogOpen={_bookmarkDialogOpen}");
         if (_bookmarkDialogOpen) return;
         _bookmarkDialogOpen = true;
         // Flyout ajoute le 2026-08-12 : ferme-le avant le ContentDialog, sinon les

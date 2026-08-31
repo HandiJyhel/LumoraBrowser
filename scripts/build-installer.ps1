@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "0.94.5.5-dev",
+    [string]$Version = "0.94.7.3-dev",
     [string]$CleanArtifactDir = "",
     [string]$OutputDirectory = "artifacts\installer"
 )

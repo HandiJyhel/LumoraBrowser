@@ -102,6 +102,26 @@ public sealed class ToolbarCustomizationRegressionTests
         }
     }
 
+    // 2026-08-31 : piege reel trouve en verifiant en direct - un bouton
+    // declare dans ToolbarButtonsPanel (XAML) mais absent de
+    // GetDefaultButtonOrder()/toolbarButtonMap disparaissait silencieusement
+    // au demarrage (ApplyOrderToToolbar vide puis reconstruit le panneau
+    // UNIQUEMENT depuis ces deux listes). LockNowButton (verrouillage manuel,
+    // MainWindow.TabSuspension.cs) sert de cas concret pour ne pas regresser.
+    [Fact]
+    public void LockNowButton_est_enregistre_dans_le_service_de_reorganisation()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var serviceCode = ReadRepoFile("Lumora.WinUI", "ToolbarCustomizationService.cs");
+        var xamlCsCode = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
+
+        var toolbarPanelIndex = xaml.IndexOf("x:Name=\"ToolbarButtonsPanel\"", StringComparison.Ordinal);
+        var buttonIndex = xaml.IndexOf("x:Name=\"LockNowButton\"", StringComparison.Ordinal);
+        Assert.True(buttonIndex > toolbarPanelIndex, "LockNowButton n'est pas déclaré à l'intérieur de ToolbarButtonsPanel.");
+        Assert.Contains("\"LockNowButton\",", serviceCode, StringComparison.Ordinal);
+        Assert.Contains("[\"LockNowButton\"] = LockNowButton,", xamlCsCode, StringComparison.Ordinal);
+    }
+
     // 2026-08-14 (2e passe) : la petite liste integree au menu Modules ne
     // tenait plus une fois etendue a toute la barre - remplacee par une
     // fenetre dediee (overlay modal), ouverte via un lien au fond du meme

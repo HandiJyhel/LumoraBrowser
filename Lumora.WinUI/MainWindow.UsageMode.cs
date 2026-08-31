@@ -516,13 +516,13 @@ public sealed partial class MainWindow : Window
 
     private void ModulePinToggle_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not ToggleButton { Tag: string moduleId } toggle)
+        if (sender is not ToggleSwitch { Tag: string moduleId } toggle)
         {
             return;
         }
 
         var pinned = _uiSettings.PinnedModuleIds;
-        if (toggle.IsChecked == true)
+        if (toggle.IsOn)
         {
             if (!pinned.Contains(moduleId, StringComparer.OrdinalIgnoreCase))
             {
@@ -543,11 +543,11 @@ public sealed partial class MainWindow : Window
     {
         var pinned = _uiSettings.PinnedModuleIds;
         bool IsPinned(string id) => pinned.Contains(id, StringComparer.OrdinalIgnoreCase);
-        void UpdatePinToggle(ToggleButton toggle, string moduleId)
+        void UpdatePinToggle(ToggleSwitch toggle, string moduleId)
         {
             var moduleName = ModuleDisplayName(moduleId);
             var isPinned = IsPinned(moduleId);
-            toggle.IsChecked = isPinned;
+            toggle.IsOn = isPinned;
             var label = isPinned
                 ? $"Retirer {moduleName} de la barre de modules"
                 : $"Épingler {moduleName} dans la barre de modules";

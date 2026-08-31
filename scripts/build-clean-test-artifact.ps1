@@ -2,7 +2,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$Platform = "x64",
-    [string]$Version = "0.94.5.5-dev",
+    [string]$Version = "0.94.7.3-dev",
     [string]$OutputRoot = "artifacts\clean-test",
     [switch]$NoRestore
 )
@@ -57,10 +57,19 @@ New-Item -ItemType Directory -Force -Path $appDir | Out-Null
 New-Item -ItemType Directory -Force -Path $signatureDir | Out-Null
 
 Set-Location $repoRoot
+# PublishReadyToRun=true (2026-08-31, session "Nettoyage" - optimisation demandee
+# par l'utilisateur) : precompile le code natif a la publication plutot que de
+# tout laisser au JIT au premier lancement de chaque utilisateur. Verifie en
+# conditions reelles (profil isole, MainWindow construite en ~622ms contre
+# ~730ms sans R2R sur la meme machine, navigation web reelle confirmee
+# fonctionnelle) - voir MEMORY.md. Doit etre pose ICI, a la fois au restore
+# (sinon NETSDK1094 : le pack runtime crossgen necessaire n'est jamais
+# restaure, meme piege deja documente pour SelfContained) et au publish.
 if (-not $NoRestore) {
     Invoke-WinUiRestore -MsbuildPath $msbuild -ProjectPath $project -Context $context -Configuration $Configuration -Platform $Platform -RuntimeIdentifier "win-x64" -AdditionalProperties @(
         "/p:SelfContained=true",
-        "/p:PublishSelfContained=true"
+        "/p:PublishSelfContained=true",
+        "/p:PublishReadyToRun=true"
     )
 }
 else {
@@ -71,6 +80,7 @@ Invoke-WinUiTarget -MsbuildPath $msbuild -ProjectPath $project -Target "Publish"
     "/p:SelfContained=true",
     "/p:PublishSelfContained=true",
     "/p:PublishSingleFile=false",
+    "/p:PublishReadyToRun=true",
     "/p:PublishDir=$appDir\"
 )
 

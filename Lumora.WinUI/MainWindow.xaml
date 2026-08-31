@@ -611,7 +611,17 @@
                                                 <Setter Target="AccentBar.Opacity" Value="1" />
                                             </VisualState.Setters>
                                         </VisualState>
-                                        <VisualState x:Name="Unchecked" />
+                                        <!-- Corrige le 2026-08-31, meme piege que NovaModulePinButtonStyle
+                                             plus bas dans ce fichier : un Setter ne revient jamais tout seul
+                                             a la valeur precedente en quittant un etat. Sans ceci, cliquer un
+                                             2e item de la nav Reglages laissait le 1er affiche "actif"
+                                             (fond + barre d'accent) en plus du nouveau. -->
+                                        <VisualState x:Name="Unchecked">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="Transparent" />
+                                                <Setter Target="AccentBar.Opacity" Value="0" />
+                                            </VisualState.Setters>
+                                        </VisualState>
                                         <VisualState x:Name="Indeterminate" />
                                     </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
@@ -669,9 +679,14 @@
                                                 <Setter Target="SubTabContentPresenter.Opacity" Value="1" />
                                             </VisualState.Setters>
                                         </VisualState>
+                                        <!-- Meme piege que NovaModulePinButtonStyle/NovaSideRailNavRadioButtonStyle
+                                             (2026-08-31) : AccentBar.Opacity manquait ici, jamais remise a 0 -
+                                             le trait d'accent restait visible sous un sous-onglet apres etre
+                                             passe a un autre. -->
                                         <VisualState x:Name="Unchecked">
                                             <VisualState.Setters>
                                                 <Setter Target="SubTabContentPresenter.Opacity" Value="0.68" />
+                                                <Setter Target="AccentBar.Opacity" Value="0" />
                                             </VisualState.Setters>
                                         </VisualState>
                                         <VisualState x:Name="Indeterminate" />
@@ -784,82 +799,24 @@
                 <Setter Property="Foreground" Value="{StaticResource NovaPrimaryTextBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
-            <!-- Refonte en interrupteur (2026-08-14, retour utilisateur avec
-                 capture d'ecran : le menu Modules "est completement en
-                 desaccord avec la charte graphique" - le rond terne
-                 n'indiquait aucun etat clair epingle/pas epingle). Meme
-                 ToggleButton, meme logique C# (IsChecked, ModulePinToggle_Click) -
-                 seul le gabarit visuel change, via VisualStateManager sur les
-                 etats Checked/Unchecked deja integres au controle. Piste
-                 (degrade + pastille) coherente avec ToolbarReorganizeOverlay
-                 deja livree. Style partage : s'applique aussi aux boutons
-                 "Panel" du gestionnaire de modules complet (meme coherence
-                 visuelle, aucun travail supplementaire necessaire). -->
-            <Style x:Key="NovaModulePinButtonStyle" TargetType="ToggleButton">
-                <Setter Property="Width" Value="44" />
-                <Setter Property="Height" Value="24" />
-                <Setter Property="Padding" Value="0" />
+            <!-- Remplace NovaModulePinButtonStyle (2026-08-31, retour utilisateur avec
+                 capture d'ecran + vrai clic a l'appui) : le ToggleButton habille a la
+                 main restait bloque visuellement "actif" apres desactivation, meme
+                 apres 2 corrections differentes du gabarit (Setters puis Storyboard -
+                 confirme par instrumentation que IsChecked redevenait pourtant bien
+                 False en interne). Plutot que rafistoler un 3e essai a l'aveugle,
+                 bascule sur le controle natif ToggleSwitch (deja utilise partout
+                 ailleurs dans les Reglages de Lumora - ex. TabSuspensionEnabledSwitch -
+                 jamais ce probleme). OnContent/OffContent vides + MinWidth=0 pour
+                 rester compact dans ces listes de modules (pas de texte "Active/
+                 Desactive" a cote, juste la piste). Meme logique C# qu'avant
+                 (ModulePinToggle_Click, UpdateModulesPinUi) - seul le controle change. -->
+            <Style x:Key="NovaModulePinSwitchStyle" TargetType="ToggleSwitch">
+                <Setter Property="OnContent" Value="" />
+                <Setter Property="OffContent" Value="" />
+                <Setter Property="MinWidth" Value="0" />
                 <Setter Property="HorizontalAlignment" Value="Right" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
-                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
-                <Setter Property="UseSystemFocusVisuals" Value="True" />
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="ToggleButton">
-                            <Grid>
-                                <Border x:Name="PinTrack"
-                                        CornerRadius="12"
-                                        Background="{StaticResource NovaChromeButtonBackgroundBrush}"
-                                        BorderBrush="{StaticResource NovaChromeStrokeBrush}"
-                                        BorderThickness="1" />
-                                <Border x:Name="PinKnob"
-                                        Width="18" Height="18"
-                                        CornerRadius="9"
-                                        Background="{StaticResource NovaTextMutedBrush}"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        Margin="3,0,0,0">
-                                    <FontIcon x:Name="PinKnobGlyph"
-                                              Glyph="&#xE73E;"
-                                              FontFamily="Segoe MDL2 Assets"
-                                              FontSize="9"
-                                              Foreground="{StaticResource NovaPanelBackgroundBrush}"
-                                              Opacity="0"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                                </Border>
-                                <VisualStateManager.VisualStateGroups>
-                                    <VisualStateGroup x:Name="CommonStates">
-                                        <VisualState x:Name="Normal" />
-                                        <VisualState x:Name="PointerOver" />
-                                        <VisualState x:Name="Pressed" />
-                                        <VisualState x:Name="Disabled">
-                                            <VisualState.Setters>
-                                                <Setter Target="PinTrack.Opacity" Value="0.4" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                    </VisualStateGroup>
-                                    <VisualStateGroup x:Name="CheckStates">
-                                        <VisualState x:Name="Checked">
-                                            <VisualState.Setters>
-                                                <Setter Target="PinTrack.Background" Value="{StaticResource NovaIdentityMarkBrush}" />
-                                                <Setter Target="PinTrack.BorderBrush" Value="Transparent" />
-                                                <Setter Target="PinKnob.HorizontalAlignment" Value="Right" />
-                                                <Setter Target="PinKnob.Margin" Value="0,0,3,0" />
-                                                <Setter Target="PinKnob.Background" Value="{StaticResource NovaPanelBackgroundBrush}" />
-                                                <Setter Target="PinKnobGlyph.Opacity" Value="1" />
-                                                <Setter Target="PinKnobGlyph.Foreground" Value="{StaticResource NovaAccentBrush}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        <VisualState x:Name="Unchecked" />
-                                        <VisualState x:Name="Indeterminate" />
-                                    </VisualStateGroup>
-                                </VisualStateManager.VisualStateGroups>
-                            </Grid>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
             </Style>
             <!-- Homogeneisation 2026-08-18 : ce style etait jusqu'ici uniquement
                  dimensionnel (hauteur/marges/rayon), sans aucune couleur Nova ni
@@ -2159,6 +2116,27 @@
                             </Flyout>
                         </Button.Flyout>
                     </Button>
+                    <!-- Verrouillage manuel (2026-08-31, retour utilisateur : "un bouton
+                         pour verrouiller le navigateur, un peu a la Windows avec Win+L") -
+                         verrouille tout de suite (LockSessionNow, meme mecanisme que le
+                         verrouillage automatique) ET met en pause les onglets inactifs au
+                         meme moment (MainWindow.TabSuspension.cs). Toujours visible, pas un
+                         module epinglable (action de base, pas un confort optionnel) -
+                         meme glyph cadenas que le reste de Lumora (Coffre, Reglages >
+                         Confidentialite). PIEGE REEL (trouve en verifiant en direct,
+                         2026-08-31) : declarer le bouton ici NE SUFFIT PAS - tout enfant de
+                         ToolbarButtonsPanel est efface puis reconstruit au demarrage par
+                         ToolbarCustomizationService.ApplyOrderToToolbar() a partir de
+                         GetDefaultButtonOrder() (liste figee). Sans y ajouter "LockNowButton"
+                         (et dans toolbarButtonMap, MainWindow.xaml.cs), ce bouton disparaissait
+                         silencieusement au premier lancement - aucune erreur, aucun log. -->
+                    <Button x:Name="LockNowButton"
+                            Style="{StaticResource NovaModuleIconButtonStyle}"
+                            ToolTipService.ToolTip="Verrouiller maintenant (Ctrl+Maj+L) — verrouille Lumora et met en pause les onglets inactifs"
+                            AutomationProperties.Name="Verrouiller maintenant"
+                            Click="LockNowMenu_Click">
+                        <FontIcon Style="{StaticResource NovaModuleFontIconStyle}" Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+                    </Button>
                     <Button x:Name="TranslatePinnedButton"
                             Style="{StaticResource NovaModuleIconButtonStyle}"
                             ToolTipService.ToolTip="Traduction locale"
@@ -2276,8 +2254,8 @@
                                  d'ecran : "completement en desaccord avec la charte graphique").
                                  Meme couleurs/gabarits que ToolbarReorganizeOverlay deja livree :
                                  liseret d'accent en degrade, puces d'icones cadrees (au lieu
-                                 d'icones nues), interrupteurs d'epinglage (NovaModulePinButtonStyle,
-                                 refondu au meme endroit) au lieu du rond terne, hierarchie claire
+                                 d'icones nues), interrupteurs d'epinglage (NovaModulePinSwitchStyle,
+                                 ToggleSwitch natif depuis le 2026-08-31) au lieu du rond terne, hierarchie claire
                                  entre les 2 boutons du bas. -->
                             <Flyout x:Name="ModulesQuickAccessFlyout" Placement="BottomEdgeAlignedRight">
                                 <StackPanel Width="320" Spacing="0">
@@ -2303,7 +2281,7 @@
                                                 <FontIcon Glyph="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Mode lecture" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickReaderPinToggleButton" Grid.Column="2" Tag="reader" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickReaderPinToggleButton" Grid.Column="2" Tag="reader" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2317,7 +2295,7 @@
                                                 <FontIcon Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Notes et annotations" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickNotesPinToggleButton" Grid.Column="2" Tag="notes" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickNotesPinToggleButton" Grid.Column="2" Tag="notes" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2331,7 +2309,7 @@
                                                 <FontIcon Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Lecture à voix haute" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickReadAloudPinToggleButton" Grid.Column="2" Tag="readAloud" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickReadAloudPinToggleButton" Grid.Column="2" Tag="readAloud" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2345,7 +2323,7 @@
                                                 <FontIcon Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Détacher la vidéo" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickDetachVideoPinToggleButton" Grid.Column="2" Tag="detachVideo" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickDetachVideoPinToggleButton" Grid.Column="2" Tag="detachVideo" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2359,7 +2337,7 @@
                                                 <FontIcon Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Télécharger la vidéo" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickVideoDownloadPinToggleButton" Grid.Column="2" Tag="videoDownload" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickVideoDownloadPinToggleButton" Grid.Column="2" Tag="videoDownload" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2373,7 +2351,7 @@
                                                 <FontIcon Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Recherche assistée" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickSearchAssistPinToggleButton" Grid.Column="2" Tag="searchAssist" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickSearchAssistPinToggleButton" Grid.Column="2" Tag="searchAssist" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2387,7 +2365,7 @@
                                                 <FontIcon Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Traduction locale" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickTranslatePinToggleButton" Grid.Column="2" Tag="translate" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickTranslatePinToggleButton" Grid.Column="2" Tag="translate" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2401,7 +2379,7 @@
                                                 <FontIcon Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Applications web" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickWebAppsPinToggleButton" Grid.Column="2" Tag="webApps" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickWebAppsPinToggleButton" Grid.Column="2" Tag="webApps" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2415,7 +2393,7 @@
                                                 <FontIcon Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Dictée vocale" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickDictationPinToggleButton" Grid.Column="2" Tag="dictation" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickDictationPinToggleButton" Grid.Column="2" Tag="dictation" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <!-- Flux RSS et Loupe de lecture (2026-08-09) : integres au systeme
                                              de modules epinglables, voir commentaires XAML sur RssModuleButton/
@@ -2432,7 +2410,7 @@
                                                 <FontIcon Glyph="&#xE7C1;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Flux RSS" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickRssPinToggleButton" Grid.Column="2" Tag="rss" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickRssPinToggleButton" Grid.Column="2" Tag="rss" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                         <Grid ColumnSpacing="11" Padding="0,3">
                                             <Grid.ColumnDefinitions>
@@ -2446,7 +2424,7 @@
                                                 <FontIcon Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="Loupe de lecture" VerticalAlignment="Center" FontSize="13" />
-                                            <ToggleButton x:Name="QuickReadingLensPinToggleButton" Grid.Column="2" Tag="readingLens" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
+                                            <ToggleSwitch x:Name="QuickReadingLensPinToggleButton" Grid.Column="2" Tag="readingLens" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                         </Grid>
                                     </StackPanel>
 
@@ -3649,6 +3627,20 @@
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Onglets" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
                             <ToggleSwitch x:Name="VerticalTabsSwitch" Header="Barre d'onglets verticale" Toggled="VerticalTabsSwitch_Toggled" />
+                            <!-- Mise en veille (2026-08-31, retour utilisateur : optimiser
+                                 memoire/CPU) : decharge le moteur d'un onglet inactif, sauf
+                                 l'onglet actif - voir MainWindow.TabSuspension.cs. Le bouton
+                                 "Verrouiller maintenant" (barre d'outils, Ctrl+Maj+L) met aussi
+                                 en pause tout de suite, meme si ce reglage est desactive ici. -->
+                            <ToggleSwitch x:Name="TabSuspensionEnabledSwitch" Header="Mettre en veille les onglets inactifs"
+                                          Toggled="TabSuspensionEnabledSwitch_Toggled"
+                                          ToolTipService.ToolTip="Décharge un onglet resté inactif trop longtemps pour libérer la mémoire et le processeur. L'onglet actif n'est jamais concerné ; un onglet en veille recharge sa page normalement dès qu'on y revient." />
+                            <ComboBox x:Name="TabSuspensionThresholdCombo" Header="Seuil d'inactivité avant mise en veille"
+                                      Width="280" SelectionChanged="TabSuspensionThresholdCombo_SelectionChanged">
+                                <ComboBoxItem Content="15 minutes" Tag="15" />
+                                <ComboBoxItem Content="30 minutes" Tag="30" />
+                                <ComboBoxItem Content="1 heure" Tag="60" />
+                            </ComboBox>
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Palette de commande" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
@@ -6031,73 +6023,55 @@
                                     <TextBlock Grid.Row="0" Grid.Column="1" Text="Mode lecture" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Article épuré, surlignage et commentaires ancrés." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="0" Grid.Column="3" Content="Lire" Click="ReaderModeMenu_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelReaderPinToggleButton" Grid.Row="0" Grid.Column="4" Tag="reader" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelReaderPinToggleButton" Grid.Row="0" Grid.Column="4" Tag="reader" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="1" Grid.Column="0" Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="1" Grid.Column="1" Text="Notes et annotations" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="1" Grid.Column="2" Text="Pages annotées et notes libres du profil." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="1" Grid.Column="3" Content="Ouvrir" Click="NotesMenu_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelNotesPinToggleButton" Grid.Row="1" Grid.Column="4" Tag="notes" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelNotesPinToggleButton" Grid.Row="1" Grid.Column="4" Tag="notes" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="2" Grid.Column="0" Glyph="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="2" Grid.Column="1" Text="Lecture à voix haute" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Synthèse vocale Windows, locale." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="2" Grid.Column="3" Content="Ouvrir" Click="ModulesReadAloud_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelReadAloudPinToggleButton" Grid.Row="2" Grid.Column="4" Tag="readAloud" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelReadAloudPinToggleButton" Grid.Row="2" Grid.Column="4" Tag="readAloud" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="3" Grid.Column="0" Glyph="&#xE8B9;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="3" Grid.Column="1" Text="Détacher la vidéo" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="3" Grid.Column="2" Text="Picture-in-Picture pour la vidéo active." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="3" Grid.Column="3" Content="Detacher" Click="DetachVideoMenu_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelDetachVideoPinToggleButton" Grid.Row="3" Grid.Column="4" Tag="detachVideo" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelDetachVideoPinToggleButton" Grid.Row="3" Grid.Column="4" Tag="detachVideo" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="4" Grid.Column="0" Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="4" Grid.Column="1" Text="Télécharger la vidéo" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="4" Grid.Column="2" Text="Module média local, avec historique des téléchargements." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="4" Grid.Column="3" Content="Télécharger" Click="ModulesVideoDownload_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelVideoDownloadPinToggleButton" Grid.Row="4" Grid.Column="4" Tag="videoDownload" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelVideoDownloadPinToggleButton" Grid.Row="4" Grid.Column="4" Tag="videoDownload" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="5" Grid.Column="0" Glyph="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="5" Grid.Column="1" Text="Recherche assistée" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="5" Grid.Column="2" Text="Reformulation locale d'une requête avant validation." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="5" Grid.Column="3" Content="Preciser" Click="ModulesSearchAssist_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelSearchAssistPinToggleButton" Grid.Row="5" Grid.Column="4" Tag="searchAssist" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelSearchAssistPinToggleButton" Grid.Row="5" Grid.Column="4" Tag="searchAssist" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="6" Grid.Column="0" Glyph="&#xF2B7;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="6" Grid.Column="1" Text="Traduction locale" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="6" Grid.Column="2" Text="Vérification et traduction de la page compatible." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="6" Grid.Column="3" Content="Vérifier" Click="ModulesTranslate_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelTranslatePinToggleButton" Grid.Row="6" Grid.Column="4" Tag="translate" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelTranslatePinToggleButton" Grid.Row="6" Grid.Column="4" Tag="translate" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="7" Grid.Column="0" Glyph="&#xE71D;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="7" Grid.Column="1" Text="Applications web" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="7" Grid.Column="2" Text="Sites épinglés en fenêtre dédiée." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="7" Grid.Column="3" Content="Gerer" Click="WebAppsMenu_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelWebAppsPinToggleButton" Grid.Row="7" Grid.Column="4" Tag="webApps" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelWebAppsPinToggleButton" Grid.Row="7" Grid.Column="4" Tag="webApps" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="8" Grid.Column="0" Glyph="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="8" Grid.Column="1" Text="Dictée vocale" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="8" Grid.Column="2" Text="Raccourci vers la dictée Windows sans voler le focus." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="8" Grid.Column="3" Content="Aide dictée" Click="MicDictationButton_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelDictationPinToggleButton" Grid.Row="8" Grid.Column="4" Tag="dictation" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelDictationPinToggleButton" Grid.Row="8" Grid.Column="4" Tag="dictation" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <!-- Flux RSS et Loupe de lecture (2026-08-09) : integres au systeme
                                          de modules epinglables, demande explicite - voir MEMORY.md. -->
@@ -6105,17 +6079,13 @@
                                     <TextBlock Grid.Row="9" Grid.Column="1" Text="Flux RSS" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="9" Grid.Column="2" Text="Lecteur de flux RSS/Atom local, sans compte." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="9" Grid.Column="3" Content="Ouvrir" Click="RssMenu_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelRssPinToggleButton" Grid.Row="9" Grid.Column="4" Tag="rss" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelRssPinToggleButton" Grid.Row="9" Grid.Column="4" Tag="rss" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
 
                                     <FontIcon Grid.Row="10" Grid.Column="0" Glyph="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="10" Grid.Column="1" Text="Loupe de lecture" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <TextBlock Grid.Row="10" Grid.Column="2" Text="Agrandir la page pour mieux lire (captcha déformé, texte minuscule)." Opacity="0.68" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Button Grid.Row="10" Grid.Column="3" Content="Ouvrir" Click="ReadingLensButton_Click" Style="{StaticResource NovaPanelActionButtonStyle}" />
-                                    <ToggleButton x:Name="PanelReadingLensPinToggleButton" Grid.Row="10" Grid.Column="4" Tag="readingLens" Style="{StaticResource NovaModulePinButtonStyle}" Click="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler">
-                                        <FontIcon Glyph="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
-                                    </ToggleButton>
+                                    <ToggleSwitch x:Name="PanelReadingLensPinToggleButton" Grid.Row="10" Grid.Column="4" Tag="readingLens" Style="{StaticResource NovaModulePinSwitchStyle}" Toggled="ModulePinToggle_Click" ToolTipService.ToolTip="Épingler" />
                                 </Grid>
                             </StackPanel>
                         </Border>

@@ -36,9 +36,6 @@ public sealed partial class MainWindow
     // Mode horizontal inchange (comportement existant : fin de liste).
     private void AddNewBlankTab()
     {
-        // Instrumentation temporaire (diagnostic gel post-connexion Google,
-        // 2026-08-30) : confirme si le clic/raccourci atteint bien ce point.
-        WinUiRuntimeTrace.Write("AddNewBlankTab invoked");
         var previousActive = CurrentTab();
         var newTab = AddTab("Nouvel onglet", "lumora://accueil", select: true);
         if (_verticalTabsEnabled && previousActive is not null)
@@ -73,6 +70,12 @@ public sealed partial class MainWindow
         // plus previsible : le split ne persiste que via son propre menu, jamais
         // implicitement). Voir MainWindow.SplitView.cs.
         ExitSplitView();
+
+        // Mise en veille des onglets inactifs (MainWindow.TabSuspension.cs) :
+        // horodatage remis a zero a CHAQUE activation, jamais seulement a la
+        // creation - c'est ce qui mesure l'inactivite (onglet le plus
+        // recemment actif = jamais le prochain candidat a la mise en veille).
+        tab.LastActiveAt = DateTimeOffset.Now;
 
         AddressBox.Text = DisplayAddressForBar(tab.Address);
         UpdateBookmarkStar(tab.Address);
@@ -159,6 +162,7 @@ public sealed partial class MainWindow
         view.GotFocus += BrowserView_GotFocus;
 
         tab.View = view;
+        tab.IsDormant = false;
         if (setPendingAddress)
         {
             tab.PendingAddress ??= tab.Address;

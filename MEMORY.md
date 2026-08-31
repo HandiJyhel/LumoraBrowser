@@ -25522,3 +25522,521 @@ dans le depot). Ancien `LumoraSetup-1.0.0-win-x64.exe` (+ son
 release. Worktree supprime apres coup (`git worktree remove --force`).
 
 Jamais lance par moi (comme toujours).
+
+## 2026-08-31 — Session privee "lock dev only" : lien externe perdu si verrouille -> 0.94.5.6-dev
+
+Nouvelle session, **dev uniquement** (consigne explicite, aucune release
+touchee). Deux retours utilisateur : (1) mode Incognito/Tor trop limite,
+aucun telechargement possible ; (2) navigateur par defaut, lien externe
+(connexion Google, lien de terminal Windows) qui n'aboutit jamais tant que
+Lumora est verrouille - a du remettre Chrome par defaut pour se connecter.
+
+**Chantier B traite en premier** (correctif confirme par lecture de code,
+avant tout Go) : `OpenUrlInNewTab` (`MainWindow.NewWindow.cs`), appelee
+quand un lien externe arrive pendant que Lumora tourne deja (relance
+redirigee, voir `App.xaml.cs`/`OnExistingInstanceActivated`), jetait le lien
+**silencieusement** si `LoginOverlay`/`SetupWizardOverlay` etait visible -
+aucune trace, aucune nouvelle tentative. Tres probablement la cause du "code
+PIN qui bloque" decrit par l'utilisateur.
+
+**Correctif** : nouveau champ `_deferredExternalUrl` (`MainWindow.xaml.cs`) -
+le lien est mis de cote au lieu d'etre jete, puis rouvert par
+`FlushDeferredExternalUrl()` (nouvelle methode, `MainWindow.NewWindow.cs`),
+appelee a la fois par `DismissLoginOverlay` (deverrouillage normal) ET par
+les deux points de sortie de l'assistant premier lancement
+(`FinishWizard`/`FinishWizardAfterImportAsync`, `MainWindow.SetupWizard.cs`).
+
+**Piege reel trouve en verifiant en direct** (skill `verify`, profil isole
+jetable) : le premier essai du correctif (flush uniquement dans
+`DismissLoginOverlay`) semblait bon a la lecture mais **echouait en
+pratique** sur un profil neuf - `DismissLoginOverlay` enchaine sur
+`ShowSetupWizard()`, donc le flush voyait encore `SetupWizardOverlay`
+visible et se re-differait tout seul (comportement voulu), mais rien ne
+relancait le flush a la fermeture de l'assistant (`FinishWizard` ne fait que
+refermer l'overlay). Confirme par trace (`winui-runtime-trace.log` : seul
+`lumora://accueil` s'ouvrait, jamais le lien externe) avant d'ajouter le
+deuxieme point d'appel. Deuxieme passage verifie en direct de bout en bout
+(profil neuf, assistant 8 etapes complet via UIA, `WizardNextButton`) :
+`WebView2 created for tab 2` + `Navigation vers
+https://example.com/lumora-external-link-test-4` dans le journal, ~24s apres
+la fin de l'assistant - confirme.
+
+**Incident mineur pendant la verification** : une capture d'ecran UIA a par
+erreur shoote le fond d'ecran personnel de la machine (photo de famille) au
+lieu de la fenetre Lumora (fenetre pas au premier plan a ce moment - meme
+piege deja documente dans le skill `verify`). Fichier supprime
+immediatement, jamais garde ni transmis.
+
+Version `0.94.5.5-dev` -> `0.94.5.6-dev` (**4e chiffre**, correctif de bug
+reel). 4 fichiers alignes (test `Version_projet_est_alignee_sur_0_94_5_6`,
+`UsageModeVisualIdentityTests.cs`) : `MainWindow.xaml.cs`, `AGENTS.md`,
+`build-clean-test-artifact.ps1`, `build-installer.ps1`. Build 0 erreur,
+871/871 tests verts, verifie en direct (voir ci-dessus). Pas encore committe
+(l'utilisateur commit lui-meme quand il le decide).
+
+**Chantier A (Incognito/Tor, telechargements) reste a faire** dans cette
+meme session - voir suite de ce journal.
+
+## 2026-08-31 (suite) — Chantier A : telechargements en Incognito/Tor -> 0.94.6.0-dev
+
+`LumoraIncognitoWindow` etait **volontairement minimale** par design (voir son
+commentaire de classe) mais l'absence totale de telechargement (meme un
+fichier simple) genait un usage reel legitime (contourner un blocage
+FAI/geo-restriction francais - meme principe que Tor Browser officiel, qui
+autorise deja les telechargements). Deux ajouts, portee choisie par
+l'utilisateur (`AskUserQuestion`) : video **+** fichiers generiques, dossier
+Telechargements **normal** du profil (pas de sous-dossier dedie - le fichier
+survit a la fermeture de la fenetre, meme compromis assume que Tor Browser).
+
+**Telechargement generique** (`LumoraIncognitoWindow.Downloads.cs`, nouveau) :
+`core.DownloadStarting` branche dans `CreateTabAsync` (absent avant, WebView2
+retombait sur sa boite de dialogue native pouvant s'afficher detachee - meme
+piege deja corrige pour MainWindow/LumoraAppWindow). `args.Handled = true` +
+reutilise `DownloadEntry` (classe deja existante, `Models/Downloads.cs`) MAIS
+liste `_incognitoDownloads` **jamais persistee** dans l'historique partage -
+disparait a la fermeture de la fenetre, coherent avec la promesse "session
+ephemere". Nouveau bouton toolbar (cache tant qu'aucun telechargement n'a
+demarre, meme principe que `DownloadsQuickButton` de `LumoraAppWindow`).
+
+**Telechargement video YouTube** (`LumoraIncognitoWindow.VideoDownload.cs`,
+nouveau) : meme moteur yt-dlp que `MainWindow.VideoDownload.cs`, mais
+**duplique** plutot que partage entre les deux fenetres (process Windows
+separe, meme raisonnement deja documente pour le reste du chrome Incognito -
+`IncognitoRaisedButtonTemplate`) - MainWindow.VideoDownload.cs **non touche**,
+zero risque de regression sur une fonctionnalite deja livree et testee.
+Nouveau bouton toolbar toujours visible, flyout dedie (qualite, progression,
+installation du moteur).
+
+**Verifie en direct** (skill `verify`, deux lancements isoles
+`--incognito --incognito-url=...`, aucun besoin de creer de profil - Incognito
+contourne entierement MainWindow/LoginOverlay) :
+- Telechargement generique (`data:application/octet-stream` en URL de
+  demarrage) : badge Telechargements apparu, flyout confirme une entree
+  reelle avec nom de fichier.
+- Detection video : page YouTube reelle (`dQw4w9WgXcQ`) -> flyout affiche
+  "Moteur local détecté : yt-dlp.exe", titre exact extrait de la page
+  ("Rick Astley - Never Gonna Give You Up..."), "Prêt à télécharger". Bouton
+  "Télécharger" lui-meme non actionne (evite un vrai telechargement reseau
+  pendant la verification - logique de telechargement en elle-meme deja
+  eprouvee, verbatim identique a celle de MainWindow).
+- Incident mineur : premier essai a laisse un dossier temporaire de session
+  Incognito orphelin (`%TEMP%\LumoraIncognito\...`, ~450 fichiers) apres un
+  `Stop-Process -Force` qui a saute le nettoyage normal a la fermeture -
+  nettoye manuellement, pas un bug Lumora (l'auto-nettoyage a la fermeture
+  normale de la fenetre n'a pas ete court-circuite par mon test, juste jamais
+  declenche puisque le process a ete tue plutot que ferme).
+
+Version `0.94.5.6-dev` -> `0.94.6.0-dev` (**3e chiffre**, ajout de
+fonctionnalite - 4e chiffre remis a 0). 4 fichiers alignes (test
+`Version_projet_est_alignee_sur_0_94_6_0`). Build 0 erreur, 871/871 tests
+verts. Pas encore committe (l'utilisateur commit lui-meme).
+
+## 2026-08-31 (suite) — Mise en veille des onglets + verrouillage manuel -> 0.94.7.0-dev
+
+Nouvelle demande dans la meme session : "optimiser un maximum la gestion
+memoire et processeur" (onglets inactifs mis en pause) + verifier un
+freeze deja signale. **Malentendu corrige en route** : l'utilisateur voulait
+un bouton pour VERROUILLER le navigateur (comme Win+L), pas un bouton pour
+mettre les onglets en pause manuellement - j'avais mal lu son analogie Win+L
+au premier passage. Corrige apres clarification (`AskUserQuestion`) : le
+verrouillage manuel **declenche aussi** la pause des onglets, un seul geste.
+
+**Mecanisme (aucune "vraie" API de gel WebView2 - n'existe pas)** : "mettre
+en veille" = decharger le moteur (`CloseTabView`, MEME methode que la
+fermeture normale d'un onglet - deja tres eprouvee) en gardant Address/
+Title/IconPath ; la reactivation recree tout seul via le chemin deja
+existant pour un onglet jamais encore ouvert (`EnsureTabViewReadyAsync`).
+Aucun nouveau code de "reveil" a ecrire - seule la logique de DECHARGEMENT
+et son declenchement sont nouveaux (`MainWindow.TabSuspension.cs`).
+
+**Regles retenues** (clarifiees via `AskUserQuestion`, l'utilisateur a
+tranche chaque point) :
+- Minuteur automatique (30 min par defaut, reglable 15/30/60, desactivable
+  entierement) + declenchement manuel immediat (bouton + `Ctrl+Maj+L`).
+- Seule exclusion demandee : l'onglet actif. Ajoute par jugement technique
+  (pas une remise en cause de la regle) : un onglet visible en vue partagee
+  (`IsTabInSplitView`) est aussi exclu - necessite technique, pas politique,
+  un onglet affiche a l'ecran ne peut pas perdre son moteur sans casser
+  l'affichage.
+- Le bouton "Verrouiller maintenant" (icone cadenas, `MainWindow.Profile.cs`
+  `LockSessionNow`) declenche la pause immediate ; comme le verrouillage
+  AUTOMATIQUE par inactivite passe par la meme methode, il en profite aussi
+  gratuitement, sans code duplique.
+- Fenetre normale uniquement (pas Incognito, pas applications web).
+- Indicateur visuel sur un onglet en veille : texte "En veille · hôte" (jamais
+  la couleur seule, meme regle d'accessibilite que le reste de Lumora) +
+  favicon estompee, dans les rendus horizontal ET vertical des onglets.
+
+**Aperçu visuel montre avant Go** (demande explicite de l'utilisateur,
+"je veux voir les nouveaux assets") : artefact HTML habille dans les tons
+reels de Lumora (mode Neutre, App.xaml). Corrige une fois en cours de route
+(bouton "pause" -> bouton "cadenas") suite au malentendu ci-dessus.
+
+**Piege reel trouve en verifiant en direct** (le plus interessant de cette
+session) : le bouton "Verrouiller maintenant", pourtant bien declare dans
+`ToolbarButtonsPanel` (XAML), **n'apparaissait nulle part** - ni dans la
+barre, ni dans l'overflow "Modules épinglés". Cause : `ToolbarCustomization
+Service.ApplyOrderToToolbar()` VIDE puis RECONSTRUIT ce panneau exclusivement
+depuis `GetDefaultButtonOrder()` (liste figee de boutons connus) + le
+dictionnaire `toolbarButtonMap` (`MainWindow.xaml.cs`) - un bouton absent des
+DEUX est efface silencieusement au demarrage, sans la moindre erreur ni log.
+Trouve seulement apres plusieurs passes de diagnostic (recherche par nom,
+dump des coordonnees reelles des boutons, capture d'ecran ciblee de la barre
+d'outils). Corrige en ajoutant `LockNowButton` aux deux listes + nouveau test
+de regression (`ToolbarCustomizationRegressionTests.cs`) pour que ce piege ne
+se reproduise plus silencieusement sur un futur bouton. **Piege documente
+directement en commentaire XAML** a cote du bouton, pour la prochaine fois.
+
+**Verifie en direct** (skill `verify`, profils isoles jetables, sans mot de
+passe) : panneau Reglages (bascule + seuil) atteint et fonctionnel, bouton
+"Verrouiller maintenant" desormais trouve avec de vraies coordonnees et
+cliquable sans crash (no-op attendu sur un profil sans mot de passe - meme
+comportement deja etabli pour le verrouillage automatique). **Limite
+assumee** : le verrouillage REEL (avec mot de passe) n'a pas pu etre
+exerce de bout en bout - `PasswordBox.SetValue` via UI Automation echoue
+toujours dans cet environnement (piege deja documente dans le skill
+`verify`), impossible de taper un mot de passe par pilotage automatise.
+
+**Question du freeze restee sans reponse cette session** : l'utilisateur a
+decrit un gel ("20s puis plus rien, meme les favoris") qui correspond
+precisement au cas deja diagnostique et corrige le 2026-08-30
+(`MainWindow.FocusRecovery.cs`, voir plus haut dans ce journal) - mais n'a
+pas confirme si c'etait avant ou apres ce correctif. Reste ouvert.
+
+Version `0.94.6.0-dev` -> `0.94.7.0-dev` (**3e chiffre**, ajout de
+fonctionnalite). 4 fichiers alignes (test
+`Version_projet_est_alignee_sur_0_94_7_0`). Build 0 erreur, 872/872 tests
+verts (1 nouveau test de regression toolbar). Pas encore committe.
+
+## 2026-08-31 (suite) — Retour utilisateur en conditions reelles : 2 bugs, 1 confirme, 1 non resolu
+
+L'utilisateur a teste 0.94.7.0-dev sur son VRAI profil (pas un profil de
+test) et a remonte une capture d'ecran reelle avec 2 problemes :
+
+**1. Bouton "Verrouiller maintenant" invisible - confirme et corrige.**
+Cause reelle : `ToolbarCustomizationService.LoadOrder()` utilisait l'ordre
+de barre SAUVEGARDE tel quel des qu'il existait, sans jamais reconsulter
+`GetDefaultButtonOrder()` - un profil deja personnalise (le cas de
+l'utilisateur, plusieurs sessions de reorganisation dans son historique)
+n'heritait donc JAMAIS d'un bouton ajoute apres coup, meme une fois ajoute a
+la liste par defaut. Corrige : `LoadOrder()` reconcilie maintenant l'ordre
+sauvegarde avec les boutons connus (ajoute en fin de liste ceux manquants,
+sans toucher a la personnalisation existante). **Verifie en direct avec
+preuve** : profil de test avec un ancien ToolbarButtonOrder (sans
+LockNowButton) ecrit a la main (DPAPI, voir skill `verify`), relance,
+bouton retrouve avec ses vraies coordonnees UIA + capture d'ecran nette
+(cadenas blanc entre Telechargements et Modules). Artefact:
+https://claude.ai/code/artifact/9abf21d5-4d5a-4974-ad0f-5505aa28fb24
+
+**2. Interrupteur "Modules épinglés" qui reste visuellement actif -
+NON RESOLU, arrete apres 2 tentatives** (regle projet : ne pas insister a
+l'aveugle, voir [[arreter-apres-echecs-repetes-sur-bug-elusif]]). Capture de
+l'utilisateur montrait "Recherche assistee" coche en permanence des qu'active
+une fois. Diagnostic :
+- Tentative 1 : `NovaModulePinButtonStyle`, etat `Unchecked` du
+  `VisualStateGroup CheckStates` etait VIDE - piege WinUI connu (un
+  `VisualState.Setters` ne revient jamais tout seul a la valeur precedente
+  en quittant l'etat, contrairement a un Storyboard). Corrige en ajoutant
+  des Setters explicites miroir de `Checked`. **Meme piege trouve et
+  corrige au passage sur 2 AUTRES styles** (`NovaSideRailNavRadioButtonStyle`
+  - nav Reglages, `NovaSubTabRadioButtonStyle` - accent bar jamais remis a
+    0).
+- Verifie en direct (skill `verify`, `TogglePattern.Toggle()` sur l'element
+  UIA) : **toujours bloque visuellement affiche "actif"**, malgre
+  `ToggleState` confirme "Off" en interne.
+- Instrumentation ajoutee temporairement (`WinUiRuntimeTrace.Write` dans
+  `ModulePinToggle_Click`/`UpdatePinToggle`) : confirme `IsChecked` bien
+  `False` a plusieurs reprises indépendantes (log "no-op" car deja a la
+  bonne valeur). Donc **la donnee est correcte, seul le rendu ne suit pas**.
+- Tentative 2 : reecrit `CheckStates` en `Storyboard`
+  (`ObjectAnimationUsingKeyFrames`/`DiscreteObjectKeyFrame`, mecanisme WinUI
+  historique, cense etre plus fiable que les Setters). **Meme resultat,
+  toujours bloque.** Instrumentation retiree, code de production nettoye.
+- **Arrete apres cette 2e tentative** (contrainte projet : pas de 3e essai
+  a l'aveugle). Hypothese non testee, hors de portee de ce pilotage UIA :
+  un clic REEL (souris) declenche peut-etre un chemin different d'un
+  `TogglePattern.Toggle()` simule - possible que le correctif fonctionne
+  deja pour un usage reel malgre l'echec de verification automatisee, ou
+  que le bug persiste vraiment. **Demande explicitement a l'utilisateur de
+  tester lui-meme** (epingler/desepingler un module) et de confirmer.
+
+Le code Storyboard (2e tentative) est **laisse en place** (aussi correct
+que les Setters, pas de raison de revenir en arriere) - a rouvrir avec plus
+d'instrumentation (ou en demandant a l'utilisateur de reproduire pendant
+qu'un build trace tourne) si le probleme persiste reellement en usage.
+
+Build 0 erreur, 872/872 tests verts a chaque etape. Rien de committe.
+
+## 2026-08-31 (suite) — Toggle modules : resolu en changeant de controle -> 0.94.7.1-dev
+
+L'utilisateur a reteste avec un VRAI clic (capture reelle a l'appui, pas mon
+pilotage automatise) : confirme que le blocage visuel persiste meme en clic
+reel - infirme l'hypothese "TogglePattern simule != vrai clic" evoquee plus
+haut. A aussi suggere lui-meme la bonne piste : "une facon plus simple de
+gerer les activations/desactivations".
+
+**Root cause acceptee sans etre totalement expliquee** : le `ToggleButton`
+habille a la main (`NovaModulePinButtonStyle`) ne revient jamais visuellement
+a l'etat "off" apres avoir ete "on", MEME apres 2 corrections differentes et
+techniquement correctes du gabarit (Setters vides -> Setters remplis ->
+Storyboard) - le mecanisme WinUI exact en cause reste non identifie avec
+certitude malgre l'instrumentation (qui confirme la DONNEE `IsChecked`
+correcte, seul le RENDU ne suit jamais). Plutot que de chercher une 3e
+explication, **remplace le controle entier** : les 22 `ToggleButton`
+(11 "Panel" + 11 "Quick") deviennent des `ToggleSwitch` **natifs** (meme
+controle que "Mise en veille des onglets", jamais ce bug ailleurs dans
+Lumora). Nouveau style partage `NovaModulePinSwitchStyle` (OnContent/
+OffContent vides + MinWidth=0 pour rester compact, sans le texte "Active/
+Desactive"). Logique C# quasi identique (`ModulePinToggle_Click`/
+`UpdateModulesPinUi`) : `ToggleButton.IsChecked` (bool?) -> `ToggleSwitch.IsOn`
+(bool). Ancien style `NovaModulePinButtonStyle` (avec ses 2 tentatives de
+correctif) entierement supprime, plus utilise nulle part.
+
+**Aperçu montre avant Go** (comparaison avant/apres, meme demande explicite
+que pour le bouton verrouillage) : https://claude.ai/code/artifact/52a71e3e-c2d5-43cf-88fc-202342ce5f86
+
+**Verifie en direct, cette fois confirme** : capture avant/apres sur le
+meme module ("Recherche assistee") - active puis desactive, le rendu suit
+correctement a chaque fois (gris/eteint <-> ambre/coche), contrairement aux
+2 tentatives precedentes sur l'ancien controle.
+
+Version `0.94.7.0-dev` -> `0.94.7.1-dev` (**4e chiffre**, correctif de bug
+reel). 4 fichiers alignes (test `Version_projet_est_alignee_sur_0_94_7_1`).
+Build 0 erreur, 872/872 tests verts. Rien de committe (l'utilisateur commit
+lui-meme).
+
+**Lecon a retenir** : quand un controle WinUI habille a la main resiste a 2
+correctifs distincts et techniquement corrects du meme symptome, suspecter
+le controle/gabarit LUI-MEME plutot que de chercher un 3e correctif -
+remplacer par le controle natif equivalent (deja eprouve ailleurs dans le
+meme projet) est souvent plus rapide ET plus fiable qu'un diagnostic plus
+profond du gabarit maison.
+
+**Reste ouvert, pas encore aborde dans cette session** : le point (2) du
+retour utilisateur au sujet du gel WebView2/focus lors d'une connexion Google
+declenchee par un lien externe (navigateur par defaut) - le correctif
+"lien perdu" (chantier B) est confirme, mais rien ne prouve encore que la
+page Google elle-meme se termine sans gel une fois le lien effectivement
+ouvert. A verifier en conditions reelles par l'utilisateur (compte Google
+reel, hors de portee d'un profil de test isole) avant de considerer ce point
+clos.
+
+## 2026-08-31 (nouvelle session) — "Nettoyage" : audit complet en cours -> 0.94.7.2-dev
+
+Nouvelle session nommee par l'utilisateur **"Nettoyage"** : audit complet du
+navigateur (fonctions, securite, fluidite), correction de tous les petits
+bugs trouves. Plan annonce et Go recu : Phase 0 (baseline) -> Phase 1
+(fonctionnel, par domaine) -> Phase 2 (securite) -> Phase 3 (fluidite/perf)
+-> Phase 4 (corrections par lots). Travail non commite deja present au
+demarrage (session precedente "lock dev only", 0.94.5.5-dev -> 0.94.7.1-dev,
+voir entrees ci-dessus) integre au perimetre de l'audit (decision utilisateur
+via `AskUserQuestion`), pas commite a part.
+
+**Detour evite** : premier reflexe d'invoquer le skill `code-review` a
+declenche une demande de connexion GitHub - rejete par l'utilisateur
+("uniquement ce qu'il y a sur le disque"). Rappel pour la suite : cet audit
+reste **100% local** (lecture de code, Grep, build/tests locaux), aucun
+outil reseau/GitHub.
+
+**Phase 0** : build WinUI 0 erreur/0 avertissement, 872/872 tests verts des
+le depart - base saine.
+
+**Phase 1 (fonctionnel)** - diff en cours entierement relu (21 fichiers) :
+rien a signaler a part le point ci-dessous, tout le reste deja verifie en
+direct lors de la session precedente. Nouveaux fichiers Incognito
+(Downloads/VideoDownload) et TabSuspension.cs relus integralement.
+
+**Bugs reels trouves et corriges** :
+1. `LumoraIncognitoWindow.Downloads.cs` - le flyout Telechargements listait
+   les fichiers en texte seul, aucun moyen de les ouvrir/reveler une fois
+   telecharges (contrairement au panneau equivalent de MainWindow,
+   `BuildDownloadCard`/`OpenDownloadFile`/`OpenDownloadFolder`,
+   `MainWindow.History.cs`). Ajoute boutons "Ouvrir"/"Dossier" par entree
+   terminee, meme mecanisme duplique localement (coherent avec le reste du
+   chrome Incognito, process separe).
+2. **Gel a la fermeture d'Incognito** (`LumoraIncognitoWindow.xaml.cs`,
+   handler `Closed`) : nettoyage du dossier de session ephemere
+   (`RetryDelete.TryDeleteDirectory`, jusqu'a 15 tentatives x 200ms = jusqu'a
+   3s, boucle `Thread.Sleep` synchrone) bloquait le thread UI **avant** de
+   relancer `MainWindow` (`_returnToMain`) - gel reel et perceptible a la
+   sortie d'Incognito. Meme piege sur la fermeture d'une session invite
+   (`MainWindow.xaml.cs`, `DeleteGuestSessionDirectoryWithRetry`, handler
+   `Closed`). Les deux corriges en jetant la suppression sur `Task.Run`
+   (nettoyage deja best-effort, resultat deja ignore - rien n'a besoin
+   d'attendre) ; le seul appelant qui a besoin du resultat
+   (`ResetProfileButton_Click`, `MainWindow.Profile.cs`) utilisait deja
+   `Task.Run` correctement, non touche.
+3. **Fuite memoire/CPU a la fermeture d'une fenetre parmi plusieurs**
+   (`MainWindow.xaml.cs`, handler `Closed`) - la plus significative des 3.
+   Lumora permet plusieurs fenetres normales simultanees (`_liveInstances`,
+   "Nouvelle fenetre"/Ctrl+N, MEME process/thread UI). Avant ce correctif,
+   fermer une fenetre parmi plusieurs (pas la derniere) ne fermait AUCUN
+   moteur WebView2 (le bloc de fermeture des vues ne s'executait que pour
+   `_isGuestMode`) ni n'arretait AUCUN des minuteurs de cette fenetre
+   (`_sessionTimer`, `_rssTimer`, `_tabSuspensionTimer`,
+   `_fullScreenTopChromeHideTimer`, `_verticalTabsRailAutoHideTimer`,
+   `_contentFullScreenWatchdogTimer`, `_addressSuggestionsCloseGraceTimer`,
+   `_noteSaveTimer`, `_totpTimer`) - tout continuait de tourner
+   indefiniment en arriere-plan, invisible, jusqu'a la fermeture complete
+   de Lumora. Handler rendu inconditionnel (fermeture des vues + arret de
+   tous les minuteurs pour TOUTE fenetre, invite ou non), separe du
+   handler invite (qui ne fait plus que la suppression du dossier ephemere).
+   **Verifie en direct avec preuve chiffree** (skill `verify`, profil isole
+   jetable, script UIA sur mesure) : fenetre 1 naviguee vers un vrai site
+   -> 13 process `msedgewebview2.exe` (creation confirmee par
+   `WebView2 created for tab 1` dans le journal). Ctrl+N (accelerateur,
+   refocus sur `AddressBox` necessaire - le focus reste dans le contenu
+   WebView2 sinon) -> 2e fenetre confirmee (2 fenetres top-level du meme
+   process), naviguee vers un autre site -> 14 process. Fermeture de la
+   2e fenetre (`WindowPattern.Close()`) -> **retombe immediatement et
+   exactement a 13 process**, stable apres 5s de grace, process principal
+   toujours vivant, aucune ligne `UNHANDLED` dans le journal. Confirme que
+   le moteur de la fenetre fermee est bien libere, ni plus ni moins.
+
+**Securite (spot-checks, pas de re-audit complet du Coffre deja fait
+plusieurs fois - voir entrees anterieures)** : pas de concatenation SQL
+(toutes les `CommandText` statiques ou parametrees), pas d'injection shell
+(`ProcessStartInfo` avec `ArgumentList`, jamais de concatenation dans un
+`Arguments` unique), pas de blocage `.Result`/`.Wait()` sur le thread UI.
+`VaultStore.cs` : AES-256-GCM authentifie + Argon2id (64 Mio, 3 iter,
+parallelisme 4) + `RandomNumberGenerator` pour sels/nonces - coherent avec
+les audits precedents, rien de nouveau trouve. Dictionnaires lies au cycle
+de vie WebView2 (`_httpsUpgradeOriginals`, `_cosmeticScriptIds`, etc., piege
+deja documente) tous nettoyes dans `CloseTabView` - aucune fuite trouvee,
+y compris pour le nouveau chemin de mise en veille des onglets qui reutilise
+cette meme methode.
+
+Version `0.94.7.1-dev` -> `0.94.7.2-dev` (**4e chiffre**, corrections de
+bugs reels). 5 fichiers alignes (test
+`Version_projet_est_alignee_sur_0_94_7_2`). Build 0 erreur, 872/872 tests
+verts. Rien de committe (l'utilisateur commit lui-meme).
+
+**Favoris** (drag-and-drop, favicons manquantes, import/export) relus
+integralement : rien trouve, tout deja solide (import/export deja protege
+par `Task.Run` depuis la session "gel import favoris" du 2026-08-22).
+
+**Coffre / identifiants** (au-dela du spot-check crypto ci-dessus) :
+`PasswordGenerator.cs` verifie - `RandomNumberGenerator` partout (mots de
+passe ET phrases de passe), pas de biais modulo. Repere un point a
+trancher plutot qu'a corriger seul : `CredentialCsv.Escape` (export CSV du
+gestionnaire de mots de passe) echappe la syntaxe CSV (virgules/guillemets)
+mais pas l'injection de formule tableur (`=`, `+`, `-`, `@` en tete de
+champ, CWE-1236) - risque theorique si un champ capture (site malveillant)
+contient une formule et que l'export est ouvert dans Excel. Non corrige :
+le format est deliberement compatible Chrome/Firefox (import/export), et
+ces deux navigateurs acceptent la meme limite pour la meme raison de
+compatibilite - un prefixe de protection casserait le format et l'import
+Lumora lui-meme (round-trip). A trancher avec l'utilisateur si souhaite.
+
+**Balayage fluidite/performance restant** (dictionnaires WebView2, minuteurs
+`DispatcherTimer`/`DispatcherQueueTimer`, blocages `.Result`/`.Wait()`,
+`Thread.Sleep`) desormais couvert integralement - voir les 3 bugs ci-dessus,
+rien d'autre trouve.
+
+**Suite (meme session, demande explicite "corrige tous les petits bugs +
+nettoie le code")** :
+
+**Domaines restants couverts** : applications web (`MainWindow.WebApps.cs`
++ `WebApps/*.cs` - raccourcis .lnk via IShellLinkW, arguments `--app=<id>`
+base sur un GUID donc sans risque d'injection, sanitisation du nom de
+fichier), `MainWindow.Sessions.cs` (purge des sessions au demarrage,
+panneau "Sites connectes", "Rester connecte ?"), `MainWindow.History.cs`
+(historique, recherche semantique), `MainWindow.LayoutStudio.cs` (Studio
+Lumora, disposition onglets/favoris/theme) - tous relus integralement,
+rien trouve, tout deja solide.
+
+**Nettoyage de code** (comportement inchange, verifie par build+tests) :
+suppression de 3 instrumentations de diagnostic explicitement marquees
+"temporaire" dans leur propre commentaire, posees le 2026-08-30 pour
+l'enquete sur le gel post-connexion Google - **bug confirme corrige** depuis
+(`MainWindow.FocusRecovery.cs`, verifie en direct le 2026-08-31, voir plus
+haut) :
+- `MainWindow.Navigation.cs` (`AddNewBlankTab`) : trace "invoked" a chaque
+  nouvel onglet.
+- `MainWindow.Bookmarks.cs` (`AddBookmarkButton_Click`) : trace "invoked" a
+  chaque clic sur l'etoile favoris.
+- `MainWindow.AccessibilityKeyboardShortcuts.cs`
+  (`RegisterGlobalAccelerator`) : la plus large des trois - construisait une
+  chaine (interpolation + 2 lectures de `Visibility`) a **chaque
+  raccourci clavier** de toute l'application (Ctrl+T, Ctrl+W, F5, Alt+←/→,
+  Ctrl+Tab, F11, Ctrl+Maj+L...), meme hors tracage actif.
+
+**Repere mais delibirement PAS touche** : le sous-classement WndProc de
+`MainWindow.WindowChrome.cs` (`RawWheelDiagnosticsWndProc`) porte encore un
+commentaire "diagnostic temporaire" (Go du 2026-07-25) mais **n'est plus du
+diagnostic** - c'est devenu le mecanisme reel de routage de la molette vers
+le bon HWND enfant (correctif du 2026-08-02/07, incluant un garde-fou
+anti-reentrance apres un crash reel STATUS_STACK_OVERFLOW). Zone
+historiquement fragile (8-9 correctifs successifs, voir
+[[diagnostiquer-avant-9e-patch-molette]]) : renommer/nettoyer les
+commentaires seuls n'apportait aucun benefice fonctionnel pour le risque
+d'y toucher - laisse tel quel.
+
+Build 0 erreur/0 avertissement, 872/872 tests verts a chaque etape de ce
+nettoyage. Pas de bump de version pour ce nettoyage seul (aucun
+comportement utilisateur modifie, contrairement aux 4 correctifs
+precedents de cette session) - reste sur `0.94.7.2-dev`. Rien de committe.
+
+**Reste hors perimetre** : balayage cosmetique plus large (usings inutilises,
+etc.) volontairement pas entrepris - risque/effort disproportionne face au
+gain purement cosmetique, aucun outil fiable local pour le faire vite et
+sans erreur ; assistant premier lancement releu en diff seulement (pas en
+profondeur ligne a ligne).
+
+## 2026-08-31 (suite) — Optimisation demandee : ReadyToRun au demarrage
+
+Nouvelle demande explicite : "rendre l'application la plus optimisee
+possible". Investigation prealable (rien de code a changer, deja optimal) :
+Garbage Collector (Workstation+concurrent, deja le defaut adapte a une app
+desktop), recherche semantique/IA locale (ONNX) deja chargee paresseusement
+(`EmbeddingService.GetOrLoadEngineAsync`, rien au demarrage tant
+qu'inutilisee), demarrage a froid deja mesure a ~700ms en conditions
+reelles plus tot dans cette session. Face a l'ambiguite de "optimiser"
+(demarrage vs empreinte disque vs balayage CPU fin, chacun tres different en
+risque), question posee a l'utilisateur (`AskUserQuestion`) - reponse :
+demarrage de l'executable final.
+
+**Changement** : `PublishReadyToRun=true` ajoute au pipeline de publication
+reel (`scripts/build-clean-test-artifact.ps1`, a la fois au restore - sinon
+`NETSDK1094`, pack crossgen jamais restaure, meme piege deja documente pour
+`SelfContained` - et au publish). Precompile le code natif de l'executable
+final a la publication au lieu de tout laisser au JIT au premier lancement
+de chaque utilisateur. `build-installer.ps1` en profite automatiquement
+(consomme l'artefact deja construit par ce script, aucun changement propre
+necessaire la-bas).
+
+**Verification reelle en 2 temps** (skill `verify`, profils isoles
+jetables) :
+1. Experimentation MSBuild directe (`/t:Restore` puis `/t:Publish` avec
+   `PublishReadyToRun=true`) : premier essai a d'abord echoue avec une
+   `XamlParseException` ("Cannot locate resource from ms-appx:///
+   MainWindow.xaml") - PAS un bug R2R, juste `Lumora.WinUI.pri`/les `.xbf`
+   jamais copies par cette invocation MSBuild simplifiee (etape que
+   `build-clean-test-artifact.ps1` fait deja correctement lui-meme). Une
+   fois ces fichiers copies a la main pour l'experimentation : lancement
+   reussi, navigation vers un vrai site (`https://example.com`) confirmee,
+   aucune ligne `UNHANDLED`. `MainWindow constructed` a 622ms depuis le
+   constructeur `App`, contre ~730ms sur le meme poste sans R2R plus tot
+   dans cette session (indicatif, un seul echantillon chaque cote, pas une
+   mesure scientifique, mais coherent avec le gain attendu).
+2. **Pipeline reel** (`build-clean-test-artifact.ps1` modifie, execute de
+   bout en bout, 0 erreur/0 avertissement) : artefact produit avec les DLL
+   R2R (taille de `Lumora.WinUI.dll` quasi doublee, 4,86 Mo contre 2,47 Mo
+   en Debug non-R2R - signe attendu de code natif precompile embarque),
+   `.pri`/`.xbf`/`VERIFICATION.txt` tous corrects (le script gere deja cette
+   etape). Relance de CET artefact (pas l'experimentation manuelle) :
+   fenetre construite en 654ms, navigation vers un 2e site
+   (`https://example.org`) confirmee reussie, aucune exception. Artefact de
+   verification et son manifeste SHA256 supprimes apres coup (verification
+   seulement, pas une demande de build reel - voir
+   [[eviter-churn-executables-installeur]]).
+
+Build Debug habituel (`build-winui.ps1`) et suite de tests non affectes
+(0 erreur, 872/872 verts) - le changement ne touche que la configuration
+Release/publication.
+
+**Versionnement tranche par l'utilisateur** (question posee, pas choisi
+seul) : micro-correctif. Version `0.94.7.2-dev` -> `0.94.7.3-dev` (**4e
+chiffre**). 5 fichiers alignes (test
+`Version_projet_est_alignee_sur_0_94_7_3`). Build 0 erreur, 872/872 tests
+verts apres le bump. Rien de committe (l'utilisateur commit lui-meme).

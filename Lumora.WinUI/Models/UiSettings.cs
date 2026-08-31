@@ -107,6 +107,14 @@ internal sealed class UiSettings
     // Verrouillage auto par défaut à 10 min (valeur présente dans le sélecteur).
     // Les profils existants conservent la valeur enregistrée dans leur ui-settings.
     public int SessionTimeoutMinutes { get; set; } = 10;
+    // Mise en veille des onglets inactifs (2026-08-31, retour utilisateur :
+    // optimiser mémoire/CPU). Active par défaut (c'est la demande d'origine),
+    // seuil 30 min - voir MainWindow.TabSuspension.cs. 0 ou
+    // TabSuspensionEnabled=false désactive entièrement le minuteur, sans
+    // affecter le déclenchement manuel (bouton Verrouiller, qui met aussi les
+    // onglets en pause quel que soit ce réglage).
+    public bool TabSuspensionEnabled { get; set; } = true;
+    public int TabSuspensionThresholdMinutes { get; set; } = 30;
     public bool NetworkBlockerEnabled { get; set; } = true;
     public bool TelemetryBlockerEnabled { get; set; } = true;
     // SmartScreen vérifie la réputation des sites en envoyant chaque URL à

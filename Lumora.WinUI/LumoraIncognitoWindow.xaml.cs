@@ -123,8 +123,15 @@ public sealed partial class LumoraIncognitoWindow : Window
             // (Cache, LevelDB...) verrouilles quelques instants apres la fermeture des
             // vues ci-dessus - un Directory.Delete en une seule tentative echoue de facon
             // fiable. Delegue au meme module partage (Storage/RetryDelete.cs).
-            try { RetryDelete.TryDeleteDirectory(_sessionDataDir, maxAttempts: 15, delayMs: 200, out _); }
-            catch { /* best-effort : ne jamais faire echouer la fermeture de fenetre pour ca */ }
+            // Jete sur Task.Run (2026-08-31, audit nettoyage) : ce Closed est synchrone
+            // et bloquait le thread UI jusqu'a 3s (15 tentatives x 200ms) AVANT de
+            // relancer MainWindow ci-dessous (_returnToMain) - gel reel a la fermeture
+            // d'Incognito, nettoyage purement best-effort donc rien n'a besoin d'attendre.
+            _ = Task.Run(() =>
+            {
+                try { RetryDelete.TryDeleteDirectory(_sessionDataDir, maxAttempts: 15, delayMs: 200, out _); }
+                catch { /* best-effort : ne jamais faire echouer la fermeture de fenetre pour ca */ }
+            });
 
             // MainWindow s'est fermee pour laisser la place a cette fenetre
             // (voir MainWindow.Incognito.cs) : si on quitte vraiment Incognito
@@ -820,6 +827,11 @@ public sealed partial class LumoraIncognitoWindow : Window
             args.Handled = true;
             _ = CreateTabAsync(args.Uri, select: true);
         };
+        // Telechargement generique (2026-08-31, voir LumoraIncognitoWindow.Downloads.cs) :
+        // sans ce branchement, WebView2 retombe sur sa boite de dialogue native, qui peut
+        // s'afficher detachee de la fenetre - meme piege deja corrige pour MainWindow et
+        // LumoraAppWindow (Core_DownloadStarting, voir leurs commentaires).
+        core.DownloadStarting += Core_DownloadStarting;
 
         WinUiRuntimeTrace.Write($"Incognito tab WebView2 ready (tor={_initialTorEnabled})");
 

@@ -71,18 +71,47 @@ public sealed partial class MainWindow
         }
     }
 
-    // Même garde que OpenNewWindow : ignore tant que le profil courant n'est
-    // pas déverrouillé (barre d'onglets pas encore prête).
+    // Même garde que OpenNewWindow : tant que le profil courant n'est pas
+    // déverrouillé (barre d'onglets pas encore prête), le lien ne peut pas
+    // s'ouvrir immédiatement. Corrigé le 2026-08-31 (retour utilisateur) :
+    // avant, le lien était jeté ici sans aucune trace - un lien de connexion
+    // Google ou un lien "ouvrir dans le navigateur" reçu pendant que Lumora
+    // était verrouillé (écran PIN/mot de passe) disparaissait purement et
+    // simplement, sans message ni nouvelle tentative possible. Il est
+    // maintenant mis de côté (_deferredExternalUrl, MainWindow.xaml.cs) et
+    // rouvert automatiquement par DismissLoginOverlay dès que le
+    // déverrouillage (ou l'assistant de configuration, s'il s'affiche
+    // ensuite) se termine - même logique d'auto-réessai que ApplyStartupPage
+    // pour le tout premier lancement (_pendingLaunchUrl), qui elle n'avait
+    // jamais ce problème.
     private void OpenUrlInNewTab(string url)
     {
         if (LoginOverlay.Visibility == Visibility.Visible ||
             SetupWizardOverlay.Visibility == Visibility.Visible)
         {
+            _deferredExternalUrl = url;
             return;
         }
 
         AddTab(DisplayTitle(url), url, select: true);
         BringToForeground();
+    }
+
+    // Rouvre un lien externe mis de côté par OpenUrlInNewTab (voir
+    // _deferredExternalUrl, MainWindow.xaml.cs) - appelé par DismissLoginOverlay
+    // ET par la fin de l'assistant de configuration (FinishWizard/
+    // FinishWizardAfterImportAsync, MainWindow.SetupWizard.cs). Nécessaire aux
+    // DEUX endroits : un profil tout juste créé enchaîne DismissLoginOverlay ->
+    // ShowSetupWizard, donc OpenUrlInNewTab (appelé depuis DismissLoginOverlay)
+    // voit encore SetupWizardOverlay visible et re-diffère le lien - sans ce
+    // second appel à la fin du wizard, le lien restait diféré indéfiniment,
+    // jusqu'au prochain lien externe reçu (jamais garanti).
+    private void FlushDeferredExternalUrl()
+    {
+        if (_deferredExternalUrl is null) return;
+        var url = _deferredExternalUrl;
+        _deferredExternalUrl = null;
+        OpenUrlInNewTab(url);
     }
 
     // Ramène cette fenêtre au premier plan pour un lien cliqué ailleurs -

@@ -616,6 +616,9 @@ public sealed partial class MainWindow
             _verticalTabsExpandedWidth = Math.Clamp(_uiSettings.VerticalTabsWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
             BookmarksBarSwitch.IsOn = _uiSettings.BookmarksBarVisible;
             VerticalTabsSwitch.IsOn = _verticalTabsEnabled;
+            TabSuspensionEnabledSwitch.IsOn = _uiSettings.TabSuspensionEnabled;
+            SelectComboByTag(TabSuspensionThresholdCombo, _uiSettings.TabSuspensionThresholdMinutes.ToString(), "30");
+            TabSuspensionThresholdCombo.IsEnabled = _uiSettings.TabSuspensionEnabled;
             CompactModeSwitch.IsOn = _compactModeEnabled;
             CompactModeHideBookmarksSwitch.IsOn = _uiSettings.CompactModeHidesBookmarks;
             FullScreenAutoHideChromeSwitch.IsOn = _uiSettings.FullScreenAutoHideChrome;

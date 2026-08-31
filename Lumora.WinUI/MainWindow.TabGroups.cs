@@ -127,6 +127,10 @@ public sealed partial class MainWindow
                 // sans marge visible. Toutes les tailles ci-dessous reduites
                 // proportionnellement (~30%) plutot que redevinees a part.
                 var icon = TabIconElement(tab, 14);
+                if (tab.IsDormant)
+                {
+                    icon.Opacity = 0.5;
+                }
 
                 var compactClose = new Button
                 {
@@ -188,13 +192,21 @@ public sealed partial class MainWindow
             else
             {
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                row.Children.Add(TabIconElement(tab, 16));
+                var rowIcon = TabIconElement(tab, 16);
+                if (tab.IsDormant)
+                {
+                    rowIcon.Opacity = 0.5;
+                }
+                row.Children.Add(rowIcon);
                 row.Children.Add(new TextBlock
                 {
-                    Text = tab.Title,
+                    // "En veille" en texte (pas seulement l'icone estompee) -
+                    // meme regle d'accessibilite que RefreshHorizontalTabHeaders.
+                    Text = tab.IsDormant ? $"En veille · {tab.Title}" : tab.Title,
                     MaxWidth = 118,
                     TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = VerticalAlignment.Center
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Opacity = tab.IsDormant ? 0.7 : 1
                 });
                 var grid = new Grid { ColumnSpacing = 6 };
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1089,7 +1101,12 @@ public sealed partial class MainWindow
                 BorderBrush = selectionBrush ?? (Brush)RootShell.Resources[active ? "NovaTabPillActiveBorderBrush" : "NovaTabPillInactiveBorderBrush"],
                 BorderThickness = new Thickness(selected ? 2 : 1)
             });
-            compactWrap.Children.Add(TabIconElement(tab, 18));
+            var compactIcon = TabIconElement(tab, 18);
+            if (tab.IsDormant)
+            {
+                compactIcon.Opacity = 0.5;
+            }
+            compactWrap.Children.Add(compactIcon);
             if (active)
             {
                 compactWrap.Children.Add(new Border
@@ -1101,6 +1118,24 @@ public sealed partial class MainWindow
                     VerticalAlignment = VerticalAlignment.Top,
                     Margin = new Thickness(0, 2, 2, 0),
                     Background = new SolidColorBrush(UiColor(255, 230, 104))
+                });
+            }
+            else if (tab.IsDormant)
+            {
+                // Meme technique que le point actif ci-dessus (pastille, pas une
+                // icone) - couleur distincte (gris-bleu vs jaune actif) ET jamais
+                // seule (voir le texte "En veille" ajoute plus bas dans la
+                // variante non compacte, meme regle d'accessibilite que la
+                // pastille Tor d'Incognito : jamais la couleur seule comme signal).
+                compactWrap.Children.Add(new Border
+                {
+                    Width = 6,
+                    Height = 6,
+                    CornerRadius = new CornerRadius(3),
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    Margin = new Thickness(0, 0, 2, 2),
+                    Background = new SolidColorBrush(UiColor(137, 146, 176))
                 });
             }
 
@@ -1119,7 +1154,10 @@ public sealed partial class MainWindow
         });
         caption.Children.Add(new TextBlock
         {
-            Text = host,
+            // "En veille" en texte, jamais seulement la pastille grise sur
+            // l'icone plus bas - meme regle d'accessibilite que partout
+            // ailleurs dans Lumora (ex. pastille Tor d'Incognito).
+            Text = tab.IsDormant ? $"En veille · {host}" : host,
             MaxWidth = 154,
             TextTrimming = TextTrimming.CharacterEllipsis,
             FontSize = 10.5,
@@ -1160,7 +1198,24 @@ public sealed partial class MainWindow
             CornerRadius = new CornerRadius(12),
             Background = (Brush)RootShell.Resources[active ? "NovaTabIconWrapActiveBackgroundBrush" : "NovaTabIconWrapInactiveBackgroundBrush"]
         });
-        iconWrap.Children.Add(TabIconElement(tab, 14));
+        var tabIcon = TabIconElement(tab, 14);
+        if (tab.IsDormant)
+        {
+            tabIcon.Opacity = 0.5;
+        }
+        iconWrap.Children.Add(tabIcon);
+        if (tab.IsDormant)
+        {
+            iconWrap.Children.Add(new Border
+            {
+                Width = 7,
+                Height = 7,
+                CornerRadius = new CornerRadius(3.5),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Background = new SolidColorBrush(UiColor(137, 146, 176))
+            });
+        }
 
         Grid.SetColumn(iconWrap, 0);
         Grid.SetColumn(caption, 1);

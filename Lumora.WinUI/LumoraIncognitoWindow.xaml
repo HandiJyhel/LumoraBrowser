@@ -228,6 +228,82 @@
                               Toggled="IncognitoTorSwitch_Toggled"
                               AutomationProperties.Name="Masquer l'adresse IP via Tor"
                               ToolTipService.ToolTip="Change l'état de Tor : ferme cette fenêtre Incognito et en rouvre une nouvelle dans le nouvel état (les onglets ouverts sont perdus, vous restez en Incognito)" />
+                <!-- Telechargements (2026-08-31, retour utilisateur : "on ne peut
+                     rien faire en Incognito/Tor, meme pas telecharger une video") -
+                     fichier generique intercepte par Core_DownloadStarting
+                     (LumoraIncognitoWindow.Downloads.cs), enregistre sur disque dans
+                     le dossier Telechargements normal comme Tor Browser officiel,
+                     mais SEULEMENT liste ici en memoire (jamais dans l'historique
+                     partage de Lumora - session ephemere oblige). Cache tant
+                     qu'aucun telechargement n'a demarre, meme principe que
+                     DownloadsQuickButton de LumoraAppWindow. -->
+                <Button x:Name="IncognitoDownloadsButton" Padding="8,5" Visibility="Collapsed"
+                        Style="{StaticResource IncognitoToolbarButtonStyle}"
+                        AutomationProperties.Name="Téléchargements de cette fenêtre Incognito"
+                        ToolTipService.ToolTip="Téléchargements de cette fenêtre Incognito">
+                    <FontIcon Glyph="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom" Opening="IncognitoDownloadsFlyout_Opening">
+                            <StackPanel Width="280" Spacing="8">
+                                <TextBlock Text="Téléchargements" FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{StaticResource LumoraWindowTextBrush}" />
+                                <TextBlock Text="Enregistrés dans le dossier Téléchargements normal, comme le reste de Lumora - mais cette liste elle-même disparaît à la fermeture de la fenêtre."
+                                           TextWrapping="Wrap" FontSize="11.5" Opacity="0.7"
+                                           Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                                <StackPanel x:Name="IncognitoDownloadsList" Spacing="4" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <!-- Video (YouTube) : meme moteur local (yt-dlp) que la fenetre
+                     principale, cf. LumoraIncognitoWindow.VideoDownload.cs. Toujours
+                     visible (comme VideoDownloadButton, MainWindow.xaml) - le
+                     flyout detecte lui-meme si l'onglet actif est une page video a
+                     l'ouverture. -->
+                <Button x:Name="IncognitoVideoDownloadButton" Padding="8,5"
+                        Style="{StaticResource IncognitoToolbarButtonStyle}"
+                        AutomationProperties.Name="Télécharger la vidéo"
+                        ToolTipService.ToolTip="Télécharger la vidéo">
+                    <FontIcon Glyph="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+                    <Button.Flyout>
+                        <Flyout x:Name="IncognitoVideoDownloadFlyout" Placement="Bottom"
+                                Opening="IncognitoVideoDownloadFlyout_Opening">
+                            <StackPanel Width="300" Spacing="10">
+                                <TextBlock Text="Télécharger la vidéo" FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{StaticResource LumoraWindowTextBrush}" />
+                                <TextBlock x:Name="IncognitoVideoDownloadTitleText" TextWrapping="Wrap"
+                                           FontSize="12.5" Opacity="0.85"
+                                           Foreground="{StaticResource LumoraWindowTextBrush}" />
+                                <TextBlock x:Name="IncognitoVideoDownloadEngineText" TextWrapping="Wrap"
+                                           FontSize="11.5" Opacity="0.7"
+                                           Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                                <Border Height="1" Background="{StaticResource LumoraWindowCalloutStrokeBrush}" Opacity="0.6" />
+                                <ComboBox x:Name="IncognitoVideoDownloadQualityCombo" Header="Qualité"
+                                          HorizontalAlignment="Stretch" IsEnabled="False"
+                                          SelectionChanged="IncognitoVideoDownloadQualityCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Meilleure qualité disponible" Tag="Best" IsSelected="True" />
+                                    <ComboBoxItem Content="1080p" Tag="Q1080" />
+                                    <ComboBoxItem Content="720p" Tag="Q720" />
+                                    <ComboBoxItem Content="480p" Tag="Q480" />
+                                </ComboBox>
+                                <TextBlock x:Name="IncognitoVideoDownloadStatusText" TextWrapping="Wrap"
+                                           FontSize="11.5" Opacity="0.75"
+                                           Foreground="{StaticResource LumoraWindowMutedTextBrush}" />
+                                <ProgressBar x:Name="IncognitoVideoDownloadProgressBar" Minimum="0" Maximum="100"
+                                             Visibility="Collapsed" />
+                                <Button x:Name="IncognitoVideoDownloadInstallEngineButton"
+                                        Content="Installer le moteur yt-dlp (open source)"
+                                        Style="{StaticResource IncognitoToolbarButtonStyle}"
+                                        HorizontalAlignment="Stretch" Visibility="Collapsed"
+                                        Click="IncognitoVideoDownloadInstallEngine_Click" />
+                                <Button x:Name="IncognitoVideoDownloadStartButton" Content="Télécharger"
+                                        Style="{StaticResource IncognitoToolbarButtonStyle}"
+                                        HorizontalAlignment="Stretch"
+                                        Click="IncognitoVideoDownloadStartButton_Click" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <!-- Icone reglages (2026-08-12, retour utilisateur : "donner a
                      Incognito un acces a certains parametres lies au pistage") -
                      acces rapide sans quitter cette fenetre, perimetre = ce qui

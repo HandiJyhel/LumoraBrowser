@@ -28,6 +28,17 @@ internal sealed record BrowserTabState(int Id, string Title, string Address)
     // onglet : null tant qu'aucun signal n'est arrivé, "direct" ou "panel" sinon.
     // Remis à null à chaque nouvelle navigation (voir BrowserView_NavigationStarting).
     public string? ConsentHandledMethod { get; set; }
+
+    // Mise en veille des onglets inactifs (MainWindow.TabSuspension.cs).
+    // LastActiveAt : mis à jour à chaque fois que cet onglet devient l'onglet
+    // actif (ActivateTab) - sert à mesurer son inactivité. IsDormant : vrai
+    // entre le moment où le moteur a été déchargé pour économiser mémoire/CPU
+    // et sa prochaine réactivation (remis à false par EnsureTabViewReadyAsync) -
+    // distingue un onglet VOLONTAIREMENT mis en veille d'un onglet qui n'a
+    // simplement jamais encore été ouvert (View est null dans les deux cas,
+    // mais seul le premier doit afficher l'indicateur "en veille").
+    public DateTimeOffset LastActiveAt { get; set; } = DateTimeOffset.Now;
+    public bool IsDormant { get; set; }
 }
 
 
