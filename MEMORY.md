@@ -26169,3 +26169,68 @@ Version `0.94.7.3-dev` -> `0.94.8.0-dev` (**3e chiffre**, ajout de
 fonctionnalité - 5 fichiers alignés, test
 `Version_projet_est_alignee_sur_0_94_8_0`). Rien de committé (l'utilisateur
 commit lui-même).
+
+## 2026-09-01 — 9e release 1.0.0 : commit favoris déjà en place, installateur regénéré
+
+Nouvelle session, nommée par l'utilisateur "release numéro 8" puis corrigée en
+"9e release 1.0.0" après clarification (`AskUserQuestion`) : le journal du
+2026-08-31 documentait déjà une "8e release 1.0.0" (commit `24926a9`, avant la
+session favoris `7bbbd30`, jamais packagée) - celle d'aujourd'hui est donc
+techniquement la 9e, pas la 8e. Demande explicite : "tu vas me faire une
+Release 1.0.0". Contrairement aux sessions précédentes, tout le travail était
+déjà committé au démarrage (`git status` propre, HEAD = `7bbbd30` = favoris
+glisser-déposer/"Déplacer vers…"/vues, 0.94.8.0-dev) - aucun commit
+intermédiaire nécessaire cette fois.
+
+**Même protocole que les 8 releases précédentes**, confirmé avec l'utilisateur
+avant de lancer quoi que ce soit (question posée, pas supposé) : worktree
+jetable (`C:\lumora100`, détaché sur `7bbbd30`), runtime WebView2 Fixed Version
+(`150.0.4078.105`, 648 Mo, gitignore) copié à la main dans le worktree,
+`ReleaseVersion` mis à `"1.0.0"` **UNIQUEMENT dans ce worktree** - vérifié
+après coup : `git status` propre dans le dépôt principal, `ReleaseVersion =
+null` toujours en place. Artefact propre (`build-clean-test-artifact.ps1
+-Version "1.0.0"`) puis installateur (`build-installer.ps1 -Version "1.0.0"`)
+générés depuis le worktree, tous deux 0 erreur/0 avertissement.
+
+**Vérifié en direct** (skill `verify`, profil isolé jetable, flux UIA groupé
+en un seul appel) - l'exécutable de l'artefact propre (jamais l'installateur
+lui-même) : titre de fenêtre confirmé `"Lumora 1.0.0"` (avant ET après
+navigation), navigation réelle vers `https://example.com` réussie
+(`NavigationCompleted isSuccess=True`, `Response: status=200`), aucune ligne
+`UNHANDLED` dans `winui-runtime-trace.log`, démarrage `App constructor start`
+-> `MainWindow constructed` ~544ms (cohérent avec le gain R2R déjà mesuré,
+~485-650ms). Le journal montre 2 séquences complètes de démarrage dans le
+même process (même PID confirmé tout du long via UIA) - pas creusé plus loin
+(hors périmètre de cette session, aucune anomalie derrière : ni crash ni
+`UNHANDLED`), à surveiller si ça se reproduit ailleurs. Capture d'écran de
+vérification ratée par un piège déjà documenté dans le skill `verify`
+(`CopyFromScreen` sur le `BoundingRectangle` UIA peut capturer une AUTRE
+fenêtre réelle du bureau si Lumora n'est pas au premier plan) - a bien capturé
+une fenêtre tierce de l'utilisateur au lieu de Lumora ; **supprimée
+immédiatement sans être examinée plus avant** (contenu personnel hors sujet),
+la vérification reposant de toute façon sur les propriétés UIA (fiables même
+quand la capture ne l'est pas), pas sur cette image.
+
+SHA256 installateur : `db061a4e1358f9964f3f49edcc88d9bbc748f143f9f8d3e449a1e7eb4ad155b4`
+(SHA256 exécutable applicatif :
+`a1c85e8c3af008910379097a5bc9158657e697179321ef5c5c9efb41d672aff4`). Vérifiés
+deux fois chacun (sortie des scripts + `sha256sum` indépendant). Ancien
+`LumoraSetup-1.0.0-win-x64.exe` (+ son `.VERIFICATION.txt`) **supprimé**, pas
+renommé - même consigne que les releases précédentes.
+
+**Écart au protocole, corrigé en direct** : worktree supprimé avant d'avoir
+copié le manifeste `.sha256` généré par `build-installer.ps1` dans le dépôt
+principal (seuls l'installateur et son `VERIFICATION.txt` avaient été
+copiés) - repéré immédiatement après coup. Pas de perte réelle : le manifeste
+n'est de toute façon jamais suivi par git (`artifacts/signatures/*` est
+gitignore hormis `.gitkeep`, malgré la mention "historique" des sessions
+précédentes - vérifié avec `git check-ignore`/`git ls-files`), donc régénéré
+sans risque directement dans le dépôt principal sur l'installateur déjà
+copié (`generate-release-checksums.ps1`), même hash confirmé. À l'avenir :
+copier le manifeste `.sha256` vers le dépôt principal AVANT de supprimer le
+worktree, plutôt que de compter sur cette régénération de secours.
+
+Worktree supprimé après coup (`git worktree remove --force`) - confirmé
+absent du disque. Jamais lancé par moi (comme toujours). Rien à committer
+côté dépôt principal (aucun fichier suivi par git n'a changé - installateur
+et manifestes sont tous gitignore).
