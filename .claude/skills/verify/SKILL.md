@@ -133,6 +133,50 @@ PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationCl
   derriere un flyout sans alternative directe, verifier sa logique via un test
   `dotnet test` cible (extraire la logique pure si besoin, comme
   `RetryDelete.cs`) plutot que de s'acharner sur l'ouverture du menu.
+  **Mise a jour (2026-09-11, session "petits ajustements")** : le popup existe
+  bel et bien, simplement PAS comme descendant de la fenetre principale -
+  meme famille de piege que le contenu deroulant d'un `ComboBox` documente
+  plus bas. Apres `InvokePattern.Invoke()` sur le bouton hote (`ModulesButton`,
+  `AddBookmarkButton`, `ModeUsageButton`...), chercher l'item par son `Name`
+  via `AutomationElement.RootElement.FindAll(TreeScope.Subtree, new
+  PropertyCondition(ProcessIdProperty, pid))` (tout le bureau, filtre par PID)
+  PLUTOT que depuis la fenetre principale - ca fonctionne de facon fiable
+  (confirme sur `MenuFlyoutItem "Parametres"` du Menu Lumora ET sur les 2
+  boutons du `Button.Flyout` "Ajouter aux favoris"/"Gerer les favoris"). Le
+  noeud trouve est souvent le `TextBlock` du libelle, pas invocable
+  directement : remonter au premier ancetre qui supporte `InvokePattern`
+  (`TreeWalker.GetParent` en boucle) avant d'appeler `Invoke()`. Un
+  `ContentDialog` ouvert PAR ce flyout (ex. editeur de favori) reste lui,
+  comme documente plus bas, cherchable directement par `Name` du bouton
+  primaire (`"Enregistrer"`, `ControlType.Button`) depuis la fenetre
+  principale, sans astuce Subtree - seul le flyout/popup lui-meme sortait de
+  l'arbre de la fenetre.
+- **`AutomationId` a bien fonctionne cette session (2026-09-11)** pour de
+  nombreux controles nommes (`AddressBox`, `ProfileNameBox`,
+  `NoPasswordSwitch`, `CreateProfileButton`, `ModulesButton`,
+  `SettingsNavAppearance`, `AppearanceSubNavLayout`, `NewTabTitleBox`,
+  `ApplySettingsChangesButton`, `UiDensityCombo`, `UsageModeCombo`,
+  `AddBookmarkButton`, `BookmarkViewModeListRadio`...), contrairement a la
+  note du 2026-08-14 ci-dessus qui le disait "silencieux". Soit corrige entre
+  temps cote framework/app, soit le probleme du 2026-08-14 etait plus
+  specifique (controles crees dynamiquement ?) - a re-tester par
+  `AutomationId` en premier avant de retomber sur `Name`, plutot que
+  d'assumer l'echec par defaut.
+- **Une `TextBlock` mise a jour par code (`StatusText.Text = "..."`) peut
+  renvoyer une valeur PERIMEE via `AutomationElement.Current.Name`**, meme
+  interrogee 2 secondes plus tard et meme si le code a bien execute
+  l'affectation (confirme par trace `WinUiRuntimeTrace` cote produit) - piege
+  reel rencontre le 2026-09-11 (`ApplySettingsChangesButton_Click`), a
+  presque fait conclure a un faux bug de message de confirmation manquant.
+  Avant de rapporter un texte "qui ne se met pas a jour" comme bug produit,
+  verifier via une trace `WinUiRuntimeTrace.Write` juste apres l'affectation
+  reelle plutot que de faire confiance a une seule lecture UIA de `Name`.
+- **`user32.PrintWindow` (meme avec `PW_RENDERFULLCONTENT`) echoue aussi a
+  capturer cette fenetre** (2026-09-11) - meme limite que `CopyFromScreen`
+  documentee plus bas (qui, elle, capture une AUTRE fenetre du bureau).
+  Aucune des deux methodes de capture d'ecran testees a ce jour n'est fiable
+  dans cet environnement pour cette app : s'appuyer sur les valeurs/etats UIA
+  et les traces de log, pas sur une image, pour toute verification visuelle.
 - **`Windows.Storage.Pickers.FileOpenPicker` (boite de dialogue systeme, pas
   XAML) ne materialise aucune fenetre/process observable dans cet
   environnement** (2026-08-18, session "Coffre V4", scan QR) : le bouton qui
@@ -185,6 +229,84 @@ PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationCl
   (existence, `BoundingRectangle`, valeurs de pattern) restent fiables meme quand
   la capture d'ecran ne l'est pas ; ne pas conclure d'un echec a partir d'une
   capture seule.
+
+- **Le `Name` accessible d'un bouton peut differer a la fois de son
+  `AutomationProperties.Name` XAML litteral ET de son `ToolTipService.ToolTip`**
+  quand du code-behind le reecrit dynamiquement (2026-09-13, session
+  "verification au final") : `ModeUsageButton` a `AutomationProperties.Name="Mode"`
+  dans le XAML et `ToolTipService.ToolTip="Mode d'usage"`, mais son `Name`
+  REEL en cours d'execution est `"Mode d'usage : Neutre."` (ecrit par
+  `UpdateUsageModeButtonUi`) - chercher "Mode d'usage" en exact echoue
+  silencieusement, chercher par `AutomationId="ModeUsageButton"` marche a coup
+  sur. Reflexe a prendre : pour un bouton dont l'etat change (mode, densite,
+  bascule...), toujours privilegier `AutomationId` a `Name` des qu'un
+  `AutomationId` existe, meme si le XAML semble donner un `Name` fixe.
+- **Le bouton "+" de la barre d'onglets HORIZONTALE n'est PAS celui dont
+  `AutomationProperties.Name="Nouvel onglet"` est pose dans `MainWindow.xaml`**
+  (ce Name-la appartient a un autre bouton, invisible/inutilise dans ce mode) -
+  le vrai bouton visible est celui du controle `Tab` natif (`TabView`), `Name`
+  reel `"Ajouter un nouvel onglet"`, `AutomationId="AddButton"` (confirme
+  2026-09-13). Chercher par `AutomationId="AddButton"` plutot que par le Name
+  suppose depuis le XAML statique.
+- **Un overlay (`WelcomeOverlay`, `LoginOverlay`...) peut rester actif ET
+  invisible dans un dump d'arbre a profondeur limitee** (2026-09-13) : `Walk`
+  avec `maxDepth=3` depuis la fenetre s'est arrete juste avant d'atteindre le
+  `Pane` de l'assistant de bienvenue, laissant croire a tort que le shell
+  principal etait deja pleinement actif (le `MainMenuButton` etc. restent
+  trouvables par une marche `Descendants`/`Find-Native` MEME sous un overlay,
+  car `InvokePattern.Invoke()` ignore le Z-order et l'etat de l'overlay -
+  contrairement a un vrai clic souris). Avant de commencer un scenario,
+  chercher explicitement `WelcomeSkipButton`/`CreateProfileGuestLink` par
+  `AutomationId` (pas juste constater qu'un bouton de la Toolbar repond) pour
+  confirmer qu'aucun overlay ne traine encore.
+- **Le Coffre (`VaultMenu_Click`, `MainWindow.VaultAccess.cs`) est
+  deliberement desactive en mode invite** (`if (_isGuestMode) { ...; return; }`,
+  message "Coffre indisponible en mode invite") - cliquer la tuile "Coffre" du
+  Menu Lumora en mode invite ne produit AUCUN effet visible, ce n'est pas un
+  bug : utiliser un vrai profil (`CreateProfileButton` + `NoPasswordSwitch`
+  pour aller vite) pour tout scenario touchant le Coffre.
+- **Meme avec un vrai profil "sans mot de passe", l'ecran d'acces au Coffre
+  (`PromptMasterPasswordAsync`) rejette une `PasswordBox` vide sans exception**
+  (`if (string.IsNullOrWhiteSpace(pwBox.Password)) return null;`) - combine a
+  la limite deja documentee plus haut (`PasswordBox.SetValue` toujours
+  refuse), **le contenu du Coffre (ajout/liste/detail d'un identifiant) reste
+  hors de portee du pilotage UIA quel que soit le type de profil** (invite OU
+  reel). Ne pas s'acharner : confirmer que le dialogue de mot de passe
+  s'affiche bien (preuve que la barriere fonctionne), puis s'appuyer sur la
+  coherence avec d'autres ecrans deja verifies pour le rendu, comme deja
+  pratique les sessions precedentes.
+- `VerticalTabsSwitch` (barre d'onglets verticale) vit dans Reglages >
+  **Espace de travail** (`SettingsNavNavigation`), PAS dans Apparence >
+  Disposition (`AppearanceSubNavLayout`) contrairement a ce qu'on pourrait
+  supposer - `CompactModeSwitch` (Interface compacte, lui) est bien dans
+  Apparence > Disposition. Les deux reglages ne sont pas cote a cote dans les
+  Reglages bien qu'ils se combinent visuellement (rail vertical + ultra-compact).
+- **`CreateProfileGuestLink` et plusieurs actions de `MainWindow.Profile.cs`
+  appellent `RestartApp()`**, qui relance completement le PROCESSUS (nouveau
+  PID, nouveau `Lumora.WinUI.exe` via `Process.Start` puis
+  `Application.Current.Exit()`) plutot que de juste rafraichir l'UI en place -
+  confirme normal via `winui-runtime-trace.log` (sequence complete "App
+  constructor start" -> ... -> "MainWindow constructed" juste apres, 0
+  `UNHANDLED`). Si un script de pilotage perd soudain son PID juste apres un
+  clic sur "Continuer sans profil"/creation de profil/changement d'emplacement,
+  ne pas conclure a un crash sans verifier `Get-Process -Name Lumora.WinUI`
+  (souvent deja relance avec un PID different) et l'absence de `UNHANDLED`.
+- Pour trouver un item precis dans le Menu Lumora (ex. tuile "Coffre") quand
+  plusieurs elements portent le MEME `Name` (vue grille epinglee + vue liste
+  recherche, parfois un element degenere de hauteur ~6px), filtrer par
+  `ControlType.Button` ET par les dimensions attendues de la tuile (~155x114
+  pour une tuile epinglee) plutot que de prendre le premier match - le premier
+  trouve par une marche en profondeur n'est pas forcement le bon.
+- **Exclure `ControlType.Document` est INDISPENSABLE meme pour une recherche
+  Subtree depuis `RootElement` par `ProcessId`** (pas seulement pour la marche
+  depuis la fenetre) : le contenu de l'onglet actif (Nouvel onglet, ses
+  raccourcis/modules) peut exposer des noeuds accessibles avec des `Name`
+  identiques a de vrais controles XAML (ex. "Coffre" apparait aussi comme
+  libelle dans la grille HTML du Nouvel onglet) - une recherche qui ne coupe
+  pas ces sous-arbres peut invoquer silencieusement un element du DOM au lieu
+  du bouton natif attendu, sans la moindre erreur. Un helper de marche manuel
+  qui elague `ControlType.Document` (voir `Find-Native` reutilisable) est plus
+  sur qu'un simple `FindAll(TreeScope.Subtree, condition)`.
 
 Script complet reutilisable : voir `drive-sitenotfound.ps1` du log 0.75
 (structure : Start-Process -> Wait fenetre -> invite -> SetValue adresse ->

@@ -1,6 +1,13 @@
-# Nova Browser - Memoire du projet
+# LumoraBrowser - Mémoire du projet
 
-Ce fichier garde l'historique chronologique des etapes effectuees sur Nova Browser. Il ne remplace pas `AGENTS.md` et ne doit pas recopier les regles permanentes du projet.
+## Index mémoire — Sessions récentes
+
+- [Session "vérification au final"](#session-verification-au-final-2026-09-13--confirmation-live-du-backlog-non-commite) — 2026-09-13, build+tests propres (949/949, 0.94.24.2-dev) puis vérification live en 2 lancements (invité + profil réel) : Mode d'usage bascule enfin confirmée (bug de recherche par Name plutôt que AutomationId), icône de secours des favoris confirmée par le contenu réel du panneau, Sons & ambiance confirmé de bout en bout (mini-lecteur apparaît/disparaît), rail vertical + Interface ultra-compacte mesurés ; Coffre confirmé bloqué (guest) et hors de portée du pilotage même sur profil réel (PasswordBox non saisissable) - 0 ligne UNHANDLED sur toute la session, rien codé
+- [Session "Ajustement organique" (Encre chaude)](#session-ajustement-organique-2026-09-12--maquette-visuelle-toolbar-en-attente-de-choix) — 2026-09-12, refonte graphique piste C implémentée sur 8 écrans maquettés (Toolbar, Réglages, Coffre, Nouvel onglet, Menu Démarrer, Favoris, Historique, Téléchargements), chacun build+testé+vérifié en direct -> 0.94.21.0-dev ; **index jamais ajouté par la session d'origine, corrigé le 2026-09-12 en session suivante**
+- [Session "Ajustement n°2 et refonte organique"](logs/ajustement-2-refonte-organique.md) — 2026-09-11, 2 aides accessibilité sur 7 (rappel de pause, sons→flash visuel) extraites dans `Accessibility/`, 2 bugs UX réels corrigés (ascenseur→chevrons, carte de respiration), piste graphique C retenue pour plus tard, + "Sons & ambiance" (Profils locaux, `Sound/`) implémentée puis 6 bugs réels corrigés après tests utilisateur — dont un décodeur OGG absent de Windows (fichiers passés en WAV) et deux réglages qui se marchaient dessus sur `ElementSoundPlayer` (coordination centralisée) -> 0.94.19.0-dev
+- [Release 1.0.0 r10](logs/release-1-0-0-r10.md) — 2026-09-02, 10e révision, titre exact "Lumora 1.0.0 r10" confirmé en vérification live
+
+Ce fichier conserve l'historique chronologique complet des étapes du projet. Il ne remplace pas `AGENTS.md` et ne doit pas recopier les règles permanentes.
 
 ## 2026-07-03
 
@@ -26234,3 +26241,2257 @@ Worktree supprimé après coup (`git worktree remove --force`) - confirmé
 absent du disque. Jamais lancé par moi (comme toujours). Rien à committer
 côté dépôt principal (aucun fichier suivi par git n'a changé - installateur
 et manifestes sont tous gitignore).
+
+## 2026-09-01 (suite) — Session "révision globale de l'interface" : audit, maquettes, 1er module codé
+
+Nouveau chantier ouvert par l'utilisateur : l'interface de Lumora est jugée
+trop "agressive"/lourde comparée à Chrome/Edge (taille et remplissage des
+boutons, densité). Périmètre confirmé : tout le navigateur (toolbar, favoris,
+historique, téléchargements, modules épinglés, menu Lumora, applis web,
+Coffre). Méthode adoptée : audit visuel réel avant toute maquette, puis
+maquettes (canvas Claude Design) avant tout code, puis implémentation en
+petites tranches vérifiées une à une - jamais tout d'un coup.
+
+**Audit réel** (profil invité isolé, captures UIA) : confirme la lourdeur sur
+la fenêtre principale, Historique, Téléchargements, Modules épinglés (bug réel
+en prime : libellés tronqués - toggles trop larges) et Menu Lumora (tuiles
+d'appli colorées façon lanceur mobile). L'utilisateur a complété avec ses
+propres captures (Coffre, Favoris, Applis web) - même diagnostic partout :
+boutons tous au même poids visuel, CTA pleine largeur pour des actions
+mineures, gros espaces vides, accent incohérent d'un module à l'autre (doré
+partout sauf "Installer la page active" en lavande).
+
+**Incident, corrigé en direct** : une capture d'écran automatisée a montré la
+messagerie privée Discord de l'utilisateur au lieu de Lumora (même piège
+`CopyFromScreen`/premier plan que la session release 1.0.0, cf. plus haut) -
+**supprimée immédiatement**, jamais utilisée. L'utilisateur a explicitement
+autorisé la suppression de toute capture hors sujet sans repasser par lui.
+
+**Maquettes** publiées en canvas Claude Design (`Lumora Interface Refresh`,
+5 planches : Main/toolbar+favoris, Panels/téléchargements+modules
+épinglés+menu Lumora+historique, Coffre en 3 onglets à vue adaptée par
+catégorie - mots de passe/portefeuille/passkeys, un seul déverrouillage
+inchangé -, Favoris, AppsWeb) - approuvées par l'utilisateur ("ça a l'air
+beaucoup plus agréable").
+
+**Découverte utile en creusant le code avant d'implémenter** : Lumora a déjà
+un système de densité complet et non-régressif (`MainWindow.UiDensity.cs`,
+3 paliers comfortable/standard/dense, déjà couvre toolbar/adresse/favoris/pied
+de page) et un système de theme/accessibilité centralisé
+(`MainWindow.SettingsTheme.cs`, `ApplyAccessibilitySettings` +
+`ApplyUsageModeChrome`, brushes recalculées à chaque changement de thème/mode/
+contraste élevé) - la "lourdeur" n'est PAS un problème de taille (déjà réglé)
+mais de **remplissage systématique** des boutons au repos. Correctif choisi :
+additif, pas de nouveau fichier XAML séparé - ajout de 2 nouvelles clés de
+brush (`NovaChromeIconRestBackgroundBrush`/`BorderBrush`, transparentes hors
+contraste élevé) branchées dans les deux méthodes de thème existantes,
+retargetage du seul `NovaChromeIconButtonStyle` (CornerRadius 10→8) vers ces
+clés - `NovaChromeButtonBackgroundBrush` lui-même n'est PAS touché (encore
+utilisé ailleurs : tuiles du menu Lumora, encarts RSS). Même traitement pour
+l'étoile de favoris au repos (`NovaBookmarkButtonBackgroundBrush`/
+`BorderBrush`, variante "Active" gardée intacte). `ApplyIconButtonSizing()`
+(opt-in AAA 44px) continue de fonctionner sans changement : même objet
+`Style`, comparé par référence.
+
+Build MSBuild propre, `dotnet test Lumora.Tests` : 884/884. **Vérification
+visuelle en direct non concluante** : 7 lancements consécutifs (avant ET après
+ce changement, donc signature indépendante de l'édition) meurent
+silencieusement ~2-3s après le mode invité, aucune ligne `UNHANDLED` dans
+`winui-runtime-trace.log` à chaque fois - même symptôme déjà documenté
+2026-08-30 (arrêt aléatoire de l'environnement de vérification, pas un bug
+applicatif), mais jamais recroisé 7 fois d'affilée sur le même point précis :
+à surveiller si ça persiste lors d'une prochaine session.
+
+**Confirmation visuelle obtenue** (suite, même session) : l'utilisateur a
+lancé Lumora normalement sur sa vraie session (profil réel, onglets
+verticaux) et confirmé par capture d'écran - icônes de la ligne d'adresse
+bien plates au repos, seul "Ouvrir l'adresse" garde son remplissage doré.
+1er module du chantier "révision graphique" terminé -> version montée à
+`0.94.9.0-dev` (les 4 fichiers alignés : `MainWindow.xaml.cs`, `AGENTS.md`,
+`build-installer.ps1`, `build-clean-test-artifact.ps1`, plus le test
+`Version_projet_est_alignee_sur_0_94_9_0` renommé/mis à jour en conséquence).
+`dotnet test Lumora.Tests` : 884/884.
+
+Reste du chantier (favoris, historique, téléchargements, modules épinglés,
+menu Lumora, applis web, Coffre) pas encore codé - prochaine étape.
+
+**Suite (même session)** : le canvas de maquettes a été repris en cours de
+route - l'utilisateur a jugé la 1ère version illisible ("plusieurs petites
+fenêtres qui n'ont rien à voir ensemble", planche `Panels.dc.html` en cause,
+4 popups miniatures cote a cote). Remplacée par UNE fenêtre complète et
+réaliste (onglets verticaux, comme l'utilisateur les utilise vraiment) plutôt
+qu'un plan de composants isolés - `launch.view` du canvas mis sur `focused`
+pour ouvrir direct dessus. Leçon a retenir pour la suite de ce chantier :
+montrer des ecrans entiers en contexte, jamais des fragments de composants
+juxtaposés sans lien visuel.
+
+Direction affinée par l'utilisateur : pas juste "moins agressif" mais
+"donner l'impression que le navigateur s'integre totalement à Windows"
+(Fluent Design/Windows 11, pas Chrome/Edge comme seule reference) - le but
+final etant qu'une fois telecharge, l'utilisateur n'ait plus envie de
+retourner sur un navigateur classique. Maquette Menu Lumora revue en
+consequence (grille d'icones façon menu Demarrer pour les epingles, plus de
+badges circulaires colores). Icone/logo Lumora explicitement HORS PERIMETRE
+(l'utilisateur ne veut pas qu'on y touche, meme dans un placeholder de
+maquette - a rappeler si une future maquette en a besoin, utiliser un
+placeholder neutre plutot qu'un losange degrade).
+
+**Onglets verticaux** : verifiés dans le code avant d'y toucher (bonne
+pratique confirmée) - déjà une fonctionnalité mûre, plusieurs cycles de
+retours réels déjà integrés (tuiles, bouton de fermeture, comparaisons
+Chrome/Edge documentées dans les commentaires). Onglet actif/inactif utilise
+déjà des brushes distinctes et théorisées (`NovaTabPillActiveBackgroundBrush`/
+`InactiveBackgroundBrush`, alpha ~184/255 au repos - légitime, un onglet est
+un objet permanent, pas une action ponctuelle comme un bouton d'icône).
+**Décision : ne pas y toucher**, aucun signal de problème, éviter le
+rafistolage d'un réglage déjà validé.
+
+**Module 3 (Historique + Téléchargements, en partie)** : `NovaCompactButtonDangerStyle`
+("Vider l'historique", "Effacer" les téléchargements - 2 seuls usages
+vérifiés par grep) transparent au repos, le rouge porté par le texte
+(`Foreground` ajouté, absent avant - le bouton n'était "rouge" que par son
+cadre) plutôt que par une case pleine. `NovaCompactButtonStyle`/
+`NovaPanelShellCardStyle` (~45 et ~28 usages respectivement, cartes de
+panneaux partagées par presque tous les écrans) sciemment PAS touchés cette
+passe - trop de surface pour une revue non faite écran par écran, à
+reprendre plus tard si besoin identifié. Build propre, 884/884 tests.
+**Vérification visuelle non obtenue** (même blocage d'environnement que le
+module 1, reconfirmé une 3e fois - signature identique, pas un bug Lumora).
+
+**Confirmation reçue** ("on va dire que c'est bon") : modules 2 (barre de
+favoris) et 3 (Historique/Téléchargements) acceptés -> version montée à
+`0.94.10.0-dev` (5 fichiers alignés, test `Version_projet_est_alignee_sur_0_94_10_0`
+renommé). `dotnet test` : 884/884.
+
+## 2026-09-10 — Session "interface" : halos/verre, barre du bas, onglets verticaux revisités, favoris resserrés
+
+Reprise du même chantier "révision globale" après une pause. L'utilisateur a
+d'abord pointé les onglets verticaux et la barre de favoris comme exemples
+("trop gros, trop enfantin" comparé à Chrome) - 1ère maquette (`Lumora
+Épure`, artifact) scopée à tort sur ces deux seuls éléments. Correction de
+trajectoire explicite de l'utilisateur ("je t'ai parlé des onglets et des
+favoris, c'était pour te donner un exemple... c'était principalement de
+l'interface globale") : même artifact réutilisé et élargi (pas de nouveau
+lien) avec deux sections en plus - barre d'outils/adresse (halos permanents +
+verre flouté) et barre du bas (3 pastilles en verre étiquetées en
+permanence). Direction validée par l'utilisateur ("beaucoup mieux") : garder
+l'identité (doré/rose/cyan, noms des 3 menus, halos eux-mêmes) mais arrêter
+de l'afficher en permanence à pleine intensité - couleur/verre réservés à
+l'état actif/survol, comme déjà fait pour l'étoile de favoris et les icônes
+de la ligne d'adresse le 2026-09-01.
+
+**Implémenté après le `go`** (`MainWindow.xaml`, `MainWindow.TabGroups.cs`,
+`MainWindow.UiDensity.cs`) :
+- Barre d'outils : 2 halos permanents (`ChromeTitleBackdrop` + un 2e à
+  l'intérieur de `NavigationToolbar`, découvert en cours de route - le 1er
+  retrait seul aurait laissé le 2nd visible) supprimés ; fond
+  `NovaFloatingGlassBrush` (verre flouté) de `NavigationToolbarCapsule`
+  remplacé par `NovaChromeSurfaceBrush` (plat, même teinte que le reste du
+  chrome). Halos gardés tels quels sur l'écran de bienvenue/onboarding (usage
+  ponctuel, pas de permanence - pas le même problème).
+- Barre du bas (Mode/Compagnon/Accessibilité) : 3 pastilles en verre avec
+  libellé+valeur+chevron toujours affichés -> 3 boutons `NovaChromeIconButtonStyle`
+  (même famille que la barre d'outils) avec juste une icône + un point de
+  couleur en badge ; le détail complet reste disponible via
+  `ToolTipService.ToolTip`/`AutomationProperties.Name`, déjà mis à jour
+  dynamiquement par le code existant (`UpdateUsageModeButtonUi` etc.) -
+  aucune régression accessibilité (lecteur d'écran inchangé, juste le texte
+  visible en permanence qui disparaît). Densité (`ApplyFooterDensity`)
+  réécrite pour piloter `Width`/`Height` des 3 boutons via `IconButtonSize`
+  (déjà partagé par la barre d'outils) au lieu de `FooterPillMinHeight`/
+  `Padding` - sans ça, la demande explicite du 2026-08-09 ("la barre du bas
+  doit aussi suivre Petite/Moyenne/Grande") aurait cessé de s'appliquer à ces
+  3 boutons.
+  **Bug réel trouvé en vérification live** (pas en relecture) : le point de
+  couleur rendait pile par-dessus l'icône, la cachant complètement - un
+  `Grid` posé comme `Content` d'un `Button` sans `HorizontalContentAlignment`/
+  `VerticalContentAlignment="Stretch"` explicites se réduit à la taille de
+  son contenu (l'icône) au lieu de remplir le bouton, donc l'icône ET le
+  point se retrouvaient superposés au centre au lieu du point dans le coin.
+  Corrigé avec `Stretch` sur les 3 boutons + une taille explicite posée en
+  C# sur le `Grid` interne en filet de sécurité. Confirmé par capture
+  d'écran zoomée x8 avec le rectangle UIA exact du bouton superposé (mesure
+  précise, pas d'évaluation à l'œil).
+- Onglets verticaux (ligne étendue, pas le rail compact icône-seule) :
+  rayon 16→8, fond/bordure toujours visibles au repos -> transparents (seul
+  l'état actif garde `NovaAccentSoftBrush` + un liseré 3px, comme la barre de
+  couleur de groupe), marge 2→1px, flèches monter/descendre + bouton fermer
+  toujours dessinés -> visibles au survol seulement (`PointerEntered`/
+  `Exited`, opacité 0↔1, même motif que le rail compact existant). **Note
+  importante** : la session du 2026-09-01 avait explicitement décidé de NE
+  PAS toucher aux onglets verticaux ("aucun signal de problème, éviter le
+  rafistolage d'un réglage déjà validé") - décision retournée cette session
+  par un retour explicite et spontané de l'utilisateur sur ce point précis,
+  pas une initiative de Claude. Confirmé visuellement en direct (capture,
+  onglet actif avec liseré + fond teinté, aucune flèche/croix visible au
+  repos).
+- Barre de favoris : puce 30→26px (palier standard), rayon 12→6px, padding
+  resserré ; paliers confortable (36→32, 14→8) et dense (26→22, 10→4) déplacés
+  en conservant les mêmes écarts qu'avant entre paliers, même logique que le
+  reste du fichier.
+
+**Volet 2 de cette même session (comptes sans mot de passe, protection du
+dossier de profil) discuté mais PAS implémenté** : l'utilisateur veut qu'un
+profil sans mot de passe ne puisse plus être "récupéré" par quelqu'un qui
+fouille dans l'Explorateur Windows (même avec fichiers cachés/système
+affichés). Diagnostic posé : `RequireTargetProfilePasswordAsync`
+(`MainWindow.Profile.cs`) laisse aujourd'hui n'importe quel autre profil de
+la session ouvrir le dossier d'un profil sans mot de passe sans preuve ;
+cacher/renommer le dossier ne protège de rien (contournable en 2 clics) ;
+seul un chiffrement réel du contenu (DPAPI, même principe déjà utilisé pour
+le Coffre en mode sans mot de passe) protège contre le fouineur manuel -
+limite explicite acceptée par l'utilisateur : pas de protection contre
+quelqu'un qui écrirait du code exprès sous la même session Windows. **2
+questions posées restent sans réponse** avant tout code : le chiffrement
+doit-il couvrir tout le dossier de profil ou seulement le plus sensible, et
+les profils sans mot de passe déjà existants sur la machine doivent-ils être
+migrés automatiquement ou au cas par cas. Prochaine étape : obtenir ces 2
+réponses avant d'écrire le moindre code de ce volet.
+
+**Vérification** : build MSBuild propre. `dotnet test Lumora.Tests` :
+884/884 (3 tests cassés par les changements ci-dessus - noms/valeurs
+d'implémentation attendus en dur - corrigés pour refléter le nouveau code,
+pas de comportement affaibli). Vérification réelle en direct (profil isolé,
+mode invité, UIA + captures zoomées) sur barre d'outils, barre du bas et
+onglets verticaux - bug trouvé et corrigé en cours de route (voir plus
+haut). Favoris non vérifiés en direct (changement numérique simple suivant
+un pattern déjà éprouvé sur les 2 autres paliers, profil de test sans favori
+épinglé). Version montée à `0.94.11.0-dev` (5 fichiers alignés : `MainWindow.xaml.cs`,
+`AGENTS.md`, `build-installer.ps1`, `build-clean-test-artifact.ps1`, test
+`Version_projet_est_alignee_sur_0_94_11_0` renommé).
+
+## 2026-09-10 (suite) — Volet 2 implémenté : verrouillage de la récupération des profils sans mot de passe
+
+Cadrage final obtenu par plusieurs allers-retours de clarification (voir
+plus haut) : profils AVEC mot de passe = intouchés. Profils SANS mot de
+passe = usage normal dans l'app totalement libre (favoris, Coffre,
+navigation), seule la **récupération** du profil (export, ouverture du
+dossier, lecture brute des fichiers) doit être verrouillée au maximum -
+même pour le titulaire du compte lui-même. Annonce explicite demandée à la
+création du compte.
+
+**Découverte en creusant avant de coder** : `LumoraFile.cs` (chiffrement
+DPAPI de tous les fichiers `.lumora` sauf `profile.lumora`/`vault.lumora`,
+qui ont leur propre appel `ProtectedData` séparé - voir plus bas) utilise
+UNE SEULE entropie fixe (`"Lumora.WinUI.v1"`), écrite en dur, partagée par
+TOUS les profils avec ou sans mot de passe. Le dépôt étant destiné à devenir
+public, cette "clé" est en pratique publique dès que le code est lisible.
+`WEBVIEW2_USER_DATA_FOLDER` (historique de navigation Chromium natif,
+cookies, sessions) vit dans le dossier de profil mais n'est chiffré par
+rien côté Lumora, pour aucun profil - annoncé explicitement à l'utilisateur
+comme hors périmètre de cette passe (chantier à part, bien plus lourd -
+mount d'un conteneur chiffré).
+
+**Implémenté** (`Storage/LumoraFile.cs`, `Storage/ProfileEntropyStore.cs`
+nouveau, `Models/ProfilePaths.cs`, `Models/UserProfile.cs`,
+`MainWindow.xaml.cs`, `MainWindow.Profile.cs`, `MainWindow.xaml`) :
+- Entropie DPAPI supplémentaire propre à chaque profil sans mot de passe
+  (32 octets aléatoires, générés une fois, stockés en clair dans
+  `profile-entropy.dat` à la racine du profil - pas secrète en soi, juste
+  plus l'unique constante publique partagée par tout le monde). Posée de
+  façon "ambiante" dans `LumoraFile` (`SetProfileEntropy`/
+  `CurrentProfileEntropyOrNull`) plutôt que threadée en paramètre dans les
+  ~15 fichiers appelants (Bookmarks, History, Notes, UiSettings...) - reste
+  vide tant que rien ne l'a posée, donc comportement STRICTEMENT identique
+  à avant pour un profil AVEC mot de passe (aucun appelant ne pose jamais
+  cette entropie pour eux).
+- Repli de migration transparent : un fichier chiffré avant l'ajout de
+  cette fonctionnalité reste lisible (tentative avec l'entropie de profil
+  puis repli sur l'ancienne), re-chiffré avec la nouvelle combinaison au
+  prochain `Save()` - aucune migration explicite à faire tourner.
+- `OpenProfileDirectory` (`MainWindow.Profile.cs`) : refuse purement et
+  simplement "Ouvrir le dossier" pour un profil sans mot de passe, y
+  compris le profil ACTIF (le titulaire du compte lui-même) - volontairement
+  pas conditionné à `!entry.IsActive` comme le reste de la méthode, demande
+  explicite de l'utilisateur.
+- `NoPasswordWarningBar` (`MainWindow.xaml`) : message réécrit pour annoncer
+  clairement les conséquences à la création (aucune sauvegarde, aucune clé
+  de récupération, dossier verrouillé même pour soi-même) - l'ancien texte
+  ("reste ouvert à quiconque utilise cette session Windows") décrivait un
+  comportement qui n'est plus vrai depuis ce correctif.
+
+**2 bugs réels trouvés en vérifiant en direct** (pas en relisant le code) :
+1. `UserProfile.Save`/`Load` (`Models/UserProfile.cs`) chiffrent
+   `profile.lumora` avec leur PROPRE appel `ProtectedData` (entropie
+   `null`, de tout temps), complètement en dehors de `LumoraFile` - la
+   première version de ce correctif posait l'entropie ambiante mais
+   `profile.lumora` n'en bénéficiait jamais. Trouvé en déchiffrant le
+   fichier réel en PowerShell avec l'entropie attendue : échec. Corrigé en
+   exposant la même entropie ambiante à `UserProfile` via
+   `LumoraFile.CurrentProfileEntropyOrNull()`, avec repli sur `null` pour
+   rester identique pour un profil AVEC mot de passe.
+2. Poule-et-œuf au démarrage : `_userProfile` n'est chargé "pour de vrai"
+   que tard et de façon asynchrone (`InitializeLoginOverlayAsync`), donc un
+   coup d'œil anticipé (synchrone, avant `UiSettings.Load`) est nécessaire
+   pour savoir s'il faut poser l'entropie AVANT tout chargement de fichier -
+   mais si le profil a déjà été migré lors d'une session précédente, le lire
+   SANS l'entropie candidate échoue silencieusement (`UserProfile.Load`
+   avale l'exception, retourne `null`, indiscernable d'un dossier vraiment
+   vide). Corrigé : entropie candidate posée avant un 2e essai si le premier
+   coup d'œil ne trouve rien, retirée si le profil s'avère avoir un mot de
+   passe. Même piège rencontré une 3e fois côté création EN COURS DE SESSION
+   (`ProfileLocationContinueButton_Click`) : l'entropie doit aussi y être
+   posée avant le tout premier `_userProfile.Save()`, sans quoi seul le
+   PROCHAIN lancement en aurait bénéficié.
+
+**Vérification réelle en direct** (3 cycles création → fermeture →
+relancement, profils isolés jetables) : `profile.lumora` déchiffré en
+PowerShell avec l'entropie de profil seule et confirmé NON déchiffrable
+avec l'entropie nulle historique (protection réelle, pas juste théorique) ;
+profil reconnu correctement au relancement (assistant de configuration
+affiché, pas l'écran de création - preuve que la lecture après migration
+fonctionne) ; zéro `UNHANDLED` dans `winui-runtime-trace.log` sur les 3
+cycles. Non vérifié en direct : le refus "Ouvrir le dossier" (nécessite 2
+profils dans le même registre, indisponible sous isolation
+`LUMORA_PROFILE_DIR` - un seul profil existe dans ce sandbox) et le cas
+AVEC mot de passe (`PasswordBox.SetValue` toujours refusé en WinUI3, limite
+déjà documentée - confiance placée dans la garde de code explicite
+`if (!_userProfile.HasAccountPassword)` avant chaque pose d'entropie,
+jamais atteinte pour un profil avec mot de passe).
+
+Limite assumée et confirmée par l'utilisateur avant d'implémenter : protège
+le fouineur manuel (Explorateur, fichiers cachés/système affichés), pas
+quelqu'un qui écrirait du code exprès sous la même session Windows.
+
+Build MSBuild propre. `dotnet test Lumora.Tests` : 884/884. Version montée
+à `0.94.12.0-dev` (5 fichiers alignés, test
+`Version_projet_est_alignee_sur_0_94_12_0` renommé).
+
+## 2026-09-10 (suite) — Emplacement de profil retiré pour les comptes sans mot de passe
+
+Idée apportée par l'utilisateur lui-même ("je viens de penser à un truc"),
+présentée comme avis a demandé d'abord, pas comme demande - deux volets :
+(1) retirer le choix d'emplacement personnalisé pour un profil sans mot de
+passe, (2) ne plus afficher où sont ses données. Avis donné avant tout code
+: (1) justifié - pas pour "cacher" (l'emplacement par défaut est déjà connu/
+documenté), mais parce qu'un profil sans mot de passe placé sur un support
+amovible rendrait les données WebView2 (toujours non chiffrées, voir volet 2
+ci-dessus) trivialement transportables et lisibles sur n'importe quelle
+autre machine, sans même le compte Windows - ferme un vrai trou lié à une
+limite déjà connue. (2) déconseillé - même raisonnement que "cacher/renommer
+le dossier" déjà rejeté ensemble plus haut : un fouineur avec accès disque
+n'a pas besoin que Lumora lui affiche le chemin, il navigue directement dans
+l'Explorateur ; cacher le texte ne gêne que le titulaire légitime, pour zéro
+protection réelle. Utilisateur a confirmé le périmètre (uniquement profils
+sans mot de passe) puis donné le `go` sans revenir sur le point (2) -
+seul (1) implémenté.
+
+**Implémenté** (`MainWindow.Profile.cs`, `CreateProfileButton_Click`) :
+quand `NoPasswordSwitch.IsOn`, l'étape "Où stocker votre profil ?" est
+sautée entièrement - `_pendingProfileDir` forcé à `null` (emplacement par
+défaut) et la suite de la création appelée directement
+(`ProfileLocationContinueButton_Click`, dont le corps ne dépend d'aucun état
+posé par cet écran - vérifié avant de l'appeler ainsi en dehors de son
+déclenchement normal par bouton). Le bouton "Changer" lui-même n'a pas eu
+besoin d'être touché : l'écran entier n'apparaît plus dans ce cas précis.
+
+**Vérifié en direct** (profil isolé jetable) : création d'un profil sans
+mot de passe saute directement à l'étape suivante de l'assistant (import de
+favoris) sans jamais montrer le choix d'emplacement ; `config.json` confirme
+`CustomProfilePath: null` après création ; zéro `UNHANDLED` dans le journal.
+
+Build MSBuild propre. `dotnet test Lumora.Tests` : 884/884. Version montée
+à `0.94.13.0-dev` (5 fichiers alignés, test
+`Version_projet_est_alignee_sur_0_94_13_0` renommé).
+
+## 2026-09-11 — Session "petits ajustements" : titre du nouvel onglet en Mode neutre, enquête sur un gel navigateur
+
+Deux retours utilisateur distincts : (1) le réglage "Titre affiché" (Réglages
+> Apparence > Nouvel onglet) semblait ne pas s'appliquer après clic sur
+"Appliquer les changements" ; (2) un gel du navigateur ("je navigue, au bout
+d'un moment je ne peux plus rien faire dans l'interface - barre d'adresse,
+nouvel onglet - mais la page web affichée continue de répondre normalement"),
+déjà rencontré et corrigé sous d'autres formes par le passé (voir
+[[gel-post-connexion-google-focus-winui-webview2]], "2 gels à la fermeture"
+0.94.7.2-dev).
+
+**Bug (1) trouvé en lisant le code, pas en devinant** : `SaveUiSettings`
+enregistrait bien `_uiSettings.NewTabTitle` sur disque - l'enregistrement
+n'était pas en cause. Le vrai bug était dans `NewTabHomeContentHtml()`
+(`MainWindow.NewTabHome.cs`) : sur les 3 gabarits de la page Nouvel onglet
+(un par Mode d'usage), seuls "Équilibré" et "Signature" affichaient
+`_uiSettings.NewTabTitle` - le gabarit "Neutre" (le mode PAR DÉFAUT de
+l'app) avait "Lumora" écrit en dur (`<span class="neutral-name">Lumora</span>`).
+Un utilisateur en Mode neutre voyait donc son réglage bel et bien enregistré
+mais jamais affiché. Corrigé pour utiliser `NewTabTitle` comme les 2 autres
+gabarits (nom + `aria-label`).
+
+**Enquête (2), plusieurs minuteurs `DispatcherTimer` tournant sur le thread
+UI pendant la navigation normale identifiés comme suspects** : mise en veille
+des onglets (`MainWindow.TabSuspension.cs`, 1 min), verrouillage automatique
+par inactivité (`MainWindow.Profile.cs`, `SessionTimeoutMinutes`), flux RSS
+(`MainWindow.Rss.cs`, 30 min), veille plein écran contenu (1s, seulement en
+plein écran).
+
+Profil de test isolé **fabriqué avec le vrai code produit** (pas de JSON
+écrit à la main, piège déjà documenté dans SKILL.md `verify`) : petit projet
+jetable hors dépôt qui compile directement `UserProfile.cs`/`UiSettings.cs`/
+`ProfilePaths.cs`/`LumoraFile.cs` du produit et appelle `UserProfile.Create`
++ `UiSettings.Save` pour écrire un `ui-settings.lumora` avec mise en veille
+des onglets à 1 min et verrouillage auto à 1 min. **Profil volontairement
+SANS mot de passe** : un profil avec mot de passe montre l'écran de
+connexion au démarrage, dont le `PasswordBox` est réfractaire au pilotage
+UIA ET à l'injection clavier synthétique dans cet environnement (limite déjà
+documentée) - donc le minuteur de verrouillage automatique (qui ne fait de
+toute façon rien pour un profil sans mot de passe, `LockSessionNow` retourne
+tôt) n'a pas pu être testé en direct par cette voie.
+
+**Mise en veille des onglets : gel NON reproduit, avec preuve concrète.**
+Trace ajoutée dans `SuspendEligibleTabs`/`InitTabSuspensionTimer`
+(`WinUiRuntimeTrace.Write`, gardée par `LUMORA_TRACE_STARTUP=1`, conservée -
+coût nul hors diagnostic) : le minuteur se déclenche bien à 60s pile, calcule
+correctement l'ancienneté par onglet (`idle` vs seuil), suspend l'onglet
+réellement éligible et laisse l'autre de côté (`idle=56s < seuil=60s`).
+3 onglets ouverts (accueil + example.com + wikipedia.org), 80s d'attente
+réelle après le dernier onglet inactif : `Get-Process ... Responding` reste
+`True`, `AddressBox.SetValue` et `Invoke` sur "Ajouter un nouvel onglet"
+(nom UIA réel du bouton `AddButton` du `TabView` - PAS "Nouvel onglet" comme
+écrit dans le XAML, piège de script rencontré et corrigé en cours de route)
+fonctionnent après coup, un 4e/7e onglet se crée sans accroc. Ce minuteur est
+donc innocenté par une vérification live, pas par une relecture de code.
+
+**Non tranché** : verrouillage automatique (bloqué par la limite PasswordBox
+ci-dessus, code relu et jugé à faible risque - mêmes primitives que la mise
+en veille, déjà innocentées), flux RSS (code async/await propre, mais aucun
+flux configuré par défaut - dépend de l'usage réel de l'utilisateur), veille
+plein écran contenu (pas testé, pertinent seulement si le gel survient en
+plein écran - à confirmer avec l'utilisateur).
+
+Capture d'écran automatisée (`CopyFromScreen` + `SetForegroundWindow`)
+**non fiable dans cet environnement à 2 reprises** sur cette session : a
+capturé une AUTRE fenêtre réelle du bureau (diaporama de photos personnelles
+avec horloge) au lieu de Lumora, malgré une fenêtre correctement identifiée/
+activée côté UIA - limite déjà documentée dans SKILL.md `verify`
+("CopyFromScreen... peut capturer une autre fenêtre réelle du bureau"),
+reconfirmée ici. Aucune conclusion tirée de ces captures ratées ; la
+vérification du bug (1) s'appuie sur le chemin de données réel (profil
+fabriqué via le vrai code produit + relecture du gabarit HTML corrigé), pas
+sur une preuve visuelle.
+
+Build MSBuild propre. `dotnet test Lumora.Tests` : 884/884. Version montée
+à `0.94.13.1-dev` (correctif, 4e chiffre - 5 fichiers alignés, test
+`Version_projet_est_alignee_sur_0_94_13_1` renommé).
+
+## 2026-09-11 (suite) — Audit ciblé "fonctionnement global" (demandé explicitement, corriger si trouvé)
+
+Suite logique de la session : demande explicite de vérifier plus largement le
+navigateur et de corriger toute erreur trouvée. Périmètre choisi (ciblé, pas
+l'audit large façon 19/08) : onboarding, Réglages/Apparence, favoris - zones
+les plus à risque de régression (récemment modifiées ou pas encore vérifiées
+de bout en bout par une vraie session utilisateur).
+
+**Percée méthodologique** : les `MenuFlyoutItem`/`Button.Flyout` (Menu Lumora,
+"Ajouter aux favoris"...), documentés depuis le 2026-08-14 comme "ne s'ouvrent
+pas de façon fiable", sont en fait parfaitement invocables - le popup existe,
+juste PAS comme descendant de la fenêtre principale (même famille de piège
+que le contenu déroulant d'un `ComboBox`, déjà documenté). Chercher l'item
+par `Name` via `AutomationElement.RootElement.FindAll(TreeScope.Subtree,
+new PropertyCondition(ProcessIdProperty, pid))` (tout le bureau, filtré par
+PID) plutôt que depuis la fenêtre principale débloque cette famille entière
+de scénarios pour les prochaines sessions `verify`. Détails et 2 autres
+correctifs de méthode (`AutomationId` qui marche finalement très bien cette
+fois ; `TextBlock.Current.Name` qui peut être périmé par rapport au vrai
+`.Text` du contrôle) versés dans `SKILL.md` de la skill `verify`.
+
+**Vérifié en direct, tout via la vraie UI (pas de profil pré-fabriqué pour
+cette partie), zéro `UNHANDLED` sur l'ensemble** :
+- Onboarding complet sur dossier profil vierge : wizard de bienvenue (8
+  diapositives, "Passer"), création de compte SANS mot de passe (nom +
+  bascule + "Créer mon profil"), étape "Où stocker votre profil ?" bien
+  absente pour ce cas (Volet 2 du 10/09 confirmé fonctionnel par la vraie UI,
+  pas seulement en profil fabriqué), import favoris "Passer cette étape",
+  arrivée propre dans le navigateur.
+- Réglages > Apparence > Disposition : bascule "Taille de l'interface"
+  (Petit / Confortable / Standard) plusieurs fois de suite, sans exception.
+- Réglages > Apparence > Nouvel onglet : le correctif du titre (bug (1) de
+  la session précédente) confirmé cette fois par la vraie UI de bout en
+  bout - saisie réelle, "Appliquer les changements", persistance vérifiée
+  après un changement de Mode d'usage ET conservée par le fichier de
+  profil.
+- Réglages > Apparence > Thème et couleurs : changement de Mode d'usage
+  (Neutre → Équilibre) via le vrai combo, "Appliquer" - exerce au passage le
+  code non commité de la session "interface" (`MainWindow.TabGroups.cs`,
+  `MainWindow.UiDensity.cs`, `MainWindow.SettingsTheme.cs`) sans le moindre
+  incident.
+- Favoris : flux complet "Ajouter aux favoris" → éditeur (ContentDialog) →
+  "Enregistrer" → favori réellement créé dans la Barre des favoris (favicon
+  téléchargée et enregistrée sur disque, bouton toolbar apparu, "Dossier
+  vide" → "1 élément"). Un premier essai incomplet (1 seul clic, sans aller
+  jusqu'à "Enregistrer") avait fait croire à tort à un bug d'ajout - corrigé
+  en terminant le flux, pas un vrai bug. Bascule des 3 vues (Icônes / Liste /
+  Détails, radios `BookmarkViewMode*`) dans le panneau "Gérer les favoris"
+  sans incident.
+
+**Fausse alerte identifiée et classée sans y toucher** : `StatusText` semblait
+ne jamais afficher "Paramètres appliqués." après clic sur "Appliquer les
+changements" (relu 10 fois via UIA sur 2 secondes, toujours la valeur au
+repos). Trace `WinUiRuntimeTrace` ajoutée dans
+`ApplySettingsChangesButton_Click` (conservée, coût nul hors diagnostic) :
+prouve que `StatusText.Text` est bien affecté correctement côté code -
+c'est la lecture UIA (`AutomationElement.Current.Name`) qui ne reflète pas
+la valeur réelle pour cette `TextBlock` précise. Aucun changement de code
+nécessaire ; documenté comme piège de méthode dans `SKILL.md`.
+
+**Non couvert par ce passage** (périmètre ciblé, pas large) : glisser-déposer
+physique des favoris (souris synthétique refusée dans cet environnement),
+"Déplacer vers…" en conditions réelles, Coffre/mots de passe, téléchargements,
+historique, Incognito, Menu Démarrer/barre des tâches, tuiles Démarrer.
+
+Aucun bug produit trouvé dans ce qui a été testé cette fois - uniquement 2
+fausses pistes de méthode d'audit résolues (flyouts, lecture UIA d'un
+`TextBlock`). Build MSBuild propre, `dotnet test Lumora.Tests` : 884/884
+(inchangé, aucune régression). Pas de changement de version : aucun
+correctif produit ni fonctionnalité ajoutée cette fois, seulement des traces
+de diagnostic (déjà comptées dans 0.94.13.1-dev) et de la documentation de
+méthode.
+
+## 2026-09-11 (suite) — Chantier "Réglages sur-mesure" : maquettes + phase 1 (application instantanée)
+
+Idée de l'utilisateur, poussée en plusieurs temps : (1) personnaliser le menu
+contextuel (clic droit), puis (2) constat que le panneau Réglages lui-même
+"c'est quand même un peu nul" comparé aux autres navigateurs (structure
+gauche/droite jugée correcte, mais l'utilisateur veut pouvoir "régler
+absolument tout ce qu'il désire"). Avis donné avant tout code : 2 frictions
+réelles trouvées en testant l'app dans la session précédente (application
+incohérente - `UiDensityCombo` instantané mais `NewTabTitleBox` exigeait
+"Appliquer" ; recherche de réglages qui ne va qu'au niveau section, pas
+jusqu'au contrôle précis, limitation déjà annoncée dans le code lui-même).
+Point stratégique soulevé et accepté : consolider le panneau Réglages avant
+d'empiler encore plus d'options dedans.
+
+**2 maquettes HTML publiées en Artifact avant tout code** (`Lumora Sur-Mesure`,
+même URL republiée à chaque itération) : (1) refonte de "Mon Lumora" montrant
+recherche transversale jusqu'au réglage précis, application instantanée
+partout (petit "✓ Enregistré" au lieu d'un bandeau + bouton), réglages
+épinglables par étoile, section "Avancé" avec le menu contextuel
+personnalisable (cocher/décocher/réordonner par glisser) ; (2) section
+Accessibilité complète ajoutée (5 groupes réels + section "Avancé" avec les
+nouvelles pistes demandées) - 2 démos réellement fonctionnelles dans la
+maquette elle-même (pas de simple interrupteur muet), suite à la mise en
+garde explicite de l'utilisateur ("attention que ça soit fonctionnel") :
+clic par survol (anneau qui se remplit au repos, ~1,3s) et réordonnancement
+sans maintenir le clic (clic pour décrocher, clic pour reposer). Les 2 idées
+les plus lourdes (sous-titres automatiques, navigation par balayage)
+volontairement affichées "à l'étude"/"à part", pas en interrupteur qui
+laisserait croire que c'est prêt. Utilisateur : "dans l'idée c'est exactement
+ça", puis validation de la maquette et `go`.
+
+**Phase 1 implémentée dans le vrai code** (le reste - recherche granulaire,
+réglages épinglés, menu contextuel personnalisable, nouvelles aides
+accessibilité - reste à faire, chantier multi-phases assumé) : les seuls
+réglages de "Mon Lumora" qui exigeaient encore "Appliquer les changements"
+séparément (`ThemeModeCombo`, `AccentPaletteCombo`, `UsageModeCombo`,
+`NewTabStyleCombo`, `PersonalizationMotionCombo`, `NewTabFocusSearchSwitch`,
+`NewTabShortcutsSwitch`, `NewTabTitleBox`, `NewTabShortcutsBox`) s'appliquent
+désormais instantanément, comme le reste des Réglages (y compris
+Accessibilité, qui s'est avérée déjà instantanée partout en vérifiant -
+bonne surprise, rien à y changer). `UsageModeCombo` réutilise
+`ApplyUsageModeFromUi` (déjà utilisée par le sélecteur du pied de fenêtre,
+donc comportement identique aux 2 endroits). Les champs texte
+(`NewTabTitleBox`, `NewTabShortcutsBox`) sauvegardent au `LostFocus`, pas à
+chaque frappe (éviter d'écrire un titre à moitié tapé ou de reparser les
+raccourcis en boucle). Avatar, fond d'écran et couleurs de mode d'usage
+restent volontairement en attente + bouton "Appliquer" : prévisualisation
+légitime avant validation, pas la même incohérence que le reste.
+
+**Vérifié en direct** (profil isolé, aucun clic sur "Appliquer" pendant tout
+le test) : titre du nouvel onglet tapé puis simplement quitté du focus →
+persistant après relancement complet de l'app sur le même profil ; Mode
+d'usage changé en "Focus" → bouton du pied de fenêtre mis à jour
+instantanément dans la même session ET persistant après relancement ; trace
+`winui-runtime-trace.log` confirmant `ApplySettingsChangesButton_Click`
+n'a JAMAIS été invoqué pendant tout le test ; zéro `UNHANDLED`.
+
+Build MSBuild propre. `dotnet test Lumora.Tests` : 884/884. Version montée
+à `0.94.14.0-dev` (ajout, 3e chiffre - 5 fichiers alignés, test
+`Version_projet_est_alignee_sur_0_94_14_0` renommé).
+
+**Reste à faire pour ce chantier** (annoncé à l'utilisateur, pas de Go
+demandé pour la suite précise) : recherche allant jusqu'au contrôle exact
+(pas juste la section) pour toutes les catégories ; réglages épinglés
+(étoile + bande personnelle persistée) ; menu contextuel personnalisable
+(cocher/masquer/réordonner) ; nouvelles aides accessibilité (glisser sans
+maintenir le clic, clic par survol, zoom mémorisé par site, curseur agrandi,
+mode simplifié, rappel de pause, sons → flash visuel).
+
+## 2026-09-11 (suite) — "Tu finis" : phases 2 et 3 du chantier "Réglages sur-mesure"
+
+Suite directe de la session précédente (phase 1 = application instantanée).
+Demande explicite "tu finis" pour le reste de la liste annoncée. Périmètre
+réellement livré cette fois : menu contextuel personnalisable (phase 2) et
+réglages épinglés (phase 3). Recherche granulaire et le reste des nouvelles
+aides accessibilité restent non faits - voir "Reste à faire" en bas, pas
+présenté comme terminé alors que ça ne l'est pas.
+
+**Phase 2 — Menu contextuel personnalisable** (`MainWindow.PageContextMenu.cs`,
+`ContextMenuOrdering.cs`, `UiSettings.cs`) : catalogue **auto-découvert**
+plutôt qu'une liste figée à l'avance - chaque action réellement vue lors
+d'un clic droit (`CoreWebView2ContextMenuItem.Name`, jamais le `Label`
+variable) est enregistrée la première fois, plafonné à 60 entrées. Nouvel
+onglet "Avancé" dans Mon Lumora > Apparence : case à cocher (afficher/
+masquer) + boutons Monter/Descendre par action - **pas de glisser-déposer
+natif** : décision volontaire, ce geste n'est pas vérifiable dans cet
+environnement (souris synthétique refusée) alors que des boutons le sont
+pleinement (Invoke). Logique de filtrage/réordonnancement extraite en pur
+(`ContextMenuOrdering.Apply`, 7 tests `dotnet test` dédiés) - testable sans
+WebView2. Table de traduction FR pour les identifiants Chromium les plus
+courants (copy, cut, openLinkNewTab, inspectElement...), repli sur le Label
+natif pour tout identifiant non couvert (jamais bloquant).
+
+**Bug réel trouvé et corrigé en vérifiant en direct** : `Application.Current.Resources["NovaCompactButtonStyle"]`
+levait une exception (le style est déclaré dans les ressources de
+`MainWindow`/`RootShell`, pas au niveau `Application`) - `Select()` sur le
+nouveau sous-onglet "Avancé" échouait donc systématiquement avec un HRESULT
+COM générique côté automation, sans rien dans le journal (l'exception
+partait avant d'atteindre un point trace-able). Corrigé en reprenant
+`RootShell.Resources[...]`, déjà utilisé ailleurs dans ce même fichier.
+Aucune build ne l'aurait révélé : seule la vérification en direct l'a
+montré.
+
+**Vérifié en direct, profil isolé, catalogue semé via le vrai code produit**
+(`UiSettings.Save`, pas de JSON à la main) : 6 entrées affichées avec les
+bons libellés français, case à cocher qui bascule l'état ET son
+enregistrement, bouton Monter qui déplace réellement une entrée, le tout
+confirmé persistant après un relancement complet de l'app sur le même
+profil. Zéro `UNHANDLED`.
+
+**Phase 3 — Réglages épinglés** (`MainWindow.Settings.cs`, `UiSettings.PinnedSettingIds`) :
+étoile à côté de 4 réglages (Thème, Mode d'usage, Taille de l'interface,
+Titre du nouvel onglet - volontairement restreint à ceux déjà convertis en
+application instantanée en phase 1, sinon la puce retrouverait un réglage
+pas à jour). Bande "Épinglés" en haut du panneau Réglages, cachée tant que
+rien n'est épinglé ; cliquer une puce rejoue les mêmes gestionnaires qu'un
+vrai clic (`SettingsNav_Click`/`AppearanceSubNav_Click`) pour atterrir au
+bon endroit plutôt que dupliquer leur logique.
+
+**Vérification en direct partiellement bloquée par un piège de méthode, pas
+un doute sur le résultat** : le pilotage UIA ne retrouvait aucune puce dans
+la bande épinglée après les avoir épinglées - inquiétant au premier abord.
+Trace `WinUiRuntimeTrace` ajoutée (conservée) dans `PinSettingButton_Click`/
+`RefreshPinnedSettingsUi` : preuve directe et sans ambiguïté que la
+fonctionnalité marche parfaitement (2 réglages épinglés, 2 puces
+construites, `Visibility=Visible`, et **identique après un relancement
+complet** - persistance confirmée). Le report initial de "0 puce" par le
+script de vérification vient soit d'un état de profil resté d'un essai
+précédent (repéré et corrigé en réinitialisant le profil), soit d'une
+limite du pilotage UIA sur ces `Button` précis (non élucidée, mais sans
+incidence : la preuve par trace est plus fiable qu'une lecture UIA en cas de
+désaccord, même raisonnement que le faux problème `StatusText` de la
+session précédente).
+
+Build MSBuild propre à chaque étape. `dotnet test Lumora.Tests` : 891/891
+(884 + 7 nouveaux tests `ContextMenuOrderingTests`). Version montée en 2
+temps (un ajout distinct par phase, comme d'habitude) : `0.94.15.0-dev`
+(menu contextuel) puis `0.94.16.0-dev` (réglages épinglés) - 5 fichiers
+alignés et test de version renommé à chaque fois.
+
+**Reste à faire pour ce chantier** (annoncé clairement, pas présenté comme
+fait) :
+- Recherche granulaire jusqu'au réglage précis (au-delà de la section) -
+  toujours limitée à la granularité section/sous-onglet actuelle.
+- Nouvelles aides accessibilité : réordonner sans maintenir le clic (pattern
+  générique, pas encore extrait/réutilisé ailleurs que l'idée en maquette),
+  clic par survol (dwell click - chantier UI-niveau système, pas une simple
+  option), zoom mémorisé par site, curseur agrandi/contrasté, mode
+  simplifié, rappel de pause, sons → flash visuel. Aucun commencé.
+
+## 2026-09-11 (suite) — "go" : phase 4, recherche granulaire
+
+Suite directe (phases 1-3 dans les sections précédentes). Demande "go" après
+un point d'étape explicite - a servi à prioriser la recherche granulaire sur
+les aides accessibilité restantes (toujours pas commencées, cf. ci-dessus).
+
+**Implémenté** (`MainWindow.SettingsSearch.cs`) : `SettingsSearchEntry` gagne
+un champ optionnel `TargetControlName`. ~10 nouvelles entrées à granularité
+contrôle précis ajoutées en tête d'index (Thème, Mode d'usage, Taille de
+l'interface, Barre de favoris, Mise en veille des onglets, Titre du nouvel
+onglet, Menu contextuel, Verrouillage automatique, Moteur de recherche,
+Bloqueur de pub) - volontairement limité aux réglages déjà rendus
+instantanés en phase 1/2, pas un index exhaustif des ~105 `TextBlock` du
+panneau (toujours hors de portée de cette passe, comme déjà noté dans le
+commentaire d'origine du fichier). Les 21 entrées section/sous-onglet
+historiques restent inchangées, servent de repli pour tout le reste.
+`BringSearchTargetIntoFocus` fait défiler jusqu'au contrôle exact
+(`StartBringIntoView`) et lui donne le focus clavier (`Focus`) - le
+rectangle de focus WinUI sert lui-même de surlignage, sans storyboard
+maison. Au passage, corrigé un vrai trou : le nouveau sous-onglet "Avancé"
+(menu contextuel, phase 2) n'avait jamais été ajouté au switch de
+navigation de la recherche - une recherche l'aurait fait échouer
+silencieusement.
+
+**2 pièges de méthode réels, résolus en creusant plutôt qu'en devinant** :
+1. `Focus(FocusState.Programmatic)` appelé juste après avoir basculé
+   plusieurs `Visibility` (changement de section/sous-onglet) échouait
+   systématiquement (renvoie `false`, pas d'exception) - la mise en page
+   n'a pas encore mesuré/arrangé le contrôle cible dans ce même passage
+   synchrone. Corrigé en différant l'appel via
+   `DispatcherQueue.TryEnqueue(...Low, ...)`, laissant un passage de mise
+   en page s'écouler avant `StartBringIntoView`/`Focus`.
+2. Mon propre script de vérification utilisait une pile (LIFO) pour
+   parcourir l'arbre UIA, inversant l'ordre des enfants trouvés - a fait
+   croire un moment que les clics sur les résultats de recherche
+   n'aboutissaient jamais, alors qu'ils fonctionnaient très bien (le mauvais
+   bouton, souvent une puce épinglée au libellé proche, était invoqué à la
+   place). Corrigé (parcours dans l'ordre réel) une fois la cause identifiée
+   par trace plutôt que suspectée sur le produit.
+
+**Vérifié en direct, profil isolé** : recherche "titre" → atterrit sur
+Mon Lumora › Nouvel onglet, `NewTabTitleBox` reçoit le focus clavier
+(confirmé `HasKeyboardFocus=True` et visible) ; recherche "bloqueur" →
+Confidentialité › Publicités, `NetworkBlockerSwitch` idem. Pour "menu
+contextuel" : la navigation vers la bonne section/sous-onglet est confirmée
+(`AppearanceSubNavAdvanced` bien coché après clic sur le résultat), mais
+`ContextMenuItemsList.Focus()` échouait spécifiquement sur ce contrôle
+(cause non élucidée - possiblement lié à une `ListView` vide/reconstruite
+dynamiquement) : plutôt que de forcer une solution non comprise, la cible de
+focus a été retirée de cette seule entrée (elle garde l'atterrissage
+section/sous-onglet, sans la dernière étape de mise en surbrillance) -
+dégradation gracieuse déjà prévue dans la conception pour toute entrée sans
+`TargetControlName`. Zéro `UNHANDLED` sur l'ensemble des tests.
+
+Build MSBuild propre. `dotnet test Lumora.Tests` : 891/891 (inchangé, aucun
+nouveau test dédié - logique de score/ciblage pas assez isolée du reste du
+fichier pour être testée en pur sans un refactor plus large, jugé hors
+scope de cette passe). Version montée à `0.94.17.0-dev` (ajout, 3e chiffre).
+
+**Bilan du chantier "Réglages sur-mesure" à ce stade** : phases 1 (application
+instantanée), 2 (menu contextuel personnalisable) et 3 (réglages épinglés)
+livrées et vérifiées en direct sur les 2 sessions précédentes ; phase 4
+(recherche granulaire) livrée sur ~10 réglages prioritaires cette fois.
+Reste non commencé : étendre la recherche granulaire aux autres réglages
+déjà instantanés (Accessibilité notamment), et toutes les nouvelles aides
+accessibilité proposées (réordonner sans maintenir le clic en pattern
+réutilisable, clic par survol, zoom mémorisé par site, curseur
+agrandi/contrasté, mode simplifié, rappel de pause, sons → flash visuel).
+
+## Session "Suite accessibilité" (2026-09-12) : 3 aides sur 5 livrées, vérifiées en direct
+
+Session ouverte sur la priorité que l'utilisateur avait lui-même demandé
+qu'on lui rappelle en premier ("Accessibilité D'ABORD, avant toute nouvelle
+idée ou tangente", voir [[prochaine-session-accessibilite-et-surprise]]) et
+une question annexe sur le Coffre (comptes multiples par site + alias) mise
+en attente pour la prochaine passe. 3 des 5 aides restantes livrées et
+vérifiées en direct (profil isolé, pilotage UIA) :
+
+1. **Mode simplifié** (`AccessibilitySimplifiedModeEnabled`) : masque
+   `ToolbarButtonsPanel` (tous les boutons "modules" gérés par
+   `ToolbarCustomizationService`), laisse navigation/adresse/favoris
+   intacts. Le plus simple des 3, aucune surprise.
+2. **Curseur agrandi et contrasté** (`AccessibilityLargeCursorEnabled`) :
+   étend `BuildAccessibilityVisionScript` (MainWindow.AccessibilityVision.cs)
+   avec une règle `html { cursor: url(svg-data-uri) 6 3, auto !important; }`
+   - flèche noire sur fond jaune, 48px, deux fois la taille système. **Portée
+   volontairement limitée au contenu web** : appliquer sur `html` (jamais
+   `*`) laisse toute règle plus spécifique du site (input → I-beam, bouton →
+   pointer) continuer à s'appliquer normalement, seul le curseur "par
+   défaut" change. Pour la chrome Lumora elle-même, le réglage Windows
+   "Pointeur" des Options d'ergonomie couvre déjà toute la machine - pas
+   réinventé, mentionné dans l'infobulle.
+3. **Mémoriser le zoom par site** (`AccessibilityZoomPerSiteEnabled`) :
+   **piège API réel évité par la compilation, pas supposé** - `WebView2`
+   (wrapper XAML du WindowsAppSDK utilisé par Lumora) n'expose NI
+   `ZoomFactor` NI `ZoomFactorChanged` (vérifié dans le XML doc
+   `Microsoft.WinUI.xml` : seulement `CoreWebView2`, `Source`,
+   `NavigationStarting/Completed` etc. - ces deux membres vivent sur
+   `CoreWebView2Controller`, jamais exposé par ce wrapper). Plan initial
+   (mémoire séparée `AccessibilityZoomMemory` + abonnement
+   `ZoomFactorChanged`) écrit, ne compilait pas, entièrement revu. Pivot vers
+   un design plus simple et plus sûr : Lumora n'avait **jusqu'ici aucun
+   Ctrl+Plus/Ctrl+Moins/Ctrl+0** - le seul zoom existant était un menu
+   déroulant manuel à pourcentages fixes dans Contrôle de site ("Zoom
+   préféré pour ce site", `SiteComfortPolicy`/`SiteComfortRules`, CSS
+   `html{zoom:X}`, déjà fiable et déjà branché sur la navigation). Le
+   réglage ajoute donc Ctrl+Plus/Ctrl+Moins/Ctrl+0
+   (MainWindow.AccessibilityZoom.cs) qui pilotent CE MÊME mécanisme (une
+   seule source de vérité, aucune nouvelle donnée à persister, aucun risque
+   d'ordre d'injection CSS concurrent) - table de paliers dans
+   `Accessibility/ZoomStepPolicy.cs` calquée EXACTEMENT sur les 6 valeurs du
+   menu déroulant (90/100/110/125/140/160) pour que le clavier ne puisse
+   jamais retomber sur une valeur que ce menu ne sait pas afficher.
+
+**Reporté, décision assumée plutôt que rush** : réordonner sans maintenir le
+clic et clic par survol (dwell click) laissés de côté cette passe. Pour le
+premier, aucune liste réelle ne consomme encore le pattern "clic pour
+décrocher, clic pour reposer" de la maquette (le menu contextuel
+personnalisable n'est qu'une logique pure `ContextMenuOrdering.cs` sans UI
+Réglages branchée ; la barre de favoris n'a que le glisser-déposer) -
+demande une décision sur QUELLE liste avant de coder. Pour le second,
+l'utilisateur avait lui-même noté "un vrai sous-chantier, prévoir plus de
+temps que les autres" - mérite une session à part plutôt qu'être tassé en
+fin de passe.
+
+**Vérifié en direct** (build MSBuild réel, profil isolé jetable, pilotage
+UIA) : les 3 interrupteurs trouvés avec leurs libellés exacts sous
+Accessibilité > Avancé ; activer "Mode simplifié" fait bien disparaître
+`HistoryToolbarButton` (et donc toute la rangée de modules) en gardant
+`AddressBox` visible, désactiver le fait réapparaître ; les 2 autres
+interrupteurs basculés on/off sans erreur ; 0 ligne `UNHANDLED` dans
+`winui-runtime-trace.log`, process resté réactif tout du long. **Non
+vérifié en direct** : Ctrl+Plus/Ctrl+Moins/Ctrl+0 eux-mêmes (l'injection
+clavier synthétique est refusée dans cet environnement de test, cf.
+`.claude/skills/verify/SKILL.md`) - couvert à la place par 7 tests unitaires
+sur `ZoomStepPolicy` (paliers, bornes, valeurs hors palier) et par le fait
+que le branchement clavier suit à l'identique le pattern déjà utilisé pour
+Ctrl+T/Ctrl+L/Ctrl+W (`RegisterGlobalAccelerator`, déjà éprouvé).
+
+`dotnet test Lumora.Tests` : 898/898 (+7, `ZoomStepPolicyTests`). Build
+MSBuild propre. Version montée à `0.94.20.0-dev` (ajout, 3e chiffre - la
+session précédente avait déjà amené le dépôt à 0.94.19.0-dev via l'ajout
+"Sons & ambiance" après sa propre clôture, voir
+[[verif-rappel-pause-sons-flash-0-94-18]]).
+
+## Même session : Coffre, alias/comptes multiples — question répondue, 2 vrais trous comblés
+
+Passage prévu de la session ("dédiée à l'amélioration du coffre") sur une
+question précise de l'utilisateur : comment le Coffre gère-t-il plusieurs
+comptes sur un même site (entrées séparées vs une entrée + liste), et
+demande d'ajouter des alias.
+
+**Réponse trouvée dans le code, pas devinée** :
+- Le Coffre regroupe déjà par domaine racine (`VaultGroupingService.Group`,
+  `VaultCredentialGroup`) : UNE entrée par site, avec la liste des comptes
+  en dessous - jamais une entrée séparée par compte. Confirme l'intuition de
+  l'utilisateur ("une seule entrée du site et sa liste en dessous").
+- La proposition de remplissage (`FindAllForAddress`, popup "Identifiants de
+  ce site") liste chaque identifiant individuellement, indépendamment du
+  regroupement visuel du Coffre complet - confirme aussi l'autre intuition
+  de l'utilisateur ("ça restera pareil au niveau de la proposition").
+- **L'alias existe déjà** : champ `Label` sur `VaultCredential`, éditable
+  via "Renommer" dans la fiche détaillée du Coffre complet
+  (`MainWindow.VaultPanel.cs`), persisté (`VaultStore.SetLabelById`), déjà
+  utilisé comme nom accessible (lecteur d'écran) et comme critère de tri
+  anti-doublons (`PasswordManagerService.FindDuplicates`).
+
+**2 vrais trous trouvés en creusant, comblés dans la foulée** : le Label
+n'était affiché VISUELLEMENT nulle part ailleurs que la fiche détaillée
+(un clic par compte) - exactement les deux endroits où on choisit
+concrètement quel compte utiliser montraient seulement l'identifiant brut :
+1. Liste compacte sous l'en-tête de groupe (`BuildVaultRow`,
+   MainWindow.VaultPanel.cs) - un site à 2+ comptes ne se distinguait qu'à
+   l'identifiant, aucun alias visible sans ouvrir chaque ligne.
+2. Popup rapide "Identifiants de ce site" (`BuildVaultQuickAccessEntry`,
+   MainWindow.VaultQuickAccess.cs) - le PLUS souvent utilisé en pratique
+   pour choisir quel compte remplir automatiquement, même limite.
+
+Corrigé aux deux endroits, même traitement : alias en texte principal
+quand posé, identifiant conservé dessous en texte secondaire (jamais
+remplacé - reste utile pour confirmer visuellement le bon compte). Motif
+repris de `MainWindow.Wallet.cs` (cartes bancaires), qui faisait déjà
+exactement ça pour son propre `Label`.
+
+**Limite honnête de vérification** : build MSBuild propre confirmé, mais
+PAS vérifié en direct (UIA) - un vrai test demanderait un coffre chiffré
+Argon2id (`VaultStore`, bibliothèque Konscious) avec 2 identifiants sur un
+même domaine dont un avec alias posé ; le fabriquer directement (sans
+passer par l'UI de capture, elle-même hors de portée de l'automatisation
+UIA pour un mot de passe saisi dans une page web) demanderait un mini-outil
+dédié, jugé disproportionné pour un changement de rendu texte/mise en page
+pur (aucune nouvelle logique, juste une composition `StackPanel`/
+`TextBlock` déjà utilisée ailleurs dans le même fichier). Dit clairement à
+l'utilisateur plutôt que fabriqué une confirmation.
+
+**Confirmé par l'utilisateur** (même session, après une question de
+clarification sur le fonctionnement exact - pas de clic requis sur l'en-tête
+du site, la liste des comptes est affichée directement en dessous) : "c'est
+ce que je voulais de toute la zone" - clôture ce chantier Coffre pour cette
+session.
+
+Session close ici. **Prochaine session annoncée par l'utilisateur** : "le
+gros du travail" - reprise de la refonte graphique, piste **C (Éditorial)**
+déjà retenue (typo qui porte le design, presque plus de cartes/bordures, un
+seul bouton plein par écran - voir
+[[verif-rappel-pause-sons-flash-0-94-18]] et
+[[prochaine-session-accessibilite-et-surprise]]), décrite cette fois comme
+"plus organique, plus humaine" - même esprit que le rejet de la piste B
+("Fait main") en tension avec l'homogénéisation des boutons, cohérent avec
+la direction déjà actée. Reste aussi en attente : les 2 aides
+d'accessibilité non faites (réordonner sans maintenir le clic, clic par
+survol), la suite de Sons & ambiance, et la "surprise" jamais révélée.
+
+## Session "Ajustement organique" (2026-09-12) : maquette visuelle Toolbar, en attente de choix
+
+Session ouverte sur "le gros du travail" annoncé - refonte graphique globale,
+piste C (Editorial) deja retenue, decrite comme "plus organique, moins IA,
+plus naturel". Avant toute action, confirmation de comprehension demandee par
+l'utilisateur puis 3 questions de cadrage repondues : reference = Arc/Zen
+Browser, ecran de depart = Toolbar + navigation, priorite n°1 = remplacer les
+icones trop geometriques/froides.
+
+**Audit rapide fait avant la maquette** (lecture seule, aucun code touche) :
+la chrome utilise des glyphes `Segoe MDL2 Assets` (police d'icones systeme
+Windows) quasiment partout dans `MainWindow.xaml` - exactement l'exemple de
+"look genere/interchangeable" a fuir. Palette de marque (ardoise `#0D1422`/
+`#10151F`, ambre `#FFB935`/`#E6AA48`, cyan `#56C2E4`) deja centralisee et
+gardee telle quelle. ~30 valeurs de `CornerRadius` differentes posees au cas
+par cas dans `MainWindow.xaml`, aucun systeme de forme organique en place.
+
+**Maquette publiee (Artifact, canvas 3 planches, aucun code implemente)** :
+https://claude.ai/code/artifact/8bee0475-c2c1-429d-aead-e19353e4173f - 3
+directions de style pour la MEME barre d'outils (precedent/suivant/
+rafraichir, adresse+etoile, historique/telechargements/coffre, menu) :
+1. **Trait de plume** - icones en trait fin irregulier (filtre SVG
+   feTurbulence/feDisplacementMap pour le tremble), coins asymetriques,
+   esprit carnet/croquis.
+2. **Galets** - chaque bouton en blob organique independant (border-radius
+   irregulier a 8 valeurs), zero bordure, larges espacements, inspire Arc
+   Browser.
+3. **Encre chaude** - icones pleines/silhouettes, grain discret (meme
+   technique feTurbulence, en overlay de texture cette fois), chaleur
+   apportee par la couleur et des ombres douces plutot que par la forme.
+
+Police d'appoint testee pour le libelle de piste : `Newsreader` (serif,
+italique) + `Manrope` (sans humaniste) - aucune des deux n'est dans la liste
+des polices "trop vues" a eviter (Inter/Roboto/Arial/Fraunces), coherent avec
+"la typo qui porte le design" de la piste C. A confirmer/rejeter par
+l'utilisateur en meme temps que le choix de direction.
+
+**En attente** : choix de l'utilisateur entre les 3 pistes (ou aucune,
+retour a la planche) avant toute extension a d'autres ecrans et avant tout
+code. Rien implemente cote logiciel a ce stade - version inchangee.
+
+**Choix de l'utilisateur** : piste **Encre chaude** preferee ("j'aime
+beaucoup", boutons juges "jolis"). Avis de Claude donne (demande explicite,
+pas une action) : coherent avec le systeme de rayons existant (s'etend plus
+facilement au reste de l'appli que les 2 autres pistes plus exotiques),
+silhouettes pleines plus lisibles pour le chantier accessibilite en cours,
+chaleur portee par couleur/ombre donc met en valeur la palette ambre/cyan
+deja actee. Point de vigilance technique note pour plus tard (pas bloquant) :
+le grain de texture (filtre SVG feTurbulence) a garder tres discret,
+notamment en Contraste renforce. **Pas encore de Go explicite pour
+etendre a d'autres ecrans ni pour coder** - question posee a l'utilisateur
+(etendre maintenant vs peaufiner encore la toolbar d'abord).
+
+**Reponse de l'utilisateur** : "tu peux partir sur quelque chose comme ca" +
+demande explicite de voir TOUTES les fenetres (Reglages nomme en premier)
+avant de tout valider, "il faut que tout soit coherent". Audit reel fait sur
+l'ecran Reglages actuel (`MainWindow.xaml` ~L3500-3760 : rail 9 categories +
+grille de 6 cartes encadrees + 6 boutons `NovaPanelActionButtonStyle`
+identiques, aucun n'etant LE bouton principal - exactement ce que la piste C
+vise a corriger). Maquette Reglages ajoutee au meme canvas (2e page) :
+meme contenu reel (categories/textes/couleurs de famille inchanges), mais
+grille de cartes -> liste editoriale a traits fins, 6 boutons -> 1 seul
+bouton plein ("Personnaliser mon Lumora") + liens texte pour le reste.
+
+**Validation forte de l'utilisateur** ("c'est tres bien", "c'est ca la vraie
+direction de LUMORA", "je trouve ca encore plus clair") : **Encre chaude
+devient la direction officielle pour TOUTE l'application - modules
+compris**, pas seulement les 2 ecrans deja montres. Toujours pas de Go pour
+coder : l'utilisateur veut voir chaque fenetre en maquette avant validation
+finale globale (process explicitement demande, pas une precaution de
+Claude). Suite prevue : continuer les maquettes ecran par ecran sur le meme
+canvas (Nouvel onglet, Coffre, menu Demarrer, favoris...).
+
+**2 ecrans de plus maquettes** (meme canvas, 2 nouvelles pages) : **Coffre**
+(actions secondaires Bilan/Fusionner/Importer/Exporter en icone+mot sans
+bordure, "Ajouter un identifiant" reste seul bouton plein - deja le cas
+avant, coherent) et **Nouvel onglet/Accueil** (masthead editorial centre,
+"Studio Lumora" seul bouton plein, "Favoris/Historique/Modules" passent de 3
+boutons encadres a une liste editoriale - meme grammaire que Reglages).
+Toujours en attente de validation finale globale avant tout code. Reste a
+maquetter : menu Demarrer, favoris, autres panneaux.
+
+## Go de l'utilisateur : premiere implementation reelle (Toolbar, icones)
+
+**Go recu apres validation complete du canvas** (8 pages). Vu l'ampleur
+(toute l'appli, ~9000 lignes XAML), avancee par etapes verifiees plutot
+qu'un seul gros changement : phase 1 = cluster de navigation de la Toolbar
+uniquement (Retour/Avancer/Recharger/Stop/Favori + icone Coffre), le reste
+(Reglages/Coffre/Nouvel onglet/Menu Demarrer/Favoris/Historique/
+Telechargements, deja tous maquettes) suit dans les passes suivantes.
+
+**Implemente** (`MainWindow.xaml`) : glyphes `Segoe MDL2 Assets` de ce
+cluster remplaces par des `Path` avec les MEMES geometries que la maquette
+"Encre chaude" validee (chevrons pleins Retour/Avancer, fleche de
+rechargement en trait, carre plein Stop, bouclier plein Coffre). Nouveau
+style partage `NovaChromeIconPathStyle` (equivalent Path de
+`NovaChromeFontIconStyle`, meme brush). Etoile de favori : passee d'un
+`FontIcon` a 2 glyphes (E734/E735) a un `Path` a une seule geometrie
+d'etoile, contour/plein bascule sur `Fill`/`Stroke` plutot que
+`Glyph`/`Foreground` (`MainWindow.Bookmarks.cs`, `UpdateBookmarkStar`).
+
+**Piege reel rencontre** : `Colors.Transparent` ne compile pas telle quelle
+(`Windows.UI.Colors` n'existe pas cote WinUI3/Windows App SDK, contrairement
+a UWP) - `Microsoft.UI.Colors.Transparent` est le bon namespace. Trouve par
+l'erreur de compilation, pas suppose.
+
+**Verifie reellement** : build MSBuild Debug x64 propre, `dotnet test
+Lumora.Tests` 898/898 (1 test cassait sur l'ancienne implementation
+`Glyph`/`E734`/`E735` - `BookmarkBarRegressionTests.cs`, corrige pour
+verifier `Fill`/`Stroke` a la place). Lancement reel en profil isole +
+pilotage UIA : titre de fenetre confirme "Lumora 0.94.21.0-dev", les 5
+boutons du cluster existent avec des dimensions non nulles (42x42/48x48),
+aucune ligne `UNHANDLED` dans `winui-runtime-trace.log` (une syntaxe de
+`Path.Data` invalide aurait leve une exception au chargement XAML, pas
+juste laisse une icone vide). **Limite honnete** : capture d'ecran pixel
+non fiable dans cet environnement (deja documente, `CopyFromScreen`/
+`PrintWindow` echouent tous les deux sur cette fenetre) - le rendu visuel
+exact n'est donc pas confirme par une image, seulement l'absence de
+crash/exception et la presence des elements.
+
+Version montee a `0.94.21.0-dev` (ajout, 3e chiffre - refonte graphique =
+nouvelle identite visuelle qui s'ajoute, pas une micro-correction). 4
+fichiers a garder synchronises sur ce numero (test dedie
+`Version_projet_est_alignee_sur_0_94_21_0`) : `MainWindow.xaml.cs`,
+`AGENTS.md`, `scripts/build-clean-test-artifact.ps1`,
+`scripts/build-installer.ps1`.
+
+**Question reelle de l'utilisateur** ("est-ce que Studio ca sert encore a
+quelque chose ?") sur le bouton "Studio Lumora" du Nouvel onglet - verifie
+dans le code (pas suppose) : `OpenPersonalizationSettings()`
+(`MainWindow.xaml.cs:1038`) ouvre juste Reglages > Mon Lumora, aucune
+fonction propre. Avis donne (question posee, pas d'action faite) : doublon
+d'un Reglages qui devient lui-meme plus facile d'acces dans cette refonte,
+et ca occupe LE bouton plein de l'ecran le plus vu du logiciel - piste a
+retenir pour plus tard, pas tranchee.
+
+**Menu Demarrer maquette** (3e page ajoutee) : plus gros foyer de "boutons
+qui se ressemblent" du logiciel actuel (chaque tuile Epinglee/Recommandee/
+Categorie est un `Button` `NovaPanelActionButtonStyle` borde, dans
+`MainWindow.xaml` ~L1169-1268 et ~L6877-6970). Maquette : tuiles = badge
+rond colore + libelle, sans bordure/fond au repos, regroupees par les
+familles de sens deja existantes (Contenu ambre/Outils cyan/Protection
+rose) - reutilisation directe du systeme de couleur deja en place, pas
+d'invention.
+
+**Barre de favoris maquettee** (6e page) : le halo chaud + repere
+"Constellation" (`BookmarksBarRow`, `NovaChromeHaloWarmGlowBrush`) existaient
+deja et collaient deja a la direction organique - gardes tels quels, seules
+les puces de favoris changent (icone pleine + libelle, sans bordure).
+Historique et Telechargements audites (`MainWindow.xaml` ~L5760-5878) : meme
+gabarit (carte en-tete + bouton danger + liste a lignes fines sans carte par
+item) deja tres proche de la cible - pas remaquettes separement, la
+transformation serait quasi identique a Reglages/Coffre (bouton danger ->
+lien texte, reste inchange). A confirmer avec l'utilisateur si des
+maquettes dediees sont quand meme voulues.
+
+**Reponse "oui"** : maquettes dediees Historique et Telechargements ajoutees
+(7e/8e pages) - meme transformation prevue (bouton danger "Vider
+l'historique"/"Effacer" -> lien texte, icones de type/domaine pleines et
+colorees, aucune carte par ligne). Canvas complet a ce stade : Toolbar (3
+pistes) / Reglages / Coffre / Nouvel onglet / Menu Demarrer / Favoris /
+Historique / Telechargements. Toujours en attente de validation finale
+globale avant tout code.
+
+**Suite immediate, demande explicite de l'utilisateur** ("il faut que tu
+fasses tout") : implementation continuee sans repause entre chaque ecran,
+toujours avec build+tests+verification reelle a chaque etape.
+
+**Reglages implemente** : rail (9 categories) - 2 cartes encadrees
+imbriquees (`NovaPanelShellCardStyle`/`NovaFlyoutHeroCardStyle`/
+`NovaPanelCardStyle`) retirees, glyphes remplaces par des `Path`
+vectoriels (anneau pour Vue d'ensemble, goutte pour Mon Lumora, grille de
+carres pour Espace de travail, bouclier pour Confidentialite/Coffre,
+silhouette pour Profils locaux, coeur simplifie pour Accessibilite,
+triangle pour Ouverture, 2 barres pour Stockage), memes couleurs de
+famille qu'avant. En-tete de contenu : carte retiree, 3 boutons identiques
+-> 1 seul bouton plein (`NovaButtonPrimaryStyle`, deja utilise ailleurs
+dans l'app comme Vault "Ajouter") + 2 `HyperlinkButton`. Grille de 6
+cartes -> liste editoriale a separateurs fins (`NovaChromeStrokeSoftBrush`),
+icone pleine + `HyperlinkButton` au lieu d'un bouton par ligne.
+
+**Piege reel** : `FillRule="EvenOdd"` n'est pas une propriete WinUI valide
+sur `<Path>` (erreur de compilation XamlCompiler WMC0011) - le mini-langage
+de `Path.Data` est EvenOdd par defaut sans le prefixe `F1`/`F0`, l'attribut
+etait simplement inutile et invalide, retire.
+
+**Verifie reellement** : build MSBuild propre, tests 898/898 verts (aucun
+test casse cette fois), lancement + pilotage UIA en profil isole : Menu
+Lumora -> "Parametres" invoque avec succes (recherche desktop-wide par
+PID, technique deja documentee pour les Flyout), les 9 categories du rail
+ET les 6 actions de la Vue d'ensemble trouvees avec des dimensions
+reelles - les 6 actions apparaissent bien comme `ControlType.Hyperlink`
+(pas `Button`), confirmant que la conversion a pris. Aucune ligne
+`UNHANDLED`.
+
+**Ecrans restants a implementer** (deja tous maquettes, meme methode) :
+Coffre, Nouvel onglet, Menu Demarrer, Favoris, Historique,
+Telechargements.
+
+**Coffre implemente (barre d'actions uniquement)** : les 4 actions
+secondaires (Bilan/Fusionner/Importer/Exporter) passent de `Button`
+bordes a `HyperlinkButton` sans bordure, glyphes remplaces par des traits
+vectoriels fins (Bilan = pouls, Fusionner = 2 fleches qui convergent,
+Importer/Exporter = fleche + ligne de base, symetriques). Actualiser
+reutilise EXACTEMENT la meme geometrie que le bouton Recharger de la
+Toolbar (coherence). "Ajouter un identifiant" reste le seul bouton plein
+(deja la convention avant cette refonte) - seule son icone "+" change de
+technique (Path plutot que `SymbolIcon`).
+
+**Scope volontairement limite** : la liste des identifiants (colonne de
+gauche) et le panneau de detail (colonne de droite) sont generes
+dynamiquement en C# (`MainWindow.VaultPanel.cs`, `BuildVaultRow` etc.) a
+partir de donnees chiffrees (Argon2id) - pas touches cette passe. Ouvrir
+le Coffre reel exige un mot de passe (`PromptMasterPasswordAsync`,
+`PasswordBox`) - **deja documente comme impossible a piloter en saisie
+via UIA dans cet environnement** (voir plus haut/SKILL.md verify). Plutot
+que de modifier ce code a l'aveugle sans pouvoir verifier le rendu,
+reporte a une passe dediee (fabriquer un coffre de test directement via
+les classes produit, comme deja fait pour d'autres verifications
+sensibles).
+
+**Verifie reellement** : build MSBuild propre, tests 898/898 verts,
+relance complete de l'app en profil isole - fenetre principale chargee
+sans erreur, process reactif, aucune ligne `UNHANDLED`. Le `VaultPanel`
+fait partie de l'arbre XAML construit des le demarrage (meme
+`Visibility="Collapsed"`) : une syntaxe de `Path.Data` invalide aurait
+fait planter `InitializeComponent()` au lancement, pas seulement a
+l'ouverture du panneau - ce test couvre donc bien les nouvelles icones
+malgre l'impossibilite d'ouvrir le Coffre reel par mot de passe.
+
+**Nouvel onglet implemente** (`MainWindow.NewTabHome.cs`, page HTML/CSS
+injectee dans le WebView, pas du XAML) : `.signature-action` (Modules/
+Ctrl+K) perd bordure+fond -> lien texte souligne, `.signature-action.primary`
+("Studio Lumora", deja seul bouton plein avant cette refonte) garde son
+remplissage mais gagne une ombre chaude. `.balanced-card` ("Aujourd'hui")
+perd sa carte encadree, `.balanced-action` (Favoris/Historique/Modules)
+passe de 3 boutons encadres a une liste a traits fins - meme grammaire que
+Reglages/Coffre. **Scope volontairement limite** : cette page a 3 variantes
+(neutre/equilibre/signature) ET un systeme de "modes" orthogonal (Focus/
+Lecture/Creation/Recherche/Nuit, `.mode-panel` et ses variantes par mode) -
+seuls les 2 blocs cites (partages entre les modes "equilibre" et
+"signature") ont ete touches ; le systeme de modes/personnalisation n'a
+PAS ete touche, changement trop large et sensible (accessibilite,
+theme clair/sombre, contraste eleve, mouvement reduit s'y branchent tous)
+pour une passe non verifiable visuellement.
+
+**Limite de verification propre a cette page** : contenu WebView2 (DOM),
+hors de portee du pilotage UIA (`ControlType.Document` toujours elague,
+cf. SKILL.md verify) - impossible de confirmer visuellement le rendu CSS
+comme pour le XAML. Verifie : build propre (le C# qui genere ce HTML est
+un litteral interpole `$$"""..."""`, une erreur de syntaxe C# aurait
+casse la compilation), tests 898/898 verts, lancement reel sans
+`UNHANDLED` (couvre une erreur de generation cote C#, pas un defaut visuel
+CSS pur).
+
+**Menu Demarrer implemente** : nouveau style `NovaStartMenuTileButtonStyle`
+(base sur `NovaPanelActionButtonStyle`, juste fond/bordure transparents au
+repos - le survol reste signale par le `HoverOverlay` deja theme-aware du
+template partage) applique aux 3 gabarits de tuiles
+(`StartMenuActionTileTemplate`/`StartMenuChipTileTemplate`/
+`StartMenuDetailTileTemplate`). Les badges ronds colores par famille
+(deja l'identite Lumora) suffisent desormais a porter chaque tuile, sans
+bouton borde autour. **Scope volontairement limite** : les glyphes par
+tuile (`StartMenuTileRegistry.cs`, ~20 entrees, un `Segoe MDL2 Assets`
+different par tuile) restent inchanges - leur remplacement par une
+silhouette vectorielle dediee par tuile est un chantier a part (bien plus
+large : toucher le modele de donnees + un converter + 20 geometries),
+pas fait cette passe.
+
+**Verifie reellement** : build propre, tests 898/898 verts, lancement +
+pilotage UIA (recherche desktop-wide par PID, le flyout du Menu Demarrer
+vit hors de l'arbre de la fenetre principale) : tuiles "Coffre", "Notes"
+et "Bloqueur de pub" trouvees avec des dimensions reelles (155x114),
+aucune ligne `UNHANDLED`.
+
+**Favoris audite puis (presque) laisse tel quel** : bonne surprise en
+creusant - `NovaBookmarkBarButtonStyle` (`MainWindow.xaml`) a DEJA fond et
+bordure transparents au repos (`#00000000`), le halo chaud et le repere
+"Constellation" collaient deja a la direction organique AVANT cette
+refonte (confirme dans le canvas). Seul reste trouve : un dossier de
+favoris retombait sur `SymbolIcon { Symbol = Symbol.Folder }` - le DERNIER
+symbole `Segoe MDL2 Assets` de toute la barre. Remplace par une
+silhouette de dossier construite en `PathGeometry`/`PathFigure`/
+`LineSegment` (pas de `Geometry.Parse` en WinUI3, contrairement a WPF -
+verifie avant d'ecrire, pas suppose).
+
+**Piege reel evite en cours de route** : le brush de couleur
+(`NovaBookmarkBarButtonForegroundBrush`) est mute en PLACE par theme/
+contraste eleve via `RootShell.Resources` (`MainWindow.SettingsTheme.cs`,
+`SetBrush`), PAS via `Application.Current.Resources` - une premiere
+version du correctif utilisait `Application.Current.Resources` (aurait
+leve une exception au premier favori-dossier affiche, resource introuvable
+a cet endroit). `BookmarkIconElement`/`BookmarkButtonContent` etaient
+`static` : passees en methodes d'instance pour acceder a `RootShell`,
+comme le reste du fichier.
+
+**Verifie reellement** : build propre, tests 898/898 verts (1 test source-text
+adapte a la nouvelle implementation), lancement reel sans `UNHANDLED`.
+**Limite honnete** : le profil de test isole n'a aucun favori-dossier a
+afficher (aucun favori du tout par defaut) - le nouveau code de l'icone
+dossier n'a donc pas ete exerce en direct cette fois, seulement construit
+avec des types WinUI bien etablis (meme famille que les Path deja
+verifies ailleurs cette session).
+
+**Historique et Telechargements implementes** (derniers des 8 ecrans
+maquettes) : meme traitement que Coffre/Reglages - carte d'en-tete
+retiree (typographie seule), "Vider l'historique"/"Effacer" passent de
+`Button` `NovaCompactButtonDangerStyle` a `HyperlinkButton` (couleur
+`NovaDangerBrush` conservee, juste sans bouton plein), carte encadrant la
+liste elle-meme retiree (la ligne individuelle n'avait deja jamais de
+carte propre, juste le survol natif `ListViewItem`). **Scope limite** :
+l'icone de secours par entree (`IconGlyph`/`IconGlyphVisibility`, un
+`FontIcon` binde utilise aussi par Favoris/Notes ailleurs dans l'app) pas
+touchee - chantier partage plus large, pas isole a ces 2 ecrans.
+
+**Verifie reellement** : build propre, tests 898/898 verts, lancement +
+ouverture reelle des 2 ecrans via les tuiles du Menu Demarrer ("Historique",
+"Téléchargements") : "Vider l'historique" et "Effacer" confirmes
+`ControlType.Hyperlink` (pas `Button`), aucune ligne `UNHANDLED`.
+
+## Bilan de la session "Ajustement organique"
+
+Les 8 ecrans maquettes dans le canvas ont tous une implementation reelle
+dans le depot, chacun build+teste+verifie en direct avant de passer au
+suivant : Toolbar, Reglages, Coffre (barre d'actions), Nouvel onglet,
+Menu Demarrer, Favoris, Historique, Telechargements. Version finale de la
+session : `0.94.21.0-dev`.
+
+**Restes assumes, pas caches** (chantiers a part, plus larges qu'une
+icone ou qu'un ecran) :
+- Liste/detail du Coffre (donnees chiffrees, generees en C#) - non
+  verifiable sans fabriquer un coffre de test dedie.
+- Glyphes par tuile du Menu Demarrer (~20 entrees, `StartMenuTileRegistry`)
+  - remplacer chacun par une silhouette dediee demande de retoucher le
+    modele de donnees, pas juste le XAML.
+- Systeme de "modes" du Nouvel onglet (Focus/Lecture/Creation/Recherche/
+  Nuit) - orthogonal, branche a l'accessibilite/theme, trop large pour
+  une passe non verifiable visuellement (WebView2 hors de portee UIA).
+- Icone de secours par entree (`IconGlyph`) partagee entre Historique,
+  Favoris et d'autres listes - chantier transverse, pas isole a 1 ecran.
+
+Tout le reste (mots de passe/donnees) n'a jamais ete touche - seule la
+couche visuelle a change.
+
+## Session "Suite de la refonte" (2026-09-12, nouvelle session)
+
+Ouverture "salut" standard (CLAUDE.md/MEMORY.md relus). Constat en debut de
+session : cette session n'avait AUCUN souvenir personnel de la session
+"Ajustement organique" ci-dessus (jamais indexee en tete de ce fichier par
+la session d'origine - corrige ci-dessus) - reconstruite entierement a
+partir du contenu reel du depot (git status, diff, grep "Encre chaude"),
+pas suppose. Etat verifie sain avant toute action : build MSBuild 0 erreur,
+`dotnet test Lumora.Tests` 898/898 verts - le travail non commite de la
+session precedente est solide.
+
+**Demande utilisateur** : capture d'ecran de la Toolbar montrant 2 boutons
+qui se ressemblent trop - "le bloqueur de pub" et "le module identifiants
+site". Verifie dans le code (pas suppose) : `ShieldButton`
+(Confidentialite du site/bloqueur pub+trackers) etait le DERNIER bouclier
+de la Toolbar encore en `FontIcon` Segoe MDL2 Assets (``), pendant
+que `VaultQuickAccessButton` (Identifiants de ce site) avait deja ete
+converti en `Path` "Encre chaude" phase 1 avec la MEME geometrie de
+bouclier (`M12,3.2 L18.6,5.9...`, reutilisee 5 fois dans l'app pour
+Confidentialite/Coffre) - les 2 boutons voisins de la Toolbar affichaient
+donc litteralement le meme bouclier, meme couleur de famille
+(`NovaTileFamilyProtectionBrush`, rose), avec juste un rendu legerement
+different (police vs vectoriel) qui explique le "gris" vs "rose" percu sur
+la capture.
+
+**Fix applique** (`MainWindow.xaml`, cluster Toolbar) :
+- `ShieldButton` : `FontIcon` -> `Path`, meme geometrie de bouclier que le
+  reste de l'app (Confidentialite/Coffre) - rejoint enfin la convention
+  "Encre chaude", n'est plus le seul bouclier en police d'icones.
+- `VaultQuickAccessButton` : bouclier -> **cle** (nouvelle silhouette
+  vectorielle : anneau via 2 arcs + tige + 2 dents), meme brush de famille
+  Protection (rose) conserve. Raisonnement : le bouclier reste le symbole
+  de "Confidentialite"/"Coffre" partout ailleurs (Reglages, Centre Lumora,
+  4 autres occurrences non touchees) - CE bouton precis (acces rapide aux
+  identifiants du site courant, une action plus etroite/litterale) gagne un
+  symbole plus direct et surtout visuellement distinct de son voisin
+  immediat dans la meme barre. Convention alignee sur Chrome/Edge/Firefox
+  (icone cle = mots de passe enregistres).
+
+**Verifie reellement** : build MSBuild Debug x64 propre (0 erreur, 0
+avertissement), `dotnet test Lumora.Tests` 898/898 verts, lancement reel
+en profil isole (`LUMORA_PROFILE_DIR` jetable, `LUMORA_TRACE_STARTUP=1`) +
+pilotage UIA : fenetre "Lumora 0.94.21.0-dev" trouvee, `ShieldButton` ET
+`VaultQuickAccessButton` retrouves par leur `AutomationProperties.Name`
+avec des dimensions reelles non nulles (42x42 chacun), **aucune ligne
+`UNHANDLED`** dans `winui-runtime-trace.log` (une syntaxe `Path.Data`
+invalide - notamment les commandes d'arc de la cle, jamais utilisees
+ailleurs dans l'app jusqu'ici - aurait fait planter `InitializeComponent`
+au chargement XAML). Limite deja documentee : rendu pixel exact non
+confirmable par capture d'ecran dans cet environnement, seule l'absence de
+crash + la presence/dimension reelle des elements est verifiee.
+
+**Version** : gardee a `0.94.21.0-dev`, inchangee. Ce correctif prolonge/
+affine le MEME chantier "Ajustement organique" deja en cours (non commite,
+jamais livre/vu par l'utilisateur sous cette forme) plutot que de cloturer
+une version deja diffusee - coherent avec le fait que les 8 ecrans de ce
+chantier ont deja partage un seul bump de version sans en reprendre un par
+sous-etape. A confirmer avec l'utilisateur si un chiffre distinct etait
+plutot attendu ici.
+
+**Reste ouvert pour la suite de cette session** (a clarifier avec
+l'utilisateur, rien tranche seul) : les "restes assumes" de la session
+precedente (liste/detail du Coffre, ~20 glyphes du Menu Demarrer, systeme
+de "modes" du Nouvel onglet, icone de secours partagee Historique/
+Favoris), + tout ce qui restait deja en attente avant cette session
+(2 aides accessibilite, suite Sons & ambiance, Coffre, la "surprise"
+jamais revelee).
+
+**Reponse de l'utilisateur** : finir les ecrans restants de la refonte
+d'abord (backlog accessibilite/sons/coffre/surprise repousse a apres), puis
+"un par un, je valide entre chaque" pour l'ordre des 3 chantiers restants.
+
+### Icone de secours partagee (favoris/historique/onglets) - fait
+
+`BookmarkGlyphs.Folder`/`BookmarkGlyphs.Link` (`Models/Bookmarks.cs`)
+tenaient chacune un caractere Segoe MDL2 Assets brut (zone privee Unicode,
+invisible a l'inspection - meme piege deja documente sur
+`StartMenuTileRegistry`), utilise comme repli (`IconGlyph`/
+`IconGlyphVisibility`) dans 5 endroits XAML (favoris grille/liste/details/
+dossiers, historique) + 1 endroit code (`TabIconElement`,
+`MainWindow.TabGroups.cs`, icone d'onglet sans favicon). Converti en
+`Path.Data` :
+- **Folder** : meme geometrie que le dossier deja construit en `PathFigure`/
+  `LineSegment` pour la barre de favoris (session precedente) - juste
+  retranscrite en mini-langage `Path.Data` pour pouvoir etre bindee.
+- **Link** : nouvelle silhouette "page generique" (rectangle + coin coupe +
+  2 lignes de texte en decoupe EvenOdd) plutot qu'un globe/trombone -
+  lignes droites uniquement, plus sur de construire sans verification
+  visuelle possible.
+
+Les 5 endroits XAML sont passes de `<FontIcon Glyph="{Binding IconGlyph}">`
+a `<Path Data="{Binding IconGlyph}" Fill="{ThemeResource
+TextFillColorPrimaryBrush}">` (le champ `IconGlyph` garde son nom - deja
+utilise par `BookmarkListItem`/`HistoryListItem` - seule la nature de la
+valeur change). `TabIconElement` (code) est passe de `static` a instance
+(necessaire pour lire `RootShell.Resources` plutot que
+`Application.Current.Resources` - **meme piege deja documente** sur
+`NovaBookmarkBarButtonForegroundBrush` : les brushes theme-aware de cette
+app vivent dans `RootShell.Resources`, pas dans les resources globales de
+l'Application), avec la geometrie reconstruite en `PathFigure`/`LineSegment`
+(pas de `Geometry.Parse` en WinUI3).
+
+**Piege reel rencontre en cours de route** : un premier decoupage de
+fichier par script (`Models/Bookmarks.cs`) a laisse une accolade fermante
+en trop (`error CS1022`) - trouve par le compilateur, pas suppose, corrige
+avant de continuer.
+
+**Verifie reellement** : build MSBuild propre (0 erreur) apres correction,
+`dotnet test Lumora.Tests` 898/898 verts, 2 lancements reels en profil
+isole sans `UNHANDLED`. Un favori reel a ete ajoute via le flux UI reel
+(adresse "example.com" + "Ajouter cette page aux favoris" par pilotage
+UIA) sans erreur. **Limite honnete** : le panneau "Gerer les favoris" lui-
+meme (ou vit le `BookmarkListItemTemplate`/`BookmarkFoldersList` avec
+l'icone de secours) n'a pas pu etre ouvert de facon fiable par pilotage
+UIA cette fois (flakiness deja documentee sur les `Button.Flyout` dans
+`SKILL.md verify`) - le rendu visuel exact de la nouvelle icone "page"
+dans CE panneau precis n'est donc pas confirme par l'observation directe,
+seulement par la coherence avec la geometrie de la cle
+(`VaultQuickAccessButton`, plus complexe - arcs + 5 sous-figures) deja
+verifiee fonctionnelle plus tot dans cette meme session.
+
+### ~20 glyphes du Menu Démarrer - fait
+
+`StartMenuTileRegistry.cs` (23 tuiles) et `OpenPanelsTaskbar.cs` (13 entrees,
+DUPLIQUEES a la main depuis le meme registre - cause historique du bug
+"Glyphe corrige - dupliquait E72E" deja documente) portaient chacun leur
+propre glyphe Segoe MDL2 Assets par tuile.
+
+**Refactor fait en meme temps** (pas seulement un remplacement d'icones) :
+- Nouveau fichier `StartMenuGlyphs.cs` : source UNIQUE des 24 geometries
+  `Path.Data` (une par concept - Modules/ReaderMode/Notes/Translate/
+  ReadingLens/Padlock/Shield/Key/Sessions/Wallet/Eye/Target/NewWindow/Star/
+  Clock/Download/Pin/Restore/TabStack/Sliders/Person/Info/Layout/Rss),
+  reutilisee par les 2 registres - ils ne peuvent plus diverger entre eux.
+  Reutilise TEL QUEL les geometries deja verifiees cette session (Shield =
+  ShieldButton, Key = VaultQuickAccessButton) plutot que d'inventer un
+  bouclier/une cle de plus.
+- **Risque identifie et traite avant d'aller plus loin** : convertir un
+  `Glyph` Segoe MDL2 en `Path.Data` binde (`Data="{Binding Glyph}"`) repose
+  sur une conversion implicite string -> Geometry par le moteur de Binding
+  XAML - comportement NON garanti/NON documente pour WinUI3 (a la
+  difference du meme mini-langage pose en attribut XAML litteral, verifie
+  fonctionnel plus tot cette session sur ShieldButton/VaultQuickAccessButton).
+  Plutot que de suivre les 8 endroits deja touches (5 favoris/historique +
+  3 tuiles Menu Demarrer) sur une hypothese non verifiable : ecriture d'un
+  **parseur mini-langage maison** (`PathMiniLanguage.cs`, logique PURE
+  testable sans WinUI - gere M/L/C/A/Z) + un adaptateur WinUI
+  (`PathGeometryBuilder.cs`, construit un vrai `PathGeometry` via
+  `PathFigure`/`LineSegment`/`BezierSegment`/`ArcSegment` - toujours pas de
+  `Geometry.Parse`, absent de WinUI3) + un `IValueConverter`
+  (`Converters/PathDataConverter.cs`, enregistre dans `App.xaml`) applique
+  aux 8 bindings existants ET au code (`OpenPanelsTaskbar` icone de tuile,
+  `TabIconElement` simplifie pour reutiliser ce meme parseur au lieu d'une
+  construction `PathFigure` dupliquee a la main).
+- **34 nouveaux tests** (`PathMiniLanguageTests.cs`) : la grammaire elle-meme
+  (M/L/C/A/Z, sous-figures multiples, fermeture) ET surtout - en `[Theory]` -
+  **chacune des 28 geometries "Encre chaude" ecrites a la main dans ce
+  depot cette session** (StartMenuGlyphs + BookmarkGlyphs + les 2
+  geometries litterales de la Toolbar) parse sans exception et produit au
+  moins une figure. Une erreur de compte d'arguments sur une commande
+  aurait ete detectee ici, sans rendu visuel necessaire.
+
+**Verifie reellement** : build MSBuild propre (0 erreur), `dotnet test
+Lumora.Tests` **932/932 verts** (898 + 34), lancement reel en profil isole
+sans `UNHANDLED`. Menu Lumora ouvert par pilotage UIA reel : tuiles
+"Coffre" (Padlock), "Bloqueur de pub" (Shield), "Notes" (page generique) et
+"Portefeuille" (carte a bande en trou EvenOdd) retrouvees avec des
+dimensions reelles non nulles (155x114/156x114/156x49) - couvre 4
+geometries differentes dont une a trou EvenOdd, confirmant que la chaine
+Binding -> `PathDataConverter` -> `PathGeometryBuilder` fonctionne
+reellement de bout en bout, pas seulement en theorie. **Limite honnete** :
+"Favoris"/"Historique"/"Paramètres" n'ont pas ete retrouves avec des
+dimensions reelles lors de ce test (element non pin par defaut, donc non
+realise dans la vue Epingles sans navigation supplementaire dans le menu -
+pas un defaut de rendu, confirme en filtrant par `ControlType.Button`).
+
+**Scope volontairement limite** : le bouton fermer (X) de chaque item de
+la barre des taches (``, generique, pas specifique a une tuile) et
+les 2 autres endroits XAML utilisant un `Glyph` bindable different
+(`MainWindow.xaml` ~L1899/~L8023, gabarit modules/marque non lie a
+`StartMenuTileRegistry`) restent inchanges - hors perimetre de ce chantier
+precis.
+
+### Liste/detail du Coffre - fait, verification live incomplete (assumee)
+
+`MainWindow.VaultPanel.cs` : favicon de secours (glyphe "globe" Segoe MDL2)
+et 11 `SymbolIcon` (Copier x3, Afficher, Ouvrir, Modifier, Renommer,
+Identifiant, Supprimer x2, Horloge TOTP, Ajouter TOTP) remplaces par des
+`PathIcon` (nouveau fichier `VaultPanelGlyphs.cs` - Copy/Forward/Pencil/
+Tag/Trash/Person/Plus, + reutilisation de `StartMenuGlyphs.Eye`/`.Clock`
+et `BookmarkGlyphs.Link` pour le favicon de secours). Nouveau helper
+`VaultIcon(data, foreground?)` (construit un `PathIcon` via
+`PathGeometryBuilder`, comme les 2 chantiers precedents).
+
+**Distinction deliberee** : "Modifier le mot de passe" (crayon) et
+"Renommer" (etiquette) restent 2 silhouettes differentes bien qu'adjacentes
+dans la meme fiche - meme raisonnement que le bouclier/la cle de la
+Toolbar plus tot cette session, ne jamais laisser 2 actions voisines
+partager une silhouette.
+
+**7 nouvelles geometries ajoutees aux 34 tests existants** (`PathMiniLanguageTests.cs`,
+desormais 939 tests au total) - chacune parse sans exception.
+
+**Verifie reellement** : build MSBuild propre (0 erreur), `dotnet test
+Lumora.Tests` 939/939 verts, plusieurs lancements reels sans `UNHANDLED`
+tout au long d'une session de pilotage UIA prolongee (assistant premier
+lancement 8 etapes + ecran de creation de profil + bascule mode invite +
+plusieurs tentatives de navigation) - l'app est restee stable de bout en
+bout malgre beaucoup d'interactions.
+
+**Limite honnete, assumee** : je n'ai PAS reussi a atteindre concretement
+"Ajouter un identifiant" ni la liste/detail du Coffre par pilotage UIA
+cette fois (le bouton "Menu Lumora" lui-meme est devenu introuvable par
+son nom apres bascule en mode invite - fenetre/toolbar potentiellement
+different en mode invite ou bouton renomme, pas creuse plus loin) - donc
+le rendu reel des 7 nouvelles icones et du favicon de secours dans CETTE
+fiche precise n'est pas confirme par l'observation directe, seulement par
+coherence avec les memes techniques (PathIcon/PathGeometryBuilder) deja
+verifiees fonctionnelles sur la Toolbar et le Menu Demarrer plus tot cette
+session. Meme limite deja documentee par la session precedente sur ce
+meme ecran ("deja documente comme impossible a piloter... reporte a une
+passe dediee") - pas une nouvelle regression, la meme difficulte
+persistante sur cet ecran precis.
+
+### Systeme de "modes" du Nouvel onglet - fait, portee volontairement reduite
+
+Dernier "reste assume" du chantier "Ajustement organique". La session
+precedente l'avait explicitement ecarte comme "trop large, branche a
+l'accessibilite/theme, pas verifiable visuellement" - **demande explicite
+de l'utilisateur de s'y attaquer quand meme** cette fois.
+
+**Choix de perimetre pour limiter le risque** (audit fait avant de coder) :
+les CONTENEURS de section (`.mode-panel`, `.mode-intro`, `.mode-context`,
+`.personalize-invite` - cartes bordees) restent INCHANGES, meme choix deja
+fait pour `.signature-masthead` qui a garde sa carte lors de la 1ere passe
+Toolbar/Reglages - "Encre chaude" n'impose pas "jamais de carte", plutot
+"jamais 2 actions voisines de meme poids visuel". De meme, les 5 blocs
+`.mode-focus`/`.mode-reading`/`.mode-creative`/`.mode-research`/`.mode-night`
+(visuels distinctifs par mode, barres colorees) et TOUTES les branches
+conditionnelles d'accessibilite (`AccessibilityVisibleFocus`,
+`AccessibilityHighContrast`, `AccessibilityLargeText`, `AccessibilityReduceMotion`)
+restent intactes - non touchees, non re-testees.
+
+**Change reellement** : les boutons secondaires repetes a bordure
+identique redeviennent des liens texte soulignes + 1 seul bouton plein par
+bloc - EXACT meme grammaire deja livree et validee sur `.signature-action`/
+`.balanced-action` (meme session) :
+- `.mode-context-button` (workbench : "Enregistrer l'objectif"/"Garder la
+  note"/... + actions comme "Ctrl+K"/"Plein ecran"/"Notes") - primaire
+  reste un bouton plein, le reste devient des liens.
+- `.mode-intro-button` ("Compris", carte de presentation du mode) - lien
+  texte plutot que pilule bordee (action de rejet, faible enjeu).
+- `.invite-button` ("Personnaliser"/"Modules", invite de personnalisation) -
+  "Personnaliser" reste plein, "Modules" devient un lien.
+
+**Verifie** : build MSBuild propre (0 erreur - une erreur de syntaxe dans
+l'interpolation C# `{{...}}` aurait casse la compilation), `dotnet test
+Lumora.Tests` 939/939 verts (pas de nouvelle geometrie ici, pur CSS/HTML),
+plusieurs lancements reels sans `UNHANDLED`, y compris un nouvel onglet
+ouvert avec succes (mode neutre par defaut - `NewTabModeWorkbenchHtml`
+retourne vide pour "neutral", donc ce test precis n'exerce PAS le code
+modifie).
+
+**Limite honnete, la plus large de la session** : je n'ai pas reussi a
+faire basculer le Mode d'usage (bouton "Mode d'usage : ..." introuvable
+par pilotage UIA apres plusieurs tentatives, y compris recherche
+desktop-wide et par regex sur le nom) pour exercer reellement le rendu
+HTML/CSS des blocs modifies (`.mode-context-button`/`.mode-intro-button`/
+`.invite-button`) en mode Focus/Lecture/Creation/Recherche/Nuit. Contrairement
+aux icones XAML de cette session, le rendu CSS/HTML dans WebView2 n'est de
+toute facon PAS verifiable par capture d'ecran dans cet environnement (deja
+etabli) - meme en atteignant l'ecran, seule l'absence d'exception aurait
+ete confirmable, pas le rendu visuel lui-meme. A confirmer par l'utilisateur
+en usage reel : basculer le Mode d'usage (bouton toolbar "Mode d'usage")
+vers Focus/Lecture/Creation/Recherche/Nuit et ouvrir un nouvel onglet.
+
+## Bug signale hors chantier : boutons systeme (points) coupes par le coin arrondi
+
+L'utilisateur a signale, independamment de la refonte, un probleme "depuis
+le debut" jamais reussi a expliquer avant (plusieurs captures d'ecran
+envoyees sans que ca aboutisse) : les 3 "points" systeme (reduire/agrandir/
+fermer, style macOS, `NovaCaptionDotButtonStyle` - demande explicite du
+2026-08-18, PAS les boutons rectangulaires natifs) donnent l'impression de
+ne pas etre inclus dans la fenetre, comme s'ils la chevauchaient. Confirme
+par l'utilisateur en repondant a des questions ciblees (sans capture,
+impossible d'en obtenir une exploitable de mon cote non plus - deja
+documente, `CopyFromScreen`/`PrintWindow` echouent sur cette fenetre) :
+**les points semblent couper le coin arrondi de la fenetre**.
+
+**Diagnostic** : Windows 11 arrondit les coins des fenetres par defaut
+(`DWMWCP_ROUND`, jamais configure explicitement dans ce depot - verifie,
+aucune occurrence de `DWMWA_WINDOW_CORNER_PREFERENCE` dans le code). Le
+`StackPanel` `WindowCaptionButtons` (`MainWindow.xaml`) n'avait que 10px de
+marge haute / 12px de marge droite - insuffisant pour degager la courbe du
+coin (rayon standard ~8px a 100% DPI), le bouton Fermer (le plus proche du
+vrai coin) empietait dessus.
+
+**Corrige** : marge portee a 18px (haut) / 20px (droite) - degage
+confortablement la courbe avec une marge de securite pour les DPI plus
+eleves (les marges XAML sont en DIP, mises a l'echelle avec le rendu,
+donc la marge suit proportionnellement le rayon physique reel a toute
+resolution). `ApplyTitleBarSafeArea()` (`MainWindow.WindowChrome.cs`,
+reserve d'espace pour BrowserTabs/NavigationToolbarCapsule) synchronisee
+sur la meme valeur.
+
+**Verifie** : build MSBuild propre (0 erreur), `dotnet test Lumora.Tests`
+939/939 verts, lancement reel sans `UNHANDLED` - les 3 boutons retrouves
+avec des dimensions reelles et une distance au bord confirmee (Fermer :
+41px du bord droit, 28px du haut - nettement plus que le rayon d'arrondi
+typique). **Limite honnete** : je ne peux pas confirmer visuellement que le
+chevauchement du coin arrondi a bien disparu (aucune capture d'ecran
+fiable possible pour cette fenetre dans cet environnement, deja etabli
+plusieurs fois cette session) - `ApplyCustomCaptionButtons` lit la position
+REELLE des boutons a chaque redimensionnement, donc le clic (regions non-
+client) reste fonctionnellement correct quelle que soit la marge. **A
+confirmer par l'utilisateur en usage reel.**
+
+**Correction (meme session, retour utilisateur ferme juste apres)** :
+l'utilisateur a clarifie - avec une capture d'ecran comparant Explorateur
+(boutons integres) et Lumora (boutons "en premier plan") - qu'il ne
+voulait PAS garder les points ronds "a la Apple" corriges ci-dessus : il
+voulait depuis le debut les vrais boutons systeme Windows, correctement
+integres comme Chrome/Edge. Malentendu de ma part sur la question posee
+juste avant (2 options presentees, il a choisi "garder les points" sans
+que ce soit clairement ce qu'il voulait) - reconnu et corrige.
+
+**Abandon complet du style "points a la Apple"** (custom depuis le
+2026-08-18) :
+- MainWindow.xaml : StackPanel WindowCaptionButtons (3 boutons) et les
+  styles NovaCaptionDotButtonStyle/NovaCaptionDotCloseButtonStyle
+  supprimes entierement.
+- MainWindow.WindowChrome.cs : ApplyCustomCaptionButtons (reprise des
+  regions non-client via InputNonClientPointerSource pour masquer les
+  boutons natifs) supprimee, ainsi que les 3 handlers de clic et
+  UpdateMaximizeButtonAccessibleState (tous devenus sans objet). Windows
+  redessine desormais SES boutons natifs (rectangulaires, integres au coin
+  arrondi par le systeme lui-meme, support natif de Snap Layouts).
+- ApplyWindowTitleBarColors() (deja existante, jamais touchee) continue
+  de recolorer ces boutons NATIFS aux teintes Lumora via
+  AppWindowTitleBar.ButtonBackgroundColor/etc. - c'etait deja le
+  mecanisme utilise AVANT le 2026-08-18, et toujours celui des autres
+  fenetres de l'app qui n'ont jamais eu ce style custom
+  (LumoraAppWindow.xaml.cs, LumoraIncognitoWindow.xaml.cs).
+- ApplyTitleBarSafeArea() : reserve recalculee depuis
+  AppWindow.TitleBar.RightInset (fourni par le systeme, meme technique
+  que LumoraAppWindow) plutot qu'une largeur fixe inventee a la main -
+  s'adapte automatiquement, fonctionne pareil en onglets horizontaux et
+  verticaux (ApplyVerticalTabsLayout appelle deja cette meme methode
+  dans les 2 cas, verifie dans le code).
+
+**Verifie reellement** : build MSBuild propre (0 erreur), dotnet test
+Lumora.Tests 939/939 verts (le test de regression sur safeRight gardait
+le meme nom de variable et la meme ligne source, toujours vert). Lancement
+reel en profil isole + pilotage UIA : les 3 boutons natifs "Minimize"/
+"Maximize"/"Close" retrouves avec la geometrie NATIVE standard (69x48,
+0px du haut, 11px du bord droit pour Fermer - flush au coin, plus aucune
+marge custom) - clic reel sur "Maximize" confirme fonctionnel (la fenetre
+passe effectivement en plein ecran). Aucune ligne UNHANDLED.
+
+**Suite immediate (meme session, 2e retour utilisateur avec capture
+comparative Lumora/Chrome)** : les boutons natifs restaures ci-dessus
+rendaient visiblement moins nets que ceux de Chrome/Edge. L'utilisateur a
+confirme ("je vois la difference aussi") : Chrome/Edge ne laissent PAS
+Windows dessiner ses boutons, ils redessinent eux-memes des icones
+fideles au style Windows - c'est ce qui leur donne un rendu net et un
+controle total des couleurs. **Go explicite pour redessiner les 3
+boutons** (pas un retour aux points "a la Apple" - une vraie recreation
+du style Windows).
+
+**Boutons redessines** (2e passe caption buttons) :
+- `NovaWindowsCaptionButtonStyle`/`NovaWindowsCaptionCloseButtonStyle`
+  (`MainWindow.xaml`) : rectangles pleine hauteur 46x32 (memes proportions
+  que Chrome/Edge a 100%), colles au coin (`Margin="0"`) - a cette taille
+  l'arrondi du coin Windows 11 ne mord que sur une fraction de pixel
+  invisible, contrairement aux points 28x28 d'avant. Fond plein au survol
+  (gris chrome pour Reduire/Agrandir via `NovaChromeSurfaceRaisedBrush`/
+  `NovaChromeStrokeBrush`, deja les memes couleurs que
+  `ApplyWindowTitleBarColors` utilisait pour les boutons natifs - rouge
+  `NovaDangerBrush` pour Fermer), pas juste un petit point.
+- Icones en `Path` `Stroke` (traits fins), pas en silhouette pleine comme
+  le reste de la refonte "Encre chaude" - deliberement, ce sont les seuls
+  boutons de l'app qui DOIVENT imiter le vocabulaire visuel systeme :
+  trait (Reduire), carre (Agrandir), 2 carres imbriques (Restaurer,
+  bascule de Visibility selon l'etat), croix (Fermer).
+- `ApplyCustomCaptionButtons` (reprise des regions non-client via
+  `InputNonClientPointerSource`) RESTAUREE - meme mecanisme que la 1ere
+  passe du 2026-08-18 (jamais problematique en soi, seule la geometrie des
+  boutons posait probleme). `UpdateMaximizeButtonAccessibleState` etendue
+  pour aussi basculer le glyphe carre/2-carres, pas seulement le nom
+  accessible.
+- `ApplyTitleBarSafeArea` : reserve recalculee sur une largeur fixe
+  (3 x 46px) plutot que `TitleBar.RightInset` (qui ne s'applique qu'aux
+  boutons natifs, redevenu non pertinent).
+
+**Verifie reellement** : build MSBuild propre (0 erreur), `dotnet test
+Lumora.Tests` 939/939 verts. Lancement reel + pilotage UIA : les 3
+boutons retrouves avec une geometrie physique de 69x48 (= 46x32 DIP a
+1.5x, coherent), colles au bord (11px du bord droit pour Fermer, 1px du
+haut - flush), clic reel sur "Agrandir" confirme fonctionnel (fenetre
+passee a W=3862 H=2110) ET bascule "Agrandir" -> "Restaurer" confirmee
+(nom accessible change apres le clic, preuve que le glyphe suit l'etat
+reel de la fenetre). Aucune ligne `UNHANDLED`. **Limite honnete** : comme
+pour tout le reste de cette session, le rendu pixel exact des icones
+(nettete du trait) n'est pas confirmable par capture d'ecran dans cet
+environnement - a confirmer par l'utilisateur en usage reel.
+
+## Bug signale hors chantier : boutons de la Toolbar pas a la meme echelle
+
+Retour utilisateur ("il y a des boutons qui sont plus gros que d'autres",
+avec capture d'ecran) sur la barre d'outils elle-meme (pas les boutons
+systeme cette fois). Audit reel avant de coder (pas suppose) : deux
+styles de boutons cohabitent dans la MEME barre sans jamais avoir partage
+la meme echelle -
+`NovaChromeIconButtonStyle` (Favoris/Confidentialite/Coffre/Historique/
+Telechargements) = 32px, coin 8 ; `NovaModuleIconButtonStyle` (modules
+epinglables : Mode lecture/Notes/Verrouiller/Modules/Connexions/Diviser
+l'ecran...) = 36px, coin 16 (quasi cercle) - 2 styles qui ont evolue
+separement, jamais unifies. Glyphes aussi a des tailles differentes (16px
+vs 15px).
+
+**Bug plus profond trouve au passage** (pas cherche au depart) :
+`ApplyIconButtonSizing`/`ApplyIconButtonSizeRecursive`
+(`MainWindow.SettingsTheme.cs`, applique la Densite d'interface et le
+Confort AAA 44px) ne redimensionnait QUE les boutons
+`NovaChromeIconButtonStyle` (verifie par reference d'objet Style) - les
+boutons "module" restaient figes a 36px quel que soit le reglage, y
+compris en Confort AAA (44px), ce qui aurait recree l'ecart encore plus
+visible pour un utilisateur qui active justement cette aide accessibilite.
+
+**Corrige** :
+- `NovaModuleIconButtonStyle` (`MainWindow.xaml`) : Width/Height/MinWidth/
+  CornerRadius retires, herite desormais de `NovaChromeIconButtonStyle`
+  (32px, coin 8) - ne garde que ses propres couleurs (teinte "module").
+- 15 `FontIcon` `NovaModuleFontIconStyle` : `FontSize` 15 -> 16, aligne sur
+  le glyphe des boutons chrome voisins.
+- `ApplyIconButtonSizing` (`MainWindow.SettingsTheme.cs`) : etendue pour
+  redimensionner aussi les boutons `NovaModuleIconButtonStyle`, pas
+  seulement `NovaChromeIconButtonStyle` - Densite et Confort AAA
+  s'appliquent desormais uniformement aux deux familles de boutons.
+
+**Verifie reellement** : build MSBuild propre (0 erreur), `dotnet test
+Lumora.Tests` 939/939 verts, lancement reel + pilotage UIA : les 8
+boutons testes (4 ex-"chrome", 4 ex-"module") retrouves avec EXACTEMENT
+la meme dimension (42x42 chacun, contre un melange 32/36 avant) -
+confirme mesure, pas suppose. Aucune ligne `UNHANDLED`.
+
+**Hors scope, note pour plus tard** : l'utilisateur a aussi mentionne le
+bouton "Ajouter" isole/surdimensionne du Nouvel onglet (accueil sans
+raccourci) - pas encore traite, question distincte de celle-ci (echelle
+Toolbar), a reprendre si demande.
+
+## Cloture de session (2026-09-12)
+
+L'utilisateur cloture ici ("ca devient du grand n'importe quoi"), une
+nouvelle session suivra pour la suite - build/tests verifies propres juste
+avant (939/939, 0 erreur), rien commite (55 fichiers modifies/ajoutes,
+comme d'habitude jusqu'a validation explicite).
+
+**Refonte organique "Ajustement organique"** : les 8 ecrans + les 3
+"restes" (glyphes Menu Demarrer, icone de secours, Coffre liste/detail)
+sont tous implementes. **3 points attendent encore une confirmation en
+usage reel** (rendu non verifiable de mon cote dans cet environnement) :
+- Ajout d'un identifiant dans le Coffre (nouvelles icones).
+- Panneau "Gerer les favoris" (icone de secours "page generique").
+- Systeme de "modes" du Nouvel onglet (Focus/Lecture/Creation/Recherche/
+  Nuit) - jamais bascule/vu en direct, ni par l'utilisateur ni par moi.
+
+**3 bugs hors-chantier trouves et corriges** cette meme session (tous
+verifies en direct avec des mesures reelles, pas supposes) :
+- Boutons systeme (reduire/agrandir/fermer) : points "a la Apple"
+  abandonnes -> boutons redessines fideles au style Windows (trait/carre/
+  carres imbriques/croix), colles au coin, flush.
+- Barre d'outils : boutons "chrome" (32px) et "module" (36px) jamais a la
+  meme echelle depuis leur origine separee - unifies a 42px physiques
+  (mesure identique sur les 8 boutons testes), `ApplyIconButtonSizing`
+  etendue pour couvrir les deux styles (bug Confort AAA trouve au passage).
+
+**Reste ouvert pour la prochaine session** :
+- Bouton "Ajouter" isole/surdimensionne du Nouvel onglet (signale,
+  jamais traite).
+- Les 3 points de verification ci-dessus (si l'utilisateur les a
+  testes entre-temps, sinon a refaire).
+- Backlog anterieur a cette session, toujours entier : 2 aides
+  accessibilite restantes (reordonner sans clic maintenu, dwell click),
+  suite Sons & ambiance (2 idees approuvees non commencees), option Coffre
+  non precisee, la "surprise" annoncee par l'utilisateur jamais revelee.
+
+## Session "refonte finale" (2026-09-12) : "Reordonner sans glisser" (1re des 2 aides accessibilite restantes)
+
+Ouverture de session : l'utilisateur demande explicitement de traiter
+d'abord le backlog le plus ancien (2 aides accessibilite, suite Sons &
+ambiance, option Coffre non precisee, la "surprise"), les points en attente
+de confirmation ensuite - ordre confirme avant tout code. Rappel pose par
+l'utilisateur en tout debut : montrer tout visuel AVANT de coder.
+
+**Choix de la liste corrige en cours de route, pas suppose** : propose
+d'abord le menu contextuel personnalisable comme 1re liste a consommer le
+pattern "decrocher/reposer" - verification du CODE REEL avant de coder a
+revele que `MainWindow.PageContextMenu.cs` a DEJA un Monter/Descendre
+fonctionnel (steppers, meme famille que `MainWindow.ToolbarCustomization.cs`),
+contrairement a une note memoire plus ancienne desormais perimee. Corrige
+aupres de l'utilisateur plutot que d'implementer sur une premisse fausse :
+la barre de favoris (glisser-depose SEUL, aucune alternative) est le vrai
+trou. Redirection validee par l'utilisateur.
+
+**Maquette Artifact publiee et approuvee avant tout code** (favoris
+decrochables, https://claude.ai/code/artifact/57330f5b-3dfd-450b-9ea0-683501f8b35f) :
+poignee (⋮⋮) par favori quand le reglage est actif, clic = decroche
+(souleve, contour ambre), emplacements cliquables en cyan entre les autres
+favoris, clic sur un emplacement = repose, Echap ou re-clic = annule. `go`
+apres visionnage.
+
+**Implemente** :
+- `Models/UiSettings.cs` : `AccessibilityClickToReorderEnabled` existait deja
+  (pose le 2026-09-11, jamais branche a aucune UI ni liste - voir
+  [[verif-rappel-pause-sons-flash-0-94-18]]) - juste cable cette fois.
+- `Accessibility/ClickToReorder.cs` (nouveau, logique pure testable sans
+  WinUI, meme esprit que `ContextMenuOrdering.cs`) : `IsDropTarget` (exclut
+  les 2 gaps qui encadrent l'element decroche, deplacement no-op sinon),
+  `BeforeIdForGap` (traduit un gap en `beforeId` pour
+  `BookmarkStore.ReorderNode`), `DisplayPositionForGap` (position 1-based
+  pour l'annonce). 8 tests unitaires (`ClickToReorderTests.cs`) - un premier
+  jet avec un calcul de position attendu FAUX dans le test lui-meme (pas dans
+  le code), corrige en recalculant a la main plutot que d'ajuster
+  l'implementation a l'aveugle.
+- `MainWindow.xaml` : carte "Motricite" (Accessibilite > Avance),
+  `AccessibilityClickToReorderSwitch`.
+- `MainWindow.Bookmarks.cs` : `CreateBookmarkBarButton` retourne desormais
+  `FrameworkElement` (avant `Button`) - quand le reglage est actif et que le
+  noeud n'est pas une racine, enveloppe le bouton favori dans une `Grid`
+  [poignee | bouton] via `WrapBookmarkButtonWithReorderGrip` - poignee
+  TOUJOURS SOEUR du bouton, jamais imbriquee dedans (meme piege documente 3
+  fois pour le glisser-depose : `ButtonBase` intercepte deja
+  `PointerPressed`/`Click`). `RenderBookmarksBar` insere des `AddBookmarkReorderGap`
+  (Border inerte si non-cible, Button reel si cible) entre chaque favori des
+  qu'un decrochage est en cours, dans les 3 dispositions (haut/bas/cote).
+  Rendu TOUJOURS differe par `DispatcherQueue.TryEnqueue` (memes precautions
+  que les 2 pieges deja documentes dans ce fichier).
+- `MainWindow.Profile.cs` (`RootKeyDown`) : Echap annule un decrochage en
+  cours, meme emplacement que les 2 autres Echap "abandon volontaire" deja
+  la (palette de commandes, plein ecran immersif).
+
+**2 bugs reels trouves et corriges en verifiant en direct (pas en relisant
+le code)** :
+1. **Crash silencieux, aucune ligne `UNHANDLED`** : `RootShell.Resources["AccentFillColorDefaultBrush"]`
+   (couleur du contour/poignee "decroche") plantait le PROCESSUS ENTIER a la
+   construction du controle, sans la moindre exception catchable - cette clef
+   ne vit QUE dans `App.xaml`/via `{ThemeResource}` (walk de portee XAML a la
+   compilation), jamais ajoutee litteralement au dictionnaire de
+   `RootShell.Resources` (fenetre) - l'indexeur direct en C# ne beneficie PAS
+   du meme fallback que `{ThemeResource}`/`{StaticResource}` en XAML. Trouve
+   en instrumentant pas a pas avec `WinUiRuntimeTrace.Write` (comme prescrit
+   par `SKILL.md` pour "un bouton qui ne fait rien") apres qu'un premier test
+   en direct se soit arrete net sans aucune trace d'erreur - localise a la
+   ligne exacte en 2 passes de traces de plus en plus fines. Corrige avec
+   `NovaAccentBrush` (ambre, vraie cle de `RootShell.Resources`, meme teinte).
+2. **Bug cosmetique trouve au passage** : le "✦" de separation entre favoris
+   se basait sur `primaryHost.Children.Count > 0` pour savoir si un connecteur
+   devait preceder le favori courant - un gap de reordonnancement ajoute AVANT
+   le 1er favori rendait cette condition vraie des la 1re iteration, un "✦"
+   parasite serait apparu en tete de barre des qu'un decrochage etait en
+   cours. Corrige avec un compteur d'iteration (`i > 0`) plutot que la taille
+   reelle du panneau.
+
+**Verifie reellement en direct, flux complet en un seul lancement** (profil
+isole jetable, `LUMORA_TRACE_STARTUP=1`, pilotage UIA) : ecran de bienvenue
+passe, navigation vers 2 pages reelles, 2 favoris ajoutes via le vrai flux
+"etoile -> flyout -> dialogue Enregistrer", Reglages ouverts via le menu
+Lumora (recherche Subtree par PID pour le flyout, piege deja documente),
+navigation Accessibilite > Avance, interrupteur "Reordonner sans glisser"
+bascule (confirme via `TogglePattern.Current.ToggleState`), **2 poignees
+retrouvees sur les 2 favoris**, 1er decrochage invoque, **exactement 1
+emplacement cliquable retrouve sur 3 gaps possibles** (avec 2 favoris et le
+1er decroche, seul le gap de fin est une vraie cible - correspond exactement
+au calcul attendu de `ClickToReorder.IsDropTarget`), depose invoquee avec
+succes, **processus toujours reactif a la fin**, **0 ligne `UNHANDLED`** sur
+tout le parcours. Bilan honnete de methode : 2 pieges reels du script de
+verification LUI-MEME (pas du produit) rencontres et resolus en route -
+`PropertyCondition(NameProperty, ...)` s'est avere peu fiable sur cette
+fenetre (marche manuelle `TreeWalker` + comparaison directe adoptee a la
+place) et un `-eq "Parametres"` avec accent litteral dans le script ps1
+echouait silencieusement (encodage source), corrige en `-like` avec un
+joker sur l'accent - aucun des deux n'affecte le produit, mais expliquent
+les faux echecs initiaux du script avant qu'il ne trouve enfin le vrai bug
+produit ci-dessus.
+
+Build MSBuild propre (0 erreur). `dotnet test Lumora.Tests` : 947/947
+(+8 `ClickToReorderTests`). Version montee a `0.94.22.0-dev` (ajout, 3e
+chiffre - 5 fichiers alignes : `MainWindow.xaml.cs`, `AGENTS.md`,
+`build-clean-test-artifact.ps1`, `build-installer.ps1`,
+`UsageModeVisualIdentityTests.cs`).
+
+**Reste pour la suite** : clic par survol (dwell click, 2e et derniere aide
+accessibilite du backlog le plus ancien - "un vrai sous-chantier, prevoir
+plus de temps que les autres" selon l'utilisateur lui-meme), puis les points
+en attente de confirmation, la suite Sons & ambiance, l'option Coffre non
+precisee, et la "surprise" toujours pas revelee.
+
+## Meme session : retour utilisateur en usage reel - decouvrabilite + lenteur "Ajouter aux favoris"
+
+Apres coup, 2 retours reels de l'utilisateur :
+
+1. **Decouvrabilite du nouveau reglage** : il n'avait PAS active
+   "Reordonner sans glisser" (confirme par lui) et a essaye le glisser-
+   depose classique sans succes particulier - avis explicite : "c'est un
+   bouton qui devrait etre accessible facilement" (le reglage est enfoui
+   dans Accessibilite > Avance). **Pas encore traite** - demande une
+   decision sur OU le rendre plus visible (bouton/icone directement sur la
+   barre de favoris ? entree de menu contextuel sur un favori ? autre ?),
+   posee a l'utilisateur, reponse en attente au moment d'ecrire cette note.
+
+2. **Lenteur reelle sur "Ajouter aux favoris"** : l'utilisateur a du
+   attendre "facile 5 a 6 secondes" avant de pouvoir agir sur un site reel.
+   Reglage "Reordonner sans glisser" desactive au moment du test - le
+   nouveau code de cette session n'etait donc PAS en cause (verifie/exclu
+   avant de chercher ailleurs, pas suppose). **Vrai bug de performance
+   trouve en lisant le code** (pas reproduit a l'identique avec les memes
+   volumes de donnees, mais cause plausible et corrigee sur le principe) :
+   `BuildBookmarkFolderChoices` (`MainWindow.BookmarksDialogs.cs`, liste
+   deroulante "Dossier" du dialogue) appelait
+   `BookmarkTreePresenter.Breadcrumb(_allBookmarkNodes, ...)` **2 FOIS PAR
+   DOSSIER** (une fois dans `ThenBy`, une fois dans `Select`), chaque appel
+   remontant les ancetres via `FirstOrDefault` sur la liste ENTIERE des
+   noeuds a CHAQUE niveau (O(profondeur×n) par appel) - sur un arbre de
+   favoris consequent (import Chrome/Edge, des centaines de dossiers), le
+   cout devient prohibitif et bloque le thread UI avant meme l'ouverture du
+   dialogue.
+   **Corrige** : nouvel overload `BookmarkTreePresenter.Breadcrumb(IReadOnlyDictionary<string,BookmarkNode>, string)`
+   (`Models/Bookmarks.cs`) a lookup O(1) par ancetre plutot que O(n) ;
+   `BuildBookmarkFolderChoices` construit le dictionnaire Id->noeud UNE FOIS
+   puis calcule chaque breadcrumb UNE SEULE FOIS (pas deux) et le reutilise
+   pour le tri ET l'affichage.
+   **Verifie reellement en direct** (profil isole, pilotage UIA) : dialogue
+   "Ajouter aux favoris" ouvert (etoile -> flyout -> "Ajouter cette page aux
+   favoris"), liste "Dossier" affiche correctement "Barre des favoris" par
+   defaut, bouton "Enregistrer" present, processus reactif, 0 ligne
+   `UNHANDLED`. **Limite honnete** : profil de test avec tres peu de favoris
+   (pas les centaines de dossiers d'un import reel) - la CORRECTION DU BUG
+   ALGORITHMIQUE est certaine (2x moins d'appels, O(1) au lieu de O(n) par
+   ancetre), mais l'ampleur reelle du gain sur LE profil de l'utilisateur
+   n'est pas mesuree en direct ; a confirmer par lui en usage reel sur son
+   propre profil charge.
+
+Build MSBuild propre, `dotnet test Lumora.Tests` : 947/947 (inchange, aucun
+nouveau test - `Models/Bookmarks.cs` depend de types WinUI, non compilable
+dans le projet de tests purs).
+
+**Decouverte au passage en cherchant ou placer un acces rapide au nouveau
+reglage** : le clic droit sur un favori a DEJA "Deplacer avant"/"Deplacer
+apres" (ajoute le 2026-08-14, meme motivation - deplacer d'un cran par
+simple clic, sans glisser, `BookmarkStore.MoveNodeAdjacent`). Signale a
+l'utilisateur avant d'ajouter quoi que ce soit au menu contextuel : il a
+confirme que ca suffit a son besoin ("bouger facilement" les favoris) -
+**aucune entree ajoutee pour "Reordonner sans glisser"** dans ce menu, le
+reglage reste dans Accessibilite > Avance tel quel. Question de
+decouvrabilite consideree close pour cette session.
+
+**Version** : `0.94.22.0-dev` -> `0.94.22.1-dev` (micro-correction, 4e
+chiffre - correctif de lenteur distinct de l'ajout de fonctionnalite
+lui-meme, classification confirmee par l'utilisateur plutot que tranchee
+seul). 5 fichiers alignes (memes que d'habitude) + build/tests reverifies
+propres apres le bump.
+
+## Meme session : "Interface compacte" ne changeait presque rien - refonte en vrai 4e palier
+
+Retour utilisateur reel : a active "Interface compacte" (Reglages >
+Apparence > Disposition, `CompactModeSwitch`/`CompactModeEnabled`) et "n'a
+pas l'impression qu'il soit si compact que ca".
+
+**Diagnostic par lecture de code, confirme par mesure live** :
+`ResolveNavigationRowHeight()`/`ResolveNavigationToolbarPadding()`
+(`MainWindow.UiDensity.cs`) ne faisaient que forcer 2 valeurs (hauteur de la
+ligne d'outils a 58px fixe, rembourrage) - TOUT LE RESTE (boutons icone,
+barre d'adresse, puces de favoris, pied de fenetre - ~27 autres dimensions
+de `UiDensityMetrics`) continuait de suivre la Densite d'interface choisie
+(`ResolveUiDensityMetrics(_uiDensity)`, appele directement a 8 endroits,
+jamais compact-aware). Utilisateur confirme etre en densite **Standard**
+(`NavigationRowHeight: 60`) : l'ecart reel etait donc de 60->58px, soit 2px,
+completement imperceptible - explique entierement le retour. Pire : en
+densite Dense (`NavigationRowHeight: 50`), activer "compact" aurait
+AGRANDI la barre (58 > 50), le contraire de l'effet attendu.
+
+**Attente clarifiee avec l'utilisateur** avant de coder : il veut un vrai
+palier plus agressif que Dense sur toute l'interface, pas juste la ligne
+d'outils. **Maquette Artifact publiee et approuvee avant tout code**
+(comparaison a l'echelle reelle Standard/Dense/Ultra-compact,
+https://claude.ai/code/artifact/550aab08-42f2-48b3-a74f-dd871cfa2e51) - `go`
+apres visionnage.
+
+**Implemente** (`MainWindow.UiDensity.cs`) :
+- `UltraCompactMetrics` (nouveau, `static readonly UiDensityMetrics`) : les
+  29 dimensions, toutes plus petites que le palier "dense" existant
+  (IconButtonSize 20 contre 24, NavigationRowHeight 42 contre 50,
+  AddressBoxMinHeight 34 contre 40, BookmarkChipHeight 18 contre 22, etc.) -
+  valeurs approuvees sur la maquette, jamais choisi via `UiDensityCombo`
+  (n'entre pas dans `NormalizeUiDensity`/`UiSettings.UiDensity`, qui restent
+  Standard/Confortable/Dense).
+- `ResolveEffectiveUiDensityMetrics()` (nouveau point d'entree UNIQUE) :
+  `_compactModeEnabled ? UltraCompactMetrics : ResolveUiDensityMetrics(_uiDensity)`
+  - remplace les 8 appels directs a `ResolveUiDensityMetrics(_uiDensity)`
+  disperses dans `MainWindow.Bookmarks.cs` (x3), `MainWindow.Settings.cs`,
+  `MainWindow.SettingsTheme.cs`, `MainWindow.xaml.cs`, `MainWindow.UiDensity.cs`
+  (`ApplyUiDensity`) - le mode compact prend desormais le dessus PARTOUT ou
+  la densite s'appliquait, pas seulement sur 2 valeurs eparpillees.
+- `ResolveNavigationRowHeight()`/`ResolveNavigationToolbarPadding()`
+  simplifiees en simples relais vers `ResolveEffectiveUiDensityMetrics()`
+  (comportement inchange pour ces 2-la, juste centralise).
+- 2 tests source-locking mis a jour (`UiDensityVisualIdentityTests.cs`) pour
+  verrouiller le nouveau mecanisme plutot que l'ancien.
+
+**Verifie reellement en direct** (profil isole, pilotage UIA, mesure AVANT/
+APRES activation sur les memes elements) : barre d'adresse -37%, bouton
+"Ouvrir l'adresse" -29%, bouton favori (etoile) -31%, puce de favori
+existante -51% - une reduction reelle et mesuree sur CHAQUE element
+controle, contre les ~3% (2px/60px) du mecanisme precedent. Processus
+reactif tout du long, 0 ligne `UNHANDLED`.
+
+Build MSBuild propre, `dotnet test Lumora.Tests` : 947/947. Version montee a
+`0.94.23.0-dev` (ajout, 3e chiffre - vrai nouveau palier, pas juste un
+correctif du mecanisme existant).
+
+## Meme session : "Interface compacte" etendue aux onglets (capture d'ecran a l'appui)
+
+Retour utilisateur avec capture d'ecran reelle : le nouveau palier
+ultra-compact fonctionne bien sur la toolbar/adresse/favoris/pied de fenetre
+("c'est tres compact et c'est tres bien"), MAIS le rail d'onglets vertical
+reste a taille normale sur la capture (boutons Reduire/Nouvel onglet
+visiblement pas retrecis) - demande explicite : "il faut que le mode
+compact fonctionne partout... sur la barre des onglets que ca soit en
+vertical ou en horizontal", plus un signalement de proportion/centrage
+dans la barre d'adresse. Avis demande AVANT toute action.
+
+**Avis donne, confirme par lecture de code** : la barre d'onglets (horizontale
+ET verticale) etait une exclusion DELIBEREE et documentee depuis l'origine
+de la Densite d'interface - ni Standard/Confortable/Dense ne l'ont jamais
+fait varier non plus, pas seulement Compact. Portee clarifiee avec
+l'utilisateur en 2 questions avant de coder :
+1. Onglets : Compact SEUL doit les retrecir (Standard/Confortable/Dense
+   restent inchanges pour les onglets, comportement historique preserve) -
+   confirme.
+2. Niveau de detail : elements visibles seulement (hauteur de ligne,
+   favicon, bouton fermer, largeur du rail) - PAS chaque micro-detail
+   (poignee de glissement, badge de groupe) - confirme, `MainWindow.TabGroups.cs`
+   aurait demande un chantier bien plus long pour un gain presque invisible
+   sur ces details-la.
+
+**Bug racine trouve pour les boutons du rail (Reduire/Muet)** :
+`ApplyIconButtonSizing()` (`MainWindow.SettingsTheme.cs`) ne parcourait QUE
+`NavigationToolbar`/`FullScreenTopBar` via `ApplyIconButtonSizeRecursive` -
+`VerticalTabsRail` (qui utilise pourtant le meme `NovaChromeIconButtonStyle`
+pour `VerticalTabsCompactButton`/`VerticalTabsMuteAllButton`) n'etait jamais
+parcouru, exactement ce qui apparaissait sur la capture d'ecran. Corrige en
+une ligne (`ApplyIconButtonSizeRecursive(VerticalTabsRail, styles, size);`).
+
+**Implemente** (nouvelles constantes `Compact*` dans `MainWindow.UiDensity.cs`,
+utilisees uniquement quand `_compactModeEnabled`, JAMAIS par
+Standard/Confortable/Dense) :
+- `MainWindow.Settings.cs` : `ApplyVerticalTabsWidth()` (largeur du rail,
+  30px replie/150px etendu en compact contre 40/largeur utilisateur sinon),
+  `ApplyVerticalTabsLayout()` et `ApplyCompactModeLayout()` (hauteur de la
+  ligne d'onglets horizontale, 40px en compact contre 52 fixe sinon -
+  `RefreshHorizontalTabHeaders()` ajoutee pour rafraichir les onglets deja
+  ouverts immediatement au bascule, pas seulement les futurs).
+- `MainWindow.TabGroups.cs` (`TabHeaderContent` partagee par les onglets
+  epingles horizontaux + `RenderVerticalTabs`) : favicon et bouton fermer
+  retrecis des 2 cotes (horizontal et vertical), tuile compacte du rail
+  (30x28->22x20) et Padding du bouton de ligne etendue (controle la hauteur,
+  10,7,10,7->7,3,7,3) reduits en compact.
+- `ApplyIconButtonSizing()` etendue au rail (voir bug racine ci-dessus).
+
+**Verifie reellement en direct** (profil isole, pilotage UIA, mesure avant/
+apres) : hauteur de la barre d'adresse 54->42px (coherent avec le palier
+ultra deja verifie), bascule reussie vers onglets verticaux + Interface
+compacte sans erreur, processus reactif, 0 ligne `UNHANDLED`. **Limite
+honnete** : `AddressIdentityBadge` (l'icone d'identite/cadenas signalee comme
+"pas centree" par l'utilisateur) n'expose aucun `AutomationId` ni `Name`
+exploitable pour une mesure UIA precise de son centrage reel - impossible de
+confirmer ou d'infirmer ce point precis par la mesure directe. Verification
+par le calcul : la marge texte-apres-icone reste a 13px en palier ultra,
+identique aux ~13-15px deja etablis sur les 3 autres paliers (aucune
+incoherence trouvee dans les chiffres poses). Le rail vertical lui-meme
+(largeur, visibilite juste apres bascule de position) n'a pas pu etre mesure
+dans la meme passe (rail pas encore stabilise au moment de la mesure,
+`VerticalTabsCompactButton`/`VerticalTabsRail` introuvables ou valeurs
+aberrantes) - **a confirmer par l'utilisateur en usage reel**, notamment le
+centrage de la barre d'adresse et la taille reelle du rail vertical avec ses
+propres onglets ouverts (profil de test sans onglet supplementaire).
+
+Build MSBuild propre, `dotnet test Lumora.Tests` : 949/949 (+2, nouveaux
+tests de verrouillage sur les onglets ; 1 test existant mis a jour car la
+barre d'onglets rejoint desormais le perimetre du mode Compact). Version
+montee a `0.94.24.0-dev` (ajout, 3e chiffre).
+
+## Meme session : barre d'adresse "deborde, plus centree" en Ultra-compact - 3 couches de cause, trouvees une par une par la mesure
+
+Retour utilisateur direct et insistant (comparaison explicite avec la
+maquette Artifact, "pourquoi ce que j'ai devant moi n'est pas conforme")
+puis confirmation apres explication : le texte de la barre d'adresse "prend
+toute la barre, deborde, plus centre" en mode Compact, alors qu'il est
+"bien centre, bien proportionne" en mode normal. Diagnostic explique
+d'abord (le `FontSize` de `AddressBox`, 18 XAML, n'est JAMAIS retreci par la
+densite - meme en Dense - donc reduire le remplissage vertical plus vite que
+la taille de texte fixe qu'il entoure rend visuellement le texte "colle" au
+bord). Utilisateur : "il faut que ca soit propre... c'est degueulasse" - go
+implicite pour corriger, pas une nouvelle demande d'avis.
+
+**Correction en 3 passes, chacune verifiee en direct par mesure REELLE
+(pas supposee) avant de conclure qu'elle suffisait** :
+1. **AddressBoxMinHeight 34->38, Padding (36,1,10,1)->(34,3,10,3)** -
+   remonte le remplissage pres du niveau "Dense" (2px) plutot que de
+   continuer a le reduire pour un gain qui n'existe pas cote texte (le
+   texte, lui, ne retrecit jamais). Mesure en direct APRES ce 1er correctif :
+   **34px avant, 34px apres - AUCUN changement mesurable**, alors que le
+   code etait bien le nouveau. A pousse a chercher pourquoi plutot que de
+   presenter un correctif non verifie comme acquis.
+2. **Cause reelle #1 trouvee : `NavigationRowHeight` est une hauteur de
+   ligne FIXE (pas Auto)** - 42px en Ultra, moins le rembourrage de la ligne
+   d'outils, ne laissait que ~37px disponibles pour `AddressBox` : le nouveau
+   `MinHeight` de 38 depassait ce plafond et etait donc silencieusement
+   ignore/ecrase par la contrainte du parent. Remonte a 46 (`MainWindow.UiDensity.cs`).
+   Mesure en direct : 34 -> 36px - un vrai mouvement, mais encore loin de la
+   cible attendue (~46-47px au facteur d'echelle mesure par ailleurs).
+3. **Cause reelle #2 trouvee en creusant le residu** : `NavigationToolbarCapsule.Margin`
+   (`ApplyFlattenedToolbarCapsule`, `MainWindow.Settings.cs`, et sa cousine
+   `ApplyTitleBarSafeArea`, `MainWindow.WindowChrome.cs`) impose une marge
+   verticale FIXE de 6px en haut ET en bas, jamais touchee par la densite
+   depuis l'origine - une 3e couche de contrainte, invisible depuis
+   `UiDensityMetrics`, qui continuait de manger le gain obtenu a l'etape 2.
+   Reduite a 2px en Interface compacte dans LES DEUX fonctions (la 2e
+   n'est pas toujours suivie de la 1ere selon le chemin d'appel). Mesure en
+   direct : 36 -> **48px** - conforme a la cible attendue (38 DIP x
+   facteur d'echelle ~1.227 = ~47).
+
+**Lecon de methode explicite** : les 2 premieres corrections, sur le papier,
+avaient l'air suffisantes (le calcul du remplissage etait juste) - seule la
+mesure en direct, repetee apres CHAQUE changement plutot qu'une fois a la
+fin, a revele que 2 autres couches de contrainte fixe (hauteur de ligne,
+marge de capsule) neutralisaient silencieusement le correctif. Sans cette
+discipline de mesure, le 1er correctif (source pourtant "correcte") aurait
+ete presente comme resolu alors qu'il ne changeait strictement rien a
+l'ecran.
+
+3 tests casses par ces changements (litteraux de code modifies), corriges
+pour verrouiller les nouvelles expressions plutot que les anciennes valeurs
+en dur : `UiDensityVisualIdentityTests.cs` (x2, `AddressBoxMinHeight`/
+`NavigationRowHeight` en bloc Ultra) et `BookmarkBarRegressionTests.cs`
+(marge de capsule devenue une variable).
+
+Build MSBuild propre a chaque etape, `dotnet test Lumora.Tests` : 949/949 au
+final. Version montee a `0.94.24.1-dev` (micro-correction, 4e chiffre -
+correctif d'un defaut du palier ajoute plus tot dans cette meme session,
+pas une nouvelle capacite).
+
+## Cloture de session "refonte finale" : bouton "Ajouter" isole + verifications rapides
+
+L'utilisateur accepte le compromis sur la barre d'adresse ("pas ce qui se
+fait de mieux mais on ne fera pas mieux pour l'instant") et demande de
+finir "ce qui rentre" - clarifie en 2 temps : les petites choses du backlog
+oui, le clic par survol (gros sous-chantier a part) non, pas aujourd'hui.
+
+**Bouton "Ajouter" isole/surdimensionne du Nouvel onglet (signale depuis
+plusieurs sessions, jamais traite)** : diagnostic par lecture de code - la
+tuile carte 92x88px (memes dimensions qu'un vrai raccourci) s'affiche SEULE
+des que la grille n'a rien d'autre a montrer (aucun raccourci existant, ou
+raccourcis masques par reglage), flottant dans tout l'espace disponible.
+Maquette Artifact publiee (avant/apres, https://claude.ai/code/artifact/6c4e7dc5-6d10-4205-b3ac-2fe08a0477b5) -
+`go` apres visionnage, jugee "explicite et discrete".
+
+**Implemente** (`MainWindow.NewTabHome.cs`) : nouvelle classe CSS
+`.add-shortcut-lone` (affordance en ligne, pilule pointillee, pas une carte)
+utilisee UNIQUEMENT quand `!showExisting` (aucun raccourci affiche a cote) -
+la tuile carte normale revient inchangee des qu'un raccourci existe. Libelle
+"Ajouter" -> "Ajouter un raccourci" dans cet etat seul (plus explicite sans
+raccourci de contexte visuel autour).
+
+**Demande "limiter a 12 raccourcis"** : deja implemente integralement avant
+cette session (`.Take(12)` a l'affichage, `canAddMore = Count < 12`, ET
+verification cote ajout dans `MainWindow.WebMessaging.cs` -
+`if (Count >= 12) { ...refus... }`) - verifie par lecture de code (un seul
+point d'ajout dans tout le depot), rien a changer. Dit clairement a
+l'utilisateur plutot que de re-implementer une protection deja existante.
+
+**Verification live des 2 points en attente** (session precedente) :
+- **Bouton "Ajouter un raccourci" seul (nouveau code)** : NON verifiable par
+  pilotage UIA - le contenu HTML du Nouvel onglet vit dans le sous-arbre
+  `ControlType.Document` de WebView2, deja documente comme inaccessible a la
+  marche UIA de cet environnement (essaye explicitement en incluant ce type
+  de noeud, aucun element trouve).
+- **Systeme de "modes" du Nouvel onglet (Focus/Lecture/Creation/Recherche/
+  Nuit)** : **jamais bascule ni verifie avant cette session** - fait ici.
+  Bascule reelle vers "Focus" via le bouton `ModeUsageButton`/flyout
+  (confirme par le libelle qui change en "Mode d'usage : Focus."), nouvel
+  onglet ouvert dans la foulee **sans aucune erreur**, processus reactif, 0
+  ligne `UNHANDLED`. **Limite honnete** : confirme que le changement de mode
+  ne PLANTE PAS a l'usage (premiere fois teste) - ne confirme PAS le rendu
+  visuel CSS du Nouvel onglet en mode Focus (meme limite Document ci-dessus).
+- Identifiant Coffre (nouvelles icones) et icone de secours du panneau
+  "Gerer les favoris" : non retentes cette passe (necessitent soit un coffre
+  chiffre fabrique expres, soit re-ouvrir un panneau deja juge disproportionne
+  a verifier pour un rendu texte/icone pur - memes limites que la session
+  precedente, pas de nouvelle piste trouvee).
+
+Build MSBuild propre, `dotnet test Lumora.Tests` : 949/949 (inchange, pur
+HTML/CSS cote C#, aucune nouvelle logique testable isolement). Version
+montee a `0.94.24.2-dev` (micro-correction, 4e chiffre - correctif d'un bug
+d'affichage signale, pas une nouvelle fonctionnalite).
+
+**Reste ouvert pour la prochaine session** (backlog inchange sinon) :
+- Clic par survol (dwell click) - refuse explicitement pour cette session,
+  "vrai sous-chantier" a part entiere.
+- Identifiant Coffre + icone de secours "Gerer les favoris" : toujours non
+  confirmes, aucune nouvelle piste de verification trouvee.
+- Suite Sons & ambiance (2 idees approuvees), option Coffre non precisee, la
+  "surprise" jamais revelee - tous inchanges depuis le debut de session.
+
+**Plan annonce par l'utilisateur pour les sessions suivantes** (pas encore
+commence, ordre confirme apres discussion) :
+1. Prochaine session ("demain") : finir le backlog ci-dessus.
+   **-> devenue la session "verification au final" ci-dessous (2026-09-13),
+   pas le backlog Sons/accessibilite/surprise lui-meme mais une passe de
+   verification sur tout le travail non commite accumule depuis.**
+2. Module de protection clavier - demande initiale formulee comme "chiffrer
+   ce qui est tape au clavier contre un pirate entre moi et le serveur".
+   **Avis donne, pas encore tranche** : ce cas precis (attaquant reseau) est
+   deja entierement couvert par HTTPS (deja impose par
+   `Privacy/HttpsEnforcer/HttpsEnforcerModule.cs`) - rajouter un chiffrement
+   applicatif par-dessus ne protegerait de rien de plus pour ce scenario. La
+   vraie menace non couverte est probablement un keylogger LOCAL (logiciel
+   espion sur la machine, pas sur le reseau) - proposition alternative faite :
+   clavier virtuel a l'ecran pour les champs sensibles (mot de passe/Coffre),
+   qui contourne un keylogger materiel/logiciel classique. A clarifier avec
+   l'utilisateur AVANT cette session laquelle des deux menaces il vise
+   reellement, plutot que construire sur la premisse initiale telle quelle.
+3. Vrai mode sombre (actuel = bleu marine `#0D1422`/`#10151F`, pas un noir
+   neutre) / vrai mode clair (actuel = blanc, pas un vrai systeme de
+   contraste - "certains menus en mode clair qu'on voyait pas tres bien").
+   Maquette avant code, comme d'habitude.
+4. Corriger tout ce qu'il reste a corriger (bugs/trous en suspens).
+5. Nettoyage complet du code.
+6. Vraie release 1.0.0 finale - explicitement definie par l'utilisateur comme
+   "la version qu'on n'aura plus besoin de toucher 36 fois", apres laquelle
+   les mises a jour suivantes redeviennent de l'evolution normale (1.1, 1.2...)
+   plutot que de la stabilisation. Avis donne et accepte par l'utilisateur :
+   deja 10 revisions "release 1.0.0" (r1-r10) dans l'historique, palier
+   `0.94.x` toujours en cours - les etapes 4/5/6 prendront probablement plus
+   d'une session chacune, ne pas se presser dessus.
+
+## Session "verification au final" (2026-09-13) : confirmation live du backlog non commite
+
+Ouverture "salut" standard (CLAUDE.md/MEMORY.md relus). L'utilisateur nomme la
+session "verification au final, comme prevu dans le plan" - clarifie via
+`AskUserQuestion` : porte sur TOUT le backlog non commite accumule depuis
+plusieurs sessions (accessibilite, Sons & ambiance, refonte "Encre chaude",
+palier ultra-compact...), pas un point precis. Aucun code modifie cette
+session - uniquement verification, conformement a la regle 4 (CLAUDE.md).
+
+**Etat de depart verifie sain** : build MSBuild Debug x64 propre (0 erreur, 0
+avertissement), `dotnet test Lumora.Tests` **949/949 verts**, version alignee
+`0.94.24.2-dev` (`MainWindow.xaml.cs`).
+
+**Verifie reellement en direct, 2 lancements isoles successifs** (profil
+jetable, `LUMORA_TRACE_STARTUP=1`, pilotage UIA, nouveau helper PowerShell
+`Find-Native` qui elague les noeuds `ControlType.Document` meme en recherche
+Subtree depuis `RootElement` - necessaire, voir piege ci-dessous) :
+
+1. **Mode d'usage (Focus/Lecture/Creation/Recherche/Nuit) - jamais reussi
+   avant cette session, confirme cette fois** : cause du blocage identifiee -
+   `ModeUsageButton` a `AutomationProperties.Name="Mode"` en XAML mais son
+   `Name` reel en cours d'execution est `"Mode d'usage : Neutre."` (ecrit par
+   `UpdateUsageModeButtonUi`), jamais egal a "Mode d'usage" cherche en exact
+   par les sessions precedentes. Recherche par `AutomationId="ModeUsageButton"`
+   a suffi - bascule vers "Focus" confirmee (`Name` devient "Mode d'usage :
+   Focus."), nouvel onglet ouvert ensuite sans exception.
+2. **Icone de secours des favoris (`BookmarkGlyphs.Link`, panneau "Gerer les
+   favoris") - confirmee pour de vrai** : favori "Example Domain" (sans
+   favicon) ajoute via le vrai flux UI, panneau "Gerer les favoris" ouvert -
+   le `ListItem` retrouve porte exactement `IconGlyph = M6,3 L14,3 L19,8
+   L19,21 L6,21 Z M9,12 L16,12 L16,13.4 L9,13.4 Z M9,15.5 L16,15.5 L16,16.9
+   L9,16.9 Z` (la silhouette "page generique") avec `IconGlyphVisibility =
+   Visible`/`IconImageVisibility = Collapsed` - preuve directe, pas deduite.
+3. **Sons & ambiance - confirme de bout en bout pour la premiere fois**
+   (jusqu'ici toujours bloque par le pilotage) : interrupteur active ->
+   `SoundThemeFooterButton` (mini-lecteur barre du bas) apparait ; pack
+   "Arcade" et ambiance "Cascade" selectionnes sans exception ; interrupteur
+   desactive -> mini-lecteur disparait bien. Comportement exactement conforme
+   a la conception (voir [[verif-rappel-pause-sons-flash-0-94-18]] et le
+   journal `logs/ajustement-2-refonte-organique.md`).
+4. **Accessibilite > Avance** : carte "Rappel de pause"
+   (`AccessibilityBreakReminderCombo`) et les 2 chevrons "Sous-onglets
+   precedents"/"suivants" retrouves et fonctionnels (chevron droit invoque
+   sans erreur).
+5. **Interface ultra-compacte + onglets verticaux, avec 2 vrais onglets
+   ouverts** : `VerticalTabsSwitch` (en realite dans Reglages > **Espace de
+   travail**, pas Apparence > Disposition - correction d'une supposition) puis
+   `CompactModeSwitch` actives - `VerticalTabsCompactButton` retrouve a
+   116x33 apres bascule, rail rendu sans exception.
+6. **Coffre ("Ajouter un identifiant") - toujours pas confirme, mais cause
+   exacte identifiee cette fois (pas juste "flaky")** : `VaultMenu_Click`
+   desactive deliberement le Coffre en mode invite (`_isGuestMode`, message
+   "Coffre indisponible en mode invite" - **pas un bug**). Sur un vrai profil
+   fraichement cree (sans mot de passe), la tuile "Coffre" ouvre bien un
+   dialogue `PromptMasterPasswordAsync`, MAIS ce dialogue rejette une
+   `PasswordBox` vide sans exception (`IsNullOrWhiteSpace` -> `return null`)
+   - combine a la limite deja connue (`PasswordBox.SetValue` toujours refuse
+   par l'environnement), le contenu du Coffre reste hors de portee du
+   pilotage UIA quel que soit le type de profil. Arrete la conformement a la
+   consigne de ne pas s'acharner - a confirmer par l'utilisateur en usage reel.
+7. **Bouton "Ajouter un raccourci" isole (Nouvel onglet)** : non retente
+   au-dela d'un essai (limite Document/WebView2 deja documentee, confirmee a
+   nouveau en cours de session - voir piege ci-dessous).
+
+**Piege methodologique reel rencontre et corrige en cours de route** : une
+recherche `FindAll(TreeScope.Subtree, ...)` depuis `RootElement` filtree par
+`ProcessId` (necessaire pour atteindre les popups/flyouts hors de l'arbre de
+la fenetre) traverse AUSSI le contenu WebView2 du Nouvel onglet si les
+noeuds `ControlType.Document` ne sont pas explicitement elagues - la grille
+de raccourcis/modules du Nouvel onglet expose des libelles HTML identiques a
+de vrais boutons XAML (ex. "Coffre" y apparait aussi), ce qui a fait
+invoquer le mauvais element plusieurs fois avant d'ecrire un helper
+`Find-Native` qui elague systematiquement ces noeuds. Egalement rencontre :
+l'assistant de bienvenue (8 etapes) restait actif et invisible dans un dump
+a profondeur limitee (3 niveaux) en tout debut de session - `InvokePattern`
+ignorant le Z-order, plusieurs clics ont fonctionne "a travers" cet overlay
+sans qu'il soit remarque, jusqu'a un dump complet qui l'a revele. Les deux
+pieges (et 3 autres plus mineurs : bouton "Nouvel onglet" horizontal mal
+nomme dans le XAML statique, `RestartApp()` qui change le PID sans que ce
+soit un crash, tuile "Coffre" dupliquee dans l'arbre a filtrer par taille)
+sont maintenant documentes dans `.claude/skills/verify/SKILL.md` pour les
+sessions suivantes.
+
+**Verification finale** : `winui-runtime-trace.log` inspecte sur l'ensemble
+de la session (2 lancements confondus) - **0 ligne `UNHANDLED`**. Aucun
+fichier de code touche, seuls `MEMORY.md` et `.claude/skills/verify/SKILL.md`
+mis a jour. Pas de bump de version (aucun changement de comportement).
+
+**Reste a faire** (inchange, backlog anterieur toujours en attente) : les 5
+aides accessibilite restantes (mode simplifie, zoom par site, reordonner
+sans clic maintenu deja fait, curseur agrandi/contraste, dwell click), les 2
+idees Sons & ambiance approuvees non commencees (coupure auto sur son
+d'onglet, "Ma musique"), option Coffre non precisee, la "surprise" jamais
+revelee, refonte graphique organique piste C (Editorial), puis le plan en 6
+etapes ci-dessus (protection clavier, vrai clair/sombre, corrections
+restantes, nettoyage, release 1.0.0 finale).
