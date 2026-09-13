@@ -28491,7 +28491,17 @@ mis a jour. Pas de bump de version (aucun changement de comportement).
 aides accessibilite restantes (mode simplifie, zoom par site, reordonner
 sans clic maintenu deja fait, curseur agrandi/contraste, dwell click), les 2
 idees Sons & ambiance approuvees non commencees (coupure auto sur son
-d'onglet, "Ma musique"), option Coffre non precisee, la "surprise" jamais
-revelee, refonte graphique organique piste C (Editorial), puis le plan en 6
-etapes ci-dessus (protection clavier, vrai clair/sombre, corrections
-restantes, nettoyage, release 1.0.0 finale).
+d'onglet, "Ma musique"), option Coffre non precisee, refonte graphique
+organique piste C (Editorial), puis le plan en 6 etapes ci-dessus (protection
+clavier, vrai clair/sombre, corrections restantes, nettoyage, release 1.0.0
+finale).
+
+## Retrait de la « surprise » du backlog (2026-09-13)
+
+L'utilisateur retire lui-meme l'idee de la « surprise » annoncee mais jamais
+revelee (mentionnee comme backlog en attente depuis la session du 2026-09-11) :
+« c'etait une betise ». Conformement a la regle memoire (l'utilisateur qui
+juge lui-meme une de ses idees bancale, cf. CLAUDE.md), retiree sans
+discussion des listes de backlog a venir - la mention reste dans le recit
+chronologique des sessions passees (fait reellement dit a l'epoque), mais
+n'est plus portee comme un "reste a faire".
