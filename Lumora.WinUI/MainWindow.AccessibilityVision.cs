@@ -34,7 +34,8 @@ public sealed partial class MainWindow
             await core.ExecuteScriptAsync(BuildAccessibilityVisionScript(
                 _uiSettings.AccessibilityTextSpacing,
                 _uiSettings.AccessibilityColorBoostEnabled,
-                _uiSettings.AccessibilityReduceBlueLight));
+                _uiSettings.AccessibilityReduceBlueLight,
+                _uiSettings.AccessibilityLargeCursorEnabled));
         }
         catch (Exception error)
         {
@@ -42,9 +43,22 @@ public sealed partial class MainWindow
         }
     }
 
-    private static string BuildAccessibilityVisionScript(string? textSpacing, bool colorBoost, bool reduceBlueLight)
+    private static string BuildAccessibilityVisionScript(string? textSpacing, bool colorBoost, bool reduceBlueLight, bool largeCursor)
     {
         var css = new List<string>();
+
+        // Curseur agrandi et contraste (basse vision) : redefinit uniquement
+        // le curseur PAR DEFAUT de la page (regle sur html, sans "*") - toute
+        // regle plus specifique deja posee par le site ou par le
+        // navigateur (input texte -> I-beam, bouton -> pointer...) continue
+        // de s'appliquer normalement, seul le fond "fleche" change. Image
+        // SVG encodee en donnees (aucune requete reseau), fleche noire
+        // epaisse sur fond jaune vif pour un contraste maximal ; taille
+        // native de l'image (48px) grande devant le curseur systeme (~24px).
+        if (largeCursor)
+        {
+            css.Add($"html {{ cursor: {BuildLargeCursorCssValue()} !important; }}");
+        }
 
         // Espacement du texte (WCAG 1.4.12) : ligne >= 1.5x, lettres >= 0.12em,
         // mots >= 0.16em, paragraphes >= 2x. "Confortable" reste en-deca du
@@ -115,5 +129,20 @@ public sealed partial class MainWindow
   style.textContent = css;
 })();
 """;
+    }
+
+    // Fleche epaisse noire sur fond jaune vif (contraste maximal), pointe en
+    // haut a gauche - meme silhouette generale qu'un curseur Windows
+    // classique pour rester reconnaissable, agrandie a 48px (le double d'un
+    // curseur systeme standard a 100%). Hotspot (6,3) : point de la fleche,
+    // mis a l'echelle depuis les coordonnees du viewBox (4,2 sur 32) vers la
+    // taille reellement affichee (48, facteur 1.5).
+    private static string BuildLargeCursorCssValue()
+    {
+        const string svg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 32 32'>" +
+            "<path d='M4 2 L4 26 L11 20 L15 29 L19 27 L15 18 L24 18 Z' fill='#FFCC33' stroke='#000000' stroke-width='2' stroke-linejoin='round'/>" +
+            "</svg>";
+        var encoded = Uri.EscapeDataString(svg);
+        return $"url(\"data:image/svg+xml,{encoded}\") 6 3, auto";
     }
 }
