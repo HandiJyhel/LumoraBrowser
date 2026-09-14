@@ -63,11 +63,14 @@ public static class BookmarkGlyphs
     // decoupe EvenOdd) plutot qu'un globe ou un trombone de chaine : c'est
     // le symbole le plus direct pour "contenu sans favicon disponible",
     // memes lignes droites que le dossier ci-dessus (pas de calcul d'arc a
-    // verifier a l'aveugle).
-    public const string Link =
-        "M6,3 L14,3 L19,8 L19,21 L6,21 Z " +
-        "M9,12 L16,12 L16,13.4 L9,13.4 Z " +
-        "M9,15.5 L16,15.5 L16,16.9 L9,16.9 Z";
+    // verifier a l'aveugle). MEME geometrie que StartMenuGlyphs.Notes -
+    // reference directe plutot que recopiee (nettoyage 2026-09-14, doublon
+    // reel trouve en audit) : ce fichier (Models/, tire des types WinUI via
+    // BookmarkNode/etc.) n'est PAS compile dans Lumora.Tests, contrairement
+    // a StartMenuGlyphs.cs (fichier sans dependance, deja teste) - la
+    // reference ne peut donc se faire que dans CE sens (Bookmarks.cs ->
+    // StartMenuGlyphs), jamais l'inverse.
+    public const string Link = StartMenuGlyphs.Notes;
 
     public static string For(BookmarkNode node) => node.Kind == BookmarkKind.Folder ? Folder : Link;
 }

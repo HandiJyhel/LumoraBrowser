@@ -35,11 +35,13 @@ public static class StartMenuGlyphs
         "M21,5 L13,7 L13,19 L21,17 Z";
 
     // "Notes" reprend la MEME silhouette de page generique que l'icone de
-    // secours des favoris/historique (BookmarkGlyphs.Link, Models/Bookmarks.cs)
-    // - meme symbole, meme sens ("contenu texte"). Valeur recopiee plutot que
-    // referencee : Models/Bookmarks.cs depend de types WinUI (Visibility...)
-    // et n'est pas compile dans le projet de tests, ce fichier-ci doit rester
-    // sans aucune dependance pour y etre lie (voir PathMiniLanguageTests.cs).
+    // secours des favoris/historique - c'est ICI la source (fichier sans
+    // aucune dependance, compile dans Lumora.Tests, voir
+    // PathMiniLanguageTests.cs) : BookmarkGlyphs.Link (Models/Bookmarks.cs,
+    // qui depend de types WinUI et n'est PAS compile dans les tests)
+    // reference cette constante plutot que de la recopier (nettoyage
+    // 2026-09-14, doublon reel corrige - la reference ne peut se faire que
+    // dans ce sens, jamais l'inverse).
     public const string Notes =
         "M6,3 L14,3 L19,8 L19,21 L6,21 Z " +
         "M9,12 L16,12 L16,13.4 L9,13.4 Z " +

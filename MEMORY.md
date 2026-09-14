@@ -2,7 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
-- [Session "correction et nettoyage"](#session-correction-et-nettoyage-2026-09-14) — 2026-09-14, fusion des étapes 4+5 (corriger+nettoyer) sur tout le dépôt : rattrapage du backlog en 9 commits locaux (rien poussé GitHub) puis audit `/code-review` (8 angles) -> 5 bugs réels corrigés (profils qui disparaissent du sélecteur, glisser-déposer des favoris cassé avec "Réordonner sans clic maintenu", 2 services jamais `Dispose()`, recherche Réglages incomplète, onglets verticaux invisibles au clavier), 9 doublons/inefficacités nettoyés, version rattrapée à `0.94.26.1-dev`, 2 nettoyages plus risqués (câblage accentuation, dimensions onglets) reportés avec l'accord de l'utilisateur (pas de vérification visuelle possible ici), vérifié en direct (0 UNHANDLED, trace confirmant le correctif recherche), build+949 tests OK, rien committé
+- [Session "correction et nettoyage"](#session-correction-et-nettoyage-2026-09-14) — 2026-09-14, fusion des étapes 4+5 (corriger+nettoyer) sur tout le dépôt : rattrapage du backlog en 9 commits locaux (rien poussé GitHub) puis audit `/code-review` (8 angles) -> 5 bugs réels corrigés (profils qui disparaissent du sélecteur, glisser-déposer des favoris cassé avec "Réordonner sans clic maintenu", 2 services jamais `Dispose()`, recherche Réglages incomplète, onglets verticaux invisibles au clavier), 9 doublons/inefficacités nettoyés, version rattrapée à `0.94.26.1-dev`, 2 nettoyages plus risqués (câblage accentuation, dimensions onglets) reportés avec l'accord de l'utilisateur (pas de vérification visuelle possible ici), vérifié en direct (0 UNHANDLED, trace confirmant le correctif recherche), build+949 tests OK, committé en local (10e commit de la journée) ; 1 doublon de glyphes trouvé après coup et corrigé (StartMenuGlyphs.Notes/BookmarkGlyphs.Link), pas encore committé ; prochaine session (2026-09-15) : exécutable + 1re mise en ligne GitHub
 - [Session "étape 3.5" — 3 petits correctifs](#session-etape-35-2026-09-14--3-petits-correctifs) — 2026-09-14, TERMINÉE : (1) bouton "+" du rail d'onglets verticaux déplacé sous la liste + fond bleu-marine du nouvel onglet neutralisé pour TOUTES les palettes (Océan/Forêt/Ambre, pas seulement Lumora), (2) lignes de "Vue d'ensemble" (Centre Lumora) passées de StackPanel à Grid 3 colonnes pour aligner les liens, (3) "Couleur du mode d'usage" (6 teintes par mode) remplacée par "Couleur d'accentuation" (1 réglage global façon Windows, dossiers de favoris/onglet actif/bouton principal/glow ambiant) - les 3 build+949 tests OK + vérifiés en direct par capture d'écran, piège réel trouvé et corrigé en vérifiant (SetBrush vs SetAppBrush, crash au démarrage)
 - [Fond bleu-marine résiduel : mode Focus](#fond-bleu-marine-residuel--mode-focus-2026-09-14) — 2026-09-14, le correctif "Noir neutre" du 2026-09-13 n'avait neutralisé que le mode Neutre, le mode Focus gardait sa propre copie quasi identique de l'ancien bleu-marine (chrome + page Nouvel onglet), corrigé, build+949 tests OK, vérifié en direct, rien committé
 - [Choix du thème demandé dès le premier lancement](#choix-du-theme-demande-des-le-premier-lancement-2026-09-13) — 2026-09-13, l'assistant ne le demandait jamais, nouvelle étape "Clair ou sombre ?" ajoutée juste après "Bienvenue" (9 étapes au lieu de 8), aperçu en direct via `ApplyThemeModeImmediate`, build+949 tests OK, clic pas confirmé visuellement (flakiness UIA), rien committé
@@ -29041,9 +29041,33 @@ d'enveloppe) a échoué - `AutomationId` semble ne pas être exposé pour ce
 `MainMenuButton`), pas creusé plus loin (verification annexe, pas
 bloquante).
 
-**Statut final** : 20 fichiers modifiés (5 bugs + 9 nettoyages/perf + 1
-rattrapage de test manquant + version), build MSBuild propre et
-`dotnet test Lumora.Tests` 949/949 après chaque lot. **Rien committé** (la
-session s'arrête ici, commit non demandé) - à committer séparément du
-rattrapage de l'étape 1 (9 commits déjà faits), toujours rien poussé vers
-GitHub.
+**Statut** : 20 fichiers modifiés (5 bugs + 9 nettoyages/perf + 1 rattrapage
+de test manquant + version), build MSBuild propre et
+`dotnet test Lumora.Tests` 949/949 après chaque lot. Committé en local (1
+commit, message détaillé) après confirmation explicite - toujours rien
+poussé vers GitHub.
+
+**Après le "Go" de commit, l'utilisateur a demandé si j'avais vraiment tout
+traité** - relecture des 8 volets un par un : 2 constats avaient été mis de
+côté sans le dire explicitement.
+1. `StartMenuGlyphs.Notes`/`BookmarkGlyphs.Link` (même géométrie "page
+   générique" recopiée) : **vrai doublon, corrigé** - `BookmarkGlyphs.Link`
+   référence désormais `StartMenuGlyphs.Notes` (sens obligé : `Models/Bookmarks.cs`
+   dépend de types WinUI donc n'est pas compilé dans `Lumora.Tests`,
+   contrairement à `StartMenuGlyphs.cs`). Build+949 tests OK.
+2. Double lecture du profil au démarrage (`MainWindow.xaml.cs`, pointée par
+   l'audit comme du gaspillage) : **PAS un oubli** - déjà documentée dans le
+   code lui-même comme un choix délibéré d'une session antérieure ("plus
+   simple et moins risqué qu'avancer tout le système d'écran de connexion").
+   Corriger reviendrait à réintroduire le risque que ce choix évitait -
+   laissée telle quelle, signalé à l'utilisateur pour transparence plutôt
+   que de la passer sous silence une 2e fois.
+
+**Clôture (2026-09-14)** : session déclarée terminée par l'utilisateur.
+Prochaine session annoncée (le lendemain) : génération de l'exécutable/
+installateur et **première mise en ligne du dépôt sur GitHub** - jusqu'ici
+toujours repoussée ("pour plus tard, pas maintenant", voir
+[[github-publication-versions]]), donc probablement la dernière étape avant
+que Lumora devienne public. Le petit correctif du doublon de glyphes
+ci-dessus reste à committer (Go demandé, pas encore reçu au moment de la
+clôture).
