@@ -2,10 +2,17 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Session "étape 3.5" — 3 petits correctifs](#session-etape-35-2026-09-14--3-petits-correctifs) — 2026-09-14, TERMINÉE : (1) bouton "+" du rail d'onglets verticaux déplacé sous la liste + fond bleu-marine du nouvel onglet neutralisé pour TOUTES les palettes (Océan/Forêt/Ambre, pas seulement Lumora), (2) lignes de "Vue d'ensemble" (Centre Lumora) passées de StackPanel à Grid 3 colonnes pour aligner les liens, (3) "Couleur du mode d'usage" (6 teintes par mode) remplacée par "Couleur d'accentuation" (1 réglage global façon Windows, dossiers de favoris/onglet actif/bouton principal/glow ambiant) - les 3 build+949 tests OK + vérifiés en direct par capture d'écran, piège réel trouvé et corrigé en vérifiant (SetBrush vs SetAppBrush, crash au démarrage)
+- [Fond bleu-marine résiduel : mode Focus](#fond-bleu-marine-residuel--mode-focus-2026-09-14) — 2026-09-14, le correctif "Noir neutre" du 2026-09-13 n'avait neutralisé que le mode Neutre, le mode Focus gardait sa propre copie quasi identique de l'ancien bleu-marine (chrome + page Nouvel onglet), corrigé, build+949 tests OK, vérifié en direct, rien committé
+- [Choix du thème demandé dès le premier lancement](#choix-du-theme-demande-des-le-premier-lancement-2026-09-13) — 2026-09-13, l'assistant ne le demandait jamais, nouvelle étape "Clair ou sombre ?" ajoutée juste après "Bienvenue" (9 étapes au lieu de 8), aperçu en direct via `ApplyThemeModeImmediate`, build+949 tests OK, clic pas confirmé visuellement (flakiness UIA), rien committé
+- [Ascenseur inutile sur l'écran de connexion](#ascenseur-inutile-sur-lecran-de-connexion-2026-09-13) — 2026-09-13, `VerticalScrollBarVisibility="Auto"` sur le `ScrollViewer` de `LoginOverlay` (défaut WinUI = `Visible` en permanence), build+949 tests OK, vérifié en direct (2 hauteurs de carte), rien committé
+
+- [Session "protection frappe clavier"](#session-protection-frappe-clavier-2026-09-13--idee-etudiee-puis-abandonnee) — 2026-09-13, idée d'anti-keylogger (clavier→app locale) étudiée puis abandonnée après avis de Claude : bénéfice trop étroit face à un attaquant avec exécution de code (capture écran, presse-papiers, mémoire, API d'accessibilité) ; retirée du backlog, rien codé, pas de bump
 - [Session "vérification au final"](#session-verification-au-final-2026-09-13--confirmation-live-du-backlog-non-commite) — 2026-09-13, build+tests propres (949/949, 0.94.24.2-dev) puis vérification live en 2 lancements (invité + profil réel) : Mode d'usage bascule enfin confirmée (bug de recherche par Name plutôt que AutomationId), icône de secours des favoris confirmée par le contenu réel du panneau, Sons & ambiance confirmé de bout en bout (mini-lecteur apparaît/disparaît), rail vertical + Interface ultra-compacte mesurés ; Coffre confirmé bloqué (guest) et hors de portée du pilotage même sur profil réel (PasswordBox non saisissable) - 0 ligne UNHANDLED sur toute la session, rien codé
 - [Session "Ajustement organique" (Encre chaude)](#session-ajustement-organique-2026-09-12--maquette-visuelle-toolbar-en-attente-de-choix) — 2026-09-12, refonte graphique piste C implémentée sur 8 écrans maquettés (Toolbar, Réglages, Coffre, Nouvel onglet, Menu Démarrer, Favoris, Historique, Téléchargements), chacun build+testé+vérifié en direct -> 0.94.21.0-dev ; **index jamais ajouté par la session d'origine, corrigé le 2026-09-12 en session suivante**
 - [Session "Ajustement n°2 et refonte organique"](logs/ajustement-2-refonte-organique.md) — 2026-09-11, 2 aides accessibilité sur 7 (rappel de pause, sons→flash visuel) extraites dans `Accessibility/`, 2 bugs UX réels corrigés (ascenseur→chevrons, carte de respiration), piste graphique C retenue pour plus tard, + "Sons & ambiance" (Profils locaux, `Sound/`) implémentée puis 6 bugs réels corrigés après tests utilisateur — dont un décodeur OGG absent de Windows (fichiers passés en WAV) et deux réglages qui se marchaient dessus sur `ElementSoundPlayer` (coordination centralisée) -> 0.94.19.0-dev
-- [Release 1.0.0 r10](logs/release-1-0-0-r10.md) — 2026-09-02, 10e révision, titre exact "Lumora 1.0.0 r10" confirmé en vérification live
+
+- [Session "thème"](#session-theme-2026-09-13--sombre-noir-neutre-implemente-non-commite) — 2026-09-13, thème clair validé (2 corrections de contraste mesurées), thème sombre "Noir neutre" implémenté sur les palettes centrales (`LumoraTheme.cs`, `MainWindow.SettingsTheme.cs`, `App.xaml`) + bug réel de fond bleu-marine trouvé et corrigé dans la page Nouvel onglet (`MainWindow.NewTabHome.cs`, système CSS séparé des brushes Nova*) ; build+949 tests OK, vérifié en direct par capture d'écran (fenêtre principale, barre d'adresse, onglets, page Nouvel onglet, Démarrer/Menu Lumora) ; Réglages navigué avec succès mais jamais capturé isolément (overlay d'onboarding + piège UIA après redémarrage de process) ; version bumpée `0.94.25.0-dev` ; **rien committé** (voir section)
 
 Ce fichier conserve l'historique chronologique complet des étapes du projet. Il ne remplace pas `AGENTS.md` et ne doit pas recopier les règles permanentes.
 
@@ -28505,3 +28512,367 @@ juge lui-meme une de ses idees bancale, cf. CLAUDE.md), retiree sans
 discussion des listes de backlog a venir - la mention reste dans le recit
 chronologique des sessions passees (fait reellement dit a l'epoque), mais
 n'est plus portee comme un "reste a faire".
+
+## Session "protection frappe clavier" (2026-09-13) : idee etudiee puis abandonnee
+
+L'utilisateur reprend le premier point du backlog "protection clavier" (liste
+en 6 etapes de la session "verification au final" ci-dessus) : proteger ce
+qui est tape au clavier contre une interception entre le poste et le
+serveur. Discussion (avis demande, pas de Go, rien code) :
+
+- **Trajet reseau** (navigateur -> serveur distant) : deja couvert par
+  HTTPS/TLS des que le site l'utilise, Lumora n'a rien d'essentiel a ajouter
+  pour les sites tiers.
+- **Trajet local** (clavier -> processus Lumora) : c'est la vraie menace
+  keylogger, et une appli en mode utilisateur ne peut pas s'en proteger
+  completement (hooks Windows bas niveau / driver = hors de portee sans
+  composant noyau dedie).
+- Pistes de mitigation partielle envisagees (clavier virtuel pour le mot de
+  passe maitre du Coffre, autofill sans frappe) jugees **peu utiles en
+  pratique** apres reflexion : si un attaquant a deja une execution de code
+  sur la machine (keylogger), il peut tout aussi bien capturer l'ecran,
+  surveiller le presse-papiers, lire la memoire du processus ou utiliser les
+  API d'accessibilite Windows - fermer une seule porte (la frappe) en
+  laissant les autres grandes ouvertes. Critique connue des claviers
+  virtuels bancaires : rassure plus que ca ne protege.
+- Le vrai remede a un keylogger reste le nettoyage de la machine
+  (antivirus), pas un blindage applicatif d'une seule fonctionnalite.
+- Pistes jugees genuinement utiles et bon marche, identifiees en passant
+  mais **non demandees** pour l'instant : avertir sur un formulaire de mot
+  de passe en HTTP non chiffre ; verifier que le presse-papiers est bien
+  vide rapidement apres un copier-coller manuel d'un mot de passe (si pas
+  deja fait).
+
+**Decision** : l'utilisateur abandonne l'idee "protection frappe clavier"
+apres l'avis de Claude - retiree du backlog a venir (n'etait de toute facon
+qu'un point d'un plan a 6 etapes, jamais un Go). Rien code, rien construit,
+aucun fichier applicatif touche. Pas de bump de version.
+
+## Session "thème" (2026-09-13) : sombre "Noir neutre" implémenté, non committé
+
+Constat de départ (voir aussi mémoire perso) : thème clair par endroits peu
+lisible, thème sombre perçu "bleu marine" plutôt que noir. Maquette Artifact
+publiée (3 candidats : Clair corrigé, Sombre "Noir neutre", Sombre "Bleu
+marine assumé") sur 4 écrans avant tout code. Décisions utilisateur : Clair
+validé tel quel, Sombre = "Noir neutre", Navigation privée (violet) conservée
+mais comme choix explicitement assumé, et exigence de périmètre : tous les
+menus et toutes les fenêtres à la même qualité, pas seulement les 4 écrans
+maquettés.
+
+**Implémentation (après Go)** :
+- `MainWindow.SettingsTheme.cs` : palette sombre neutralisée pour le mode
+  "neutral" et le mode par défaut de `ResolveModeChromePalette` (fond, 3
+  niveaux de surface, bordures, texte atténué - ex. fond `UiColor(9,13,20)`
+  -> `UiColor(13,13,13)`), plus tous les brushes "morts" (jamais reconnectés
+  au système de mode : overlay, FocusInner, InfoSurface, PanelBackground,
+  acrylique flottant, pastilles/texte d'onglets) qui gardaient encore la
+  teinte bleu-marine d'origine. Accent/CoolAccent/WarmAccent/Focus de CHAQUE
+  mode volontairement INTACTS (identité de mode déjà voulue par
+  l'utilisateur, notamment le bleu-ardoise du mode Neutre corrigé le
+  2026-07-20) ; Focus/Reading/Creative/Research/Night gardent aussi leurs
+  teintes atmosphériques propres (hors périmètre de cette demande).
+- `LumoraTheme.cs` : palette sombre du rôle WebApp (fenêtres détachées)
+  neutralisée pareil. Palette Incognito (violet) intentionnellement NON
+  touchée.
+- `App.xaml` : couleurs de design-time (avant 1re application du thème)
+  alignées sur le nouveau neutre.
+- `MainWindow.OpenPanelsTaskbar.cs`, `MainWindow.WindowChrome.cs`,
+  `MainWindow.TabGroups.cs` : fallbacks mineurs alignés aussi.
+- **Bug réel trouvé en vérification live** (pas en relecture de code) : la
+  page Nouvel onglet (`MainWindow.NewTabHome.cs`, `NewTabPalette()`) a son
+  PROPRE système de couleurs CSS, totalement séparé des brushes Nova* -
+  `Ink` sombre par défaut valait `#090d14` (= `UiColor(9,13,20)` en hex),
+  donc restait bleu-marine même après le correctif ci-dessus. Corrigé
+  (`#0d0d0d`), ainsi que 2 arrêts de dégradés dans `NewTabBackdropCss`
+  (`#0b1116`, `#101820`).
+
+**Vérification** : build MSBuild OK, 949/949 tests `Lumora.Tests` OK (avant
+ET après le correctif NewTabHome). Lancement réel de l'app (profil invité
+jetable, pilotage UIA) + captures d'écran confirmant AVANT (fond bleu-marine
+visible sur la page Nouvel onglet malgré le correctif des brushes) puis
+APRÈS (gris neutre partout : fenêtre principale, barre d'adresse, onglets,
+page Nouvel onglet). Démarrer (Menu Lumora, `ModulesFlyout`) capturé aussi :
+gris neutre confirmé. Panneau Réglages > Apparence navigué avec succès à 2
+reprises (ThemeModeCombo + sous-onglet "Thème et couleurs" trouvés) mais
+jamais capturé isolément : la fenêtre retombait systématiquement derrière
+l'overlay de bienvenue à 8 diapositives (un profil jetable neuf relance tout
+l'onboarding, et `ModulesButton` invoque bien la logique EN DESSOUS de
+l'overlay sans le faire disparaître). Nouveau piège UIA constaté : après un
+redémarrage de process (`RestartApp`), le cluster de boutons Mode
+d'usage/Compagnon/Accessibilité/Menu Lumora peut rester invisible dans
+l'arbre UIA (`FindAll(Descendants)` ne retourne que 23 boutons au lieu de
+~30) de façon reproductible, sans lien identifié avec la taille de fenêtre
+ni `SetForegroundWindow` - non résolu. Confiance élevée sur Réglages via le
+code (mêmes brushes que la fenêtre principale déjà confirmée) mais pas de
+capture directe.
+
+**Version bumpée** (demande explicite de l'utilisateur) : `0.94.24.2-dev` ->
+`0.94.25.0-dev` (3e chiffre), mis à jour dans les 5 emplacements pinnés par
+le test `Version_projet_est_alignee_sur_0_94_25_0`
+(`Lumora.Tests/UsageModeVisualIdentityTests.cs`, `AGENTS.md`,
+`MainWindow.xaml.cs`, `scripts/build-installer.ps1`,
+`scripts/build-clean-test-artifact.ps1`). Build+949 tests re-vérifiés OK
+après.
+
+**Reste en attente** : rien committé (commit à la demande explicite de
+l'utilisateur uniquement, comme toujours).
+
+## Ascenseur inutile sur l'écran de connexion (2026-09-13)
+
+Retour utilisateur avec capture à l'appui, hors sujet de la session "thème" :
+sur l'écran de connexion (`LoginOverlay`, choix de profil / mot de passe /
+PIN), une piste d'ascenseur restait visible en permanence sur le côté droit
+de la carte, alors que le contenu tient largement dans la fenêtre.
+
+Cause confirmée dans le code : le `ScrollViewer` qui enveloppe la carte
+(`MainWindow.xaml`, ~ligne 8116) ne précisait pas `VerticalScrollBarVisibility`,
+donc WinUI retombait sur sa valeur par défaut `Visible` - la piste s'affiche
+en permanence, que le contenu déborde ou non. Même famille de bug que
+"ascenseur -> chevrons" du 2026-09-11.
+
+**Correctif** : ajout de `VerticalScrollBarVisibility="Auto"` sur ce
+`ScrollViewer` (uniquement celui de `LoginOverlay` - 3 autres `ScrollViewer`
+au réglage par défaut identique existent ailleurs, `ToolbarReorganizeOverlay`/
+`SetupWizardOverlay`/écran de bienvenue, non touchés car non signalés). Le
+`ScrollViewer` est conservé (utile en fenêtre basse, Texte large, ou liste de
+profils longue), seule sa piste devient invisible tant qu'aucun défilement
+n'est réellement nécessaire.
+
+Build + 949 tests OK. Vérifié en direct : écran de création de profil (avec
+et sans les champs PIN, donc à deux hauteurs de carte différentes) sans trace
+d'ascenseur. L'écran de saisie du PIN après verrouillage (celui de la
+capture d'origine) n'a pas pu être reproduit à l'identique - `PasswordBox`
+non saisissable par pilotage UIA (limite déjà documentée), donc impossible de
+créer un vrai mot de passe puis verrouiller/déverrouiller par ce chemin. Le
+correctif est le même attribut sur le même `ScrollViewer` qui héberge les 3
+écrans (profil/mot de passe/PIN), donc s'applique logiquement aux trois.
+
+Rien committé.
+
+## Choix du thème demandé dès le premier lancement (2026-09-13)
+
+Question utilisateur, hors sujet de la session "thème" en cours : est-ce que
+l'assistant premier lancement demande le thème clair/sombre ? Réponse après
+lecture du code : **non**. Les 8 diapositives de bienvenue (`WelcomeStep*`,
+philosophie/coffre/Incognito/compte/lecture/accessibilité/connexions) et les
+8 étapes de l'assistant `SetupWizardOverlay` (moteur de recherche, disposition
+des onglets, mode d'usage + modules, photo de profil, verrouillage) n'abordent
+jamais le thème - seul `ThemeModeCombo` dans Réglages > Apparence > Thème et
+couleurs permet de le choisir, jamais mis en avant à l'installation.
+
+**Correctif demandé et fait** : nouvelle étape "Clair ou sombre ?" insérée
+dans `SetupWizardOverlay` juste après "Bienvenue" (position 1, avant "Profil
+existant ?"), avant tout le reste - le reste de l'assistant se rend ensuite
+directement dans le thème choisi. 3 `RadioButton` (Sombre/Clair/Suivre
+Windows), même tags que `ThemeModeCombo`. Réutilise `ApplyThemeModeImmediate`
+(`MainWindow.LayoutStudio.cs`, déjà utilisée par les Réglages) plutôt que de
+dupliquer la logique : la carte de l'assistant change réellement de thème en
+direct au clic, pas seulement à la fin. Résumé final de l'assistant
+(dernière étape) complété avec une ligne "Thème : ...".
+
+Impact structurel : l'assistant passe de 8 à 9 étapes. Les noms XAML
+`WizardStep1`..`WizardStep7` (contenu) n'ont pas été renommés - seul le
+mapping `_wizardStep -> panneau` dans `UpdateWizardStep()`
+(`MainWindow.SetupWizard.cs`) décale d'un cran à partir de l'étape 1, pour
+éviter de toucher aux handlers déjà référencés ailleurs.
+
+Build + 949 tests OK. Vérifié en direct : l'indicateur "Étape 1 / 9"
+s'affiche correctement sur l'assistant fraîchement lancé (confirme que la
+nouvelle étape est bien comptée). Le clic effectif sur "Suivant" pour
+atteindre visuellement la nouvelle étape (aperçu clair/sombre en direct,
+3 tentatives sur 2 process différents) n'a pas pu être confirmé par capture
+d'écran : le bouton `WizardNextButton`, pourtant visible à l'écran, restait
+introuvable par le pilotage UIA (`FindAll`/`FindFirst`, fenêtre ET recherche
+plein bureau par PID) - même famille de flakiness que celle déjà rencontrée
+sur `ModulesButton` plus tôt dans la session (voir plus haut), a priori un
+problème d'outillage de vérification dans cet environnement plutôt qu'un bug
+produit (le contenu affiché à l'écran était correct à chaque capture). Code
+relu attentivement (réutilisation directe d'`ApplyThemeModeImmediate` déjà
+éprouvée, pas de logique nouvelle inventée) mais pas de confirmation visuelle
+du clic. Signalé honnêtement à l'utilisateur plutôt que présenté comme vérifié.
+
+Rien committé.
+
+## Fond bleu-marine residuel : mode Focus (2026-09-14)
+
+Retour utilisateur avec repro claire : la page Nouvel onglet (heure,
+recherche) restait bleu-marine dans certains cas malgre le correctif de la
+veille. Cause trouvee : le correctif du 2026-09-13 n'avait neutralise que le
+mode d'usage "Neutre" (par defaut) - le mode **"Focus"** gardait sa propre
+copie quasi identique de l'ancien bleu-marine, aussi bien dans
+`MainWindow.SettingsTheme.cs` (`ResolveModeChromePalette`, fond
+`UiColor(8,13,20)` - 1 point d'ecart avec l'ancien Neutre) que dans
+`MainWindow.NewTabHome.cs` (`NewTabBackdropCss`, `#0b1118`). Contrairement a
+Lecture/Creation/Recherche/Nuit (teintes vraiment distinctes, deliberees),
+le fond de Focus n'avait jamais ete une atmosphere different de Neutre -
+seul l'accent (cyan) le distingue. Meme traitement applique : fond/surfaces/
+bordures/texte neutralises, Accent/CoolAccent/WarmAccent/Focus (identite
+cyan) inchanges.
+
+Rappel fait a l'utilisateur en meme temps : rien de cette session (ni de la
+veille) n'a ete installe/deploye - tout tourne en build de test isole,
+jamais dans l'executable ouvert au quotidien.
+
+Build + 949 tests OK. Verifie en direct : mode Focus sélectionné via le
+sélecteur "Mode d'usage" (footer), page Nouvel onglet capturée après
+sélection - fond gris neutre confirmé, plus de trace de bleu.
+
+Rien committé.
+
+## Clôture (2026-09-14)
+
+L'utilisateur clôture ici. Rappel du plan multi-sessions (voir note "Plan
+annoncé par l'utilisateur pour les sessions suivantes" plus haut) : étape 4
+("corriger tout ce qui reste à corriger") était censée suivre le thème
+clair/sombre - **repoussée** : l'utilisateur a repéré, en usage réel,
+d'autres choses à corriger qu'il juge "pas des petits bugs" (portée/nature
+non précisée par lui à la clôture, à detailer à la prochaine session avant
+d'attaquer quoi que ce soit). Plan des sessions restantes inchangé sinon :
+étape 4 (élargie) → nettoyage → release 1.0.0 finale.
+
+## Session "étape 3.5" (2026-09-14) — 3 petits correctifs
+
+Nommée "étape 3.5" par l'utilisateur (ni un simple micro-bug isolé comme
+l'étape 4, ni un chantier de refonte) : ce sont les "choses pas des petits
+bugs" annoncées à la clôture ci-dessus. 3 points relevés en usage réel,
+traités un par un avec Go séparé et capture d'écran à chaque fois (demande
+explicite). Maquette Artifact publiée avant tout code (3 sections
+avant/après), 2 points validés tels quels, le 3e ("couleur d'accentuation")
+affiné sur un aller-retour (l'utilisateur ne veut aucun fond teinté derrière
+les favoris - seule l'icône du dossier doit prendre la couleur).
+
+**1. Rail d'onglets verticaux (fait, vérifié)** :
+- `MainWindow.xaml` : `VerticalTabsActionsPanel`
+  (+ Nouvel onglet/Muet/Réduire) et `VerticalTabsCompactActionsColumn`
+  déplacés après le `ScrollViewer`/`VerticalTabsPanelItems` dans le rail -
+  le bouton "+" apparaissait au-dessus de la liste des onglets, jugé peu
+  logique.
+- `MainWindow.NewTabHome.cs` (`NewTabPalette()`) : Ink/Surface sombres des
+  palettes **Ocean/Forest/Ember** neutralisés vers le même noir neutre que
+  la palette Lumora par défaut (`#0d0d0d`/`#131313`) - le correctif
+  "Noir neutre" du 2026-09-13 (et celui du mode Focus le même jour) n'avait
+  neutralisé QUE la palette Lumora par défaut ; l'utilisateur avait la
+  palette **Ocean** active (fond `#0c1520`/`#121d2a`, vraiment bleu marine),
+  jamais touchée - d'où le bug perçu comme "pas corrigé" alors qu'il s'agit
+  d'un angle mort différent du correctif précédent. Accent/Accent2/Text de
+  chaque palette inchangés (identité visuelle conservée, seul le fond
+  devient neutre). Confirmé : "tous les modes" pour l'utilisateur = en
+  réalité "la palette Ocean", peu importe le mode d'usage.
+
+**2. Alignement de "Vue d'ensemble" (fait, vérifié)** :
+- `MainWindow.xaml`, section `SettingsSectionOverview` : les 6 lignes
+  (Mon Lumora/Espace de travail/Confidentialité/Coffre et
+  données/Profils locaux/Accessibilité) passées de `StackPanel
+  Orientation="Horizontal"` à `Grid ColumnDefinitions="20,*,110"`. Cause
+  réelle : `HorizontalAlignment="Right"` sur le `HyperlinkButton` n'avait
+  aucun effet dans un StackPanel horizontal (pas d'espace supplémentaire à
+  distribuer) - chaque lien collait juste après son texte, donc tombait à
+  une position différente selon la longueur du libellé au-dessus
+  ("Personnaliser" vs "Gerer" etc.), d'où l'effet "n'importe comment"
+  signalé. La 3e colonne (110px, fixe et commune aux 6 lignes) aligne tous
+  les liens sur le même bord droit.
+
+**3. Couleur d'accentuation (fait, vérifié)** : "Couleur du mode d'usage" (6
+couleurs, une par mode, n'affectant que le chrome du mode actif) remplacée
+par un **réglage global unique** façon Windows.
+- `Models/UiSettings.cs` : nouveau champ `AccentColor` (hex, vide = défaut).
+  Les 6 anciens champs `ModeAccentColor*` restent dans le schéma (données
+  existantes non perdues) mais ne sont plus lus/écrits par l'UI.
+- `MainWindow.ModeAccentColor.cs` renommé en `MainWindow.AccentColor.cs` :
+  logique par-mode (dictionnaire de 6 entrées, 6 ColorPicker/pastilles)
+  remplacée par un seul getter/setter global ; dérivation HSL
+  (`DeriveModeAccentTones`/`DeriveFocusTone`) réutilisée telle quelle.
+  Nouvelle fonction `ApplyCustomAccentToPalette` (miroir de
+  `ApplyCustomModeAccent` existant) pour la palette générique à 5 champs de
+  `ResolveAccentPalette` (bouton principal, pastille d'onglet, dossiers de
+  favoris), en plus de la palette de chrome à 7 champs déjà gérée.
+- `MainWindow.xaml` : section "Couleur du mode d'usage" (6 boutons+flyouts)
+  remplacée par UN bouton `AccentColorSwatchButton` + un `ColorPicker` +
+  Réinitialiser. Texte réécrit : "Une seule couleur, reprise avec mesure à
+  travers Lumora : onglet actif, boutons, dossiers de favoris et contour des
+  champs en focus - jamais en aplat sur une grande surface."
+- `MainWindow.SettingsTheme.cs` : la couleur globale est injectée à 2
+  endroits - `ApplyAccessibilitySettings` (palette générique : bouton
+  principal `AccentFillColorDefaultBrush`, pastille d'onglet active
+  `NovaTabPillActiveBorderBrush`, glow ambiant) et `ApplyUsageModeChrome`
+  (chrome du mode actif, quel qu'il soit - avant : une couleur DIFFÉRENTE
+  par mode). S'applique donc maintenant indépendamment du Mode d'usage
+  choisi, exactement la demande.
+- **Dossiers de favoris, "pas de fond, juste l'icône"** (précision explicite
+  de l'utilisateur après la 1ère maquette) : nouvelle clé de brush dédiée
+  `NovaBookmarkFolderGlyphBrush`, séparée de
+  `NovaBookmarkBarButtonForegroundBrush` (qui reste le texte du favori,
+  jamais teinté) - seule l'icône du dossier (`Path.Fill` dans
+  `BookmarkIconElement`, `MainWindow.Bookmarks.cs`) prend directement
+  `chrome.Accent` quand une couleur personnalisée est active. Fond
+  (`NovaBookmarkBarButtonBackgroundBrush`) resté transparent, jamais touché.
+  Test de régression `BookmarkBarRegressionTests.cs` mis à jour (asserte
+  l'ancienne clé littéralement).
+- **Piège réel trouvé en vérifiant (pas en relecture)** : `SetBrush(key, ...)`
+  (indexeur sur `RootShell.Resources`) plante le processus SANS exception
+  catchable... en fait si (`WinUiRuntimeTrace` l'a capturée en `UNHANDLED`)
+  mais l'app crash net au démarrage, écran jamais affiché - si la clé
+  (`AccentFillColorDefaultBrush` et les 3 autres `AccentFill*`/
+  `TextOnAccentFillColorPrimaryBrush`) vit dans `App.xaml`
+  (`Application.Current.Resources`) et pas littéralement dans
+  `RootShell.Resources` : `RootShell.Resources[key]` lève
+  `COMException: Cannot find a resource with the given key`. Il fallait
+  `SetAppBrush` (cible `Application.Current.Resources`), pas `SetBrush` -
+  piège EXACTEMENT déjà documenté dans un commentaire de
+  `MainWindow.Bookmarks.cs` (NovaAccentBrush vs AccentFillColorDefaultBrush,
+  2026-09-12) mais retombé dedans quand même en ajoutant un nouvel appel.
+  **Réflexe à prendre** : avant tout nouveau `SetBrush("Xyz", ...)`, vérifier
+  d'abord si `Xyz` est déjà écrit ailleurs via `SetBrush` (RootShell) ou
+  `SetAppBrush` (App) plutôt que de deviner - les cles WinUI standard
+  (`AccentFillColor*`, `TextOnAccentFillColor*`) vivent presque toujours
+  côté App.xaml.
+- Profil de test reseedé avec `AccentColor = "#d97b3f"` (orange), même
+  mécanisme jetable que les 2 correctifs précédents. Capture confirmant :
+  pastille unique orange dans les Réglages, bouton "Appliquer les
+  changements"/"Retour au site" orange, pastille d'onglet actif "Accueil
+  Lumora" à bordure orange, icône du dossier "Autres favoris" orange (texte
+  resté neutre), halo ambiant de fond légèrement teinté orange (effet de
+  glow déjà existant, hérite automatiquement de la nouvelle couleur globale
+  - bonus non prévu explicitement mais cohérent avec "prédomine à travers
+  Lumora").
+
+**Piège UIA découvert cette session (à garder pour le skill verify)** : le
+cluster de boutons (Menu Lumora, Mode d'usage, Compagnon, Confort) devient
+invisible dans l'arbre UIA quand la fenêtre occupe la largeur physique de
+l'écran (2880px dans cet environnement) au lancement - reproductible à 100%,
+indépendant du chemin (guest ET profil pré-configuré sans onboarding).
+Redimensionner la fenêtre a une taille "normale" (ex. 1600x1000 via
+`user32.SetWindowPos`) juste après le lancement fait immédiatement
+réapparaître les 35 boutons (au lieu de 26) - contournement fiable, ajouté
+au skill verify. Explique probablement une partie des échecs UIA "cluster
+invisible" déjà documentés en sessions précédentes sans cause identifiée.
+
+**Profil de test pré-configuré via le vrai code produit** : plutôt que de
+naviguer `CreateProfileGuestLink` (RestartApp, PID différent, plus exposé au
+piège ci-dessus au premier essai), un profil sans mot de passe a été
+fabriqué directement via `UserProfile.Create/Save` + `UiSettings.Save` +
+`ProfileEntropyStore` (même code que `CreateProfileButton_Click`) depuis un
+test xunit **jetable** (`ZZZScratchSeedProfileForVerify.cs`, ajouté puis
+retiré du dépôt après usage) plutôt qu'un JSON écrit à la main - permet de
+lancer l'app directement dans le shell principal avec thème/palette/rail
+déjà configurés, sans onboarding ni clic. Point d'attention retrouvé :
+`UiSettings.VerticalTabsEnabled` seul ne suffit pas à afficher le rail - la
+visibilité réelle est pilotée par `TabStripPosition` ("left"/"right"), pas
+par ce booléen (qui ne sert qu'à calculer des valeurs par défaut ailleurs).
+
+Build + 949 tests OK après chacun des 3 correctifs. Vérifié en direct par
+capture d'écran à chaque fois (demande explicite de l'utilisateur, pour lui
+éviter d'ouvrir l'app). Les 3 points de la session sont traités. Rien
+committé (attend une demande explicite).
+
+**Retour spontané de l'utilisateur avant clôture** : depuis le passage au
+vrai thème sombre "Noir neutre" (session précédente), Lumora "c'est autre
+chose, ça donne une certaine propreté et ça commence à devenir quelque
+chose de très propre" - en usage réel, pas sur une maquette. Signal de
+validation direct sur la direction "assainir/neutraliser l'existant plutôt
+qu'ajouter de nouvelles teintes" - à privilégier dans les prochains
+chantiers graphiques en cas de doute.
+
+**Clôture (2026-09-14)** : utilisateur clôture ici, reprise "un peu plus
+tard" (pause). Rien d'autre en attente. Rien committé - les 3 correctifs de
+cette session restent dans l'arbre de travail, non demandés au commit.
