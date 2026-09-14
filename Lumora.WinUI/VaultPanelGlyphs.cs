@@ -45,11 +45,13 @@ public static class VaultPanelGlyphs
         "M13.8,11 L15,11 L15,19 L13.8,19 Z";
 
     // Silhouette (tete + epaules) - "Identifiant" (champ nom d'utilisateur) :
-    // MEME geometrie que StartMenuGlyphs.Person, recopiee ici (fichier sans
-    // dependance croisee, meme raisonnement que StartMenuGlyphs.Notes).
-    public const string Person =
-        "M16,8 A4,4 0 1,1 8,8 A4,4 0 1,1 16,8 Z " +
-        "M4,21 C4,15 8,13 12,13 C16,13 20,15 20,21 Z";
+    // MEME geometrie que StartMenuGlyphs.Person. Reference directe plutot que
+    // recopiee (nettoyage 2026-09-14, doublon reel trouve en audit) : les
+    // deux fichiers sont dans le meme assembly/namespace SANS dependance
+    // croisee a eviter ici (contrairement a StartMenuGlyphs.Notes, qui
+    // recopie BookmarkGlyphs.Link pour une vraie raison : Models/Bookmarks.cs
+    // tire des types WinUI que Lumora.Tests ne peut pas referencer).
+    public const string Person = StartMenuGlyphs.Person;
 
     // Croix pleine - "Ajouter un code TOTP".
     public const string Plus =

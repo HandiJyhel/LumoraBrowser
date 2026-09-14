@@ -261,6 +261,8 @@ public sealed partial class MainWindow
             "SessionTimeoutCombo" => SessionTimeoutCombo,
             "SearchEngineCombo" => SearchEngineCombo,
             "NetworkBlockerSwitch" => NetworkBlockerSwitch,
+            "AccessibilityBreakReminderCombo" => AccessibilityBreakReminderCombo,
+            "AccessibilitySoundsAsVisualFlashSwitch" => AccessibilitySoundsAsVisualFlashSwitch,
             _ => null
         };
         if (target is null)

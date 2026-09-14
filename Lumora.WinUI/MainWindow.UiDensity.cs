@@ -292,53 +292,55 @@ public sealed partial class MainWindow
         // FooterAccentBarHeight comme diametre (Width ET Height, pas
         // seulement Height comme avant) pour rester un cercle net a chaque
         // palier plutot que s'ovaliser.
+        // Les 3 pilules (Mode d'usage/Compagnon/Accessibilite) partagent
+        // exactement les memes reglages - boucle plutot que le meme bloc
+        // recopie 3 fois (nettoyage 2026-09-14, trouve en audit : un 4e
+        // pilule ou une correction future n'aurait autrement qu'un risque
+        // reel d'oubli sur une des 3 copies).
         var footerIconSize = metrics.IconButtonSize;
-        ModeUsageButton.Width = footerIconSize;
-        ModeUsageButton.Height = footerIconSize;
-        ModeUsageButton.MinWidth = footerIconSize;
-        CompanionButton.Width = footerIconSize;
-        CompanionButton.Height = footerIconSize;
-        CompanionButton.MinWidth = footerIconSize;
-        AccessibilityMenuButton.Width = footerIconSize;
-        AccessibilityMenuButton.Height = footerIconSize;
-        AccessibilityMenuButton.MinWidth = footerIconSize;
+        foreach (var button in new[] { ModeUsageButton, CompanionButton, AccessibilityMenuButton })
+        {
+            button.Width = footerIconSize;
+            button.Height = footerIconSize;
+            button.MinWidth = footerIconSize;
+        }
         // Filet de securite : meme taille posee explicitement sur le Grid
         // interne (icone + point), au cas ou HorizontalContentAlignment=
         // Stretch sur le bouton ne suffirait pas a lui seul a le faire
         // occuper tout le bouton (ContentPresenter/Grid par defaut sinon
         // "colle" au contenu, ce qui centre le point sur l'icone au lieu de
         // l'envoyer dans le coin).
-        ModeUsageIconGrid.Width = footerIconSize;
-        ModeUsageIconGrid.Height = footerIconSize;
-        CompanionIconGrid.Width = footerIconSize;
-        CompanionIconGrid.Height = footerIconSize;
-        AccessibilityQuickIconGrid.Width = footerIconSize;
-        AccessibilityQuickIconGrid.Height = footerIconSize;
+        foreach (var grid in new[] { ModeUsageIconGrid, CompanionIconGrid, AccessibilityQuickIconGrid })
+        {
+            grid.Width = footerIconSize;
+            grid.Height = footerIconSize;
+        }
 
         var dotSize = metrics.FooterAccentBarHeight;
-        UsageModeAccentBar.Width = dotSize;
-        UsageModeAccentBar.Height = dotSize;
-        UsageModeAccentBar.CornerRadius = new CornerRadius(dotSize / 2);
-        CompanionAccentBar.Width = dotSize;
-        CompanionAccentBar.Height = dotSize;
-        CompanionAccentBar.CornerRadius = new CornerRadius(dotSize / 2);
-        AccessibilityQuickAccentBar.Width = dotSize;
-        AccessibilityQuickAccentBar.Height = dotSize;
-        AccessibilityQuickAccentBar.CornerRadius = new CornerRadius(dotSize / 2);
+        foreach (var dot in new[] { UsageModeAccentBar, CompanionAccentBar, AccessibilityQuickAccentBar })
+        {
+            dot.Width = dotSize;
+            dot.Height = dotSize;
+            dot.CornerRadius = new CornerRadius(dotSize / 2);
+        }
 
-        UsageModeIcon.FontSize = metrics.FooterIconFontSize;
-        CompanionIcon.FontSize = metrics.FooterIconFontSize;
-        AccessibilityQuickIcon.FontSize = metrics.FooterIconFontSize;
-        UsageModeChevronIcon.FontSize = metrics.FooterChevronFontSize;
-        CompanionChevronIcon.FontSize = metrics.FooterChevronFontSize;
-        AccessibilityChevronIcon.FontSize = metrics.FooterChevronFontSize;
+        foreach (var icon in new[] { UsageModeIcon, CompanionIcon, AccessibilityQuickIcon })
+        {
+            icon.FontSize = metrics.FooterIconFontSize;
+        }
+        foreach (var chevron in new[] { UsageModeChevronIcon, CompanionChevronIcon, AccessibilityChevronIcon })
+        {
+            chevron.FontSize = metrics.FooterChevronFontSize;
+        }
 
-        UsageModeLabelText.FontSize = metrics.FooterLabelFontSize;
-        CompanionLabelText.FontSize = metrics.FooterLabelFontSize;
-        AccessibilityQuickLabelText.FontSize = metrics.FooterLabelFontSize;
-        UsageModeCurrentText.FontSize = metrics.FooterBoldFontSize;
-        CompanionStateText.FontSize = metrics.FooterBoldFontSize;
-        AccessibilityQuickCurrentText.FontSize = metrics.FooterBoldFontSize;
+        foreach (var label in new[] { UsageModeLabelText, CompanionLabelText, AccessibilityQuickLabelText })
+        {
+            label.FontSize = metrics.FooterLabelFontSize;
+        }
+        foreach (var bold in new[] { UsageModeCurrentText, CompanionStateText, AccessibilityQuickCurrentText })
+        {
+            bold.FontSize = metrics.FooterBoldFontSize;
+        }
 
         StatusText.FontSize = metrics.StatusTextFontSize;
     }

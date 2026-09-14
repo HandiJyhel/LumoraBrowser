@@ -120,16 +120,21 @@ public sealed partial class MainWindow
     private void PopulateContextMenuSettingsList()
     {
         var hidden = _uiSettings.ContextMenuHiddenItems;
-        var orderIndex = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (var i = 0; i < _uiSettings.ContextMenuOrder.Count; i++)
-        {
-            orderIndex.TryAdd(_uiSettings.ContextMenuOrder[i], i);
-        }
-
-        var sorted = _uiSettings.ContextMenuKnownItems
-            .OrderBy(k => orderIndex.TryGetValue(k.Name, out var idx) ? idx : int.MaxValue)
-            .ThenBy(k => k.Name, StringComparer.Ordinal)
-            .ToList();
+        // Reutilise ContextMenuOrdering.Apply (deja la logique de tri
+        // "elements ordonnes en tete, reste dans l'ordre d'origine" pour le
+        // VRAI menu contextuel, BuildContextMenuFlyout plus haut) plutot que
+        // de reimplementer un 2e algorithme de tri a la main - nettoyage
+        // 2026-09-14, doublon reel trouve en audit (les deux pouvaient
+        // silencieusement diverger sur le choix du "reste"). Aucun masquage
+        // ici (hiddenNames vide) : cette liste des Reglages doit au contraire
+        // montrer TOUS les elements connus, masques ou non, pour pouvoir les
+        // recocher - seul `hidden` (ci-dessus) sert a l'etat de la case a
+        // cocher de chaque ligne, pas au filtrage de la liste elle-meme.
+        var sorted = ContextMenuOrdering.Apply(
+            _uiSettings.ContextMenuKnownItems,
+            static k => k.Name,
+            hiddenNames: Array.Empty<string>(),
+            _uiSettings.ContextMenuOrder);
 
         ContextMenuItemsList.Items.Clear();
         for (var i = 0; i < sorted.Count; i++)

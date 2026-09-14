@@ -661,21 +661,7 @@ public sealed partial class MainWindow
 
         if (sideLayout)
         {
-            var sidePickedIndex = _bookmarkReorderPickedId is null
-                ? -1
-                : toolbarNodes.FindIndex(n => n.Id == _bookmarkReorderPickedId);
-            for (var i = 0; i < toolbarNodes.Count; i++)
-            {
-                if (sidePickedIndex >= 0)
-                {
-                    AddBookmarkReorderGap(BookmarksSideBarPanel, toolbarNodes, i, sidePickedIndex, vertical: true);
-                }
-                BookmarksSideBarPanel.Children.Add(CreateBookmarkBarButton(toolbarNodes[i]));
-            }
-            if (sidePickedIndex >= 0)
-            {
-                AddBookmarkReorderGap(BookmarksSideBarPanel, toolbarNodes, toolbarNodes.Count, sidePickedIndex, vertical: true);
-            }
+            RenderBookmarkRowWithGaps(BookmarksSideBarPanel, toolbarNodes, vertical: true);
 
             if (toolbarNodes.Count == 0)
             {
@@ -710,15 +696,8 @@ public sealed partial class MainWindow
         var visibleNodes = toolbarNodes.Take(visibleCount).ToList();
         var overflowNodes = toolbarNodes.Skip(visibleCount).ToList();
 
-        var barPickedIndex = _bookmarkReorderPickedId is null
-            ? -1
-            : visibleNodes.FindIndex(n => n.Id == _bookmarkReorderPickedId);
-        for (var i = 0; i < visibleNodes.Count; i++)
+        RenderBookmarkRowWithGaps(primaryHost, visibleNodes, vertical: false, beforeButton: i =>
         {
-            if (barPickedIndex >= 0)
-            {
-                AddBookmarkReorderGap(primaryHost, visibleNodes, i, barPickedIndex, vertical: false);
-            }
             // i > 0 plutot que Children.Count > 0 : un gap de reordonnancement
             // peut deja avoir ete ajoute ci-dessus AVANT le 1er favori, ce qui
             // aurait rendu Children.Count > 0 des la 1re iteration et fait
@@ -727,13 +706,7 @@ public sealed partial class MainWindow
             {
                 primaryHost.Children.Add(CreateConstellationConnector());
             }
-
-            primaryHost.Children.Add(CreateBookmarkBarButton(visibleNodes[i]));
-        }
-        if (barPickedIndex >= 0)
-        {
-            AddBookmarkReorderGap(primaryHost, visibleNodes, visibleNodes.Count, barPickedIndex, vertical: false);
-        }
+        });
 
         if (overflowNodes.Count > 0)
         {
@@ -754,6 +727,41 @@ public sealed partial class MainWindow
         if (otherRoot is not null)
         {
             secondaryHost.Children.Add(CreateBookmarkBarButton(otherRoot));
+        }
+    }
+
+    // Calcule l'index de l'element decroche (aide accessibilite "Reordonner
+    // sans glisser") dans CETTE liste precise, insere le gap de depot avant
+    // le 1er element/entre 2 elements/apres le dernier quand un decrochage
+    // est en cours, et ajoute le bouton de chaque noeud - squelette commun
+    // aux 2 mises en page (rail vertical et barre horizontale), qui ne
+    // differaient que par le connecteur "Constellation" insere UNIQUEMENT en
+    // horizontal (beforeButton, invoque juste avant chaque bouton, exactement
+    // a la meme place que dans le code d'origine). Nettoyage 2026-09-14,
+    // doublon reel trouve en audit - meme ordre d'operations qu'avant, rien
+    // de fonctionnel ne change.
+    private void RenderBookmarkRowWithGaps(
+        Panel host,
+        List<BookmarkNode> nodes,
+        bool vertical,
+        Action<int>? beforeButton = null)
+    {
+        var pickedIndex = _bookmarkReorderPickedId is null
+            ? -1
+            : nodes.FindIndex(n => n.Id == _bookmarkReorderPickedId);
+
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            if (pickedIndex >= 0)
+            {
+                AddBookmarkReorderGap(host, nodes, i, pickedIndex, vertical);
+            }
+            beforeButton?.Invoke(i);
+            host.Children.Add(CreateBookmarkBarButton(nodes[i]));
+        }
+        if (pickedIndex >= 0)
+        {
+            AddBookmarkReorderGap(host, nodes, nodes.Count, pickedIndex, vertical);
         }
     }
 

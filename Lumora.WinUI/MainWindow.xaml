@@ -2031,8 +2031,12 @@
                              differents E734/E735) - contour = pas en favori,
                              remplissage = en favori, bascule en code-behind
                              (UpdateBookmarkStar, MainWindow.Bookmarks.cs). -->
+                        <!-- Data pose en code-behind (StartMenuGlyphs.Star via
+                             PathGeometryBuilder, voir MainWindow.xaml.cs) plutot que
+                             recopie ici en litteral - nettoyage 2026-09-14, doublon reel
+                             trouve en audit (source unique deja introduite par cette
+                             meme refonte pour eviter exactement cette derive). -->
                         <Path x:Name="BookmarkStarIcon" Width="15" Height="15" Stretch="Uniform"
-                              Data="M12,4 L14.2,9.6 L20.2,10.1 L15.6,14 L17,20 L12,16.8 L7,20 L8.4,14 L3.8,10.1 L9.8,9.6 Z"
                               Fill="Transparent"
                               Stroke="{StaticResource NovaBookmarkButtonForegroundBrush}"
                               StrokeThickness="1.4" />
@@ -2081,9 +2085,12 @@
                                  seul bouclier encore en police d'icones, ce qui le rendait visuellement
                                  plus terne que VaultQuickAccessButton juste a cote (constat utilisateur
                                  sur capture d'ecran reelle). Voir MEMORY.md. -->
-                            <Path Width="16" Height="16" Stretch="Uniform"
+                            <!-- Data pose en code-behind (StartMenuGlyphs.Shield via
+                                 PathGeometryBuilder, voir MainWindow.xaml.cs) plutot que
+                                 recopie ici en litteral - nettoyage 2026-09-14, doublon
+                                 reel trouve en audit. -->
+                            <Path x:Name="ShieldIcon" Width="16" Height="16" Stretch="Uniform"
                                   Fill="{StaticResource NovaTileFamilyProtectionBrush}"
-                                  Data="M12,3.2 L18.6,5.9 L18.6,11 C18.6,15.6 15.9,19.1 12,20.8 C8.1,19.1 5.4,15.6 5.4,11 L5.4,5.9 Z"
                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
                             <Border x:Name="TelemetryActivityBadge"
                                     MinWidth="16"
@@ -2161,8 +2168,11 @@
                              pour "identifiants" (convention Chrome/Edge/Firefox) et surtout
                              visuellement distinct de son voisin. Meme brush de famille
                              (Protection, rose) conserve : la cle proteges aussi les identifiants. -->
-                        <Path Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource NovaTileFamilyProtectionBrush}"
-                              Data="M12,12 A5,5 0 1,1 2,12 A5,5 0 1,1 12,12 Z M9.3,12 A2.3,2.3 0 1,1 4.7,12 A2.3,2.3 0 1,1 9.3,12 Z M12,10.8 L20,10.8 L20,13.2 L12,13.2 Z M15.4,13.2 L16.6,13.2 L16.6,15.6 L15.4,15.6 Z M18.2,13.2 L19.6,13.2 L19.6,16.8 L18.2,16.8 Z" />
+                        <!-- Data pose en code-behind (StartMenuGlyphs.Key via
+                             PathGeometryBuilder, voir MainWindow.xaml.cs) plutot que
+                             recopie ici en litteral - nettoyage 2026-09-14, doublon reel
+                             trouve en audit. -->
+                        <Path x:Name="VaultQuickAccessIcon" Width="16" Height="16" Stretch="Uniform" Fill="{StaticResource NovaTileFamilyProtectionBrush}" />
                         <Button.Flyout>
                             <Flyout x:Name="VaultQuickAccessFlyout"
                                     Opening="VaultQuickAccessFlyout_Opening"

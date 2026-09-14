@@ -125,6 +125,32 @@ internal static class LumoraProfileRegistry
                 var id = LumoraProfilePaths.NormalizeProfileId(Path.GetFileName(dir));
                 var paths = LumoraProfilePaths.FromDirectory(dir);
                 var profile = UserProfile.Load(paths.ProfileFile, paths.LegacyProfileFile);
+                if (profile is null)
+                {
+                    // Bug reel corrige le 2026-09-14 : LumoraFile.CurrentProfileEntropyOrNull()
+                    // est AMBIANTE et posee pour le profil ACTIF uniquement (voir
+                    // MainWindow.xaml.cs) - un AUTRE profil sans mot de passe deja
+                    // migre (sa propre entropie DPAPI, differente) echouait donc a
+                    // se dechiffrer ici et disparaissait silencieusement du
+                    // selecteur. Repli en LECTURE SEULE sur l'entropie propre a CE
+                    // dossier (jamais de creation : un profil AVEC mot de passe ne
+                    // doit jamais se voir attribuer de fichier d'entropie).
+                    var ownEntropy = ProfileEntropyStore.TryReadExisting(paths);
+                    if (ownEntropy is { Length: > 0 })
+                    {
+                        var previousEntropy = LumoraFile.CurrentProfileEntropyOrNull();
+                        try
+                        {
+                            LumoraFile.SetProfileEntropy(ownEntropy);
+                            profile = UserProfile.Load(paths.ProfileFile, paths.LegacyProfileFile);
+                        }
+                        finally
+                        {
+                            if (previousEntropy is null) LumoraFile.ClearProfileEntropy();
+                            else LumoraFile.SetProfileEntropy(previousEntropy);
+                        }
+                    }
+                }
                 if (profile is null) continue;
                 entries.Add(new LumoraProfileEntry(
                     id,

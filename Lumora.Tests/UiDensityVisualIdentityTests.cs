@@ -116,14 +116,17 @@ public sealed class UiDensityVisualIdentityTests
         // par FooterPillMinHeight/Padding mais reutilise IconButtonSize (deja
         // partage par la barre d'outils) - le principe verrouille par ce test
         // (la barre du bas suit la Taille de l'interface) reste inchange,
-        // seul le mecanisme change.
+        // seul le mecanisme change. Depuis le 2026-09-14 (nettoyage), les 3
+        // boutons sont poses via UNE SEULE boucle plutot que 3 blocs recopies
+        // - le test verifie desormais que les 3 sont bien dans le MEME
+        // tableau (donc ne peuvent plus diverger entre eux) et que le corps
+        // de la boucle applique bien footerIconSize.
         var densityCode = ReadRepoFile("Lumora.WinUI", "MainWindow.UiDensity.cs");
 
         Assert.Contains("ApplyFooterDensity(metrics);", densityCode, StringComparison.Ordinal);
         Assert.Contains("var footerIconSize = metrics.IconButtonSize;", densityCode, StringComparison.Ordinal);
-        Assert.Contains("ModeUsageButton.Width = footerIconSize;", densityCode, StringComparison.Ordinal);
-        Assert.Contains("CompanionButton.Width = footerIconSize;", densityCode, StringComparison.Ordinal);
-        Assert.Contains("AccessibilityMenuButton.Width = footerIconSize;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("foreach (var button in new[] { ModeUsageButton, CompanionButton, AccessibilityMenuButton })", densityCode, StringComparison.Ordinal);
+        Assert.Contains("button.Width = footerIconSize;", densityCode, StringComparison.Ordinal);
         Assert.Contains("StatusText.FontSize = metrics.StatusTextFontSize;", densityCode, StringComparison.Ordinal);
 
         var comfortableIndex = densityCode.IndexOf("\"comfortable\" => new UiDensityMetrics(", StringComparison.Ordinal);

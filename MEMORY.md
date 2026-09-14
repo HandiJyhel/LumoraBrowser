@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Session "correction et nettoyage"](#session-correction-et-nettoyage-2026-09-14) — 2026-09-14, fusion des étapes 4+5 (corriger+nettoyer) sur tout le dépôt : rattrapage du backlog en 9 commits locaux (rien poussé GitHub) puis audit `/code-review` (8 angles) -> 5 bugs réels corrigés (profils qui disparaissent du sélecteur, glisser-déposer des favoris cassé avec "Réordonner sans clic maintenu", 2 services jamais `Dispose()`, recherche Réglages incomplète, onglets verticaux invisibles au clavier), 9 doublons/inefficacités nettoyés, version rattrapée à `0.94.26.1-dev`, 2 nettoyages plus risqués (câblage accentuation, dimensions onglets) reportés avec l'accord de l'utilisateur (pas de vérification visuelle possible ici), vérifié en direct (0 UNHANDLED, trace confirmant le correctif recherche), build+949 tests OK, rien committé
 - [Session "étape 3.5" — 3 petits correctifs](#session-etape-35-2026-09-14--3-petits-correctifs) — 2026-09-14, TERMINÉE : (1) bouton "+" du rail d'onglets verticaux déplacé sous la liste + fond bleu-marine du nouvel onglet neutralisé pour TOUTES les palettes (Océan/Forêt/Ambre, pas seulement Lumora), (2) lignes de "Vue d'ensemble" (Centre Lumora) passées de StackPanel à Grid 3 colonnes pour aligner les liens, (3) "Couleur du mode d'usage" (6 teintes par mode) remplacée par "Couleur d'accentuation" (1 réglage global façon Windows, dossiers de favoris/onglet actif/bouton principal/glow ambiant) - les 3 build+949 tests OK + vérifiés en direct par capture d'écran, piège réel trouvé et corrigé en vérifiant (SetBrush vs SetAppBrush, crash au démarrage)
 - [Fond bleu-marine résiduel : mode Focus](#fond-bleu-marine-residuel--mode-focus-2026-09-14) — 2026-09-14, le correctif "Noir neutre" du 2026-09-13 n'avait neutralisé que le mode Neutre, le mode Focus gardait sa propre copie quasi identique de l'ancien bleu-marine (chrome + page Nouvel onglet), corrigé, build+949 tests OK, vérifié en direct, rien committé
 - [Choix du thème demandé dès le premier lancement](#choix-du-theme-demande-des-le-premier-lancement-2026-09-13) — 2026-09-13, l'assistant ne le demandait jamais, nouvelle étape "Clair ou sombre ?" ajoutée juste après "Bienvenue" (9 étapes au lieu de 8), aperçu en direct via `ApplyThemeModeImmediate`, build+949 tests OK, clic pas confirmé visuellement (flakiness UIA), rien committé
@@ -28876,3 +28877,173 @@ chantiers graphiques en cas de doute.
 **Clôture (2026-09-14)** : utilisateur clôture ici, reprise "un peu plus
 tard" (pause). Rien d'autre en attente. Rien committé - les 3 correctifs de
 cette session restent dans l'arbre de travail, non demandés au commit.
+
+## Session "correction et nettoyage" (2026-09-14)
+
+Session dédiée demandée par l'utilisateur : fusion des points "corriger tout
+ce qui reste à corriger" et "nettoyer le code" (étapes 4+5 du plan initial)
+en une seule passe, sur tout le dépôt. Deux temps : (1) rattrapage du
+backlog de 61 fichiers non committés en 9 commits locaux thématiques
+(jamais poussés vers GitHub, distinction clarifiée avec l'utilisateur), (2)
+audit correction+nettoyage réel.
+
+**Étape 1 - rattrapage** : 9 commits locaux créés (refonte graphique "Encre
+chaude"/icônes vectorielles, thème sombre "Noir neutre"+accentuation
+globale, chantier "Réglages sur-mesure", accessibilité, Sons & ambiance,
+sécurité profils sans mot de passe, densité d'interface, divers/version,
+MEMORY.md). Build+949 tests vérifiés après. Aucun push GitHub.
+
+**Étape 2 - audit** : `/code-review` (skill, effort max, 8 angles en
+parallèle) lancé sur `Lumora.WinUI` en arrière-plan. Résultats compilés :
+
+*5 bugs réels corrigés, vérifiés build+949 tests après chaque lot* :
+1. `LumoraProfileRegistry.Discover` (`Models/Profiles.cs`) déchiffrait TOUS
+   les profils avec l'entropie DPAPI du profil ACTIF uniquement (ambiante,
+   `LumoraFile.CurrentProfileEntropyOrNull()`) - un 2e profil sans mot de
+   passe déjà migré (sa propre entropie) échouait silencieusement et
+   disparaissait du sélecteur. Corrigé par un repli en LECTURE SEULE
+   (`ProfileEntropyStore.TryReadExisting`, nouveau, jamais de création) sur
+   l'entropie propre au dossier candidat.
+2. Recherche Réglages : 2 entrées ("Rappel de pause", "Remplacer les sons
+   par un flash visuel") annonçaient un ciblage précis (`TargetControlName`)
+   jamais branché dans le switch `BringSearchTargetIntoFocus`
+   (`MainWindow.SettingsSearch.cs`) - atterrissage restait au niveau
+   section. Ajoutées.
+3. **Bug le plus sérieux** : glisser-déposer souris des favoris totalement
+   cassé (silencieusement, sans erreur) dès que l'aide accessibilité
+   "Réordonner sans clic maintenu" est active - `WrapBookmarkButtonWithReorderGrip`
+   enveloppe chaque favori dans une `Grid` (poignée+bouton), mais
+   `BookmarkBarButton_PointerPressed` capturait le pointeur sur `btn.Parent`
+   (devenu cette `Grid`, jamais câblée pour PointerMoved/Released) au lieu
+   du vrai panneau hôte, et `BookmarkDragPanel_PointerMoved` cherchait des
+   `Button` en enfants directs du panneau (devenus des `Grid`). Corrigé
+   (`MainWindow.BookmarksDragDrop.cs`) : `ResolveBookmarkDragHostPanel`
+   remonte l'arbre jusqu'au vrai panneau hôte, `BookmarkNodeOf` retrouve le
+   `BookmarkNode` que l'enfant direct soit un `Button` ou une `Grid`
+   d'enveloppe.
+4. `_breakReminderService`/`_soundThemeService` (tous deux `IDisposable`,
+   minuteur et/ou `MediaPlayer`) n'étaient jamais `Dispose()` à la fermeture
+   d'une fenêtre (`MainWindow.xaml.cs`) - avec plusieurs fenêtres ouvertes,
+   fermer l'une laissait tourner indéfiniment son rappel de pause et son
+   ambiance sonore.
+5. Onglets verticaux : boutons monter/descendre/fermer ne devenaient
+   visibles qu'au survol SOURIS (`Opacity=0` en permanence sinon) - un
+   utilisateur clavier/switch qui y accédait par Tab ne voyait jamais
+   qu'une action existait. Ajouté `GotFocus`/`LostFocus` sur le `Grid`
+   conteneur (événements routés, captent le focus de tous les descendants
+   sans les câbler un par un).
+
+*Nettoyage/doublons éliminés* :
+- `ZoomStepPolicy.Steps` recopiait à la main la table de `SiteComfortPolicy.SuggestedZoomPercents`
+  (même valeurs) - référence directe désormais.
+- `VaultPanelGlyphs.Person` recopiait `StartMenuGlyphs.Person` (aucune
+  contrainte de dépendance croisée contrairement à `Notes`/`BookmarkGlyphs.Link`,
+  qui reste, lui, une vraie copie justifiée) - référence directe.
+- 3 icônes Toolbar (étoile favoris, bouclier confidentialité, clé
+  identifiants) codées en dur en XAML (`MainWindow.xaml`) au lieu de passer
+  par `StartMenuGlyphs`/`PathGeometryBuilder`, le système que cette même
+  refonte avait introduit pour éviter exactement cette dérive - posées
+  désormais en code-behind (`MainWindow.xaml.cs`, juste après
+  `InitializeComponent()`).
+- `PathDataConverter` reparsait le mini-langage et reconstruisait un
+  `PathGeometry` à CHAQUE évaluation de binding (listes virtualisées - Menu
+  Démarrer, favoris) - mis en cache par chaîne (jeu d'icônes petit et fixe).
+- `MainWindow.PageContextMenu.cs` (`PopulateContextMenuSettingsList`)
+  réimplémentait à la main le tri "éléments ordonnés en tête, reste dans
+  l'ordre d'origine" déjà fourni par `ContextMenuOrdering.Apply` (utilisé
+  par le vrai menu contextuel) - réutilisé avec `hiddenNames` vide (cette
+  liste des Réglages doit montrer les éléments masqués aussi, pas les
+  filtrer). Nuance assumée : le tri de repli des éléments jamais réordonnés
+  passe d'alphabétique à "ordre de première découverte" (comportement de
+  `Apply`), aucun test ne verrouillait l'ancien ordre.
+- `MainWindow.UiDensity.cs` (`ApplyFooterDensity`) : les 3 pilules du pied
+  de fenêtre (Mode d'usage/Compagnon/Accessibilité) recevaient le même bloc
+  de 3 lignes recopié 3 fois - remplacé par des boucles `foreach` sur des
+  tableaux des 3 contrôles (impossible désormais qu'une correction future
+  n'oublie qu'une des 3 copies). 1 test source-texte adapté au nouveau motif
+  (`UiDensityVisualIdentityTests.cs`).
+- `MainWindow.Bookmarks.cs` (`RenderBookmarksBar`) : logique d'insertion des
+  "gaps" de réordonnancement (aide accessibilité) dupliquée entre la mise en
+  page rail vertical et la barre horizontale - extraite dans
+  `RenderBookmarkRowWithGaps` (le connecteur "Constellation", propre à
+  l'horizontal, reste injecté via un callback `beforeButton`, même ordre
+  d'opérations qu'avant).
+- `MainWindow.SettingsTheme.cs` (`ResolveModeChromePalette`) : les 8
+  premières valeurs (fond/surfaces "Noir neutre") des branches sombres
+  "neutral" et "focus" étaient recopiées à l'identique (déjà divergées une
+  fois par le passé sur ce même type de valeur, cf. session "thème") -
+  extraites en variables locales partagées (`neutralizedBackground` etc.),
+  aucun changement de valeur, refactor pur.
+
+*Performance* :
+- `SoundThemeService.PlayEffect` faisait un `File.Exists` (disque) à CHAQUE
+  clic/bascule de toute l'app - mis en cache par chemin (jeu de fichiers
+  fixe, 4 packs × 2 fichiers). La recréation volontaire de `MediaSource` à
+  chaque lecture (pour que des clics rapprochés sonnent pleinement) n'a PAS
+  été touchée.
+- Glisser le curseur "Volume d'ambiance" réécrivait le fichier de réglages
+  chiffré (DPAPI) en entier à CHAQUE `ValueChanged` (un par pixel) - même
+  motif de debounce que l'éditeur de notes (`DispatcherQueueTimer`, 400ms),
+  avec un flush explicite à la fermeture de fenêtre (contrairement à
+  `_noteSaveTimer`, jamais perdre silencieusement la dernière valeur si la
+  fenêtre se ferme en plein glissement).
+
+*Reporté, décision assumée avec l'utilisateur (pas de Go pour ceux-là)* :
+- Câblage de la couleur d'accentuation globale résolu à 2 endroits séparés
+  (`ApplyAccessibilitySettings` et `ApplyUsageModeChrome`,
+  `MainWindow.SettingsTheme.cs`) qui resynchronisent chacun la même logique
+  à la main - consolidation reportée : restructurer l'ORDRE D'EXÉCUTION de
+  2 grosses méthodes qui s'écrasent volontairement l'une l'autre par
+  endroits, dans le fichier qui a déjà causé un crash au démarrage cette
+  semaine (piège SetBrush/SetAppBrush), sans pouvoir vérifier le rendu
+  couleur visuellement dans cet environnement (capture d'écran non fiable,
+  déjà documenté) - risque jugé trop élevé pour cette passe.
+- 12 constantes `Compact*Tab*` (dimensions des onglets en mode compact,
+  `MainWindow.UiDensity.cs`) posées à côté du système central
+  `UiDensityMetrics`/`ResolveEffectiveUiDensityMetrics` plutôt que dedans -
+  les y intégrer demanderait ~48 valeurs à retranscrire à la main (4
+  constructions × 12 champs) + mise à jour d'~10 points d'appel dans
+  `MainWindow.TabGroups.cs`, sans vérification visuelle possible non plus.
+
+**Correctif annexe découvert en creusant** : `Storage/ProfileEntropyStore.cs`
+n'était pas inclus dans `Lumora.Tests.csproj` (nécessaire une fois
+`Models/Profiles.cs` s'est mis à le référencer pour le correctif ci-dessus) -
+ajouté à la liste des `Compile Include`.
+
+**Rattrapage de version (demande explicite de l'utilisateur)** : plusieurs
+changements avaient été committés (rattrapage étape 1 ci-dessus) sans jamais
+faire bouger le 3e/4e chiffre depuis `0.94.25.0-dev` (étape thème assistant,
+ascenseur connexion, résidu bleu-marine Focus, 3 correctifs "étape 3.5").
+Version montée à `0.94.26.1-dev` en 1 saut couvrant à la fois les ajouts
+(couleur d'accentuation globale, étape thème assistant - 3e chiffre) et les
+correctifs déjà committés + ceux de cette session (4e chiffre) - 5
+emplacements alignés, test `Version_projet_est_alignee_sur_0_94_26_1`
+renommé.
+
+**Vérification en direct (skill `verify`, mode invité, profil jetable)** :
+scénario complet en une seule commande (lancement -> "Passer" l'accueil ->
+mode invité, PID relancé -> Menu Lumora -> Réglages -> recherche "rappel de
+pause" -> résultat invoqué -> recherche "flash visuel" -> résultat invoqué
+-> Accessibilité > Avancé -> activation "Réordonner sans clic maintenu" ->
+navigation example.com -> ajout du favori) : **0 ligne `UNHANDLED`** sur tout
+le scénario. Trace confirmant directement le correctif (2) : `BringSearchTargetIntoFocus:
+controlName='AccessibilityBreakReminderCombo' focus reussi=True` et idem
+pour `AccessibilitySoundsAsVisualFlashSwitch` (les deux échouaient avant
+avec `non resolu`). **Limite honnête** : le glisser-déposer réel (correctif
+3) n'a pas pu être exercé par un vrai geste souris (synthétique refusé dans
+cet environnement, déjà documenté) - confiance basée sur la relecture du
+correctif + l'absence de toute exception pendant le reste du scénario
+(activation du réglage, rendu de la barre de favoris), pas sur une
+observation directe du glisser lui-même. L'inspection structurelle de
+`BookmarksBarPanel` (confirmer que ses enfants sont bien des `Grid`
+d'enveloppe) a échoué - `AutomationId` semble ne pas être exposé pour ce
+`StackPanel` précis (même famille de limite déjà documentée pour
+`MainMenuButton`), pas creusé plus loin (verification annexe, pas
+bloquante).
+
+**Statut final** : 20 fichiers modifiés (5 bugs + 9 nettoyages/perf + 1
+rattrapage de test manquant + version), build MSBuild propre et
+`dotnet test Lumora.Tests` 949/949 après chaque lot. **Rien committé** (la
+session s'arrête ici, commit non demandé) - à committer séparément du
+rattrapage de l'étape 1 (9 commits déjà faits), toujours rien poussé vers
+GitHub.

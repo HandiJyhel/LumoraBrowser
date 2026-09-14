@@ -102,9 +102,10 @@ public sealed partial class MainWindow : Window
             WinUiRuntimeTrace.Write("[drag-favoris] PointerPressed : sender n'est pas un Button avec BookmarkNode, abandon");
             return;
         }
-        if (btn.Parent is not FrameworkElement panel)
+        var panel = ResolveBookmarkDragHostPanel(btn);
+        if (panel is null)
         {
-            WinUiRuntimeTrace.Write("[drag-favoris] PointerPressed : pas de parent FrameworkElement, abandon");
+            WinUiRuntimeTrace.Write("[drag-favoris] PointerPressed : panneau hote introuvable, abandon");
             return;
         }
 
@@ -122,6 +123,32 @@ public sealed partial class MainWindow : Window
         // sort de ses limites, ce qui arrive des les premiers pixels d'un
         // glissement horizontal.
         panel.CapturePointer(e.Pointer);
+    }
+
+    // btn.Parent n'est PLUS forcement le panneau hote depuis l'aide
+    // accessibilite "Reordonner sans glisser" (2026-09-11,
+    // WrapBookmarkButtonWithReorderGrip dans MainWindow.Bookmarks.cs) : quand
+    // elle est active, chaque bouton non-racine est enveloppe dans une Grid
+    // (poignee + bouton) elle-meme ajoutee au panneau - btn.Parent devient
+    // cette Grid, jamais cablee pour PointerMoved/Released/CaptureLost (voir
+    // WireBookmarkDragPanels ci-dessus). Remonte jusqu'a trouver l'un des 3
+    // vrais panneaux hotes plutot que de supposer un seul niveau de parente -
+    // bug reel corrige le 2026-09-14 (glisser-depose silencieusement mort des
+    // que ce reglage etait actif).
+    private FrameworkElement? ResolveBookmarkDragHostPanel(Button btn)
+    {
+        FrameworkElement? current = btn;
+        for (var depth = 0; depth < 4 && current is not null; depth++)
+        {
+            if (ReferenceEquals(current, BookmarksBarPanel)
+                || ReferenceEquals(current, BookmarksBottomBarPanel)
+                || ReferenceEquals(current, BookmarksSideBarPanel))
+            {
+                return current;
+            }
+            current = current.Parent as FrameworkElement;
+        }
+        return null;
     }
 
     private void BookmarkDragPanel_PointerMoved(object sender, PointerRoutedEventArgs e)
@@ -142,18 +169,35 @@ public sealed partial class MainWindow : Window
 
         if (panel is not Panel childrenPanel) return;
 
+        // Chaque enfant direct du panneau est SOIT le Button du favori (cas
+        // normal), SOIT la Grid poignee+bouton de l'aide "Reordonner sans
+        // glisser" (voir ResolveBookmarkDragHostPanel ci-dessus) - le Tag
+        // BookmarkNode vit alors sur le Button interne, pas sur la Grid.
+        // Mesuree sur l'enfant DIRECT (Grid ou Button) pour que la largeur de
+        // la poignee compte dans le calcul de cible, pas seulement le bouton.
         var items = childrenPanel.Children
-            .OfType<Button>()
-            .Where(child => child.Tag is BookmarkNode)
-            .Select(child =>
+            .OfType<FrameworkElement>()
+            .Select(child => (Element: child, Node: BookmarkNodeOf(child)))
+            .Where(entry => entry.Node is not null)
+            .Select(entry =>
             {
-                var origin = child.TransformToVisual(panel).TransformPoint(new Windows.Foundation.Point(0, 0));
-                return (Id: ((BookmarkNode)child.Tag).Id, Left: origin.X, Width: child.ActualWidth);
+                var origin = entry.Element.TransformToVisual(panel).TransformPoint(new Windows.Foundation.Point(0, 0));
+                return (Id: entry.Node!.Id, Left: origin.X, Width: entry.Element.ActualWidth);
             })
             .ToList();
 
         _bookmarkPendingTargetId = HorizontalDragReorderMath.FindTargetId(items, _bookmarkDraggedId, point.X);
     }
+
+    // Meme raisonnement que ResolveBookmarkDragHostPanel : le Tag BookmarkNode
+    // vit sur le Button, direct enfant du panneau OU imbrique une colonne dans
+    // la Grid poignee+bouton selon que l'aide accessibilite est active.
+    private static BookmarkNode? BookmarkNodeOf(FrameworkElement child) => child switch
+    {
+        Button { Tag: BookmarkNode node } => node,
+        Grid grid => grid.Children.OfType<Button>().FirstOrDefault(b => b.Tag is BookmarkNode)?.Tag as BookmarkNode,
+        _ => null
+    };
 
     private void BookmarkDragPanel_PointerReleased(object sender, PointerRoutedEventArgs e)
     {

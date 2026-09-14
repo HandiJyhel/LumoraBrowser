@@ -1,3 +1,4 @@
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -14,6 +15,11 @@ namespace Lumora.WinUI;
 // du bas), et repercuter vers le service.
 public sealed partial class MainWindow
 {
+    // Sauvegarde differee du volume d'ambiance (voir ApplySoundAmbianceVolumeChange
+    // plus bas) - meme motif de debounce que l'editeur de notes
+    // (MainWindow.Notes.cs, _noteSaveTimer).
+    private DispatcherQueueTimer? _soundAmbianceVolumeSaveTimer;
+
     private void InitializeSoundThemeService()
     {
         _soundThemeService.AttachTo(RootShell);
@@ -240,6 +246,42 @@ public sealed partial class MainWindow
         _uiSettings.SoundAmbianceVolume = Math.Clamp(sliderValue / 100.0, 0.0, 1.0);
         _soundThemeService.SetAmbianceVolume(_uiSettings.SoundAmbianceVolume);
         RefreshSoundThemeUi();
-        SaveSoundThemeSettings();
+        ScheduleSoundAmbianceVolumeSave();
+    }
+
+    // Sauvegarde differee (nettoyage+perf, trouve en audit 2026-09-14) :
+    // glisser le curseur declenchait un ValueChanged par pixel, chacun
+    // reecrivant sur disque le fichier de reglages chiffre (DPAPI) en entier
+    // - meme motif de debounce deja utilise pour l'editeur de notes
+    // (MainWindow.Notes.cs, _noteSaveTimer) : une seule ecriture par pause,
+    // pas par tick du curseur. Le volume LIVE (SetAmbianceVolume ci-dessus)
+    // et l'UI (RefreshSoundThemeUi) restent instantanes - seule l'ecriture
+    // disque est differee.
+    private void ScheduleSoundAmbianceVolumeSave()
+    {
+        _soundAmbianceVolumeSaveTimer ??= CreateSoundAmbianceVolumeSaveTimer();
+        _soundAmbianceVolumeSaveTimer.Stop();
+        _soundAmbianceVolumeSaveTimer.Start();
+    }
+
+    private DispatcherQueueTimer CreateSoundAmbianceVolumeSaveTimer()
+    {
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(400);
+        timer.IsRepeating = false;
+        timer.Tick += (_, _) => SaveSoundThemeSettings();
+        return timer;
+    }
+
+    // A appeler a la fermeture de la fenetre : une sauvegarde encore en
+    // attente (fenetre fermee en plein glissement du curseur) ne doit jamais
+    // etre perdue silencieusement.
+    private void FlushPendingSoundAmbianceVolumeSave()
+    {
+        if (_soundAmbianceVolumeSaveTimer?.IsRunning == true)
+        {
+            _soundAmbianceVolumeSaveTimer.Stop();
+            SaveSoundThemeSettings();
+        }
     }
 }

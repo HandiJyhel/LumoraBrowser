@@ -826,6 +826,25 @@ public sealed partial class MainWindow
             };
         }
 
+        // Fond/surfaces "Noir neutre" PARTAGES entre "neutral" et "focus"
+        // (2026-09-14 : le mode Focus a ete aligne sur Neutre faute
+        // d'atmosphere distincte comme Lecture/Creation/Recherche/Nuit,
+        // Accent/CoolAccent/WarmAccent/Focus - l'identite cyan du mode -
+        // restent propres a chacun). Extrait en valeurs communes plutot que
+        // recopie 2 fois en litteral (nettoyage 2026-09-14, doublon reel
+        // trouve en audit) : ce type de valeur avait deja legerement divergee
+        // par le passe entre ces 2 memes branches (8,13,20 contre 9,13,20,
+        // voir l'historique de ce fichier) - un partage direct empeche
+        // desormais ce genre de derive silencieuse.
+        var neutralizedBackground = UiColor(13, 13, 13);
+        var neutralizedSurface = UiColor(19, 19, 19, alpha);
+        var neutralizedSurfaceAlt = UiColor(24, 24, 24, alpha);
+        var neutralizedSurfaceRaised = UiColor(31, 31, 31, alpha);
+        var neutralizedStroke = UiColor(58, 58, 58);
+        var neutralizedStrokeSoft = UiColor(38, 38, 38);
+        var neutralizedAddressBackground = UiColor(21, 21, 21, 242);
+        var neutralizedAddressBorder = UiColor(74, 74, 74);
+
         return mode switch
         {
             // Palette du mode "Neutre" (dark) corrigee le 2026-07-20 : les
@@ -836,20 +855,13 @@ public sealed partial class MainWindow
             // ("mode sombre verdatre") : rebalance vers un bleu-ardoise net
             // (~220 degres) en gardant la meme luminosite approximative.
             "neutral" => new(
-                UiColor(13, 13, 13), UiColor(19, 19, 19, alpha), UiColor(24, 24, 24, alpha), UiColor(31, 31, 31, alpha),
-                UiColor(58, 58, 58), UiColor(38, 38, 38), UiColor(21, 21, 21, 242), UiColor(74, 74, 74),
+                neutralizedBackground, neutralizedSurface, neutralizedSurfaceAlt, neutralizedSurfaceRaised,
+                neutralizedStroke, neutralizedStrokeSoft, neutralizedAddressBackground, neutralizedAddressBorder,
                 UiColor(120, 145, 196), UiColor(120, 145, 196, 24), UiColor(201, 158, 78), UiColor(201, 158, 78, 18),
                 UiColor(219, 142, 98), UiColor(198, 214, 240), UiColor(178, 178, 178), UiColor(244, 244, 244)),
-            // Fond/surfaces neutralises (2026-09-14, retour utilisateur : la page
-            // Nouvel onglet restait bleu-marine en mode Focus) - ce fond etait en
-            // realite une quasi-copie de l'ancien fond bleu-marine du mode Neutre
-            // (8,13,20 contre 9,13,20 : 1 point d'ecart), pas une atmosphere
-            // distincte comme Lecture/Creation/Recherche/Nuit - meme traitement
-            // que Neutre. Accent/CoolAccent/WarmAccent/Focus (identite cyan du
-            // mode) INCHANGES.
             "focus" => new(
-                UiColor(13, 13, 13), UiColor(19, 19, 19, alpha), UiColor(24, 24, 24, alpha), UiColor(31, 31, 31, alpha),
-                UiColor(58, 58, 58), UiColor(38, 38, 38), UiColor(21, 21, 21, 242), UiColor(74, 74, 74),
+                neutralizedBackground, neutralizedSurface, neutralizedSurfaceAlt, neutralizedSurfaceRaised,
+                neutralizedStroke, neutralizedStrokeSoft, neutralizedAddressBackground, neutralizedAddressBorder,
                 UiColor(86, 194, 228), UiColor(86, 194, 228, 32), UiColor(255, 185, 53), UiColor(255, 185, 53, 22),
                 UiColor(235, 126, 74), UiColor(190, 224, 255), UiColor(178, 178, 178), UiColor(244, 244, 244)),
             "reading" => new(

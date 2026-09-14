@@ -69,6 +69,16 @@ internal static class ProfileEntropyStore
         }
     }
 
+    // Lecture SEULE, jamais de creation (contrairement a LoadOrCreate) :
+    // utilisee par LumoraProfileRegistry.Discover (Models/Profiles.cs) pour
+    // retenter le dechiffrement d'un profil qui n'est PAS le profil actif -
+    // ne doit jamais faire apparaitre un fichier d'entropie pour un profil
+    // AVEC mot de passe qui n'en a jamais demande (corrige le 2026-09-14,
+    // bug reel trouve en audit : Discover() dechiffrait tous les profils
+    // avec l'entropie ambiante du profil actif uniquement).
+    public static byte[]? TryReadExisting(LumoraProfilePaths profile) =>
+        File.Exists(profile.EntropyFile) ? TryReadBase64(profile.EntropyFile) : null;
+
     private static byte[]? TryReadBase64(string path)
     {
         try

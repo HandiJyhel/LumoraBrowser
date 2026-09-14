@@ -43,6 +43,16 @@ internal sealed class SoundThemeService : IDisposable
     // clique (retour utilisateur reel, 2026-09-11). Ces zones-la utilisent
     // PreviewClick/PreviewToggle explicitement, avec le pack DEJA a jour.
     private readonly List<DependencyObject> _excludedRoots = [];
+    // Jeu de fichiers d'effets FIXE (4 packs x 2 fichiers, voir
+    // KnownEffectPacks) - mis en cache par chemin plutot que de refaire un
+    // File.Exists (appel disque) a CHAQUE clic/bascule de toute l'app
+    // (nettoyage+perf, trouve en audit 2026-09-14). Ne cache PAS la
+    // MediaSource elle-meme : celle-ci est deliberement recreee a chaque
+    // lecture (voir PlayEffect) pour que des clics rapproches sonnent
+    // pleinement a chaque fois - seul le sondage disque, purement
+    // redondant pour un fichier qui ne bouge jamais en cours de session,
+    // est evite.
+    private readonly Dictionary<string, bool> _fileExistsCache = new();
     private string _effectsPack = "base";
     private bool _disposed;
 
@@ -194,7 +204,7 @@ internal sealed class SoundThemeService : IDisposable
     private void PlayEffect(MediaPlayer player, string fileName)
     {
         var path = Path.Combine(_assetsRoot, "Effects", _effectsPack, fileName);
-        if (!File.Exists(path))
+        if (!FileExistsCached(path))
         {
             WinUiRuntimeTrace.Write($"SoundThemeService.PlayEffect: fichier introuvable {path}");
             return;
@@ -208,6 +218,14 @@ internal sealed class SoundThemeService : IDisposable
         WinUiRuntimeTrace.Write($"SoundThemeService.PlayEffect: lecture de {path}");
         player.Source = MediaSource.CreateFromUri(new Uri(path));
         player.Play();
+    }
+
+    private bool FileExistsCached(string path)
+    {
+        if (_fileExistsCache.TryGetValue(path, out var exists)) return exists;
+        exists = File.Exists(path);
+        _fileExistsCache[path] = exists;
+        return exists;
     }
 
     public void Dispose()

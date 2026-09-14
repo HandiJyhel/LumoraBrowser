@@ -49,6 +49,7 @@
     <Compile Include="..\Lumora.WinUI\Models\Profiles.cs"                Link="Product\Profiles.cs" />
     <Compile Include="..\Lumora.WinUI\LumoraConfig.cs"                    Link="Product\LumoraConfig.cs" />
     <Compile Include="..\Lumora.WinUI\Storage\LumoraFile.cs"              Link="Product\LumoraFile.cs" />
+    <Compile Include="..\Lumora.WinUI\Storage\ProfileEntropyStore.cs"     Link="Product\ProfileEntropyStore.cs" />
     <Compile Include="..\Lumora.WinUI\Storage\RetryDelete.cs"             Link="Product\RetryDelete.cs" />
     <Compile Include="..\Lumora.WinUI\LumoraBackup.cs"                    Link="Product\LumoraBackup.cs" />
     <Compile Include="..\Lumora.WinUI\Privacy\NetworkBlocker\FilterParser.cs" Link="Product\FilterParser.cs" />

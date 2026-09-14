@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.25.0-dev";
+    internal const string Version = "0.94.26.1-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -378,6 +378,15 @@ public sealed partial class MainWindow : Window
 
         InitializeComponent();
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");
+        // Etoile/bouclier/cle de la Toolbar : geometrie posee ici depuis
+        // StartMenuGlyphs (source UNIQUE deja introduite par la refonte
+        // "Encre chaude" pour ces 3 silhouettes) plutot que recopiee en
+        // litteral dans MainWindow.xaml - nettoyage 2026-09-14, doublon reel
+        // trouve en audit (c'est exactement la derive que StartMenuGlyphs
+        // visait a eliminer, voir son commentaire d'en-tete).
+        BookmarkStarIcon.Data = PathGeometryBuilder.Build(StartMenuGlyphs.Star);
+        ShieldIcon.Data = PathGeometryBuilder.Build(StartMenuGlyphs.Shield);
+        VaultQuickAccessIcon.Data = PathGeometryBuilder.Build(StartMenuGlyphs.Key);
         InitializeAccessibilityAlertServices();
         InitializeSoundThemeService();
         // Le titre de fenetre affichait toujours le compteur dev interne, meme
@@ -518,6 +527,20 @@ public sealed partial class MainWindow : Window
             _addressSuggestionsCloseGraceTimer?.Stop();
             _noteSaveTimer?.Stop();
             _totpTimer?.Stop();
+            // Debounce introduit le 2026-09-14 (nettoyage+perf) : contrairement
+            // a _noteSaveTimer ci-dessus (Stop seul, tolerance existante), un
+            // volume glisse puis la fenetre fermee avant l'echeance du
+            // minuteur ne doit pas perdre silencieusement la derniere valeur.
+            FlushPendingSoundAmbianceVolumeSave();
+            // Bug reel corrige le 2026-09-14 (audit) : ces 2 services (chacun
+            // possede son propre DispatcherTimer et/ou MediaPlayer) n'etaient
+            // jamais Dispose() ici, contrairement a tous les minuteurs
+            // ci-dessus - avec plusieurs fenetres ouvertes (_liveInstances,
+            // meme raisonnement que le commentaire au-dessus), fermer une
+            // fenetre laissait son rappel de pause continuer a se declencher
+            // et son ambiance sonore continuer a boucler indefiniment.
+            _breakReminderService.Dispose();
+            _soundThemeService.Dispose();
         };
         // Session invite : _profile.ProfileDir est le dossier ephemere pose par
         // GuestProcessLauncher (voir _pendingGuestLaunch/EnterGuestMode). Un vrai

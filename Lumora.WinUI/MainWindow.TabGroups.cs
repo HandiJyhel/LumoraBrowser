@@ -335,6 +335,25 @@ public sealed partial class MainWindow
                         button.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
                     }
                 };
+                // Bug reel corrige le 2026-09-14 (audit accessibilite) :
+                // moveStack/close ne devenaient visibles qu'au survol SOURIS -
+                // un utilisateur clavier/switch qui tabule jusqu'a ces boutons
+                // (parfaitement focusables/actionnables) ne voyait jamais
+                // qu'une action existait, Opacity restant a 0 en permanence.
+                // GotFocus/LostFocus sont des evenements ROUTES (bubbling) :
+                // les cabler une seule fois sur `grid` capte le focus entrant/
+                // sortant de n'importe lequel de ses descendants (bouton
+                // principal, fleches, fermeture) sans les cabler un par un.
+                grid.GotFocus += (_, _) =>
+                {
+                    moveStack.Opacity = 1;
+                    close.Opacity = 0.75;
+                };
+                grid.LostFocus += (_, _) =>
+                {
+                    moveStack.Opacity = 0;
+                    close.Opacity = 0;
+                };
             }
 
             if (tab.GroupId is int tabGroupId && _tabGroups.FirstOrDefault(g => g.Id == tabGroupId) is { } tabGroup)

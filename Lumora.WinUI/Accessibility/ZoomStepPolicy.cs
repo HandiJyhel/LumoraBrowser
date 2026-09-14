@@ -14,8 +14,14 @@ namespace Lumora.WinUI.Accessibility;
 // ne puisse jamais retomber sur une valeur que ce menu ne sait pas afficher.
 internal static class ZoomStepPolicy
 {
-    public static readonly int[] Steps = [90, 100, 110, 125, 140, 160];
-    public const int DefaultPercent = 100;
+    // Reference directement SiteComfortPolicy plutot que de recopier les
+    // memes valeurs (nettoyage 2026-09-14, doublon reel trouve en audit) :
+    // le commentaire ci-dessus dit deja "calquee EXACTEMENT" sur ce menu -
+    // une table recopiee a la main aurait pu diverger silencieusement si
+    // SiteComfortPolicy changeait un jour, et le clavier aurait alors pu
+    // retomber sur un palier que le menu deroulant ne propose pas.
+    public static readonly IReadOnlyList<int> Steps = SiteComfortPolicy.SuggestedZoomPercents;
+    public const int DefaultPercent = SiteComfortPolicy.DefaultZoomPercent;
 
     public static int StepUp(int currentPercent)
     {
@@ -32,7 +38,7 @@ internal static class ZoomStepPolicy
 
     public static int StepDown(int currentPercent)
     {
-        for (var i = Steps.Length - 1; i >= 0; i--)
+        for (var i = Steps.Count - 1; i >= 0; i--)
         {
             if (Steps[i] < currentPercent)
             {
