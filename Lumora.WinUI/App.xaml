@@ -32,6 +32,10 @@
                  ci-dessus) - violet dédié, distinct des 3 teintes existantes. -->
             <SolidColorBrush x:Key="NovaTileFamilyIdentityBrush" Color="#FF9E8CD6" />
             <conv:StartMenuFamilyKeyToBrushConverter x:Key="StartMenuFamilyKeyToBrushConverter" />
+            <!-- Refonte organique "Encre chaude" (2026-09-12, suite) : convertit
+                 une chaine Path.Data (BookmarkGlyphs/StartMenuGlyphs) en Geometry
+                 pour un Binding XAML - voir Converters/PathDataConverter.cs. -->
+            <conv:PathDataConverter x:Key="PathDataConverter" />
             <!-- Ecran de connexion / gestion des utilisateurs (session
                  "Ecran de connexion", 2026-08-10) : avatars par profil dans le
                  selecteur de profil. -->
@@ -48,14 +52,17 @@
             <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#DDFFB935" />
             <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#B8FFB935" />
             <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#55FFB935" />
-            <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#FF0D0D0D" />
             <SolidColorBrush x:Key="NovaFocusVisualPrimaryBrush" Color="#FFFFE668" />
-            <SolidColorBrush x:Key="NovaFocusVisualSecondaryBrush" Color="#FF0D1822" />
+            <SolidColorBrush x:Key="NovaFocusVisualSecondaryBrush" Color="#FF0D0D0D" />
             <SolidColorBrush x:Key="NovaControlForegroundBrush" Color="#FFFFF8EA" />
             <SolidColorBrush x:Key="NovaControlMutedForegroundBrush" Color="#FFC3B9A5" />
-            <SolidColorBrush x:Key="NovaControlSurfaceBrush" Color="#FF1A2231" />
-            <SolidColorBrush x:Key="NovaControlSurfaceRaisedBrush" Color="#FF222A3A" />
-            <SolidColorBrush x:Key="NovaControlStrokeBrush" Color="#FF40495B" />
+            <!-- Valeurs de conception (design-time / avant premiere application du theme) -->
+            <!-- alignees sur le noir neutre desormais utilise par LumoraTheme/MainWindow.SettingsTheme -->
+            <!-- (retour utilisateur 2026-09-13, session "theme" : le sombre etait percu bleu-marine). -->
+            <SolidColorBrush x:Key="NovaControlSurfaceBrush" Color="#FF131313" />
+            <SolidColorBrush x:Key="NovaControlSurfaceRaisedBrush" Color="#FF1F1F1F" />
+            <SolidColorBrush x:Key="NovaControlStrokeBrush" Color="#FF3A3A3A" />
             <SolidColorBrush x:Key="NovaSuccessBrush" Color="#FF3DD688" />
             <SolidColorBrush x:Key="NovaSuccessSurfaceBrush" Color="#FF1F3C39" />
             <SolidColorBrush x:Key="NovaWarningBrush" Color="#FFFFB935" />

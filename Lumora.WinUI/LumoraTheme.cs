@@ -125,7 +125,7 @@ internal static class LumoraTheme
     {
         var luminance = (0.2126 * background.R) + (0.7152 * background.G) + (0.0722 * background.B);
         return luminance >= 154
-            ? UiColor(13, 20, 34)
+            ? UiColor(13, 13, 13)
             : UiColor(255, 248, 234);
     }
 
@@ -184,21 +184,21 @@ internal static class LumoraTheme
                     UiColor(246, 243, 252)),
             _ => isDark
                 ? new(
-                    UiColor(9, 13, 20),
-                    UiColor(16, 21, 31),
-                    UiColor(20, 26, 38),
-                    UiColor(47, 56, 72),
-                    UiColor(242, 245, 250),
-                    UiColor(171, 178, 191),
+                    UiColor(13, 13, 13),
+                    UiColor(19, 19, 19),
+                    UiColor(24, 24, 24),
+                    UiColor(58, 58, 58),
+                    UiColor(244, 244, 244),
+                    UiColor(178, 178, 178),
                     UiColor(230, 170, 72),
                     UiColor(86, 194, 228),
                     UiColor(195, 214, 255),
-                    UiColor(9, 13, 20),
+                    UiColor(13, 13, 13),
                     UiColor(61, 214, 136),
                     UiColor(229, 72, 77),
-                    UiColor(24, 32, 44),
-                    UiColor(49, 58, 74),
-                    UiColor(14, 20, 30))
+                    UiColor(29, 29, 29),
+                    UiColor(58, 58, 58),
+                    UiColor(20, 20, 20))
                 : new(
                     UiColor(248, 246, 241),
                     UiColor(255, 253, 249),

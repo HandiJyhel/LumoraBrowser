@@ -4,170 +4,106 @@ using Microsoft.UI.Xaml.Media;
 
 namespace Lumora.WinUI;
 
-// Couleur personnalisee par mode d'usage (ColorPicker + pastille dans
-// Parametres > Mon Lumora > Disposition). Extrait de MainWindow.IdentitySpine.cs
-// (2026-08-10, suppression du Style Lumora - demande explicite utilisateur,
-// "trop difficile a gerer" apres plusieurs jours de correctifs concentres
-// sur ce style) : cette fonctionnalite n'a jamais ete exclusive a la colonne
-// identitaire, elle s'applique aux deux styles via ApplyUsageModeChrome
-// (MainWindow.SettingsTheme.cs) - deplacee ici plutot que supprimee.
+// Couleur d'accentuation globale (ColorPicker + pastille dans Parametres >
+// Mon Lumora > Theme et couleurs). Anciennement "MainWindow.ModeAccentColor.cs"
+// (2026-08-10 -> 2026-09-13) : un reglage PAR mode d'usage (6 teintes),
+// n'affectant que le chrome du mode actif. Remplace le 2026-09-14 (session
+// "3.5") par UN SEUL reglage global, facon Windows - retour utilisateur
+// explicite : "je veux une veritable couleur d'accentuation ... [mais] je
+// veux pas que ca soit agressif non plus" et, sur les favoris precisement,
+// "pas de couleurs de fond ... que l'icone du dossier prenne la couleur".
+// S'applique desormais quel que soit le Mode d'usage actif, via 2 points
+// d'injection - ApplyAccessibilitySettings (palette generique : bouton
+// principal, dossiers de favoris, pastille d'onglet active) et
+// ApplyUsageModeChrome (chrome du mode : boutons de la ligne d'outils,
+// verre du compagnon, halo...) - voir MainWindow.SettingsTheme.cs.
 public sealed partial class MainWindow
 {
-    private static readonly string[] ModeAccentColorKeys =
+    private string? _pendingAccentColorHex;
+    private bool _pendingAccentColorReset;
+
+    // ── Couleur d'accentuation globale ────────────────────────────────────
+
+    private bool TryResolveGlobalAccentOverride(out Windows.UI.Color color)
     {
-        "neutral", "focus", "reading", "creative", "research", "night"
-    };
-
-    private readonly Dictionary<string, string> _pendingModeAccentColors = new(StringComparer.OrdinalIgnoreCase);
-
-    // ── Couleur personnalisee par mode d'usage ───────────────────────────────
-
-    private string GetModeAccentColorHex(string mode) => mode switch
-    {
-        "neutral" => _uiSettings.ModeAccentColorNeutral,
-        "focus" => _uiSettings.ModeAccentColorFocus,
-        "reading" => _uiSettings.ModeAccentColorReading,
-        "creative" => _uiSettings.ModeAccentColorCreative,
-        "research" => _uiSettings.ModeAccentColorResearch,
-        "night" => _uiSettings.ModeAccentColorNight,
-        _ => string.Empty
-    };
-
-    private void SetModeAccentColorHex(string mode, string hex)
-    {
-        switch (mode)
-        {
-            case "neutral": _uiSettings.ModeAccentColorNeutral = hex; break;
-            case "focus": _uiSettings.ModeAccentColorFocus = hex; break;
-            case "reading": _uiSettings.ModeAccentColorReading = hex; break;
-            case "creative": _uiSettings.ModeAccentColorCreative = hex; break;
-            case "research": _uiSettings.ModeAccentColorResearch = hex; break;
-            case "night": _uiSettings.ModeAccentColorNight = hex; break;
-        }
+        color = default;
+        var hex = _uiSettings.AccentColor;
+        return !string.IsNullOrWhiteSpace(hex) && TryParseHexColor(hex, out color);
     }
 
-    private ColorPicker? ModeAccentColorPicker(string mode) => mode switch
-    {
-        "neutral" => ModeColorPickerNeutral,
-        "focus" => ModeColorPickerFocus,
-        "reading" => ModeColorPickerReading,
-        "creative" => ModeColorPickerCreative,
-        "research" => ModeColorPickerResearch,
-        "night" => ModeColorPickerNight,
-        _ => null
-    };
+    private Windows.UI.Color ResolveDefaultAccentColor() =>
+        ResolveModeChromePalette((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant(),
+            LumoraTheme.ResolveIsDarkTheme(_uiSettings), 255).Accent;
 
-    private Button? ModeAccentColorSwatchButton(string mode) => mode switch
-    {
-        "neutral" => ModeColorSwatchNeutralButton,
-        "focus" => ModeColorSwatchFocusButton,
-        "reading" => ModeColorSwatchReadingButton,
-        "creative" => ModeColorSwatchCreativeButton,
-        "research" => ModeColorSwatchResearchButton,
-        "night" => ModeColorSwatchNightButton,
-        _ => null
-    };
-
-    private Windows.UI.Color ResolveDefaultModeAccentColor(string mode) =>
-        ResolveModeChromePalette(mode, LumoraTheme.ResolveIsDarkTheme(_uiSettings), 255).Accent;
-
-    // Initialise chaque ColorPicker/pastille depuis _uiSettings au moment ou
+    // Initialise le ColorPicker/la pastille depuis _uiSettings au moment ou
     // les Reglages sont (re)affiches - meme moment que les autres
     // SelectComboByTag(...) de ApplyUiSettings(), sous _suppressUiSettingsSave.
     private void InitializeModeAccentColorPickers()
     {
-        _pendingModeAccentColors.Clear();
+        _pendingAccentColorHex = null;
+        _pendingAccentColorReset = false;
 
-        foreach (var mode in ModeAccentColorKeys)
-        {
-            var hex = GetModeAccentColorHex(mode);
-            var color = !string.IsNullOrWhiteSpace(hex) && TryParseHexColor(hex, out var custom)
-                ? custom
-                : ResolveDefaultModeAccentColor(mode);
+        var hex = _uiSettings.AccentColor;
+        var color = !string.IsNullOrWhiteSpace(hex) && TryParseHexColor(hex, out var custom)
+            ? custom
+            : ResolveDefaultAccentColor();
 
-            var picker = ModeAccentColorPicker(mode);
-            if (picker is not null)
-            {
-                picker.Color = color;
-            }
-
-            var swatch = ModeAccentColorSwatchButton(mode);
-            if (swatch is not null)
-            {
-                swatch.Background = new SolidColorBrush(color);
-            }
-        }
+        AccentColorPicker.Color = color;
+        AccentColorSwatchButton.Background = new SolidColorBrush(color);
     }
 
-    private void ModeColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
+    private void AccentColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
     {
-        if (_suppressUiSettingsSave || sender.Tag is not string mode)
+        if (_suppressUiSettingsSave)
         {
             return;
         }
 
-        _pendingModeAccentColors[mode] = ToHexColor(args.NewColor);
-        var swatch = ModeAccentColorSwatchButton(mode);
-        if (swatch is not null)
-        {
-            swatch.Background = new SolidColorBrush(args.NewColor);
-        }
-
+        _pendingAccentColorHex = ToHexColor(args.NewColor);
+        _pendingAccentColorReset = false;
+        AccentColorSwatchButton.Background = new SolidColorBrush(args.NewColor);
         MarkAppearanceOptionsPending();
     }
 
-    private void ModeColorResetButton_Click(object sender, RoutedEventArgs e)
+    private void AccentColorResetButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string mode })
-        {
-            return;
-        }
+        _pendingAccentColorHex = null;
+        _pendingAccentColorReset = true;
 
-        _pendingModeAccentColors[mode] = string.Empty;
-        var defaultColor = ResolveDefaultModeAccentColor(mode);
-
-        var picker = ModeAccentColorPicker(mode);
-        if (picker is not null)
-        {
-            picker.Color = defaultColor;
-        }
-
-        var swatch = ModeAccentColorSwatchButton(mode);
-        if (swatch is not null)
-        {
-            swatch.Background = new SolidColorBrush(defaultColor);
-        }
-
+        var defaultColor = ResolveDefaultAccentColor();
+        AccentColorPicker.Color = defaultColor;
+        AccentColorSwatchButton.Background = new SolidColorBrush(defaultColor);
         MarkAppearanceOptionsPending();
     }
 
     // Appele depuis ApplySettingsChangesButton_Click, comme
-    // ApplyPendingAvatarChange()/ApplyPendingWallpaperChange() : les couleurs
-    // choisies ne sont commises dans _uiSettings (et sauvegardees) qu'a la
+    // ApplyPendingAvatarChange()/ApplyPendingWallpaperChange() : la couleur
+    // choisie n'est commise dans _uiSettings (et sauvegardee) qu'a la
     // validation explicite, jamais en direct pendant le glisser du picker
     // (ColorChanged se declenche a tres haute frequence - un re-theme complet
     // a chaque tick serait couteux, en plus de rompre la coherence "rien ne
     // change avant Appliquer" du reste de cette section Personnalisation).
     private bool ApplyPendingModeAccentColorChanges()
     {
-        if (_pendingModeAccentColors.Count == 0)
+        if (_pendingAccentColorHex is null && !_pendingAccentColorReset)
         {
             return false;
         }
 
-        foreach (var (mode, hex) in _pendingModeAccentColors)
-        {
-            SetModeAccentColorHex(mode, hex);
-        }
-
-        _pendingModeAccentColors.Clear();
+        _uiSettings.AccentColor = _pendingAccentColorReset ? string.Empty : _pendingAccentColorHex ?? string.Empty;
+        _pendingAccentColorHex = null;
+        _pendingAccentColorReset = false;
         _uiSettings.Save(_profile.UiSettingsFile);
         return true;
     }
 
-    private void ResetPendingModeAccentColorChanges() => _pendingModeAccentColors.Clear();
+    private void ResetPendingModeAccentColorChanges()
+    {
+        _pendingAccentColorHex = null;
+        _pendingAccentColorReset = false;
+    }
 
-    // ── Derivation automatique du degrade (couleur unique choisie par mode) ─
+    // ── Derivation automatique du degrade (couleur unique choisie) ──────────
 
     // Point d'injection appele depuis ApplyUsageModeChrome (MainWindow.SettingsTheme.cs),
     // STRICTEMENT apres son court-circuit "if (highContrast) { ...; return; }" :
@@ -185,6 +121,25 @@ public sealed partial class MainWindow
             WarmAccent = warm,
             Focus = DeriveFocusTone(accent, isDark)
         };
+    }
+
+    // Meme derivation que ci-dessus, pour la palette GENERIQUE (non liee au
+    // Mode d'usage) resolue par ResolveAccentPalette dans
+    // ApplyAccessibilitySettings - bouton principal, pastille d'onglet
+    // active, dossiers de favoris.
+    private static (Windows.UI.Color Accent, Windows.UI.Color AccentSoft, Windows.UI.Color CoolAccent, Windows.UI.Color CoolAccentSoft, Windows.UI.Color Focus)
+        ApplyCustomAccentToPalette(
+            (Windows.UI.Color Accent, Windows.UI.Color AccentSoft, Windows.UI.Color CoolAccent, Windows.UI.Color CoolAccentSoft, Windows.UI.Color Focus) basePalette,
+            Windows.UI.Color accent, bool isDark)
+    {
+        var (cool, warm) = DeriveModeAccentTones(accent, isDark);
+        _ = warm; // pas de canal "chaud" distinct dans cette palette (5 champs, pas 7)
+        return (
+            accent,
+            WithAlpha(accent, isDark ? (byte)32 : (byte)38),
+            cool,
+            WithAlpha(cool, isDark ? (byte)28 : (byte)30),
+            DeriveFocusTone(accent, isDark));
     }
 
     private static (Windows.UI.Color Cool, Windows.UI.Color Warm) DeriveModeAccentTones(Windows.UI.Color accent, bool isDark)

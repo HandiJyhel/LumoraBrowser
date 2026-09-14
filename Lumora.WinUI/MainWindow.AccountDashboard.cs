@@ -25,6 +25,7 @@ public sealed partial class MainWindow
         AccountTabOverviewContent.Visibility = tab == "overview" ? Visibility.Visible : Visibility.Collapsed;
         AccountTabSecurityContent.Visibility = tab == "security" ? Visibility.Visible : Visibility.Collapsed;
         AccountTabBackupContent.Visibility = tab == "backup" ? Visibility.Visible : Visibility.Collapsed;
+        AccountTabSoundContent.Visibility = tab == "sound" ? Visibility.Visible : Visibility.Collapsed;
         ResetSettingsScrollPosition();
     }
 

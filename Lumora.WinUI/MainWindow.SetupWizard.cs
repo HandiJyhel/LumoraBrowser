@@ -11,6 +11,7 @@ public sealed partial class MainWindow
     {
         _wizardStep = 0;
         _suppressUiSettingsSave = true;
+        SelectWizardTheme(_uiSettings.ThemeMode);
         WizardSearchGoogle.IsChecked    = _uiSettings.SearchEngine is not ("duckduckgo" or "brave" or "bing");
         WizardSearchDuckDuckGo.IsChecked = _uiSettings.SearchEngine == "duckduckgo";
         WizardSearchBrave.IsChecked     = _uiSettings.SearchEngine == "brave";
@@ -29,20 +30,26 @@ public sealed partial class MainWindow
 
     private void UpdateWizardStep()
     {
-        WizardStepIndicator.Text = $"Étape {_wizardStep + 1} / 8";
+        // Etape "Theme" inseree en position 1 (juste apres "Bienvenue", 2026-09-13) :
+        // les noms WizardStep1..7 restent ceux d'origine, seul l'INDICE _wizardStep
+        // auquel chacun s'affiche decale de 1 - evite de renommer 7 panneaux XAML
+        // deja references ailleurs (WizardSearch_Checked, etc.) pour un simple ajout.
+        WizardStepIndicator.Text = $"Étape {_wizardStep + 1} / 9";
         WizardStep0.Visibility = _wizardStep == 0 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStep1.Visibility = _wizardStep == 1 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStep2.Visibility = _wizardStep == 2 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStep3.Visibility = _wizardStep == 3 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStep4.Visibility = _wizardStep == 4 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStep5.Visibility = _wizardStep == 5 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStep6.Visibility = _wizardStep == 6 ? Visibility.Visible : Visibility.Collapsed;
-        WizardStep7.Visibility = _wizardStep == 7 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStepTheme.Visibility = _wizardStep == 1 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep1.Visibility = _wizardStep == 2 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep2.Visibility = _wizardStep == 3 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep3.Visibility = _wizardStep == 4 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep4.Visibility = _wizardStep == 5 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep5.Visibility = _wizardStep == 6 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep6.Visibility = _wizardStep == 7 ? Visibility.Visible : Visibility.Collapsed;
+        WizardStep7.Visibility = _wizardStep == 8 ? Visibility.Visible : Visibility.Collapsed;
         WizardPrevButton.IsEnabled = _wizardStep > 0;
-        WizardNextButton.Content = _wizardStep == 7 ? "Terminer" : "Suivant";
+        WizardNextButton.Content = _wizardStep == 8 ? "Terminer" : "Suivant";
 
-        if (_wizardStep == 7)
+        if (_wizardStep == 8)
         {
+            WizardSummaryTheme.Text = "Thème : " + ThemeModeLabel(_uiSettings.ThemeMode);
             WizardSummarySearch.Text = "Moteur de recherche : " + _uiSettings.SearchEngine switch
             {
                 "duckduckgo" => "DuckDuckGo",
@@ -80,7 +87,7 @@ public sealed partial class MainWindow
 
     private void WizardNextButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_wizardStep < 7)
+        if (_wizardStep < 8)
         {
             _wizardStep++;
             UpdateWizardStep();
@@ -255,6 +262,26 @@ public sealed partial class MainWindow
         if (_suppressUiSettingsSave) return;
         if (sender is RadioButton rb && rb.Tag is string engine)
             _uiSettings.SearchEngine = engine;
+    }
+
+    // Etape "Theme" : a la difference des autres champs de l'assistant (juste
+    // poses en memoire, sauvegardes une seule fois dans FinishWizard),
+    // reutilise ApplyThemeModeImmediate (MainWindow.LayoutStudio.cs) pour un
+    // apercu reel - la carte de l'assistant elle-meme change de theme au
+    // clic, plutot que de decouvrir le resultat seulement a la fin.
+    private void WizardTheme_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        if (sender is RadioButton rb && rb.Tag is string mode)
+            ApplyThemeModeImmediate(mode);
+    }
+
+    private void SelectWizardTheme(string? themeMode)
+    {
+        var mode = (themeMode ?? "dark").Trim().ToLowerInvariant();
+        WizardThemeDark.IsChecked = mode == "dark";
+        WizardThemeLight.IsChecked = mode == "light";
+        WizardThemeSystem.IsChecked = mode == "system";
     }
 
     private void WizardUsage_Checked(object sender, RoutedEventArgs e)
