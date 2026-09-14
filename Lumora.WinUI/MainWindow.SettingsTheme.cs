@@ -178,6 +178,15 @@ public sealed partial class MainWindow
         // NovaChromeHalo*/NovaChromeMistBrush plus haut.
         SetBrush("NovaChromeButtonShadowBrush", highContrast ? UiColor(255, 255, 255, 20) : (isDark ? UiColor(0, 0, 0, 82) : UiColor(123, 103, 73, 34)));
         SetBrush("NovaChromeButtonHighlightBrush", highContrast ? UiColor(255, 255, 255, 24) : (isDark ? UiColor(255, 255, 255, 28) : UiColor(255, 255, 255, 108)));
+        // Valeurs par defaut de secours (menus contextuels - MenuFlyoutItem),
+        // ecrasees par ApplyUsageModeChrome juste apres pour toute couleur
+        // d'accentuation reelle - meme convention que NovaChromeButtonHighlightBrush/
+        // NovaBookmarkFolderGlyphBrush ci-dessus. Ambre d'origine (#E6AA48,
+        // chantier identite visuelle 2026-08-10) conserve ici comme valeur de
+        // repli en contraste eleve, la ou l'accentuation personnalisee ne
+        // s'applique jamais.
+        SetBrush("MenuFlyoutItemBackgroundPointerOver", highContrast ? UiColor(255, 255, 255, 40) : UiColor(230, 170, 72, 38));
+        SetBrush("MenuFlyoutItemBackgroundPressed", highContrast ? UiColor(255, 255, 255, 60) : UiColor(230, 170, 72, 58));
         // Puce de favori au repos (2026-09-01) : transparente hors contraste
         // eleve, meme traitement que les icones de la ligne d'outils - voir
         // NovaChromeIconRestBackgroundBrush plus haut.
@@ -658,9 +667,23 @@ public sealed partial class MainWindow
         SetBrush("NovaChromeButtonShadowBrush", isDark
             ? UiColor(0, 0, 0, 92)
             : ChromeTint(chrome.WarmAccent, chrome.Stroke, 0.18, 36));
-        SetBrush("NovaChromeButtonHighlightBrush", isDark
-            ? ChromeTint(chrome.Text, chrome.CoolAccent, 0.06, 34)
-            : UiColor(255, 255, 255, 112));
+        // Halo de survol (rail de Reglages, boutons de la barre d'outils,
+        // onglets via les alias TabView*PointerOver plus haut dans MainWindow.xaml,
+        // tuiles du Menu Demarrer) : repris par la couleur d'accentuation
+        // (2026-09-14, retour utilisateur "c'est joli mais pas totalement" -
+        // maquette Artifact "Survol des menus" validee). Avant : blanc quasi
+        // pur (6% de melange vers CoolAccent en sombre, aucun en clair) - la
+        // personnalisation s'arretait aux elements statiques (onglet actif,
+        // dossiers de favoris). Meme alpha que MenuFlyoutItemBackgroundPointerOver/
+        // Pressed ci-dessous pour une meme "force" de halo partout.
+        SetBrush("NovaChromeButtonHighlightBrush", WithAlpha(chrome.Accent, isDark ? (byte)56 : (byte)96));
+        // Menus contextuels (Menu Lumora, clic droit sur une page, etc.) :
+        // meme reprise de l'accentuation que ci-dessus, a la place de l'ambre
+        // fixe pose au chantier identite visuelle (2026-08-10). Alpha du
+        // "Pressed" superieur au "PointerOver", meme rapport que les valeurs
+        // d'origine (#26E6AA48 / #3AE6AA48).
+        SetBrush("MenuFlyoutItemBackgroundPointerOver", WithAlpha(chrome.Accent, 48));
+        SetBrush("MenuFlyoutItemBackgroundPressed", WithAlpha(chrome.Accent, 72));
         // Puce de favori au repos : transparente quel que soit le Mode
         // d'usage (highContrast deja exclu par le return anticipe) - voir la
         // meme cle dans ApplyAccessibilitySettings().

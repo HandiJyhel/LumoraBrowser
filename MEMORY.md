@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Session "couleur d'accentuation"](#session-couleur-daccentuation-2026-09-14) — 2026-09-14, roue chromatique RVB (session "3.5") remplacée par un nuancier de 7 pastilles nommées (Bleu/Rouge/Orange/Jaune/Vert/Violet + "Braise" signature, dérivée de l'accent du mode Ember existant) après retour utilisateur ("pas très beau", "je m'attendais à un système simple avec les couleurs les plus utilisées") ; 2 itérations de maquette Artifact avant code (vert sarcelle rejeté, Braise validée) ; idée de thème "rétro" complet évoquée puis explicitement reportée après la 1.0.0 ; implémenté (XAML+code-behind), build+949 tests OK, vérifié en direct de bout en bout (scénario complet : création profil, navigation Réglages, clic pastille, Appliquer persiste et rethème, Réinitialiser) -> `0.94.27.0-dev` ; **suite le même jour** : retour utilisateur "j'ai cliqué Appliquer et rien n'a changé" -> diagnostic en direct (pas un bug, contraste élevé actif) puis vrai bug trouvé ("il faut cliquer 2 fois") -> état/logique confirmés corrects dès le 1er clic par traces temporaires (aucune ressource de couleur manquante), donc probablement un problème de repeinture visuelle non résolu, pas de logique - **pas corrigé, en attente d'une piste** ; puis nuancier sorti du menu caché derrière la pastille unique -> 7 pastilles affichées à plat directement dans le panneau (maquette Artifact validée "c'est ça que je veux"), implémenté+vérifié en direct -> `0.94.28.0-dev` ; puis l'accentuation étendue au halo de survol des menus (rail Réglages, barre d'outils, onglets, tuiles, menus contextuels) - maquette interactive validée par un "go", `NovaChromeButtonHighlightBrush`/`MenuFlyoutItemBackgroundPointerOver`/`Pressed` reprennent `chrome.Accent` au lieu du blanc/ambre fixe, vérifié en direct par trace (valeurs calculées exactes) -> `0.94.29.0-dev`, **rien committé**
 - [Session "correction et nettoyage"](#session-correction-et-nettoyage-2026-09-14) — 2026-09-14, fusion des étapes 4+5 (corriger+nettoyer) sur tout le dépôt : rattrapage du backlog en 9 commits locaux (rien poussé GitHub) puis audit `/code-review` (8 angles) -> 5 bugs réels corrigés (profils qui disparaissent du sélecteur, glisser-déposer des favoris cassé avec "Réordonner sans clic maintenu", 2 services jamais `Dispose()`, recherche Réglages incomplète, onglets verticaux invisibles au clavier), 9 doublons/inefficacités nettoyés, version rattrapée à `0.94.26.1-dev`, 2 nettoyages plus risqués (câblage accentuation, dimensions onglets) reportés avec l'accord de l'utilisateur (pas de vérification visuelle possible ici), vérifié en direct (0 UNHANDLED, trace confirmant le correctif recherche), build+949 tests OK, committé en local (10e commit de la journée) ; 1 doublon de glyphes trouvé après coup et corrigé (StartMenuGlyphs.Notes/BookmarkGlyphs.Link), pas encore committé ; prochaine session (2026-09-15) : exécutable + 1re mise en ligne GitHub
 - [Session "étape 3.5" — 3 petits correctifs](#session-etape-35-2026-09-14--3-petits-correctifs) — 2026-09-14, TERMINÉE : (1) bouton "+" du rail d'onglets verticaux déplacé sous la liste + fond bleu-marine du nouvel onglet neutralisé pour TOUTES les palettes (Océan/Forêt/Ambre, pas seulement Lumora), (2) lignes de "Vue d'ensemble" (Centre Lumora) passées de StackPanel à Grid 3 colonnes pour aligner les liens, (3) "Couleur du mode d'usage" (6 teintes par mode) remplacée par "Couleur d'accentuation" (1 réglage global façon Windows, dossiers de favoris/onglet actif/bouton principal/glow ambiant) - les 3 build+949 tests OK + vérifiés en direct par capture d'écran, piège réel trouvé et corrigé en vérifiant (SetBrush vs SetAppBrush, crash au démarrage)
 - [Fond bleu-marine résiduel : mode Focus](#fond-bleu-marine-residuel--mode-focus-2026-09-14) — 2026-09-14, le correctif "Noir neutre" du 2026-09-13 n'avait neutralisé que le mode Neutre, le mode Focus gardait sa propre copie quasi identique de l'ancien bleu-marine (chrome + page Nouvel onglet), corrigé, build+949 tests OK, vérifié en direct, rien committé
@@ -29071,3 +29072,249 @@ toujours repoussée ("pour plus tard, pas maintenant", voir
 que Lumora devienne public. Le petit correctif du doublon de glyphes
 ci-dessus reste à committer (Go demandé, pas encore reçu au moment de la
 clôture).
+
+## Session "couleur d'accentuation" (2026-09-14)
+
+Session dédiée au réglage "Couleur d'accentuation" introduit la veille
+(session "3.5") sous forme de roue chromatique + curseurs RVB + champ hex
+(`ColorPicker` WinUI). Retour utilisateur dès l'ouverture : "malgré tous les
+efforts, tu as encore fait une petite erreur" - la roue est "le système le
+plus chaud", attendu à la place un système simple avec les couleurs les plus
+utilisées (bleu/rouge/orange/jaune/vert/violet) plus une ou deux teintes
+"exotiques", si possible avec une couleur exclusive à Lumora comme
+plus-value. Consigne explicite : avis d'abord, maquette à valider avant tout
+code.
+
+**Avis donné puis maquette (Artifact, avant tout code)** : 3 défauts
+identifiés dans la roue (aucun garde-fou de lisibilité/contraste, pas
+cohérente avec l'identité "Doux moderne" sobre, aucune opportunité de
+marque) - accord avec la direction "nuancier de swatches". 2 questions
+tranchées par l'utilisateur : swatches uniquement (pas de repli
+roue/RVB avancé), 6 couleurs de base + 1 teinte exclusive Lumora.
+
+**2 itérations sur la 7<sup>e</sup> teinte (exclusive)**, à chaque fois
+ancrée dans une vraie couleur déjà présente dans le code plutôt
+qu'inventée :
+1. Première proposition : vert sarcelle `#638986`, l'ancien accent du mode
+   Neutre avant l'alignement bleu-ardoise du 20 juillet 2026
+   (`MainWindow.SettingsTheme.cs`). **Rejetée** ("pas très beau", "je
+   m'attendais plutôt à une couleur chaude... un orange un peu tiré sur le
+   rouge").
+2. Deuxième proposition : `#D65129` ("Braise"), dérivée de l'accent du mode
+   **Ember** déjà présent dans Lumora (`#eb7e4a` sombre / `#b54928` clair,
+   `ResolveModeChromePalette`). **Validée** ("ça peut être plutôt stylé") -
+   raison donnée : capital symbolique immédiat (chaleur/lumière, lien direct
+   avec le nom "Lumora"), contraste net avec les 6 couleurs de base
+   volontairement sourdes.
+
+**Idée "thème rétro" évoquée puis reportée** : l'utilisateur a proposé un
+thème visuel rétro complet (façon Mode d'usage Ocean/Forest/Ember/Neutre,
+pas juste une couleur). Avis donné (pertinent sur le principe, s'intégrerait
+dans un tiroir existant, mais bien plus gros qu'un réglage de couleur - 4
+pistes concrètes proposées : OS classique 90s, terminal/CRT phosphore,
+synthwave 80s, papier vintage/affiche voyage 70s). L'utilisateur a
+explicitement demandé de garder l'idée de côté pour une future mise à jour,
+dans quelques mois - priorité à la 1.0.0. Rien maquetté, rien codé (voir
+mémoire personnelle [[idee-theme-retro-future-mise-a-jour]]).
+
+**Implémentation (après "Go" explicite de l'utilisateur)** :
+- `MainWindow.xaml` : le `ColorPicker` du flyout "Couleur d'accentuation"
+  remplacé par 7 `Button` circulaires (nouveau style
+  `NovaAccentSwatchOptionButtonStyle`), chacun avec son hex en `Background`
+  et son nom en `AutomationProperties.Name`/`ToolTipService.ToolTip`, plus
+  un `FontIcon` coche (glyphe `&#xE73E;`) affiché/masqué selon la sélection.
+- `MainWindow.AccentColor.cs` : `AccentColorPicker_ColorChanged` (événement
+  `ColorPicker`) remplacé par `AccentSwatchButton_Click` (lit le hex depuis
+  `Tag`) + nouvelle `UpdateAccentSwatchSelection(hex)` qui coche la pastille
+  correspondante et décoche les autres (`hex == null` après Réinitialiser,
+  la teinte par défaut dérivée du mode ne correspond pas forcément à l'une
+  des 7 pastilles nommées). Reste inchangé : persistance dans
+  `_uiSettings.AccentColor` (même mécanisme "rien n'change avant Appliquer"
+  que le reste de la section Personnalisation), dérivation HSL
+  (`ApplyCustomModeAccent`/`ApplyCustomAccentToPalette`) pour les tons
+  clair/foncé/focus.
+
+**Version** : ajout de fonctionnalité (nouveau système de sélection, pas un
+correctif) -> 3<sup>e</sup> chiffre, `0.94.26.1-dev` -> `0.94.27.0-dev`. 4
+emplacements alignés (`MainWindow.xaml.cs`, `AGENTS.md`,
+`build-clean-test-artifact.ps1`, `build-installer.ps1`) + test
+`Version_projet_est_alignee_sur_0_94_26_1` renommé/mis à jour
+(`UsageModeVisualIdentityTests.cs`). Build MSBuild propre (0 erreur, 0
+avertissement), `dotnet test Lumora.Tests` 949/949 après le bump.
+
+**Vérification en direct (skill `verify`)** : scénario complet en plusieurs
+passes (voir piège ci-dessous). Résultat final, une fois dans le bon état
+applicatif : Menu Lumora -> Paramètres -> Mon Lumora > Thème et couleurs ->
+ouverture du nuancier -> **les 7 pastilles sont bien présentes** (Bleu,
+Rouge, Orange, Jaune, Vert, Violet, Braise) -> clic "Rouge" -> texte "en
+attente" mis à jour immédiatement -> **Appliquer** -> "Options de
+personnalisation appliquées." (donc `ApplyPendingModeAccentColorChanges` +
+`ApplyAccessibilitySettings` ont bien tourné, chrome rethémé) ->
+**Réinitialiser** -> repasse "en attente" correctement. Un seul point non
+confirmé formellement : la coche visuelle sur "Rouge" en rouvrant le flyout
+après Appliquer (lecture `BoundingRectangle`/`IsOffscreen` revenue à `false`)
+- très probablement un artefact de lecture UIA (même famille que le piège
+déjà documenté sur `StatusText.Current.Name` périmé), pas un vrai bug : la
+preuve textuelle (texte "en attente" au clic, texte "appliqué" après
+Appliquer, texte "en attente" après Réinitialiser) confirme déjà que la
+sélection/l'état se comportent correctement de bout en bout.
+
+**Piège réel rencontré en vérifiant** : la section "Mon Lumora" (Apparence)
+est **délibérément bloquée en mode invité** (`SettingsNav_Click`,
+`MainWindow.xaml.cs` : `if (_isGuestMode && section is "appearance" or
+"vault") section = "overview";`, même politique "Live Linux" que le Coffre)
+- plusieurs passes de vérification en mode invité ont échoué silencieusement
+sur ce blocage (aucune erreur, juste jamais atteint la section) avant de
+comprendre qu'il fallait un vrai profil (sans mot de passe). Un vrai profil
+déclenche ensuite un écran de migration des favoris ("Passer cette etape",
+`MigrationSkipButton_Click`) PUIS l'assistant premier lancement à 9 étapes
+(`WizardNextButton`, "Suivant" x8 puis "Terminer") avant d'atteindre le
+shell normal - à refaire en une seule commande la prochaine fois plutôt que
+de le redécouvrir pas à pas.
+
+**Statut** : 6 fichiers modifiés (XAML, code-behind, 4 fichiers de version +
+1 test). Build+949 tests OK, vérifié en direct. **Rien committé** au moment
+de la clôture - décision de commit/push à prendre avec l'utilisateur à la
+prochaine reprise.
+
+### Suite le même jour : bug "Appliquer" à 2 clics + pastilles sorties du menu
+
+Reprise plus tard le même jour. Retour utilisateur : couleur orange choisie,
+clic sur "Appliquer les changements", **aucun changement visible** à l'écran.
+
+**1er diagnostic (faux négatif)** : lecture du code montre que
+`ApplyAccessibilitySettings` ignore délibérément toute couleur personnalisée
+si le Contraste élevé (Accessibilité) est actif - texte d'aide déjà présent
+sous la pastille ("Sans effet si le contraste élevé est actif"). Hypothèse
+proposée à l'utilisateur avant toute action ; réponse : "autant pour moi, ça
+fonctionne" - **ce n'était pas la cause**, le contraste élevé n'était pas actif.
+
+**Vrai bug signalé ensuite** : "il faut appuyer plusieurs fois sur Appliquer
+les changements". Diagnostic en conditions réelles (skill `verify`) :
+- Profil de test crafté directement sur disque (DPAPI, sans passer par
+  l'assistant) : `UserProfile.Save`/`Load` utilisent une entropie DPAPI
+  `null` pour `profile.lumora`, `ui-settings.lumora` l'entropie fixe
+  `"Lumora.WinUI.v1"` (`LumoraFile`) - un `UserProfile` minimal
+  (`{"Name":"Verif"}`) + `ui-settings.lumora` avec `SetupWizardCompleted:true`
+  suffit à entrer directement dans le shell principal, **sans mode invité,
+  sans migration, sans assistant 9 étapes** (`_isGuestMode=false`,
+  `_userProfile.HasAccountPassword=false` -> `DismissLoginOverlay()`
+  immédiat). Bien plus rapide que le parcours "vrai profil créé via l'UI"
+  documenté dans la section ci-dessus - **à réutiliser en premier réflexe**
+  pour toute vérification future touchant Apparence/Coffre.
+- Traces temporaires (`WinUiRuntimeTrace.Write`) ajoutées dans
+  `AccentSwatchButton_Click`, `ApplyPendingModeAccentColorChanges`,
+  `ApplyAccessibilitySettings`, `ApplyUsageModeChrome`, `SetBrush` (détecte
+  une ressource de brush introuvable) - retirées après coup.
+- **Résultat, avec preuve journal** : dès le **1er clic**, la couleur est
+  bien commise dans `_uiSettings.AccentColor`, `ApplyAccessibilitySettings`
+  ET `ApplyUsageModeChrome` la voient et l'appliquent toutes les deux,
+  aucune ligne "brush introuvable". Le 2e clic réapplique exactement les
+  mêmes valeurs (aucune différence de log). **Donc pas un bug de logique/état
+  - tout pointe vers un problème de repeinture visuelle** (une couche ne se
+  rafraîchit pas toute seule au 1er passage, probablement liée au chrome
+  translucide/verre) plutôt qu'un souci de séquencement des méthodes.
+  **Pas corrigé** - piste à creuser plus tard (forcer un rafraîchissement
+  visuel explicite après application), pas de Go donné pour s'y attaquer
+  cette session.
+- **Piège de pilotage trouvé** : le vrai `ModulesButton` ("Menu Lumora", en
+  bas à gauche - un doublon legacy `MainMenuButton` du même nom existe aussi,
+  caché dans le mode compact, à ne pas confondre) **ne s'ouvre pas de façon
+  fiable via `InvokePattern.Invoke()` dans cet environnement** malgré le
+  précédent documenté plus haut sur `ModulesFlyout_Opening` - aucune fenêtre
+  supplémentaire n'apparaît après l'invocation, testé à plusieurs reprises,
+  y compris avec `SetForegroundWindow` explicite juste avant. Contournement
+  utilisé : point d'entrée de diagnostic **temporaire** (`if
+  (Environment.GetEnvironmentVariable("LUMORA_DEBUG_JUMP_SETTINGS") == "1")`
+  dans `DismissLoginOverlay`, **différé** via `Task.Delay` - la restauration
+  d'onglets rappelle `ShowPanel(BrowserPanel,...)` juste après et écraserait
+  un saut non différé) qui appelle directement `ShowPanel(SettingsPanel,...)`
+  + `SettingsNav_Click`/`AppearanceSubNav_Click` sans passer par le menu.
+  Retiré avant de committer. **À retenir** : si une prochaine session doit
+  piloter les Réglages par UIA, prévoir d'emblée ce contournement plutôt que
+  de reperdre du temps sur `ModulesButton`.
+- Capture d'écran délibérément évitée sur toute cette investigation (risque
+  déjà documenté ailleurs : incidents réels de fuite de contenu d'une autre
+  fenêtre) - diagnostic entièrement mené par assertions UIA + journal.
+
+**Pastilles sorties du menu (2e demande de la même reprise)** : retour
+complémentaire de l'utilisateur, "je m'attendais plutôt à voir carrément sur
+la page les différentes couleurs" plutôt que de devoir cliquer pour ouvrir un
+menu. Maquette Artifact (avant/après, hex identiques au code réel) présentée
+et validée telle quelle ("c'est ça que je veux").
+
+**Implémentation** :
+- `MainWindow.xaml` : le bouton unique `AccentColorSwatchButton` + son
+  `Button.Flyout` supprimés ; les 7 boutons-pastilles (`AccentSwatchBlueButton`
+  etc., inchangés) désormais directement dans le panneau, chacun avec une
+  petite légende (`TextBlock`, 10px, `NovaTextMutedBrush`) ; bouton
+  "Réinitialiser" toujours présent, plus besoin d'ouvrir quoi que ce soit
+  pour y accéder. Style `NovaModeColorSwatchButtonStyle` (n'était utilisé
+  que par le bouton supprimé) retiré aussi.
+- `MainWindow.AccentColor.cs` : les 3 lignes qui peignaient
+  `AccentColorSwatchButton.Background` (aperçu du bouton unique, disparu)
+  retirées ; `ResolveDefaultAccentColor()` (n'était appelée que pour ça)
+  retirée aussi. Le mécanisme de coche par pastille (`UpdateAccentSwatchSelection`,
+  `_pendingAccentColorHex`, persistance à l'Appliquer) est **inchangé** - seul
+  l'emplacement visuel des 7 pastilles a bougé.
+- Version : ajout (changement structurel de ce réglage, pas un correctif) ->
+  3<sup>e</sup> chiffre, `0.94.27.0-dev` -> `0.94.28.0-dev`. 5 emplacements
+  alignés (mêmes que ci-dessus + le test déjà renommé).
+- Build MSBuild propre, `dotnet test` 949/949. Vérifié en direct (même
+  contournement de diagnostic temporaire pour atteindre Thème et couleurs,
+  retiré ensuite) : les 7 pastilles ont bien des coordonnées réelles côte à
+  côte une fois la page défilée jusqu'à la section (elle est plus bas que
+  l'ancien bouton compact - normal, pas un bug), le clic sur une pastille
+  déclenche bien le texte "en attente", **Appliquer** se termine sans
+  exception (`Personnalisation appliquée.`).
+
+**Statut** : `AccentColorSwatchButton`/`NovaModeColorSwatchButtonStyle`
+supprimés, 7 pastilles + légendes + Réinitialiser à plat dans le panneau,
+plus de menu à ouvrir. Bug "2 clics pour Appliquer" identifié précisément
+(repeinture visuelle, pas logique) mais **pas corrigé**. Build+949 tests OK,
+vérifié en direct. **Rien committé.**
+
+### Suite (3e volet) : la couleur d'accentuation aussi au survol des menus
+
+Retour utilisateur après les pastilles à plat : "c'est joli mais pas
+totalement" - il voulait que l'accentuation se retrouve aussi au survol des
+menus (Réglages, Menu Démarrer). Avis donné (idée pertinente, techniquement
+facile car déjà centralisé dans 1-2 ressources partagées, mais à garder
+discret pour ne pas retomber dans l'"agressif" déjà écarté) + maquette
+Artifact interactive (survol réel sur rail/barre d'outils/onglets/tuiles/menu
+contextuel, sélecteur des 7 teintes en direct) -> validée par un simple "go".
+
+**Découverte en marge** : `NovaChromeButtonHighlightBrush` (halo de survol
+partagé par le rail de Réglages, les boutons de la barre d'outils, les
+onglets via des alias `TabView*PointerOver`, les tuiles) était déjà très
+légèrement teinté en sombre (6% de mélange vers `CoolAccent`, quasi
+imperceptible) et pas du tout en clair - explique précisément le "pas
+totalement" de l'utilisateur. `MenuFlyoutItemBackgroundPointerOver`/`Pressed`
+(menus contextuels type Menu Lumora), eux, étaient un ambre fixe
+(`#E6AA48`, chantier identité visuelle du 2026-08-10) jamais raccordés à
+l'accentuation.
+
+**Implémentation** (`MainWindow.SettingsTheme.cs`) :
+- `ApplyAccessibilitySettings` : valeurs de secours ajoutées pour
+  `MenuFlyoutItemBackgroundPointerOver`/`Pressed` (ambre d'origine conservé
+  tel quel comme repli, utilisé uniquement en Contraste élevé - même
+  convention que les autres brushes "défaut écrasé juste après").
+- `ApplyUsageModeChrome` (strictement après le retour anticipé du contraste
+  élevé, comme le reste de la couleur d'accentuation) : les 3 brushes
+  reprennent directement `chrome.Accent` via `WithAlpha` - `NovaChromeButtonHighlightBrush`
+  (56/255 sombre, 96/255 clair), `MenuFlyoutItemBackgroundPointerOver` (48/255),
+  `MenuFlyoutItemBackgroundPressed` (72/255). `chrome.Accent` est déjà la
+  couleur finale (personnalisée ou par défaut du mode), donc aucun nouveau
+  point d'injection nécessaire.
+- Texte descriptif du réglage complété ("...et halo au survol des menus").
+
+**Version** : ajout -> 3<sup>e</sup> chiffre, `0.94.28.0-dev` ->
+`0.94.29.0-dev`, 5 emplacements alignés. Build+949 tests OK.
+
+**Vérification en direct** : trace temporaire (retirée après coup) confirme
+les valeurs calculées exactes pour un accent Bleu (`#5B7FB5`) ->
+`highlight=#385B7FB5`, `menuHover=#305B7FB5`, `menuPressed=#485B7FB5` -
+alpha et RGB conformes au code, 0 exception. Pas de capture d'écran (risque
+déjà documenté) : vérification par assertion de valeur, pas par l'image.
+
+**Statut** : implémenté + vérifié en direct, **rien committé**.

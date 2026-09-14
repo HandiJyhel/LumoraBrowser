@@ -1,10 +1,11 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 
 namespace Lumora.WinUI;
 
-// Couleur d'accentuation globale (ColorPicker + pastille dans Parametres >
+// Couleur d'accentuation globale (nuancier + pastille dans Parametres >
 // Mon Lumora > Theme et couleurs). Anciennement "MainWindow.ModeAccentColor.cs"
 // (2026-08-10 -> 2026-09-13) : un reglage PAR mode d'usage (6 teintes),
 // n'affectant que le chrome du mode actif. Remplace le 2026-09-14 (session
@@ -12,11 +13,18 @@ namespace Lumora.WinUI;
 // explicite : "je veux une veritable couleur d'accentuation ... [mais] je
 // veux pas que ca soit agressif non plus" et, sur les favoris precisement,
 // "pas de couleurs de fond ... que l'icone du dossier prenne la couleur".
-// S'applique desormais quel que soit le Mode d'usage actif, via 2 points
-// d'injection - ApplyAccessibilitySettings (palette generique : bouton
-// principal, dossiers de favoris, pastille d'onglet active) et
-// ApplyUsageModeChrome (chrome du mode : boutons de la ligne d'outils,
-// verre du compagnon, halo...) - voir MainWindow.SettingsTheme.cs.
+// Le ColorPicker (roue + sliders RVB) de cette meme session a ensuite ete
+// remplace le meme jour (session "couleur d'accentuation") par un nuancier
+// de 7 pastilles nommees : retour utilisateur explicite, une roue chromatique
+// est un outil de studio graphique, pas un reglage grand public. La 7e
+// teinte ("Braise") est deliberement dérivée de l'accent du mode Ember
+// existant (#eb7e4a sombre / #b54928 clair, cf. ResolveModeChromePalette dans
+// MainWindow.SettingsTheme.cs) plutot qu'arbitraire.
+// S'applique quel que soit le Mode d'usage actif, via 2 points d'injection -
+// ApplyAccessibilitySettings (palette generique : bouton principal, dossiers
+// de favoris, pastille d'onglet active) et ApplyUsageModeChrome (chrome du
+// mode : boutons de la ligne d'outils, verre du compagnon, halo...) - voir
+// MainWindow.SettingsTheme.cs.
 public sealed partial class MainWindow
 {
     private string? _pendingAccentColorHex;
@@ -31,38 +39,65 @@ public sealed partial class MainWindow
         return !string.IsNullOrWhiteSpace(hex) && TryParseHexColor(hex, out color);
     }
 
-    private Windows.UI.Color ResolveDefaultAccentColor() =>
-        ResolveModeChromePalette((_uiSettings.UsageMode ?? "neutral").ToLowerInvariant(),
-            LumoraTheme.ResolveIsDarkTheme(_uiSettings), 255).Accent;
+    private IEnumerable<Button> AccentSwatchButtons
+    {
+        get
+        {
+            yield return AccentSwatchBlueButton;
+            yield return AccentSwatchRedButton;
+            yield return AccentSwatchOrangeButton;
+            yield return AccentSwatchYellowButton;
+            yield return AccentSwatchGreenButton;
+            yield return AccentSwatchVioletButton;
+            yield return AccentSwatchBraiseButton;
+        }
+    }
 
-    // Initialise le ColorPicker/la pastille depuis _uiSettings au moment ou
-    // les Reglages sont (re)affiches - meme moment que les autres
-    // SelectComboByTag(...) de ApplyUiSettings(), sous _suppressUiSettingsSave.
+    // Initialise le nuancier depuis _uiSettings au moment ou les Reglages
+    // sont (re)affiches - meme moment que les autres SelectComboByTag(...)
+    // de ApplyUiSettings(), sous _suppressUiSettingsSave. Les 7 pastilles
+    // etant affichees a plat (2026-09-14, plus de bouton-previsualisation
+    // separe - voir UpdateAccentSwatchSelection), seule la coche sur la
+    // pastille active reste a positionner ici.
     private void InitializeModeAccentColorPickers()
     {
         _pendingAccentColorHex = null;
         _pendingAccentColorReset = false;
 
         var hex = _uiSettings.AccentColor;
-        var color = !string.IsNullOrWhiteSpace(hex) && TryParseHexColor(hex, out var custom)
-            ? custom
-            : ResolveDefaultAccentColor();
-
-        AccentColorPicker.Color = color;
-        AccentColorSwatchButton.Background = new SolidColorBrush(color);
+        UpdateAccentSwatchSelection(!string.IsNullOrWhiteSpace(hex) ? hex : null);
     }
 
-    private void AccentColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
+    private void AccentSwatchButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_suppressUiSettingsSave)
+        if (sender is not Button { Tag: string hex } || !TryParseHexColor(hex, out _))
         {
             return;
         }
 
-        _pendingAccentColorHex = ToHexColor(args.NewColor);
+        _pendingAccentColorHex = hex;
         _pendingAccentColorReset = false;
-        AccentColorSwatchButton.Background = new SolidColorBrush(args.NewColor);
+        UpdateAccentSwatchSelection(hex);
         MarkAppearanceOptionsPending();
+    }
+
+    // Coche la pastille dont le Tag (hex) correspond a la couleur active ;
+    // decoche tout le reste. hex == null decoche tout (ex. apres
+    // Reinitialiser, la teinte par defaut derivee du mode ne correspond pas
+    // forcement a l'une des 7 pastilles nommees).
+    private void UpdateAccentSwatchSelection(string? hex)
+    {
+        foreach (var button in AccentSwatchButtons)
+        {
+            var selected = hex is not null
+                && button.Tag is string tagHex
+                && string.Equals(tagHex, hex, StringComparison.OrdinalIgnoreCase);
+
+            if (button.Content is FontIcon checkmark)
+            {
+                checkmark.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
     }
 
     private void AccentColorResetButton_Click(object sender, RoutedEventArgs e)
@@ -70,9 +105,7 @@ public sealed partial class MainWindow
         _pendingAccentColorHex = null;
         _pendingAccentColorReset = true;
 
-        var defaultColor = ResolveDefaultAccentColor();
-        AccentColorPicker.Color = defaultColor;
-        AccentColorSwatchButton.Background = new SolidColorBrush(defaultColor);
+        UpdateAccentSwatchSelection(null);
         MarkAppearanceOptionsPending();
     }
 

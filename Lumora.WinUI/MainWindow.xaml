@@ -925,13 +925,21 @@
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="Foreground" Value="{ThemeResource NovaDangerBrush}" />
             </Style>
-            <Style x:Key="NovaModeColorSwatchButtonStyle" TargetType="Button">
-                <Setter Property="Width" Value="34" />
-                <Setter Property="Height" Value="34" />
+            <!-- Nuancier "Couleur d'accentuation" (2026-09-14, session "couleur d'accentuation") :
+                 une pastille par teinte proposee, cochee quand selectionnee (voir
+                 MainWindow.AccentColor.cs / UpdateAccentSwatchSelection). Remplace la
+                 roue chromatique + sliders RVB de la session "3.5" precedente - retour
+                 utilisateur explicite : la roue est un outil de studio graphique, pas un
+                 reglage grand public. -->
+            <Style x:Key="NovaAccentSwatchOptionButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
                 <Setter Property="Padding" Value="0" />
-                <Setter Property="CornerRadius" Value="17" />
-                <Setter Property="BorderThickness" Value="2" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaChromeStrokeSoftBrush}" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource NovaFocusBrush}" />
                 <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource NovaFocusInnerBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
@@ -4184,25 +4192,84 @@
                                  dans le schema (donnees existantes non perdues) mais ne sont
                                  plus lus/ecrits par cette UI. -->
                             <TextBlock Text="Couleur d'accentuation" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Text="Une seule couleur, reprise avec mesure a travers Lumora : onglet actif, boutons, dossiers de favoris et contour des champs en focus - jamais en aplat sur une grande surface. Réinitialiser revient à la teinte Lumora d'origine. Sans effet si le contraste élevé (Accessibilité) est actif."
+                            <TextBlock Text="Une seule couleur, reprise avec mesure a travers Lumora : onglet actif, boutons, dossiers de favoris, contour des champs en focus et halo au survol des menus - jamais en aplat sur une grande surface. Réinitialiser revient à la teinte Lumora d'origine. Sans effet si le contraste élevé (Accessibilité) est actif."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <StackPanel Spacing="4" HorizontalAlignment="Left">
-                                <Button x:Name="AccentColorSwatchButton"
-                                        Style="{StaticResource NovaModeColorSwatchButtonStyle}"
-                                        ToolTipService.ToolTip="Couleur d'accentuation"
-                                        AutomationProperties.Name="Couleur d'accentuation">
-                                    <Button.Flyout>
-                                        <Flyout>
-                                            <StackPanel Spacing="10">
-                                                <ColorPicker x:Name="AccentColorPicker"
-                                                             IsAlphaEnabled="False" ColorSpectrumShape="Ring"
-                                                             ColorChanged="AccentColorPicker_ColorChanged" />
-                                                <Button Content="Réinitialiser" Click="AccentColorResetButton_Click"
-                                                        Style="{StaticResource NovaCompactButtonStyle}" />
-                                            </StackPanel>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                </Button>
+                            <!-- Les 7 pastilles a plat, sans clic prealable pour les decouvrir
+                                 (2026-09-14, retour utilisateur explicite : "je m'attendais
+                                 plutot a voir carrement sur la page les differentes couleurs" -
+                                 remplace le bouton unique + Flyout precedent, maquette Artifact
+                                 validee "c'est ca que je veux" avant ce changement). -->
+                            <StackPanel Spacing="10" HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal" Spacing="14">
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Button x:Name="AccentSwatchBlueButton" Tag="#5B7FB5" Background="#5B7FB5"
+                                                Style="{StaticResource NovaAccentSwatchOptionButtonStyle}"
+                                                Click="AccentSwatchButton_Click"
+                                                ToolTipService.ToolTip="Bleu" AutomationProperties.Name="Bleu">
+                                            <FontIcon Glyph="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White" Visibility="Collapsed" />
+                                        </Button>
+                                        <TextBlock Text="Bleu" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource NovaTextMutedBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Button x:Name="AccentSwatchRedButton" Tag="#C1594F" Background="#C1594F"
+                                                Style="{StaticResource NovaAccentSwatchOptionButtonStyle}"
+                                                Click="AccentSwatchButton_Click"
+                                                ToolTipService.ToolTip="Rouge" AutomationProperties.Name="Rouge">
+                                            <FontIcon Glyph="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White" Visibility="Collapsed" />
+                                        </Button>
+                                        <TextBlock Text="Rouge" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource NovaTextMutedBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Button x:Name="AccentSwatchOrangeButton" Tag="#C97C3D" Background="#C97C3D"
+                                                Style="{StaticResource NovaAccentSwatchOptionButtonStyle}"
+                                                Click="AccentSwatchButton_Click"
+                                                ToolTipService.ToolTip="Orange" AutomationProperties.Name="Orange">
+                                            <FontIcon Glyph="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White" Visibility="Collapsed" />
+                                        </Button>
+                                        <TextBlock Text="Orange" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource NovaTextMutedBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Button x:Name="AccentSwatchYellowButton" Tag="#C9A63D" Background="#C9A63D"
+                                                Style="{StaticResource NovaAccentSwatchOptionButtonStyle}"
+                                                Click="AccentSwatchButton_Click"
+                                                ToolTipService.ToolTip="Jaune" AutomationProperties.Name="Jaune">
+                                            <FontIcon Glyph="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White" Visibility="Collapsed" />
+                                        </Button>
+                                        <TextBlock Text="Jaune" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource NovaTextMutedBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Button x:Name="AccentSwatchGreenButton" Tag="#5E9169" Background="#5E9169"
+                                                Style="{StaticResource NovaAccentSwatchOptionButtonStyle}"
+                                                Click="AccentSwatchButton_Click"
+                                                ToolTipService.ToolTip="Vert" AutomationProperties.Name="Vert">
+                                            <FontIcon Glyph="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White" Visibility="Collapsed" />
+                                        </Button>
+                                        <TextBlock Text="Vert" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource NovaTextMutedBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Button x:Name="AccentSwatchVioletButton" Tag="#7C6BAE" Background="#7C6BAE"
+                                                Style="{StaticResource NovaAccentSwatchOptionButtonStyle}"
+                                                Click="AccentSwatchButton_Click"
+                                                ToolTipService.ToolTip="Violet" AutomationProperties.Name="Violet">
+                                            <FontIcon Glyph="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White" Visibility="Collapsed" />
+                                        </Button>
+                                        <TextBlock Text="Violet" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource NovaTextMutedBrush}" />
+                                    </StackPanel>
+                                    <!-- Teinte signature Lumora : derivee de l'accent du mode Ember
+                                         (#eb7e4a sombre / #b54928 clair, MainWindow.SettingsTheme.cs),
+                                         pas une couleur arbitraire. -->
+                                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                        <Button x:Name="AccentSwatchBraiseButton" Tag="#D65129" Background="#D65129"
+                                                Style="{StaticResource NovaAccentSwatchOptionButtonStyle}"
+                                                Click="AccentSwatchButton_Click"
+                                                ToolTipService.ToolTip="Braise (teinte signature Lumora)" AutomationProperties.Name="Braise, teinte signature Lumora">
+                                            <FontIcon Glyph="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="White" Visibility="Collapsed" />
+                                        </Button>
+                                        <TextBlock Text="Braise" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource NovaTextMutedBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button Content="Réinitialiser" Click="AccentColorResetButton_Click"
+                                        Style="{StaticResource NovaCompactButtonStyle}" HorizontalAlignment="Left" />
                             </StackPanel>
                             </StackPanel>
 

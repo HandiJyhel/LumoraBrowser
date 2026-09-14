@@ -275,6 +275,32 @@ PowerShell + `System.Windows.Automation` (`Add-Type -AssemblyName UIAutomationCl
   s'affiche bien (preuve que la barriere fonctionne), puis s'appuyer sur la
   coherence avec d'autres ecrans deja verifies pour le rendu, comme deja
   pratique les sessions precedentes.
+- **La section "Mon Lumora" (Apparence) est elle aussi deliberement bloquee
+  en mode invite**, meme politique "Live Linux" que le Coffre
+  (`SettingsNav_Click`, `MainWindow.xaml.cs` : `if (_isGuestMode && section
+  is "appearance" or "vault") section = "overview";`) - cliquer
+  `SettingsNavAppearance` en mode invite retombe silencieusement sur
+  "Apercu", aucune erreur, `AppearanceSubNavTheme`/`AccentColorSwatchButton`
+  etc. restent introuvables (confirme 2026-09-14, session "couleur
+  d'accentuation") : utiliser un vrai profil pour tout scenario touchant
+  l'Apparence, pas seulement le Coffre. **Creer ce profil declenche 2 ecrans
+  supplementaires avant le shell normal** : un ecran de migration des
+  favoris (`MigrationPanel`, lien `HyperlinkButton` "Passer cette etape" ->
+  `MigrationSkipButton_Click`, trouvable par son `Name` exact "Passer cette
+  etape", PAS d'AutomationId), puis l'assistant premier lancement a 9 etapes
+  (`WizardNextButton`, Content="Suivant" puis "Terminer" a la derniere -
+  cliquer 9 fois de suite suffit, le handler avance tout seul puis appelle
+  `FinishWizard()` au 9e clic).
+- **Une recherche `FindFirst`/`FindAll` NATIVE avec `TreeScope.Descendants`
+  ou `TreeScope.Subtree` (sans elagage manuel) peut echouer silencieusement
+  (retourne `null`/vide) des que l'arbre contient un `ControlType.Document`
+  volumineux** (page Nouvel onglet avec son WebView2) - pas juste "plus
+  lent", carrement pas fiable dans cet environnement (confirme 2026-09-14) :
+  meme la marche pruned deja recommandee plus haut doit passer par
+  `TreeWalker` a la main (`GetFirstChild`/`GetNextSibling`, on saute des
+  qu'on croise `ControlType.Document`) plutot que par les methodes `Find*`
+  natives, y compris pour une recherche Subtree "hors fenetre" (popups/
+  flyouts) depuis `AutomationElement.RootElement` filtree par `ProcessId`.
 - `VerticalTabsSwitch` (barre d'onglets verticale) vit dans Reglages >
   **Espace de travail** (`SettingsNavNavigation`), PAS dans Apparence >
   Disposition (`AppearanceSubNavLayout`) contrairement a ce qu'on pourrait
