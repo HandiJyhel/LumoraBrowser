@@ -143,7 +143,11 @@ internal sealed record UserProfile
     public void Save(string path)
     {
         var json   = JsonSerializer.SerializeToUtf8Bytes(this, JsonOpts);
-        var cipher = ProtectedData.Protect(json, null, DataProtectionScope.CurrentUser);
+        // Entropie de profil (2026-09-10, comptes sans mot de passe) : voir
+        // LumoraFile.CurrentProfileEntropyOrNull. Reste null (comportement
+        // inchange) tant que rien ne l'a posee - donc TOUJOURS null pour un
+        // profil AVEC mot de passe.
+        var cipher = ProtectedData.Protect(json, LumoraFile.CurrentProfileEntropyOrNull(), DataProtectionScope.CurrentUser);
         var dir    = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
         File.WriteAllBytes(path, cipher);
@@ -157,7 +161,7 @@ internal sealed record UserProfile
             if (!File.Exists(path) && legacyPath is not null && File.Exists(legacyPath))
             {
                 var cipher2 = File.ReadAllBytes(legacyPath);
-                var plain2  = ProtectedData.Unprotect(cipher2, null, DataProtectionScope.CurrentUser);
+                var plain2  = UnprotectWithEntropyFallback(cipher2);
                 var profile = JsonSerializer.Deserialize<UserProfile>(plain2, JsonOpts);
                 profile?.Save(path);
                 try { File.Delete(legacyPath); } catch { }
@@ -166,12 +170,37 @@ internal sealed record UserProfile
 
             if (!File.Exists(path)) return null;
             var cipher = File.ReadAllBytes(path);
-            var plain  = ProtectedData.Unprotect(cipher, null, DataProtectionScope.CurrentUser);
+            var plain  = UnprotectWithEntropyFallback(cipher);
             return JsonSerializer.Deserialize<UserProfile>(plain, JsonOpts);
         }
         catch
         {
             return null;
+        }
+    }
+
+    // Essaie d'abord l'entropie de profil courante (voir Save ci-dessus),
+    // puis retombe sur "pas d'entropie" (2026-09-10) : couvre a la fois un
+    // profil AVEC mot de passe (toujours null, reussit du premier coup,
+    // comportement inchange) et un profil sans mot de passe pas encore migre
+    // (ecrit avant cette fonctionnalite, ou avant que ce profil precis n'ait
+    // ete rouvert une fois avec le correctif). Migre transparente au premier
+    // Save() qui suit, comme LumoraFile.UnprotectWithCompatibility.
+    private static byte[] UnprotectWithEntropyFallback(byte[] cipher)
+    {
+        var entropy = LumoraFile.CurrentProfileEntropyOrNull();
+        if (entropy is null)
+        {
+            return ProtectedData.Unprotect(cipher, null, DataProtectionScope.CurrentUser);
+        }
+
+        try
+        {
+            return ProtectedData.Unprotect(cipher, entropy, DataProtectionScope.CurrentUser);
+        }
+        catch (CryptographicException)
+        {
+            return ProtectedData.Unprotect(cipher, null, DataProtectionScope.CurrentUser);
         }
     }
 

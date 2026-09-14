@@ -36,6 +36,11 @@ internal sealed class LumoraProfilePaths
         WebAppsFile         = DataFile(NavigationDir, "webapps");
         WebAppIconsDir      = Path.Combine(NavigationDir, "webapp-icons");
         RssFeedsFile        = DataFile(NavigationDir, "rss-feeds");
+        // Entropie DPAPI propre au profil (2026-09-10, comptes sans mot de
+        // passe) : voir ProfileEntropyStore.cs. Fichier en clair (base64,
+        // pas passe par LumoraFile - dependance circulaire sinon), a la
+        // racine du profil comme profile.lumora/vault.lumora.
+        EntropyFile         = Path.Combine(profileDir, "profile-entropy.dat");
     }
 
     public string ProfileDir           { get; }
@@ -64,6 +69,7 @@ internal sealed class LumoraProfilePaths
     public string WebAppsFile          { get; }
     public string WebAppIconsDir       { get; }
     public string RssFeedsFile         { get; }
+    public string EntropyFile          { get; }
 
     public static string ProfilesRoot()
     {

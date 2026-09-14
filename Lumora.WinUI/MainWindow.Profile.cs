@@ -888,6 +888,26 @@ public sealed partial class MainWindow
         // ne jamais reveler/ouvrir le dossier d'un profil depuis une session invite.
         if (_isGuestMode) return;
 
+        // Profil sans mot de passe : "Ouvrir le dossier" refuse purement et
+        // simplement (2026-09-10, demande explicite utilisateur - "je veux
+        // que leur acces soit le plus limite possible, meme pour
+        // l'utilisateur qui a cree le compte", specifiquement pour la
+        // RECUPERATION du profil). Volontairement PAS conditionne a
+        // `!entry.IsActive` comme le reste de cette methode : le proprietaire
+        // du compte lui-meme n'a plus cette porte de sortie non plus - c'est
+        // le point precis demande, l'usage normal dans l'app (favoris,
+        // Coffre, navigation) reste totalement libre par ailleurs. Charge le
+        // profil cible directement (RequireTargetProfilePasswordAsync
+        // laisserait passer sans preuve dans ce cas precis, voir son propre
+        // commentaire - regle differente ici, volontairement).
+        var paths = LumoraProfilePaths.FromDirectory(entry.ProfileDir);
+        var targetProfile = UserProfile.Load(paths.ProfileFile, paths.LegacyProfileFile);
+        if (targetProfile is not null && !targetProfile.HasAccountPassword)
+        {
+            StatusText.Text = "Dossier verrouillé : ce profil n'a pas de mot de passe, son dossier ne peut pas être ouvert.";
+            return;
+        }
+
         // Ouvrir le dossier d'un AUTRE profil expose son vault.lumora (localisation
         // + acces filesystem complet) : meme regle que Modifier/Supprimer, aucun
         // profil n'a de pouvoir sur un autre sans preuve de son mot de passe.
@@ -1295,6 +1315,26 @@ public sealed partial class MainWindow
         // nomme d'apres son utilisateur.
         _pendingProfileId = LumoraProfileRegistry.CreateProfileId(name);
         _profileCreationTarget = null;
+
+        if (NoPasswordSwitch.IsOn)
+        {
+            // Demande explicite utilisateur (2026-09-10, meme session que
+            // l'entropie de profil) : un profil sans mot de passe ne peut
+            // plus choisir un emplacement personnalise (disque externe,
+            // dossier Documents...) - seul l'emplacement par defaut est
+            // permis, etape "Ou stocker votre profil ?" sautee entierement.
+            // Raison : les donnees WebView2 (historique, cookies) restent
+            // non chiffrees (hors perimetre, voir MEMORY.md) - sur un
+            // support amovible, elles deviendraient trivialement
+            // transportables et lisibles sur n'importe quelle autre machine,
+            // sans meme le compte Windows. L'emplacement par defaut lui-meme
+            // n'est PAS cache (deja connu/documente, rien a y gagner - voir
+            // discussion) : seul le CHOIX d'un autre emplacement est retire.
+            _pendingProfileDir = null;
+            ProfileLocationContinueButton_Click(sender, e);
+            return;
+        }
+
         ProfileLocationPathText.Text = LumoraProfilePaths.ForProfileId(_pendingProfileId).ProfileDir;
         ShowLoginPanel("location");
     }
@@ -1323,6 +1363,18 @@ public sealed partial class MainWindow
         _profileCreationTarget = targetProfile;
         _userProfile = _pendingUserProfile;
         _pendingUserProfile = null;
+        // Entropie de profil (2026-09-10, comptes sans mot de passe) : meme
+        // logique que l'amorce du constructeur (MainWindow.xaml.cs), posee
+        // ici aussi pour le cas cree PENDANT la session en cours - quand
+        // l'emplacement par defaut est garde, _restartRequired plus bas reste
+        // false et aucun redemarrage ne relance le constructeur. Sans cette
+        // ligne, ce tout premier enregistrement (et tout ce qui suit tant que
+        // la fenetre reste ouverte) utiliserait encore l'entropie partagee
+        // seule - seul le PROCHAIN lancement en aurait beneficie.
+        if (!_userProfile.HasAccountPassword)
+        {
+            LumoraFile.SetProfileEntropy(ProfileEntropyStore.LoadOrCreate(targetProfile));
+        }
         _userProfile.Save(targetProfile.ProfileFile);
 
         if (Directory.Exists(targetProfile.NavigationDir))
@@ -1634,6 +1686,16 @@ public sealed partial class MainWindow
         {
             e.Handled = true;
             ExitImmersiveFullScreenFromKeyboard();
+            return;
+        }
+
+        // Aide accessibilite "Reordonner sans glisser" (barre de favoris) :
+        // Echap annule un decrochage en cours, meme raison d'etre que les 2
+        // cas ci-dessus (abandon volontaire d'un etat transitoire au clavier).
+        if (_bookmarkReorderPickedId is not null && e.Key == Windows.System.VirtualKey.Escape)
+        {
+            e.Handled = true;
+            CancelBookmarkReorderPick();
             return;
         }
 
