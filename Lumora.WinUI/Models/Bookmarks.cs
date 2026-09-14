@@ -39,10 +39,35 @@ public sealed record BookmarkNode(
     public string IconUri => string.IsNullOrWhiteSpace(IconPath) ? string.Empty : new Uri(IconPath).AbsoluteUri;
 }
 
+// Refonte organique "Encre chaude" (2026-09-12, suite - "icone de secours"
+// signalee comme chantier transverse restant dans le bilan de la session
+// precedente) : ces 2 constantes tenaient jusqu'ici un caractere Segoe MDL2
+// Assets brut (zone privee Unicode, invisible a l'inspection texte - meme
+// piege deja documente sur StartMenuTileRegistry). Elles portent maintenant
+// une geometrie Path.Data (mini-langage XAML), utilisee partout ou
+// IconGlyph/IconGlyphVisibility sont deja bindes (favoris/historique/onglets)
+// avec un <Path Data="{Binding IconGlyph}"> a la place du <FontIcon
+// Glyph="{Binding IconGlyph}">. Le nom du champ IconGlyph n'a pas ete
+// renomme (deja utilise par BookmarkListItem/HistoryListItem/TabGroups),
+// seule la nature de la valeur qu'il transporte change.
 public static class BookmarkGlyphs
 {
-    public const string Folder = "";
-    public const string Link = "";
+    // Meme geometrie que le dossier deja construit en code pour la barre de
+    // favoris (BookmarkIconElement, MainWindow.Bookmarks.cs) - juste
+    // retranscrite en Path.Data pour pouvoir etre bindee ici, afin que le
+    // dossier ait la MEME silhouette dans la barre ET dans le panneau de
+    // gestion des favoris (BookmarkFoldersList).
+    public const string Folder = "M4,7 L10,7 L12,9 L20,9 L20,18 L4,18 Z";
+
+    // Page generique (silhouette de document + 2 lignes de texte en
+    // decoupe EvenOdd) plutot qu'un globe ou un trombone de chaine : c'est
+    // le symbole le plus direct pour "contenu sans favicon disponible",
+    // memes lignes droites que le dossier ci-dessus (pas de calcul d'arc a
+    // verifier a l'aveugle).
+    public const string Link =
+        "M6,3 L14,3 L19,8 L19,21 L6,21 Z " +
+        "M9,12 L16,12 L16,13.4 L9,13.4 Z " +
+        "M9,15.5 L16,15.5 L16,16.9 L9,16.9 Z";
 
     public static string For(BookmarkNode node) => node.Kind == BookmarkKind.Folder ? Folder : Link;
 }
@@ -1246,6 +1271,27 @@ public static class BookmarkTreePresenter
                 break;
             }
 
+            parts.Insert(0, current.Title);
+            currentId = current.ParentId;
+        }
+
+        return string.Join(" > ", parts);
+    }
+
+    // Meme calcul que ci-dessus, mais a partir d'un dictionnaire Id->noeud
+    // deja construit (O(1) par ancetre) plutot qu'un FirstOrDefault relineaire
+    // sur la liste complete a CHAQUE niveau (O(n) par ancetre, O(profondeur*n)
+    // par appel) - a reserver aux appelants qui font ce calcul en boucle sur
+    // plusieurs dossiers (voir BuildBookmarkFolderChoices, MainWindow.BookmarksDialogs.cs,
+    // bug de lenteur reel signale 2026-09-12 : "Ajouter aux favoris" pouvait
+    // geler plusieurs secondes sur un arbre de favoris consequent, ce calcul
+    // etait refait 2 fois par dossier avec la version O(n) ci-dessus).
+    public static string Breadcrumb(IReadOnlyDictionary<string, BookmarkNode> nodesById, string folderId)
+    {
+        var parts = new List<string>();
+        var currentId = folderId;
+        while (!string.IsNullOrWhiteSpace(currentId) && nodesById.TryGetValue(currentId, out var current))
+        {
             parts.Insert(0, current.Title);
             currentId = current.ParentId;
         }

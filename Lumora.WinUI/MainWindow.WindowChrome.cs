@@ -47,7 +47,7 @@ public sealed partial class MainWindow : Window
         var highContrast = _uiSettings.AccessibilityHighContrast;
         var translucent = IsTranslucentChromeEnabled();
         var titleBarBackgroundAlpha = translucent ? (byte)226 : (byte)255;
-        var background = BrushColor("NovaChromeSurfaceBrush", UiColor(20, 32, 42, titleBarBackgroundAlpha));
+        var background = BrushColor("NovaChromeSurfaceBrush", UiColor(24, 24, 24, titleBarBackgroundAlpha));
         var inactiveBackground = BrushColor("NovaChromeSurfaceAltBrush", background);
         // NovaChromeButtonForegroundBrush (pas NovaAddressForegroundBrush) :
         // c'est deja le jeton utilise par les AUTRES boutons-icones de la
@@ -61,8 +61,8 @@ public sealed partial class MainWindow : Window
         // en verifiant le correctif de survol ci-dessous.
         var foreground = BrushColor("NovaChromeButtonForegroundBrush", UiColor(255, 248, 234));
         var inactiveForeground = BrushColor("NovaTextMutedBrush", UiColor(195, 185, 165));
-        var hoverBackground = BrushColor("NovaChromeSurfaceRaisedBrush", UiColor(34, 49, 58, translucent ? (byte)238 : (byte)255));
-        var pressedBackground = BrushColor("NovaChromeStrokeBrush", UiColor(50, 69, 76, translucent ? (byte)244 : (byte)255));
+        var hoverBackground = BrushColor("NovaChromeSurfaceRaisedBrush", UiColor(31, 31, 31, translucent ? (byte)238 : (byte)255));
+        var pressedBackground = BrushColor("NovaChromeStrokeBrush", UiColor(46, 46, 46, translucent ? (byte)244 : (byte)255));
         var hoverForeground = foreground;
         var pressedForeground = foreground;
 
@@ -175,16 +175,17 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // Reserve fixe (2026-08-18) : depuis le passage aux boutons systeme customs
-    // "points groupes" (WindowCaptionButtons, voir ApplyCustomCaptionButtons),
-    // TitleBar.RightInset ne reflete plus une reservation utile - la region
-    // Close/Maximize/Minimize est desormais reprise par nos propres boutons via
-    // InputNonClientPointerSource, pas par le systeme. Largeur connue à
-    // l'avance (3 boutons de 28px + 2 espacements de 4px + marges) plutot que
-    // deduite d'une API qui ne s'applique plus a notre cas.
+    // Reserve pour les boutons systeme REDESSINES (reduire/agrandir/fermer),
+    // 2e passe (2026-09-12) : les boutons natifs de la passe precedente
+    // rendaient moins nets que Chrome/Edge (retour utilisateur, capture
+    // comparative) - Chrome/Edge redessinent eux-memes leurs boutons plutot
+    // que de laisser Windows le faire. Largeur connue a l'avance (3 boutons
+    // de 46px, memes proportions que Chrome/Edge a 100% - voir
+    // NovaWindowsCaptionButtonStyle, MainWindow.xaml) plutot que deduite de
+    // TitleBar.RightInset (qui ne s'applique qu'aux boutons natifs).
     private void ApplyTitleBarSafeArea()
     {
-        const double safeRight = 3 * 28 + 2 * 4 + 12 + 12;
+        const double safeRight = 3 * 46;
         BrowserTabs.Margin = new Thickness(0, 0, safeRight, 0);
 
         // NavigationToolbarCapsule (ligne d'adresse/outils) n'avait ICI aucune
@@ -194,25 +195,27 @@ public sealed partial class MainWindow : Window
         // - signale par l'utilisateur avec capture d'ecran, 2026-08-22. Marge
         // de base (14,6,14,6) reprise telle quelle du XAML (NavigationToolbarCapsule) :
         // seul le cote droit gagne la reserve systeme, en plus (pas a la
-        // place) de son inset esthetique existant.
-        NavigationToolbarCapsule.Margin = new Thickness(14, 6, safeRight + 14, 6);
+        // place) de son inset esthetique existant. Marge verticale reduite en
+        // Interface compacte (2026-09-12) - meme raison qu'ApplyFlattenedToolbarCapsule
+        // (MainWindow.Settings.cs), qui reprend la main juste apres dans le
+        // flux normal mais peut ne pas etre appelee dans tous les chemins qui
+        // appellent CETTE fonction.
+        var capsuleVerticalMargin = _compactModeEnabled ? 2 : 6;
+        NavigationToolbarCapsule.Margin = new Thickness(14, capsuleVerticalMargin, safeRight + 14, capsuleVerticalMargin);
 
         _titleBarSafeRight = safeRight;
         UpdateTitleBarDragRegion();
     }
 
-    // Points systemes (reduire/agrandir/fermer) "a la Apple" (2026-08-18,
-    // demande explicite utilisateur) en remplacement des boutons de legende
-    // natifs Windows. Sans ceci, Windows continue de dessiner SES propres
-    // boutons de legende par-dessus/a cote des notres des que
-    // ExtendsContentIntoTitleBar est actif - reprendre les regions non-client
-    // Close/Maximize/Minimize sur les rectangles de NOS boutons est le seul
-    // moyen documente de faire disparaitre les boutons natifs (le systeme
-    // arrete de les dessiner la ou une region a ete reclamee) tout en gardant
-    // le comportement systeme attendu (curseur, Alt+F4, aperçu Snap Layouts
-    // au survol du bouton Agrandir). Appelee a chaque changement de taille
-    // (RootShell.SizeChanged) car les rectangles doivent suivre la position
-    // reelle des boutons (redimensionnement, changement de DPI/moniteur).
+    // Reprend les regions non-client Close/Maximize/Minimize sur les
+    // rectangles de NOS boutons (2e passe, 2026-09-12 - meme mecanisme que la
+    // 1ere passe du 2026-08-18, seule la geometrie des boutons a change) :
+    // c'est le seul moyen documente de faire disparaitre les boutons natifs
+    // (le systeme arrete de les dessiner la ou une region a ete reclamee) tout
+    // en gardant le comportement systeme attendu (curseur, Alt+F4, aperçu Snap
+    // Layouts au survol du bouton Agrandir). Appelee a chaque changement de
+    // taille (RootShell.SizeChanged) car les rectangles doivent suivre la
+    // position reelle des boutons (redimensionnement, changement de DPI/moniteur).
     private void ApplyCustomCaptionButtons()
     {
         if (_appWindow is null) return;
@@ -284,12 +287,16 @@ public sealed partial class MainWindow : Window
     // 2026-08-19). Appelé au clic (retour immédiat) ET depuis AppWindow_Changed
     // (MainWindow.Settings.cs) pour suivre aussi un changement d'état survenu
     // autrement (double-clic sur la barre de titre, raccourci Windows...).
+    // Bascule aussi le glyphe (carre simple <-> 2 carres imbriques, 2e passe
+    // 2026-09-12) - meme convention visuelle que Windows/Chrome/Edge.
     private void UpdateMaximizeButtonAccessibleState()
     {
         var isMaximized = _appWindow?.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
         var label = isMaximized ? "Restaurer" : "Agrandir";
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(WindowMaximizeButton, label);
         ToolTipService.SetToolTip(WindowMaximizeButton, label);
+        MaximizeGlyph.Visibility = isMaximized ? Visibility.Collapsed : Visibility.Visible;
+        RestoreGlyph.Visibility = isMaximized ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void WindowCloseButton_Click(object sender, RoutedEventArgs e) => Close();

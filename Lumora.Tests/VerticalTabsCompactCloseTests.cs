@@ -46,11 +46,16 @@ public sealed class VerticalTabsCompactCloseTests
         Assert.Contains("compactClose.Opacity = 1; icon.Opacity = 0.3;", compactBranch, StringComparison.Ordinal);
         Assert.Contains("compactClose.Opacity = 0.6; icon.Opacity = 1;", compactBranch, StringComparison.Ordinal);
 
-        // Cible reduite proportionnellement (round 3, 2026-08-12) : 18x18,
-        // suite au resserrement de la tuile elle-meme (44x38 -> 30x28) - voir
-        // le commentaire d'en-tete pour l'historique complet des tailles.
-        Assert.Contains("Width = 18,", compactBranch, StringComparison.Ordinal);
-        Assert.Contains("Height = 18,", compactBranch, StringComparison.Ordinal);
+        // Cible reduite proportionnellement (round 3, 2026-08-12) : 18x18 par
+        // defaut, suite au resserrement de la tuile elle-meme (44x38 -> 30x28)
+        // - voir le commentaire d'en-tete pour l'historique complet des
+        // tailles. Depuis le 2026-09-12, cette taille de repli (18) devient
+        // elle-meme le "sinon" d'un ternaire sur CompactModeEnabled (Interface
+        // compacte descend a CompactVerticalTabCompactCloseSize) - le repli
+        // reste inchange.
+        Assert.Contains("_compactModeEnabled ? CompactVerticalTabCompactCloseSize : 18", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("Width = compactCloseSize,", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("Height = compactCloseSize,", compactBranch, StringComparison.Ordinal);
     }
 
     // Verrouille que le bouton reutilise bien le meme gestionnaire que la
@@ -68,7 +73,10 @@ public sealed class VerticalTabsCompactCloseTests
 
     private static string ExtractCompactBranch(string source)
     {
-        var marker = "if (_verticalTabsCompact || tab.Pinned)";
+        // Extrait via booleen nomme depuis le 2026-09-10 (session "interface",
+        // reutilise aussi par l'indicateur d'onglet actif) - meme condition,
+        // juste factorisee: "var isCompactTile = _verticalTabsCompact || tab.Pinned;".
+        var marker = "if (isCompactTile)";
         var start = source.IndexOf(marker, StringComparison.Ordinal);
         Assert.True(start >= 0, $"Signature introuvable : {marker}");
 

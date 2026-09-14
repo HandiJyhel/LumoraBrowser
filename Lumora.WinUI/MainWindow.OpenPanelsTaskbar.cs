@@ -98,11 +98,18 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        var icon = new FontIcon
+        // Refonte organique "Encre chaude" (2026-09-12, suite) : FontIcon Segoe
+        // MDL2 Assets remplace par un Path (StartMenuGlyphs.cs, meme source
+        // que les tuiles du Menu Demarrer - ce panneau reprend deja les memes
+        // definitions via OpenPanelsTaskbar.Find). PathGeometryBuilder plutot
+        // que Geometry.Parse (absent de WinUI3).
+        var icon = new Microsoft.UI.Xaml.Shapes.Path
         {
-            Glyph = string.IsNullOrEmpty(definition?.Glyph) ? "" : definition!.Glyph,
-            FontFamily = new FontFamily("Segoe MDL2 Assets"),
-            FontSize = 13,
+            Data = string.IsNullOrEmpty(definition?.Glyph) ? null : PathGeometryBuilder.Build(definition!.Glyph),
+            Fill = ResolveNovaBrush("NovaPrimaryTextBrush", UiColor(230, 226, 218)),
+            Stretch = Stretch.Uniform,
+            Width = 13,
+            Height = 13,
             VerticalAlignment = VerticalAlignment.Center
         };
 
@@ -125,7 +132,7 @@ public sealed partial class MainWindow
             Tag = id,
             Style = RootShell.Resources["NovaTaskbarItemButtonStyle"] as Style,
             Background = isActive
-                ? ResolveNovaBrush("NovaChromeSurfaceBrush", UiColor(34, 42, 58))
+                ? ResolveNovaBrush("NovaChromeSurfaceBrush", UiColor(31, 31, 31))
                 : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             Opacity = isActive ? 1.0 : 0.62
         };

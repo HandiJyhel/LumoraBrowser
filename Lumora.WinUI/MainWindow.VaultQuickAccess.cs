@@ -118,17 +118,36 @@ public sealed partial class MainWindow
     private UIElement BuildVaultQuickAccessEntry(VaultCredential cred)
     {
         var hasUser = !string.IsNullOrWhiteSpace(cred.Username);
+        var hasLabel = !string.IsNullOrWhiteSpace(cred.Label);
         var body = new StackPanel { Spacing = 6 };
 
+        // Avec plusieurs comptes sur un même site, c'est ICI (pas seulement
+        // dans la fiche du Coffre complet) que l'utilisateur doit distinguer
+        // "Perso" de "Boulot" pour choisir lequel remplir - le nom
+        // personnalisé (Renommer, VaultPanel) était déjà utilisé pour le nom
+        // accessible des boutons ci-dessous, mais jamais affiché VISUELLEMENT
+        // ici avant cette passe : seul l'identifiant brut apparaissait,
+        // souvent peu parlant (ex. deux adresses e-mail qui se ressemblent).
         var headerRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         headerRow.Children.Add(BuildFaviconElement(cred.Origin, size: 18));
-        headerRow.Children.Add(new TextBlock
+        var textColumn = new StackPanel { Spacing = 0, VerticalAlignment = VerticalAlignment.Center };
+        textColumn.Children.Add(new TextBlock
         {
-            Text = hasUser ? cred.Username : PasswordManagerService.DisplayName(cred),
+            Text = hasLabel ? cred.Label : (hasUser ? cred.Username : PasswordManagerService.DisplayName(cred)),
             FontSize = AccessibilityBodyFontSize(),
-            VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
+        if (hasLabel && hasUser)
+        {
+            textColumn.Children.Add(new TextBlock
+            {
+                Text = cred.Username,
+                FontSize = AccessibilitySecondaryFontSize(),
+                Opacity = 0.65,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+        }
+        headerRow.Children.Add(textColumn);
         body.Children.Add(headerRow);
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };

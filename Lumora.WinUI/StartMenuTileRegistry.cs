@@ -35,14 +35,14 @@ public static class StartMenuTileRegistry
         // en tete de liste pour apparaitre juste apres "Epingles" dans le
         // rail du Menu Demarrer, plutot que noyee au milieu de 5 autres
         // tuiles sous "Lumora et profil".
-        new(StartMenuTileIds.AllModules, "Modules", "Tous les modules", "Activer ou désactiver", "\uE8A9"),
+        new(StartMenuTileIds.AllModules, "Modules", "Tous les modules", "Activer ou désactiver", StartMenuGlyphs.Modules),
 
-        new(StartMenuTileIds.ReaderMode, "Lecture et contenu", "Mode lecture", "Sans distraction", "\uE736"),
-        new(StartMenuTileIds.Notes, "Lecture et contenu", "Notes", "Locales", "\uE70B"),
-        new(StartMenuTileIds.Translate, "Lecture et contenu", "Traduction", "Hors-ligne", "\uF2B7"),
-        new(StartMenuTileIds.ReadingLens, "Lecture et contenu", "Loupe de lecture", "Confort visuel", "\uE721"),
+        new(StartMenuTileIds.ReaderMode, "Lecture et contenu", "Mode lecture", "Sans distraction", StartMenuGlyphs.ReaderMode),
+        new(StartMenuTileIds.Notes, "Lecture et contenu", "Notes", "Locales", StartMenuGlyphs.Notes),
+        new(StartMenuTileIds.Translate, "Lecture et contenu", "Traduction", "Hors-ligne", StartMenuGlyphs.Translate),
+        new(StartMenuTileIds.ReadingLens, "Lecture et contenu", "Loupe de lecture", "Confort visuel", StartMenuGlyphs.ReadingLens),
 
-        new(StartMenuTileIds.Vault, "Confidentialité", "Coffre", "Mots de passe", "\uE72E"),
+        new(StartMenuTileIds.Vault, "Confidentialité", "Coffre", "Mots de passe", StartMenuGlyphs.Padlock),
         // Seule protection de fond promue en tuile (2026-08-08, retour
         // utilisateur : "par defaut, ce que l'utilisateur voit quoi qu'il
         // arrive, c'est le bloqueur de pub et le coffre") - epinglee par
@@ -56,33 +56,33 @@ public static class StartMenuTileRegistry
         // fichier, ce qui le rendait invisible a l'inspection texte (zone
         // privee Unicode, aucun glyphe hors police Segoe MDL2). EA18, meme
         // bouclier deja verifie sur ShieldButton (barre d'outils).
-        new(StartMenuTileIds.AdBlocker, "Confidentialité", "Bloqueur de pub", "Publicités et traceurs", "\uEA18"),
-        new(StartMenuTileIds.Passkeys, "Confidentialité", "Passkeys", "Sans mot de passe", "\uE8D7"),
-        new(StartMenuTileIds.Sessions, "Confidentialité", "Sessions", "Connexions actives", "\uE7F4"),
-        new(StartMenuTileIds.Wallet, "Confidentialité", "Portefeuille", "Cartes locales", "\uE8C7"),
+        new(StartMenuTileIds.AdBlocker, "Confidentialité", "Bloqueur de pub", "Publicités et traceurs", StartMenuGlyphs.Shield),
+        new(StartMenuTileIds.Passkeys, "Confidentialité", "Passkeys", "Sans mot de passe", StartMenuGlyphs.Key),
+        new(StartMenuTileIds.Sessions, "Confidentialité", "Sessions", "Connexions actives", StartMenuGlyphs.Sessions),
+        new(StartMenuTileIds.Wallet, "Confidentialité", "Portefeuille", "Cartes locales", StartMenuGlyphs.Wallet),
         // Glyphe corrige (2026-08-12, retour utilisateur) : dupliquait aussi
         // E72E (cadenas) avec Coffre. E890, deja verifie dans ce depot
         // (icone "oeil", AccessibilityQuickVisionButton) - distinct du
         // cadenas.
-        new(StartMenuTileIds.Incognito, "Confidentialité", "Incognito", "Nouvelle fenêtre privée", "\uE890"),
-        new(StartMenuTileIds.SiteControl, "Confidentialité", "Site actuel", "Centre de contrôle", "\uE774"),
+        new(StartMenuTileIds.Incognito, "Confidentialité", "Incognito", "Nouvelle fenêtre privée", StartMenuGlyphs.Eye),
+        new(StartMenuTileIds.SiteControl, "Confidentialité", "Site actuel", "Centre de contrôle", StartMenuGlyphs.Target),
 
         // Session partagee avec la fenetre courante (2026-08-13, retour
         // utilisateur : redemande de connexion Google a chaque nouvelle
         // fenetre) - voir MainWindow.NewWindow.cs. Glyphe E8A7 (OpenInNewWindow),
         // deja utilise pour ce meme point d'entree dans le menu Lumora classique.
-        new(StartMenuTileIds.NewWindow, "Navigation", "Nouvelle fenêtre", "Même session", "\uE8A7"),
-        new(StartMenuTileIds.Favoris, "Navigation", "Favoris", "Enregistrés", "\uE735"),
-        new(StartMenuTileIds.History, "Navigation", "Historique", "Recherche sémantique", "\uE81C"),
-        new(StartMenuTileIds.Downloads, "Navigation", "Téléchargements", "Fichiers reçus", "\uE896"),
-        new(StartMenuTileIds.WebApps, "Navigation", "Applis web", "Épinglées", "\uE71D"),
-        new(StartMenuTileIds.ReopenTab, "Navigation", "Onglet fermé", "Rouvrir le dernier", "\uE7A7"),
-        new(StartMenuTileIds.TabGroups, "Navigation", "Groupes d'onglets", "Enregistrés", "\uE8FD"),
+        new(StartMenuTileIds.NewWindow, "Navigation", "Nouvelle fenêtre", "Même session", StartMenuGlyphs.NewWindow),
+        new(StartMenuTileIds.Favoris, "Navigation", "Favoris", "Enregistrés", StartMenuGlyphs.Star),
+        new(StartMenuTileIds.History, "Navigation", "Historique", "Recherche sémantique", StartMenuGlyphs.Clock),
+        new(StartMenuTileIds.Downloads, "Navigation", "Téléchargements", "Fichiers reçus", StartMenuGlyphs.Download),
+        new(StartMenuTileIds.WebApps, "Navigation", "Applis web", "Épinglées", StartMenuGlyphs.Pin),
+        new(StartMenuTileIds.ReopenTab, "Navigation", "Onglet fermé", "Rouvrir le dernier", StartMenuGlyphs.Restore),
+        new(StartMenuTileIds.TabGroups, "Navigation", "Groupes d'onglets", "Enregistrés", StartMenuGlyphs.TabStack),
 
-        new(StartMenuTileIds.Settings, "Lumora et profil", "Paramètres", "Centre Lumora", "\uE713"),
-        new(StartMenuTileIds.Profiles, "Lumora et profil", "Profils locaux", "PIN, verrouillage", "\uE77B"),
-        new(StartMenuTileIds.About, "Lumora et profil", "À propos", "Version, licences", "\uE946"),
-        new(StartMenuTileIds.Studio, "Lumora et profil", "Studio", "Position des onglets/favoris", "\uE82D"),
+        new(StartMenuTileIds.Settings, "Lumora et profil", "Paramètres", "Centre Lumora", StartMenuGlyphs.Sliders),
+        new(StartMenuTileIds.Profiles, "Lumora et profil", "Profils locaux", "PIN, verrouillage", StartMenuGlyphs.Person),
+        new(StartMenuTileIds.About, "Lumora et profil", "À propos", "Version, licences", StartMenuGlyphs.Info),
+        new(StartMenuTileIds.Studio, "Lumora et profil", "Studio", "Position des onglets/favoris", StartMenuGlyphs.Layout),
     ];
 
     public static StartMenuTileDefinition? Find(string id) =>

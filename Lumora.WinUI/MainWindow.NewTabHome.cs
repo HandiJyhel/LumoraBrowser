@@ -43,9 +43,14 @@ public sealed partial class MainWindow
         .signature-title{font-size:20px;font-weight:650;color:{{NewTabLogoTextColorCss()}}}
         .signature-text{font-size:13px;line-height:1.4;color:{{NewTabModeMutedCss()}};max-width:58ch}
         .signature-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-        .signature-action{border:1px solid {{NewTabModeBorderCss()}};border-radius:999px;background:var(--nt-button-bg);color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:9px 13px;cursor:pointer;white-space:nowrap}
-        .signature-action.primary{background:{{NewTabAccentSolidCss()}};border-color:{{NewTabAccentSolidCss()}};color:#15130e;font-weight:650}
-        .signature-action:hover,.signature-action:focus{transform:translateY(-1px);background:var(--nt-button-hover-bg);box-shadow:var(--nt-elev-hover);outline:none}
+        /* Refonte organique "Encre chaude" (2026-09-12) : un seul bouton plein
+           par ecran (deja "Studio Lumora" = .primary avant cette refonte,
+           juste renforce d'une ombre chaude) - les 2 autres redeviennent des
+           liens texte soulignes plutot que des boutons a bordure/pilule. */
+        .signature-action{border:none;border-radius:0;background:transparent;color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:9px 4px;cursor:pointer;white-space:nowrap;text-decoration:underline;text-underline-offset:3px;text-decoration-color:transparent}
+        .signature-action.primary{border:none;border-radius:999px;background:{{NewTabAccentSolidCss()}};color:#15130e;font-weight:650;padding:9px 16px;text-decoration:none;box-shadow:0 10px 20px -8px {{NewTabAccentSolidCss()}}66}
+        .signature-action:not(.primary):hover,.signature-action:not(.primary):focus{text-decoration-color:currentColor;background:transparent;transform:none;box-shadow:none;outline:none}
+        .signature-action.primary:hover,.signature-action.primary:focus{transform:translateY(-1px);box-shadow:0 14px 26px -8px {{NewTabAccentSolidCss()}}88;outline:none}
         .home-grid{width:100%;display:grid;grid-template-columns:minmax(420px,1.04fr) minmax(380px,.82fr);gap:72px;align-items:center}
         .home-primary{display:flex;flex-direction:column;align-items:stretch;gap:30px;padding-top:18px}
         .mode-side{display:flex;flex-direction:column;gap:16px;justify-self:end;width:min(500px,100%)}
@@ -88,12 +93,26 @@ public sealed partial class MainWindow
         .mode-context-text{font-size:12px;line-height:1.35;color:{{NewTabModeMutedCss()}}}
         .mode-draft{width:100%;min-height:116px;resize:vertical;border:1px solid {{NewTabModeBorderCss()}};border-radius:8px;background:{{(_uiSettings.AccessibilityHighContrast ? "#000" : "var(--nt-draft-bg)")}};color:{{(_uiSettings.AccessibilityHighContrast ? "#fff" : NewTabTextColorCss())}};font:inherit;font-size:13px;line-height:1.35;padding:12px;outline:none}
         .mode-draft:focus{border-color:{{(_uiSettings.AccessibilityHighContrast ? "#ffd500" : NewTabFocusBorderCss())}};box-shadow:0 0 0 3px {{NewTabFocusRingCss()}}}
-        .mode-context-actions{display:flex;flex-direction:column;gap:10px}
-        .mode-context-button{border:1px solid {{NewTabModeBorderCss()}};border-radius:8px;background:var(--nt-button-bg);color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:11px 12px;cursor:pointer;text-align:left}
-        .mode-context-button.primary{background:{{NewTabAccentSolidCss()}};border-color:{{NewTabAccentSolidCss()}};color:#15130e;font-weight:650;text-align:center}
-        .mode-context-button:hover,.mode-context-button:focus,.mode-intro-button:hover,.mode-intro-button:focus{transform:translateY(-1px);background:var(--nt-button-hover-bg);box-shadow:var(--nt-elev-hover);outline:none}
+        .mode-context-actions{display:flex;flex-direction:column;gap:2px}
+        /* Refonte organique "Encre chaude" (2026-09-12, suite - systeme de
+           "modes" du Nouvel onglet, dernier reste assume de ce chantier) :
+           meme grammaire que .signature-action/.balanced-action deja livrees -
+           un seul bouton plein par bloc ("Enregistrer l'objectif"/"Garder la
+           note"/...), les actions secondaires (Ctrl+K, Plein ecran, Notes...)
+           redeviennent des liens texte soulignes plutot que des boutons
+           bordes identiques. Les CONTENEURS (.mode-context/.mode-intro/
+           .personalize-invite) et les visuels par mode (.mode-focus
+           .mode-visual, etc.) restent inchanges - meme choix deja fait pour
+           .signature-masthead, qui garde sa carte. Rien touche cote
+           accessibilite (NewTabModeBorderCss/AccessibilityXxx) : seule la
+           mise en forme des boutons secondaires change. -->
+        .mode-context-button{border:none;border-radius:0;background:transparent;color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:10px 2px;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px;text-decoration-color:transparent}
+        .mode-context-button.primary{border:none;border-radius:999px;background:{{NewTabAccentSolidCss()}};color:#15130e;font-weight:650;text-align:center;padding:11px 16px;text-decoration:none;box-shadow:0 10px 20px -8px {{NewTabAccentSolidCss()}}66}
+        .mode-context-button:not(.primary):hover,.mode-context-button:not(.primary):focus{text-decoration-color:currentColor;background:transparent;transform:none;box-shadow:none;outline:none}
+        .mode-context-button.primary:hover,.mode-context-button.primary:focus{transform:translateY(-1px);box-shadow:0 14px 26px -8px {{NewTabAccentSolidCss()}}88;outline:none}
         .mode-note-status{min-height:16px;font-size:12px;color:{{NewTabModeMutedCss()}}}
-        .mode-intro-button{border:1px solid {{NewTabModeBorderCss()}};border-radius:999px;background:var(--nt-button-bg);color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:8px 12px;cursor:pointer;white-space:nowrap}
+        .mode-intro-button{border:none;background:transparent;color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:8px 2px;cursor:pointer;white-space:nowrap;text-decoration:underline;text-underline-offset:3px;text-decoration-color:transparent}
+        .mode-intro-button:hover,.mode-intro-button:focus{text-decoration-color:currentColor;outline:none}
         .mode-focus .mode-panel{box-shadow:0 16px 38px rgba(0,0,0,.2),0 0 0 1px {{NewTabAccentSolidCss()}}22}
         .mode-focus .mode-visual{gap:3px;background:var(--nt-focus-visual-bg)}
         .mode-focus .mode-visual span{width:4px;border-radius:3px}
@@ -161,13 +180,17 @@ public sealed partial class MainWindow
         .balanced-dock{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start}
         .balanced-mode-panel{grid-column:1 / -1}
         .balanced-wide{grid-column:1 / -1}
-        .balanced-card{border:1px solid {{NewTabModeBorderCss()}};border-radius:10px;background:var(--nt-balanced-card-bg);padding:16px;box-shadow:var(--nt-elev-card)}
-        .balanced-card-title{font-size:15px;font-weight:650;color:{{NewTabLogoTextColorCss()}};margin-bottom:10px}
-        .balanced-actions{display:grid;gap:8px}
-        .balanced-action{border:1px solid {{NewTabModeBorderCss()}};border-radius:8px;background:var(--nt-button-soft-bg);color:{{NewTabTextColorCss()}};font:inherit;font-size:13px;padding:12px;text-align:left;cursor:pointer}
+        /* Refonte organique "Encre chaude" (2026-09-12) : carte encadree ->
+           simple bloc typographique, 3 boutons encadres -> liste editoriale a
+           traits fins (meme grammaire que Reglages/Coffre). */
+        .balanced-card{border:none;background:transparent;padding:16px 0 0;box-shadow:none}
+        .balanced-card-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:650;color:{{NewTabModeMutedCss()}};margin-bottom:6px}
+        .balanced-actions{display:grid;gap:0}
+        .balanced-action{border:none;border-radius:0;border-bottom:1px solid {{NewTabModeBorderCss()}};background:transparent;color:{{NewTabTextColorCss()}};font:inherit;font-size:13px;padding:12px 2px;text-align:left;cursor:pointer}
+        .balanced-action:last-child{border-bottom:none}
         .balanced-action strong{display:block;font-size:13px;color:{{NewTabLogoTextColorCss()}};margin-bottom:3px}
         .balanced-action span{display:block;font-size:12px;line-height:1.28;color:{{NewTabModeMutedCss()}}}
-        .balanced-action:hover,.balanced-action:focus{transform:translateY(-1px);background:var(--nt-button-soft-hover-bg);box-shadow:var(--nt-elev-hover);outline:none}
+        .balanced-action:hover,.balanced-action:focus{transform:none;background:transparent;box-shadow:none;outline:none;text-decoration:underline;text-decoration-color:currentColor}
         .mode-neutral{align-items:center}
         .mode-neutral::after{display:none}
         .mode-neutral main{width:min(860px,100%);gap:0}
@@ -186,10 +209,11 @@ public sealed partial class MainWindow
         .invite-eyebrow{font-size:12px;color:{{NewTabModeMutedCss()}};margin-bottom:3px}
         .invite-title{font-size:19px;font-weight:650;color:{{NewTabLogoTextColorCss()}}}
         .invite-text{font-size:13px;color:{{NewTabModeMutedCss()}};line-height:1.38;margin-top:4px;max-width:520px}
-        .invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-        .invite-button{border:1px solid {{NewTabModeBorderCss()}};border-radius:999px;background:var(--nt-button-bg);color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:8px 12px;cursor:pointer;white-space:nowrap}
-        .invite-button.primary{background:{{NewTabAccentSolidCss()}};border-color:{{NewTabAccentSolidCss()}};color:#15130e;font-weight:650}
-        .invite-button:hover,.invite-button:focus{transform:translateY(-1px);background:var(--nt-button-hover-bg);box-shadow:var(--nt-elev-hover)}
+        .invite-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+        .invite-button{border:none;background:transparent;color:{{NewTabTextColorCss()}};font:inherit;font-size:12px;padding:8px 2px;cursor:pointer;white-space:nowrap;text-decoration:underline;text-underline-offset:3px;text-decoration-color:transparent}
+        .invite-button.primary{border:none;border-radius:999px;background:{{NewTabAccentSolidCss()}};color:#15130e;font-weight:650;padding:8px 16px;text-decoration:none;box-shadow:0 10px 20px -8px {{NewTabAccentSolidCss()}}66}
+        .invite-button:not(.primary):hover,.invite-button:not(.primary):focus{text-decoration-color:currentColor;background:transparent;transform:none;box-shadow:none;outline:none}
+        .invite-button.primary:hover,.invite-button.primary:focus{transform:translateY(-1px);box-shadow:0 14px 26px -8px {{NewTabAccentSolidCss()}}88;outline:none}
         {{NewTabResponsiveCss()}}
         .shortcuts{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-start;max-width:760px}
         .shortcut-card{position:relative;width:92px;min-height:88px;border-radius:8px;padding:8px 6px 7px;display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--nt-shortcut-text);text-decoration:none;font-size:12px;border:1px solid var(--nt-shortcut-border);background:var(--nt-shortcut-bg);box-shadow:var(--nt-shortcut-shadow)}
@@ -205,6 +229,15 @@ public sealed partial class MainWindow
         .add-shortcut{border:1px dashed var(--nt-add-shortcut-border);background:var(--nt-add-shortcut-bg);cursor:pointer;box-shadow:var(--nt-add-shortcut-shadow)}
         .add-shortcut .shortcut-dot{background:var(--nt-add-shortcut-dot-bg);border-style:dashed;color:var(--nt-add-shortcut-dot-text)}
         .add-shortcut:hover .shortcut-dot{border-color:{{NewTabAccentSolidCss()}};color:var(--nt-add-shortcut-dot-hover-text)}
+        /* Variante "seule" (2026-09-12, retour utilisateur : "isole/surdimensionne"
+           quand aucun raccourci n'existe encore - la tuile carte 92x88 flottait
+           seule dans tout l'espace). Affordance discrete en ligne, pas une carte -
+           utilisee uniquement quand la grille n'a rien d'autre a montrer, voir
+           BuildShortcutsSection. */
+        .add-shortcut-lone{width:auto;min-height:0;flex-direction:row;padding:9px 16px;border-radius:999px;border:1px dashed var(--nt-add-shortcut-border);background:transparent;box-shadow:none;color:var(--nt-shortcut-text)}
+        .add-shortcut-lone .shortcut-dot{width:auto;height:auto;border:none;background:transparent;font-size:14px;color:var(--nt-add-shortcut-dot-text)}
+        .add-shortcut-lone:hover{border-color:{{NewTabAccentSolidCss()}}}
+        .add-shortcut-lone:hover .shortcut-dot{color:var(--nt-add-shortcut-dot-hover-text)}
         .minimal .accent-line,.minimal .hint{display:none}
         .minimal main{gap:22px}
         .calm .shortcut-card:hover,.calm .shortcut-card:focus-within{background:var(--nt-shortcut-calm-hover-bg)}
@@ -286,9 +319,9 @@ public sealed partial class MainWindow
         {
             return $$"""
               <section class="neutral-home" aria-label="Accueil neutre Lumora">
-                <div class="neutral-brand" aria-label="Lumora">
+                <div class="neutral-brand" aria-label="{{NewTabMarkup.HtmlText(_uiSettings.NewTabTitle)}}">
                   <img class="neutral-logo" src="{{LumoraLogoDataUri()}}" alt="" aria-hidden="true">
-                  <span class="neutral-name">Lumora</span>
+                  <span class="neutral-name">{{NewTabMarkup.HtmlText(_uiSettings.NewTabTitle)}}</span>
                 </div>
                 <div class="neutral-greeting">{{NewTabMarkup.HtmlText(NewTabGreetingMoment())}}</div>
                 <time class="neutral-clock" datetime="{{DateTime.Now:HH\:mm}}" aria-label="Heure locale">{{DateTime.Now:HH:mm}}</time>
@@ -810,19 +843,25 @@ public sealed partial class MainWindow
 
         var isDark = NewTabIsDarkTheme();
 
+        // Ink/Surface sombres neutralises pour TOUTES les palettes (retour
+        // utilisateur 2026-09-14, session "3.5" : le fond du nouvel onglet
+        // restait bleu-marine avec la palette Ocean active - le correctif du
+        // 2026-09-13 n'avait neutralise que la palette Lumora par defaut,
+        // pas Ocean/Forest/Ember). Accent/Accent2/Text/LogoText (identite de
+        // chaque palette) inchanges - seul le fond devient noir neutre.
         return (_uiSettings.AccentPalette ?? "lumora").ToLowerInvariant() switch
         {
             "ocean" => isDark
-                ? ("#5cbcff", "#89e2d6", "#0c1520", "#121d2a", "#eff8ff", "#f2fbff")
+                ? ("#5cbcff", "#89e2d6", "#0d0d0d", "#131313", "#eff8ff", "#f2fbff")
                 : ("#0067ab", "#0f8d9e", "#f3f8fb", "#fdfefe", "#22313a", "#1b2a33"),
             "forest" => isDark
-                ? ("#80cc7c", "#56d0c2", "#101813", "#152019", "#f3f8f0", "#f4faef")
+                ? ("#80cc7c", "#56d0c2", "#0d0d0d", "#131313", "#f3f8f0", "#f4faef")
                 : ("#307a3d", "#1d8d83", "#f3f7f0", "#fcfefb", "#253126", "#203022"),
             "ember" => isDark
-                ? ("#eb7e4a", "#f6ce68", "#1b1411", "#241c18", "#fff3ea", "#fff5eb")
+                ? ("#eb7e4a", "#f6ce68", "#0d0d0d", "#131313", "#fff3ea", "#fff5eb")
                 : ("#b54928", "#c89624", "#fbf4ee", "#fffdf9", "#33241d", "#2d211b"),
             _ => isDark
-                ? ("#e6aa48", "#56c2e4", "#090d14", "#10151f", "#f2f5fa", "#f2f5fa")
+                ? ("#e6aa48", "#56c2e4", "#0d0d0d", "#131313", "#f4f4f4", "#f4f4f4")
                 : ("#b06f00", "#0081a8", "#f6f2ea", "#fffdf9", "#2b251e", "#221d18")
         };
     }
@@ -1086,11 +1125,11 @@ public sealed partial class MainWindow
 
         if (mode == "neutral")
         {
-            return $"linear-gradient(180deg,{palette.Ink} 0%,#0b1116 100%)";
+            return $"linear-gradient(180deg,{palette.Ink} 0%,#101010 100%)";
         }
         if (mode == "focus")
         {
-            return $"linear-gradient(90deg,{palette.Accent}18,transparent 30%),linear-gradient(180deg,{palette.Ink} 0%,#0b1118 100%)";
+            return $"linear-gradient(90deg,{palette.Accent}18,transparent 30%),linear-gradient(180deg,{palette.Ink} 0%,#101010 100%)";
         }
         if (mode == "reading")
         {
@@ -1111,9 +1150,9 @@ public sealed partial class MainWindow
 
         return NewTabStyleClass() switch
         {
-            "calm" => $"linear-gradient(180deg,{palette.Ink} 0%,#171a1a 100%)",
-            "minimal" => $"linear-gradient(180deg,{palette.Ink} 0%,#101820 100%)",
-            _ => $"radial-gradient(circle at 48% 26%,{palette.Accent}33,transparent 23%),radial-gradient(circle at 72% 18%,{palette.Accent2}24,transparent 26%),radial-gradient(circle at 18% 72%,#ff7f3520,transparent 28%),linear-gradient(180deg,{palette.Ink} 0%,#101820 100%)"
+            "calm" => $"linear-gradient(180deg,{palette.Ink} 0%,#1a1a1a 100%)",
+            "minimal" => $"linear-gradient(180deg,{palette.Ink} 0%,#141414 100%)",
+            _ => $"radial-gradient(circle at 48% 26%,{palette.Accent}33,transparent 23%),radial-gradient(circle at 72% 18%,{palette.Accent2}24,transparent 26%),radial-gradient(circle at 18% 72%,#ff7f3520,transparent 28%),linear-gradient(180deg,{palette.Ink} 0%,#141414 100%)"
         };
     }
 
@@ -1215,10 +1254,17 @@ public sealed partial class MainWindow
         }
         if (canAddMore)
         {
+            // Seule dans la grille (aucun raccourci affiche a cote) : affordance
+            // discrete en ligne plutot que la tuile carte pleine grandeur, qui
+            // flottait seule et surdimensionnee dans tout l'espace disponible
+            // (retour utilisateur, 2026-09-12). Des qu'un raccourci existe et
+            // s'affiche, showExisting redevient vrai et la tuile carte normale
+            // revient (inchange).
+            var cardClass = showExisting ? "shortcut-card add-shortcut" : "add-shortcut add-shortcut-lone";
             html.AppendLine($"""
-            <button class="shortcut-card add-shortcut" type="button" onclick="addShortcut()" title="Ajouter un raccourci" style="--d:{shortcuts.Count * 42}ms">
+            <button class="{cardClass}" type="button" onclick="addShortcut()" title="Ajouter un raccourci" style="--d:{shortcuts.Count * 42}ms">
               <span class="shortcut-dot">+</span>
-              <span class="shortcut-title">Ajouter</span>
+              <span class="shortcut-title">Ajouter{(showExisting ? "" : " un raccourci")}</span>
             </button>
             """);
         }

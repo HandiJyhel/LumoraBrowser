@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.8.0-dev";
+    internal const string Version = "0.94.25.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -197,6 +197,19 @@ public sealed partial class MainWindow : Window
     // hit-test WinUI reassigne l'evenement Entered a la barre avant l'Exited.
     private DispatcherTimer? _fullScreenTopChromeHideTimer;
     private DispatcherTimer? _verticalTabsRailAutoHideTimer;
+    // Rappel de pause et "sons -> flash visuel" (accessibilite, chantier
+    // "Ajustement n2" 2026-09-11) : logique extraite dans Accessibility/
+    // pour ne pas alourdir davantage ce fichier. Construits dans le
+    // constructeur (voir InitializeAccessibilityAlertServices) ; MainWindow
+    // ne fait que les alimenter depuis les reglages et s'abonner a
+    // BreakReminderService.ReminderDue.
+    private readonly Lumora.WinUI.Accessibility.BreakReminderService _breakReminderService = new();
+    private Lumora.WinUI.Accessibility.VisualFlashService? _visualFlashService;
+    // "Sons & ambiance" (chantier "Ajustement n2", 2026-09-11) : logique de
+    // lecture dans Sound/SoundThemeService.cs, glue UI dans
+    // MainWindow.SoundTheme.cs (InitializeSoundThemeService, appele juste
+    // apres InitializeComponent puisqu'il a besoin de RootShell).
+    private readonly Lumora.WinUI.Sound.SoundThemeService _soundThemeService = new();
     private Microsoft.UI.Windowing.AppWindow? _appWindow;
     private double _verticalTabsExpandedWidth = VerticalTabsDefaultWidth;
     private int _nextTabId = 1;
@@ -310,6 +323,45 @@ public sealed partial class MainWindow : Window
             GuestProcessLauncher.CleanupStaleSessionFolders();
         }
 
+        // Entropie DPAPI de profil (2026-09-10, comptes sans mot de passe) :
+        // doit etre posee AVANT le premier chargement de fichier .lumora
+        // (UiSettings.Load juste en dessous est le tout premier) pour que
+        // TOUT le profil en beneficie des l'ouverture, pas seulement ce qui
+        // est sauvegarde apres coup. _userProfile lui-meme n'est charge que
+        // plus tard, de facon asynchrone (InitializeLoginOverlayAsync,
+        // MainWindow.Profile.cs) - trop tard pour ce role, donc lecture
+        // synchrone anticipee ici, juste pour connaitre HasAccountPassword ;
+        // InitializeLoginOverlayAsync recharge _userProfile normalement
+        // ensuite (double lecture volontaire, deja le cas ailleurs - voir
+        // RequireTargetProfilePasswordAsync - plus simple et moins risque
+        // qu'avancer tout le systeme d'ecran de connexion). Ne touche a rien
+        // pour un profil AVEC mot de passe (SetProfileEntropy jamais appelee
+        // dans ce cas, LumoraFile garde son comportement d'avant cette
+        // fonctionnalite).
+        var earlyProfilePeek = UserProfile.Load(_profile.ProfileFile, _profile.LegacyProfileFile);
+        if (earlyProfilePeek is not null && !earlyProfilePeek.HasAccountPassword)
+        {
+            LumoraFile.SetProfileEntropy(ProfileEntropyStore.LoadOrCreate(_profile));
+        }
+        else if (earlyProfilePeek is null)
+        {
+            // Poule et oeuf (2026-09-10) : si le profil existe mais a deja ete
+            // migre vers l'entropie de profil lors d'une session precedente,
+            // le lire SANS cette entropie (ci-dessus) echoue - UserProfile.Load
+            // avale l'exception et retourne null, indistinguable d'un dossier
+            // vraiment vide. On retente une fois avec l'entropie candidate de
+            // ce dossier avant de conclure. Cout : un profile-entropy.dat cree
+            // meme si l'utilisateur choisit finalement un mot de passe a la
+            // creation (fichier orphelin inoffensif, jamais relu dans ce cas -
+            // aucun effet sur le comportement d'un profil AVEC mot de passe).
+            LumoraFile.SetProfileEntropy(ProfileEntropyStore.LoadOrCreate(_profile));
+            earlyProfilePeek = UserProfile.Load(_profile.ProfileFile, _profile.LegacyProfileFile);
+            if (earlyProfilePeek is null || earlyProfilePeek.HasAccountPassword)
+            {
+                LumoraFile.ClearProfileEntropy();
+            }
+        }
+
         // Chargé avant ConfigureOnce : le drapeau anti-fuite WebRTC est un argument
         // Chromium figé au démarrage du moteur WebView2, donc il faut connaître le
         // réglage AVANT cette étape (un ApplyUiSettings ultérieur ne pourrait plus
@@ -326,6 +378,8 @@ public sealed partial class MainWindow : Window
 
         InitializeComponent();
         WinUiRuntimeTrace.Write("MainWindow after InitializeComponent");
+        InitializeAccessibilityAlertServices();
+        InitializeSoundThemeService();
         // Le titre de fenetre affichait toujours le compteur dev interne, meme
         // sur une vraie release (ReleaseVersion n'etait applique qu'a l'ecran A
         // propos, voir ApplyVersionDisplay) - bug reel trouve le 2026-08-30 en
@@ -398,6 +452,7 @@ public sealed partial class MainWindow : Window
         ApplyWindowTitleBarColors();
         ApplyTitleBarSafeArea();
         ApplyCustomCaptionButtons();
+        UpdateMaximizeButtonAccessibleState();
         RootShell.SizeChanged += (_, _) =>
         {
             UpdateTitleBarDragRegion();
@@ -509,6 +564,7 @@ public sealed partial class MainWindow : Window
         RegisterAccessibilityContextAccelerators();
         RegisterAccessibilityRescueAccelerators();
         RegisterAccessibilityKeyboardShortcuts();
+        RegisterAccessibilityZoomShortcuts();
         // Diagnostic gel post-connexion Google (2026-08-30) : voir
         // MainWindow.FocusRecovery.cs pour le detail de l'hypothese.
         RegisterFocusRecoveryOnActivation();
@@ -780,7 +836,9 @@ public sealed partial class MainWindow : Window
         AppearanceGroupTheme.Visibility     = group == "theme"     ? Visibility.Visible : Visibility.Collapsed;
         AppearanceGroupLayout.Visibility    = group == "layout"    ? Visibility.Visible : Visibility.Collapsed;
         AppearanceGroupNewTab.Visibility    = group == "newtab"    ? Visibility.Visible : Visibility.Collapsed;
+        AppearanceGroupAdvanced.Visibility  = group == "advanced"  ? Visibility.Visible : Visibility.Collapsed;
         AppearanceGroupDiscovery.Visibility = group == "discovery" ? Visibility.Visible : Visibility.Collapsed;
+        if (group == "advanced") PopulateContextMenuSettingsList();
         ResetSettingsScrollPosition();
     }
 
@@ -793,8 +851,31 @@ public sealed partial class MainWindow : Window
         AccessibilityGroupWebContent.Visibility = group == "webcontent" ? Visibility.Visible : Visibility.Collapsed;
         AccessibilityGroupReading.Visibility    = group == "reading"    ? Visibility.Visible : Visibility.Collapsed;
         AccessibilityGroupKeyboard.Visibility   = group == "keyboard"   ? Visibility.Visible : Visibility.Collapsed;
+        AccessibilityGroupAdvanced.Visibility   = group == "advanced"   ? Visibility.Visible : Visibility.Collapsed;
         ResetSettingsScrollPosition();
     }
+
+    // Fleches de defilement des barres de sous-onglets (2026-09-11, retour
+    // utilisateur : la molette seule pour atteindre un onglet hors champ
+    // n'etait pas acceptable). Un pas fixe plutot qu'une "page" entiere : ces
+    // barres ne contiennent que quelques onglets, un grand saut sauterait
+    // souvent la cible visee.
+    private const double SubNavScrollStep = 120;
+
+    private static void ScrollSubNavBy(ScrollViewer viewer, double delta)
+    {
+        var target = Math.Clamp(viewer.HorizontalOffset + delta, 0, Math.Max(0, viewer.ScrollableWidth));
+        viewer.ChangeView(target, null, null);
+    }
+
+    private void AppearanceSubNavScrollLeft_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(AppearanceSubNavScroller, -SubNavScrollStep);
+    private void AppearanceSubNavScrollRight_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(AppearanceSubNavScroller, SubNavScrollStep);
+    private void AccessibilitySubNavScrollLeft_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(AccessibilitySubNavScroller, -SubNavScrollStep);
+    private void AccessibilitySubNavScrollRight_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(AccessibilitySubNavScroller, SubNavScrollStep);
+    private void PrivacySubNavScrollLeft_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(PrivacySubNavScroller, -SubNavScrollStep);
+    private void PrivacySubNavScrollRight_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(PrivacySubNavScroller, SubNavScrollStep);
+    private void AboutSubNavScrollLeft_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(AboutSubNavScroller, -SubNavScrollStep);
+    private void AboutSubNavScrollRight_Click(object sender, RoutedEventArgs e) => ScrollSubNavBy(AboutSubNavScroller, SubNavScrollStep);
 
     private void PrivacySubNav_Click(object sender, RoutedEventArgs e)
     {
@@ -1743,7 +1824,7 @@ public sealed partial class MainWindow : Window
             AddressIdentityBadge.Visibility = collapseAddressIdentity ? Visibility.Collapsed : Visibility.Visible;
         }
 
-        var addressMetrics = ResolveUiDensityMetrics(_uiDensity);
+        var addressMetrics = ResolveEffectiveUiDensityMetrics();
         AddressBox.Padding = new Thickness(
             collapseAddressIdentity ? 18 : addressMetrics.AddressBoxPadding.Left,
             addressMetrics.AddressBoxPadding.Top,

@@ -85,10 +85,11 @@ public sealed partial class MainWindow
             }
 
             var isActive = current?.Id == tab.Id || IsTabInSplitView(tab.Id);
+            var isCompactTile = _verticalTabsCompact || tab.Pinned;
             Button button;
             FrameworkElement content;
 
-            if (_verticalTabsCompact || tab.Pinned)
+            if (isCompactTile)
             {
                 // Bug reel signale par l'utilisateur (2026-08-07) : en rail
                 // compact (icone seule), aucun moyen visible de fermer un
@@ -126,7 +127,13 @@ public sealed partial class MainWindow
                 // chaque tuile n'est guere plus large que le favicon lui-meme,
                 // sans marge visible. Toutes les tailles ci-dessous reduites
                 // proportionnellement (~30%) plutot que redevinees a part.
-                var icon = TabIconElement(tab, 14);
+                // Interface compacte (2026-09-12) : icone/bouton fermer
+                // reduits, meme portee que le reste du chrome (elements
+                // visibles seulement - voir MainWindow.UiDensity.cs).
+                var compactIconSize = _compactModeEnabled ? CompactVerticalTabCompactIconSize : 14;
+                var compactCloseSize = _compactModeEnabled ? CompactVerticalTabCompactCloseSize : 18;
+                var compactCloseGlyphSize = compactCloseSize * 8 / 18;
+                var icon = TabIconElement(tab, compactIconSize);
                 if (tab.IsDormant)
                 {
                     icon.Opacity = 0.5;
@@ -134,24 +141,24 @@ public sealed partial class MainWindow
 
                 var compactClose = new Button
                 {
-                    Width = 18,
-                    Height = 18,
+                    Width = compactCloseSize,
+                    Height = compactCloseSize,
                     Padding = new Thickness(0),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalContentAlignment = HorizontalAlignment.Center,
                     VerticalContentAlignment = VerticalAlignment.Center,
                     Tag = tab.Id,
-                    CornerRadius = new CornerRadius(9),
+                    CornerRadius = new CornerRadius(compactCloseSize / 2),
                     BorderThickness = new Thickness(0),
                     Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
                     // Viewbox plutot que SymbolIcon.FontSize (n'existe pas sur ce
-                    // controle) : force le glyphe a une taille lisible (8x8)
-                    // dans le bouton de fermeture.
+                    // controle) : force le glyphe a une taille lisible dans le
+                    // bouton de fermeture, proportionnelle a sa propre taille.
                     Content = new Viewbox
                     {
-                        Width = 8,
-                        Height = 8,
+                        Width = compactCloseGlyphSize,
+                        Height = compactCloseGlyphSize,
                         Child = new SymbolIcon(Symbol.Cancel)
                     },
                     Opacity = 0.6
@@ -165,10 +172,12 @@ public sealed partial class MainWindow
                 compactContent.Children.Add(compactClose);
                 content = compactContent;
 
+                var compactTileWidth = _compactModeEnabled ? CompactVerticalTabTileWidth : 30;
+                var compactTileHeight = _compactModeEnabled ? CompactVerticalTabTileHeight : 28;
                 button = new Button
                 {
-                    Width = 30,
-                    Height = 28,
+                    Width = compactTileWidth,
+                    Height = compactTileHeight,
                     Padding = new Thickness(0),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     HorizontalContentAlignment = HorizontalAlignment.Center,
@@ -192,7 +201,7 @@ public sealed partial class MainWindow
             else
             {
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                var rowIcon = TabIconElement(tab, 16);
+                var rowIcon = TabIconElement(tab, _compactModeEnabled ? CompactVerticalTabRowIconSize : 16);
                 if (tab.IsDormant)
                 {
                     rowIcon.Opacity = 0.5;
@@ -222,7 +231,14 @@ public sealed partial class MainWindow
                 var positionInSection = unpinnedOrder.IndexOf(tab);
                 var canMoveUp = positionInSection > 0;
                 var canMoveDown = positionInSection >= 0 && positionInSection < unpinnedOrder.Count - 1;
-                var moveStack = new StackPanel { Width = 16, Height = 26, VerticalAlignment = VerticalAlignment.Center };
+                // Fleches et fermeture masquees au repos, revelees au survol
+                // de la ligne (2026-09-10, session "interface") : au repos,
+                // trois elements d'action toujours dessines en plus du titre
+                // lisaient "charge" compare a Chrome/Edge - le glisser-depose
+                // reel (CanDrag/AllowDrop plus bas) reste le moyen principal,
+                // ces boutons redeviennent un raccourci de secours visible au
+                // survol seulement. Voir maquette "Lumora Epure".
+                var moveStack = new StackPanel { Width = 16, Height = 26, VerticalAlignment = VerticalAlignment.Center, Opacity = 0 };
                 var moveUp = new Button
                 {
                     Width = 16,
@@ -258,16 +274,18 @@ public sealed partial class MainWindow
                 Grid.SetColumn(moveStack, 1);
                 grid.Children.Add(moveStack);
 
+                var expandedCloseSize = _compactModeEnabled ? CompactVerticalTabCloseSize : 26;
                 var close = new Button
                 {
-                    Width = 26,
-                    Height = 26,
-                    MinWidth = 26,
+                    Width = expandedCloseSize,
+                    Height = expandedCloseSize,
+                    MinWidth = expandedCloseSize,
                     Padding = new Thickness(0),
                     Tag = tab.Id,
                     Content = new SymbolIcon(Symbol.Cancel),
                     Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                    BorderThickness = new Thickness(0)
+                    BorderThickness = new Thickness(0),
+                    Opacity = 0
                 };
                 ToolTipService.SetToolTip(close, "Fermer l'onglet");
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(close, $"Fermer {tab.Title}");
@@ -275,17 +293,47 @@ public sealed partial class MainWindow
                 Grid.SetColumn(close, 2);
                 grid.Children.Add(close);
                 content = grid;
+                // Pastille allegee (2026-09-10, session "interface") : rayon
+                // 16->8 (une ligne de 36px avec un rayon de 16 lisait "capsule"
+                // plutot que "ligne de liste"), plus de fond/bordure visibles
+                // au repos (Transparent) - seul l'etat actif garde une teinte,
+                // via NovaAccentSoftBrush plutot qu'un fond plein, complete par
+                // le liseret ajoute plus bas. Bordure de selection multiple
+                // (Ctrl/Shift+clic, plus bas) reste posee par-dessus intacte.
+                // Voir maquette "Lumora Epure".
                 button = new Button
                 {
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     HorizontalContentAlignment = HorizontalAlignment.Left,
-                    Padding = new Thickness(10, 7, 10, 7),
+                    // Hauteur de ligne pilotee par ce Padding (bouton auto-hauteur) -
+                    // reduit en Interface compacte, meme portee que le reste.
+                    Padding = _compactModeEnabled ? new Thickness(7, 3, 7, 3) : new Thickness(10, 7, 10, 7),
                     Tag = tab.Id,
-                    Margin = new Thickness(0, 2, 0, 2),
-                    CornerRadius = new CornerRadius(16),
-                    BorderThickness = new Thickness(1),
-                    Background = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBackgroundBrush" : "NovaTabPillInactiveBackgroundBrush"],
-                    BorderBrush = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBorderBrush" : "NovaTabPillInactiveBorderBrush"]
+                    Margin = new Thickness(0, 1, 0, 1),
+                    CornerRadius = new CornerRadius(8),
+                    BorderThickness = new Thickness(0),
+                    Background = isActive
+                        ? (Brush)RootShell.Resources["NovaAccentSoftBrush"]
+                        : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                    BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent)
+                };
+                button.PointerEntered += (_, _) =>
+                {
+                    moveStack.Opacity = 1;
+                    close.Opacity = 0.75;
+                    if (!isActive)
+                    {
+                        button.Background = (Brush)RootShell.Resources["NovaChromeButtonHighlightBrush"];
+                    }
+                };
+                button.PointerExited += (_, _) =>
+                {
+                    moveStack.Opacity = 0;
+                    close.Opacity = 0;
+                    if (!isActive)
+                    {
+                        button.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+                    }
                 };
             }
 
@@ -302,14 +350,32 @@ public sealed partial class MainWindow
                 wrapper.Children.Add(content);
                 button.Content = wrapper;
             }
+            else if (!isCompactTile && isActive)
+            {
+                // Indicateur d'onglet actif (2026-09-10) : remplace la pastille
+                // pleine + bordure d'avant par un liseret discret, meme motif
+                // que la barre de couleur de groupe juste au-dessus - pas
+                // utilise quand l'onglet appartient deja a un groupe (sa barre
+                // de couleur tient deja ce role, pas la peine d'en cumuler deux).
+                var activeWrapper = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+                activeWrapper.Children.Add(new Border
+                {
+                    Width = 3,
+                    CornerRadius = new CornerRadius(1.5),
+                    Background = (Brush)RootShell.Resources["NovaAccentBrush"],
+                    VerticalAlignment = VerticalAlignment.Stretch
+                });
+                activeWrapper.Children.Add(content);
+                button.Content = activeWrapper;
+            }
             else
             {
                 button.Content = content;
             }
 
             button.Foreground = new SolidColorBrush(isActive
-                ? UiColor(242, 245, 250)
-                : UiColor(214, 221, 229));
+                ? UiColor(244, 244, 244)
+                : UiColor(221, 221, 221));
 
             // Bordure accentuée : marque la sélection multiple (Ctrl/Shift+clic),
             // distincte du fond "actif" déjà posé ci-dessus.
@@ -371,8 +437,8 @@ public sealed partial class MainWindow
             Margin = new Thickness(0, 8, 0, 2),
             CornerRadius = new CornerRadius(14),
             BorderThickness = new Thickness(1),
-            Background = new SolidColorBrush(UiColor(19, 27, 39, 156)),
-            BorderBrush = new SolidColorBrush(UiColor(61, 71, 88, 116)),
+            Background = new SolidColorBrush(UiColor(22, 22, 22, 156)),
+            BorderBrush = new SolidColorBrush(UiColor(58, 58, 58, 116)),
             Content = row,
             Tag = group.Id
         };
@@ -1089,19 +1155,22 @@ public sealed partial class MainWindow
 
         if (compact)
         {
+            // Interface compacte (2026-09-12) : onglet epingle deja "icone
+            // seule" par nature - juste plus petit, meme motif.
+            var pinnedWrapSize = _compactModeEnabled ? CompactHorizontalTabPinnedWrapSize : 30;
             var compactWrap = new Grid
             {
-                Width = 30,
-                Height = 30
+                Width = pinnedWrapSize,
+                Height = pinnedWrapSize
             };
             compactWrap.Children.Add(new Border
             {
-                CornerRadius = new CornerRadius(15),
+                CornerRadius = new CornerRadius(pinnedWrapSize / 2),
                 Background = (Brush)RootShell.Resources[active ? "NovaTabPillActiveBackgroundBrush" : "NovaTabPillInactiveBackgroundBrush"],
                 BorderBrush = selectionBrush ?? (Brush)RootShell.Resources[active ? "NovaTabPillActiveBorderBrush" : "NovaTabPillInactiveBorderBrush"],
                 BorderThickness = new Thickness(selected ? 2 : 1)
             });
-            var compactIcon = TabIconElement(tab, 18);
+            var compactIcon = TabIconElement(tab, _compactModeEnabled ? CompactHorizontalTabPinnedIconSize : 18);
             if (tab.IsDormant)
             {
                 compactIcon.Opacity = 0.5;
@@ -1187,18 +1256,25 @@ public sealed partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
+        // Interface compacte (2026-09-12, retour utilisateur : le mode
+        // compact ne touchait ni la barre d'onglets horizontale ni
+        // verticale) : icone/enveloppe reduites, meme principe que le reste
+        // du chrome (ResolveEffectiveUiDensityMetrics) mais tabs restees
+        // volontairement hors de ce mecanisme (voir MainWindow.UiDensity.cs) -
+        // Standard/Confortable/Dense ne les font toujours pas varier.
+        var iconWrapSize = _compactModeEnabled ? CompactHorizontalTabIconWrapSize : 24;
         var iconWrap = new Grid
         {
-            Width = 24,
-            Height = 24,
+            Width = iconWrapSize,
+            Height = iconWrapSize,
             VerticalAlignment = VerticalAlignment.Center
         };
         iconWrap.Children.Add(new Border
         {
-            CornerRadius = new CornerRadius(12),
+            CornerRadius = new CornerRadius(iconWrapSize / 2),
             Background = (Brush)RootShell.Resources[active ? "NovaTabIconWrapActiveBackgroundBrush" : "NovaTabIconWrapInactiveBackgroundBrush"]
         });
-        var tabIcon = TabIconElement(tab, 14);
+        var tabIcon = TabIconElement(tab, _compactModeEnabled ? CompactHorizontalTabIconSize : 14);
         if (tab.IsDormant)
         {
             tabIcon.Opacity = 0.5;
@@ -1283,7 +1359,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private static FrameworkElement TabIconElement(BrowserTabState tab, double size)
+    private FrameworkElement TabIconElement(BrowserTabState tab, double size)
     {
         if (!string.IsNullOrWhiteSpace(tab.IconPath) && FaviconQuality.IsUsablePngFile(tab.IconPath))
         {
@@ -1295,11 +1371,22 @@ public sealed partial class MainWindow
             };
         }
 
-        return new FontIcon
+        // Refonte organique "Encre chaude" (2026-09-12, suite) : icone de
+        // secours (favicon absent) - FontIcon Segoe MDL2 Assets remplace par
+        // un Path. Meme silhouette "page generique" que BookmarkGlyphs.Link
+        // (Models/Bookmarks.cs), construite via PathGeometryBuilder (pas de
+        // Geometry.Parse en WinUI3, contrairement a WPF).
+        return new Microsoft.UI.Xaml.Shapes.Path
         {
-            Glyph = BookmarkGlyphs.Link,
-            FontFamily = new FontFamily("Segoe MDL2 Assets"),
-            FontSize = size
+            Data = PathGeometryBuilder.Build(BookmarkGlyphs.Link),
+            // RootShell.Resources, pas Application.Current.Resources : meme piege
+            // deja documente sur NovaBookmarkBarButtonForegroundBrush (MEMORY.md) -
+            // les brushes theme-aware de cette app vivent dans RootShell.Resources,
+            // pas dans les resources globales de l'Application.
+            Fill = (Brush)RootShell.Resources["NovaTabTitleInactiveForegroundBrush"],
+            Stretch = Stretch.Uniform,
+            Width = size,
+            Height = size
         };
     }
 

@@ -116,15 +116,27 @@ public sealed partial class MainWindow
         return (false, false, title, folderId);
     }
 
-    private List<BookmarkFolderChoice> BuildBookmarkFolderChoices() =>
-        _allBookmarkNodes
+    // Bug de lenteur reel (signale 2026-09-12, "j'ai du attendre 5-6 secondes"
+    // sur "Ajouter aux favoris") : la version precedente appelait
+    // BookmarkTreePresenter.Breadcrumb(_allBookmarkNodes, ...) 2 FOIS par
+    // dossier (une fois dans ThenBy, une fois dans Select), chaque appel
+    // remontant les ancetres par FirstOrDefault sur la liste ENTIERE a
+    // CHAQUE niveau (O(profondeur*n) par appel) - sur un arbre de favoris
+    // consequent (import Chrome/Edge, des centaines de dossiers), le cout
+    // devient prohibitif. Dictionnaire Id->noeud construit UNE FOIS (O(n)),
+    // breadcrumb calcule UNE FOIS par dossier (pas deux) via l'overload
+    // dictionnaire de Breadcrumb (O(1) par ancetre).
+    private List<BookmarkFolderChoice> BuildBookmarkFolderChoices()
+    {
+        var nodesById = _allBookmarkNodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        return _allBookmarkNodes
             .Where(node => node.Kind == BookmarkKind.Folder)
-            .OrderBy(node => node.IsRoot ? 0 : 1)
-            .ThenBy(node => BookmarkTreePresenter.Breadcrumb(_allBookmarkNodes, node.Id), StringComparer.CurrentCultureIgnoreCase)
-            .Select(node => new BookmarkFolderChoice(
-                node.Id,
-                BookmarkTreePresenter.Breadcrumb(_allBookmarkNodes, node.Id)))
+            .Select(node => (node, breadcrumb: BookmarkTreePresenter.Breadcrumb(nodesById, node.Id)))
+            .OrderBy(entry => entry.node.IsRoot ? 0 : 1)
+            .ThenBy(entry => entry.breadcrumb, StringComparer.CurrentCultureIgnoreCase)
+            .Select(entry => new BookmarkFolderChoice(entry.node.Id, entry.breadcrumb))
             .ToList();
+    }
 
     private async Task<string?> PromptTextAsync(string title, string placeholder, string initialValue)
     {

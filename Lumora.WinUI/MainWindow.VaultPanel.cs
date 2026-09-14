@@ -118,6 +118,7 @@ public sealed partial class MainWindow
     {
         var isSelected = _selectedVaultCredential?.Id == cred.Id;
         var hasUser = !string.IsNullOrWhiteSpace(cred.Username);
+        var hasLabel = !string.IsNullOrWhiteSpace(cred.Label);
 
         var button = new Button
         {
@@ -138,16 +139,33 @@ public sealed partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var text = new TextBlock
+        // Plusieurs comptes sous le même groupe (site) ne se distinguaient
+        // jusqu'ici que par l'identifiant brut, y compris quand un nom
+        // personnalisé (Renommer) était déjà posé - visible seulement en
+        // ouvrant chaque ligne. Le nom personnalisé passe désormais en
+        // texte principal ici aussi, l'identifiant restant visible dessous
+        // en second (pas remplacé : c'est souvent lui qui sert à confirmer
+        // qu'on remplit le bon compte).
+        var textColumn = new StackPanel { Spacing = 0, VerticalAlignment = VerticalAlignment.Center };
+        textColumn.Children.Add(new TextBlock
         {
-            Text = hasUser ? cred.Username : "(aucun identifiant enregistré)",
-            Opacity = hasUser ? 0.85 : 0.5,
-            FontStyle = hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(text, 0);
-        row.Children.Add(text);
+            Text = hasLabel ? cred.Label : (hasUser ? cred.Username : "(aucun identifiant enregistré)"),
+            Opacity = hasLabel || hasUser ? 0.85 : 0.5,
+            FontStyle = hasLabel || hasUser ? Windows.UI.Text.FontStyle.Normal : Windows.UI.Text.FontStyle.Italic,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        if (hasLabel && hasUser)
+        {
+            textColumn.Children.Add(new TextBlock
+            {
+                Text = cred.Username,
+                Opacity = 0.55,
+                FontSize = 12,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+        }
+        Grid.SetColumn(textColumn, 0);
+        row.Children.Add(textColumn);
 
         var dot = new Ellipse { Width = 8, Height = 8, Fill = StrengthBrush(cred.Password), VerticalAlignment = VerticalAlignment.Center };
         ToolTipService.SetToolTip(dot, $"Mot de passe {StrengthLabel(cred.Password).ToLowerInvariant()}");
@@ -212,6 +230,23 @@ public sealed partial class MainWindow
         return border;
     }
 
+    // Refonte organique "Encre chaude" (2026-09-12, suite) : construit un
+    // `PathIcon` (IconElement, comme SymbolIcon/FontIcon - accepte par
+    // BuildGhostIconButton/BuildTextLinkButton) a partir d'une geometrie
+    // VaultPanelGlyphs/StartMenuGlyphs, via PathGeometryBuilder (pas de
+    // Geometry.Parse en WinUI3). Remplace les SymbolIcon(Symbol.X) de cette
+    // fiche - meme silhouette pleine que le reste de la refonte plutot que
+    // des glyphes systeme.
+    private static PathIcon VaultIcon(string data, Brush? foreground = null)
+    {
+        var icon = new PathIcon { Data = PathGeometryBuilder.Build(data) };
+        if (foreground is not null)
+        {
+            icon.Foreground = foreground;
+        }
+        return icon;
+    }
+
     // Icône de site à partir du cache favicon déjà alimenté par la navigation
     // (MainWindow.Bookmarks.cs), en lecture seule : aucun téléchargement déclenché
     // depuis le coffre. Repli sur un glyphe générique si rien n'est en cache.
@@ -233,11 +268,17 @@ public sealed partial class MainWindow
             catch { /* fichier corrompu ou illisible : repli glyphe */ }
         }
 
-        return new FontIcon
+        // Refonte organique "Encre chaude" (2026-09-12, suite) : glyphe Segoe
+        // MDL2 Assets (globe) remplace par la MEME silhouette "page generique"
+        // que le repli favoris/historique (BookmarkGlyphs.Link) - un seul
+        // symbole de secours pour "site sans icone" dans toute l'app.
+        return new Microsoft.UI.Xaml.Shapes.Path
         {
-            Glyph = "", // Globe
-            FontFamily = new FontFamily("Segoe MDL2 Assets"),
-            FontSize = size * 0.85,
+            Data = PathGeometryBuilder.Build(BookmarkGlyphs.Link),
+            Fill = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"],
+            Stretch = Stretch.Uniform,
+            Width = size * 0.85,
+            Height = size * 0.85,
             Opacity = 0.55
         };
     }
@@ -317,11 +358,11 @@ public sealed partial class MainWindow
 
         secretStack.Children.Add(BuildSecretRow(
             "Identifiant", hasUser ? cred.Username : "(aucun)",
-            (BuildGhostIconButton(new SymbolIcon(Symbol.Copy), "Copier l'identifiant", () => CopyPasswordManagerText(cred.Username, "Identifiant copié."), hasUser), null)));
+            (BuildGhostIconButton(VaultIcon(VaultPanelGlyphs.Copy), "Copier l'identifiant", () => CopyPasswordManagerText(cred.Username, "Identifiant copié."), hasUser), null)));
 
         var passwordVisible = false;
         var passwordValueText = new TextBlock { FontFamily = new FontFamily("Consolas"), FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
-        var revealBtn = BuildGhostIconButton(new SymbolIcon(Symbol.View), "Afficher le mot de passe", () => { });
+        var revealBtn = BuildGhostIconButton(VaultIcon(StartMenuGlyphs.Eye), "Afficher le mot de passe", () => { });
         void RenderPasswordVisibility()
         {
             passwordValueText.Text = passwordVisible ? cred.Password : new string('•', Math.Max(cred.Password.Length, 8));
@@ -330,7 +371,7 @@ public sealed partial class MainWindow
         }
         revealBtn.Click += (_, _) => { passwordVisible = !passwordVisible; RenderPasswordVisibility(); };
         RenderPasswordVisibility();
-        var copyPasswordBtn = BuildGhostIconButton(new SymbolIcon(Symbol.Copy), "Copier le mot de passe", () => CopyPasswordManagerText(cred.Password, "Mot de passe copié."));
+        var copyPasswordBtn = BuildGhostIconButton(VaultIcon(VaultPanelGlyphs.Copy), "Copier le mot de passe", () => CopyPasswordManagerText(cred.Password, "Mot de passe copié."));
         secretStack.Children.Add(new Border { BorderThickness = new Thickness(0, 1, 0, 0), BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"] });
         secretStack.Children.Add(BuildSecretRowRaw("Mot de passe", passwordValueText, revealBtn, copyPasswordBtn));
 
@@ -343,7 +384,7 @@ public sealed partial class MainWindow
 
         var openBtn = new Button
         {
-            Content = BuildIconTextContent(new SymbolIcon(Symbol.Forward), "Ouvrir la page de connexion"),
+            Content = BuildIconTextContent(VaultIcon(VaultPanelGlyphs.Forward), "Ouvrir la page de connexion"),
             Style = (Style)Application.Current.Resources["AccentButtonStyle"],
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center
@@ -356,7 +397,7 @@ public sealed partial class MainWindow
         Grid.SetColumn(openBtn, 0);
         primaryRow.Children.Add(openBtn);
 
-        var editPasswordBtn = new Button { Content = new SymbolIcon(Symbol.Edit), Width = 44 };
+        var editPasswordBtn = new Button { Content = VaultIcon(VaultPanelGlyphs.Pencil), Width = 44 };
         ToolTipService.SetToolTip(editPasswordBtn, "Modifier le mot de passe");
         ApplyNovaControlAccessibility(editPasswordBtn, "Modifier le mot de passe");
         editPasswordBtn.Click += async (_, _) =>
@@ -387,7 +428,7 @@ public sealed partial class MainWindow
 
         var manageLinks = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 18 };
 
-        var renameBtn = BuildTextLinkButton(new SymbolIcon(Symbol.Rename), "Renommer");
+        var renameBtn = BuildTextLinkButton(VaultIcon(VaultPanelGlyphs.Tag), "Renommer");
         renameBtn.Click += async (_, _) =>
         {
             var box = new TextBox { Text = cred.Label, PlaceholderText = "Nom personnalisé (ex. Amazon perso)", MinWidth = 320 };
@@ -407,7 +448,7 @@ public sealed partial class MainWindow
         };
         manageLinks.Children.Add(renameBtn);
 
-        var editUsernameBtn = BuildTextLinkButton(new SymbolIcon(Symbol.Contact), "Identifiant");
+        var editUsernameBtn = BuildTextLinkButton(VaultIcon(VaultPanelGlyphs.Person), "Identifiant");
         editUsernameBtn.Click += async (_, _) =>
         {
             var box = new TextBox { Text = cred.Username, PlaceholderText = "Identifiant (ex. adresse email)", MinWidth = 320 };
@@ -429,7 +470,7 @@ public sealed partial class MainWindow
         Grid.SetColumn(manageLinks, 0);
         manageRow.Children.Add(manageLinks);
 
-        var deleteBtn = BuildTextLinkButton(new SymbolIcon(Symbol.Delete), "Supprimer", (Brush)Application.Current.Resources["NovaDangerBrush"]);
+        var deleteBtn = BuildTextLinkButton(VaultIcon(VaultPanelGlyphs.Trash), "Supprimer", (Brush)Application.Current.Resources["NovaDangerBrush"]);
         deleteBtn.Click += async (_, _) =>
         {
             var confirm = new ContentDialog
@@ -694,11 +735,11 @@ public sealed partial class MainWindow
     {
         var hasTotp = !string.IsNullOrWhiteSpace(cred.TotpSecret);
         var card = BuildFeatureCard(out var content);
-        content.Children.Add(BuildFeatureCardHeader(new SymbolIcon(Symbol.Clock), "Authentification à deux facteurs", hasTotp));
+        content.Children.Add(BuildFeatureCardHeader(VaultIcon(StartMenuGlyphs.Clock), "Authentification à deux facteurs", hasTotp));
 
         if (!hasTotp)
         {
-            var addBtn = new Button { Content = BuildIconTextContent(new SymbolIcon(Symbol.Add), "Ajouter un code TOTP") };
+            var addBtn = new Button { Content = BuildIconTextContent(VaultIcon(VaultPanelGlyphs.Plus), "Ajouter un code TOTP") };
             ApplyNovaControlAccessibility(addBtn, "Ajouter un code TOTP");
             addBtn.Click += async (_, _) => await PromptAddTotpAsync(cred);
             content.Children.Add(addBtn);
@@ -746,10 +787,10 @@ public sealed partial class MainWindow
         codeRow.Children.Add(ring);
         Grid.SetColumn(codeTextStack, 1);
         codeRow.Children.Add(codeTextStack);
-        var copyCodeBtn = BuildGhostIconButton(new SymbolIcon(Symbol.Copy), "Copier le code TOTP", () => CopyPasswordManagerText(codeText.Text, "Code TOTP copié."));
+        var copyCodeBtn = BuildGhostIconButton(VaultIcon(VaultPanelGlyphs.Copy), "Copier le code TOTP", () => CopyPasswordManagerText(codeText.Text, "Code TOTP copié."));
         Grid.SetColumn(copyCodeBtn, 2);
         codeRow.Children.Add(copyCodeBtn);
-        var removeTotpBtn = BuildGhostIconButton(new SymbolIcon(Symbol.Delete), "Supprimer le TOTP", () =>
+        var removeTotpBtn = BuildGhostIconButton(VaultIcon(VaultPanelGlyphs.Trash), "Supprimer le TOTP", () =>
         {
             _passwordManager.SetTotpById(cred.Id, null);
             StatusText.Text = "TOTP supprimé.";

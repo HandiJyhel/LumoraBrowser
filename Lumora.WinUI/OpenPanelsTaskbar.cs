@@ -35,19 +35,19 @@ public static class OpenPanelsTaskbar
     // l'inspection texte, incident du 2026-08-12).
     public static readonly IReadOnlyList<TrackedPanelDefinition> Definitions =
     [
-        new(StartMenuTileIds.Vault, "Coffre", "\uE72E"),
-        new(StartMenuTileIds.Favoris, "Favoris", "\uE735"),
-        new(StartMenuTileIds.History, "Historique", "\uE81C"),
-        new(StartMenuTileIds.Settings, "Param\u00E8tres", "\uE713"),
-        new(StartMenuTileIds.Notes, "Notes", "\uE70B"),
-        new(RssId, "Flux RSS", "\uE7C1"),
-        new(StartMenuTileIds.Downloads, "T\u00E9l\u00E9chargements", "\uE896"),
-        new(StartMenuTileIds.TabGroups, "Groupes d'onglets", "\uE8FD"),
-        new(StartMenuTileIds.Sessions, "Sessions", "\uE7F4"),
-        new(StartMenuTileIds.Wallet, "Portefeuille", "\uE8C7"),
-        new(StartMenuTileIds.WebApps, "Applis web", "\uE71D"),
-        new(StartMenuTileIds.ReadingLens, "Loupe de lecture", "\uE721"),
-        new(StartMenuTileIds.AllModules, "Modules", "\uE8A9"),
+        new(StartMenuTileIds.Vault, "Coffre", StartMenuGlyphs.Padlock),
+        new(StartMenuTileIds.Favoris, "Favoris", StartMenuGlyphs.Star),
+        new(StartMenuTileIds.History, "Historique", StartMenuGlyphs.Clock),
+        new(StartMenuTileIds.Settings, "Param\u00E8tres", StartMenuGlyphs.Sliders),
+        new(StartMenuTileIds.Notes, "Notes", StartMenuGlyphs.Notes),
+        new(RssId, "Flux RSS", StartMenuGlyphs.Rss),
+        new(StartMenuTileIds.Downloads, "T\u00E9l\u00E9chargements", StartMenuGlyphs.Download),
+        new(StartMenuTileIds.TabGroups, "Groupes d'onglets", StartMenuGlyphs.TabStack),
+        new(StartMenuTileIds.Sessions, "Sessions", StartMenuGlyphs.Sessions),
+        new(StartMenuTileIds.Wallet, "Portefeuille", StartMenuGlyphs.Wallet),
+        new(StartMenuTileIds.WebApps, "Applis web", StartMenuGlyphs.Pin),
+        new(StartMenuTileIds.ReadingLens, "Loupe de lecture", StartMenuGlyphs.ReadingLens),
+        new(StartMenuTileIds.AllModules, "Modules", StartMenuGlyphs.Modules),
     ];
 
     public static TrackedPanelDefinition? Find(string id) =>

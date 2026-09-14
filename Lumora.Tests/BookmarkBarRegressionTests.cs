@@ -303,8 +303,13 @@ public sealed class BookmarkBarRegressionTests
         // Avant ce correctif, seule BrowserTabs recevait la reserve
         // dynamique (safeRight) - la ligne d'adresse/outils (NavigationToolbarCapsule)
         // n'en avait aucune et son contenu pouvait passer SOUS les boutons
-        // systeme des qu'elle etait assez remplie (modules epingles).
-        Assert.Contains("NavigationToolbarCapsule.Margin = new Thickness(14, 6, safeRight + 14, 6);", code, StringComparison.Ordinal);
+        // systeme des qu'elle etait assez remplie (modules epingles). La
+        // marge verticale (6) est devenue une variable le 2026-09-12
+        // (compacte en Interface compacte) - le principe verrouille ici (le
+        // cote droit gagne la reserve systeme EN PLUS de son inset existant)
+        // reste inchange.
+        Assert.Contains("NavigationToolbarCapsule.Margin = new Thickness(14, capsuleVerticalMargin, safeRight + 14, capsuleVerticalMargin);", code, StringComparison.Ordinal);
+        Assert.Contains("var capsuleVerticalMargin = _compactModeEnabled ? 2 : 6;", code, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -336,12 +341,16 @@ public sealed class BookmarkBarRegressionTests
     [Fact]
     public void Etoile_favori_utilise_un_contour_quand_absent_des_favoris()
     {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
 
-        // E735 (FavoriteStarFill) uniquement quand bookmarked, E734
-        // (FavoriteStar, contour) sinon - avant ce correctif l'etoile restait
-        // TOUJOURS pleine (E735), seule la couleur changeait.
-        Assert.Contains("BookmarkStarIcon.Glyph = bookmarked ? \"\\uE735\" : \"\\uE734\";", code, StringComparison.Ordinal);
+        // Refonte organique "Encre chaude" (2026-09-12) : BookmarkStarIcon est
+        // desormais un Path (une seule geometrie d'etoile) plutot qu'un
+        // FontIcon a 2 glyphes (E734/E735) - contour = pas en favori, pleine
+        // (Fill = meme brush que Stroke) = en favori, transparent sinon.
+        Assert.Contains("Path x:Name=\"BookmarkStarIcon\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("BookmarkStarIcon.Fill = bookmarked ? starBrush : new SolidColorBrush(Microsoft.UI.Colors.Transparent);", code, StringComparison.Ordinal);
+        Assert.Contains("BookmarkStarIcon.Stroke = starBrush;", code, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -452,10 +461,19 @@ public sealed class BookmarkBarRegressionTests
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.Bookmarks.cs");
 
         // La branche generique "Symbol.Link pour tout lien sans favicon" ne
-        // doit plus exister : seul un dossier garde encore une icone fixe.
+        // doit plus exister : seul un dossier garde encore une icone fixe -
+        // devenue une silhouette vectorielle Lumora (refonte organique
+        // "Encre chaude", 2026-09-12) plutot que le symbole systeme
+        // Segoe MDL2 Assets (dernier de toute la barre de favoris).
         Assert.DoesNotContain("Symbol.Folder : Symbol.Link", code, StringComparison.Ordinal);
         Assert.Contains("return BookmarkLetterAvatar(node, size);", code, StringComparison.Ordinal);
-        Assert.Contains("return new SymbolIcon { Symbol = Symbol.Folder, Width = size, Height = size };", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("new SymbolIcon { Symbol = Symbol.Folder", code, StringComparison.Ordinal);
+        Assert.Contains("new PathGeometry();", code, StringComparison.Ordinal);
+        // Cle dediee (2026-09-14, session "3.5", couleur d'accentuation) -
+        // separee de NovaBookmarkBarButtonForegroundBrush (texte du favori,
+        // jamais teinte par l'accent personnalise) depuis ce correctif, voir
+        // MainWindow.SettingsTheme.cs.
+        Assert.Contains("Fill = (Brush)RootShell.Resources[\"NovaBookmarkFolderGlyphBrush\"],", code, StringComparison.Ordinal);
     }
 
     [Fact]

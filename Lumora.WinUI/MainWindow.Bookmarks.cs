@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Lumora.WinUI.Accessibility;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -50,6 +51,12 @@ public sealed partial class MainWindow
     // conditions reelles : deux clics rapides sur l'etoile favoris avant de
     // repondre au premier dialogue faisaient planter toute l'application).
     private bool _bookmarkDialogOpen;
+
+    // Aide accessibilite "Reordonner sans glisser" (Accessibility/ClickToReorder.cs) :
+    // Id du favori actuellement decroche, ou null si aucun. Vit ici (pas dans
+    // MainWindow.BookmarksDragDrop.cs) car partage entre les 3 dispositions de
+    // la barre (haut/bas/cote), toutes rendues par RenderBookmarksBar.
+    private string? _bookmarkReorderPickedId;
 
     private async void AddBookmarkButton_Click(object sender, RoutedEventArgs e)
     {
@@ -610,15 +617,17 @@ public sealed partial class MainWindow
                          _allBookmarkNodes.Any(node =>
                              node.Kind == BookmarkKind.Url && SameBookmarkUrl(node.Url, address));
 
-        // E735 (FavoriteStarFill, pleine) vs E734 (FavoriteStar, contour) :
-        // avant ce correctif l'etoile restait TOUJOURS pleine et ne changeait
-        // que de couleur, une difference peu visible a 16px - convention
-        // standard (Chrome/Edge/Firefox) : contour = pas en favori, pleine +
-        // couleur = en favori. Signale par l'utilisateur, 2026-08-22.
-        BookmarkStarIcon.Glyph = bookmarked ? "\uE735" : "\uE734";
-        BookmarkStarIcon.Foreground = bookmarked
+        // Convention standard (Chrome/Edge/Firefox) : contour = pas en favori,
+        // pleine + couleur = en favori. Signale par l'utilisateur, 2026-08-22.
+        // Depuis la refonte organique "Encre chaude" (2026-09-12), BookmarkStarIcon
+        // est un Path (une seule geometrie d'etoile) plutot qu'un FontIcon a 2
+        // glyphes : la bascule contour/pleine se fait sur Fill/Stroke, plus sur
+        // Glyph/Foreground.
+        var starBrush = bookmarked
             ? (Brush)RootShell.Resources["NovaBookmarkButtonActiveForegroundBrush"]
             : (Brush)RootShell.Resources["NovaBookmarkButtonForegroundBrush"];
+        BookmarkStarIcon.Fill = bookmarked ? starBrush : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        BookmarkStarIcon.Stroke = starBrush;
         AddBookmarkButton.Background = bookmarked
             ? (Brush)RootShell.Resources["NovaBookmarkButtonActiveBackgroundBrush"]
             : (Brush)RootShell.Resources["NovaBookmarkButtonBackgroundBrush"];
@@ -652,9 +661,20 @@ public sealed partial class MainWindow
 
         if (sideLayout)
         {
-            foreach (var node in toolbarNodes)
+            var sidePickedIndex = _bookmarkReorderPickedId is null
+                ? -1
+                : toolbarNodes.FindIndex(n => n.Id == _bookmarkReorderPickedId);
+            for (var i = 0; i < toolbarNodes.Count; i++)
             {
-                BookmarksSideBarPanel.Children.Add(CreateBookmarkBarButton(node));
+                if (sidePickedIndex >= 0)
+                {
+                    AddBookmarkReorderGap(BookmarksSideBarPanel, toolbarNodes, i, sidePickedIndex, vertical: true);
+                }
+                BookmarksSideBarPanel.Children.Add(CreateBookmarkBarButton(toolbarNodes[i]));
+            }
+            if (sidePickedIndex >= 0)
+            {
+                AddBookmarkReorderGap(BookmarksSideBarPanel, toolbarNodes, toolbarNodes.Count, sidePickedIndex, vertical: true);
             }
 
             if (toolbarNodes.Count == 0)
@@ -690,14 +710,29 @@ public sealed partial class MainWindow
         var visibleNodes = toolbarNodes.Take(visibleCount).ToList();
         var overflowNodes = toolbarNodes.Skip(visibleCount).ToList();
 
-        foreach (var node in visibleNodes)
+        var barPickedIndex = _bookmarkReorderPickedId is null
+            ? -1
+            : visibleNodes.FindIndex(n => n.Id == _bookmarkReorderPickedId);
+        for (var i = 0; i < visibleNodes.Count; i++)
         {
-            if (primaryHost.Children.Count > 0)
+            if (barPickedIndex >= 0)
+            {
+                AddBookmarkReorderGap(primaryHost, visibleNodes, i, barPickedIndex, vertical: false);
+            }
+            // i > 0 plutot que Children.Count > 0 : un gap de reordonnancement
+            // peut deja avoir ete ajoute ci-dessus AVANT le 1er favori, ce qui
+            // aurait rendu Children.Count > 0 des la 1re iteration et fait
+            // apparaitre un "✦" parasite en tete de barre.
+            if (i > 0)
             {
                 primaryHost.Children.Add(CreateConstellationConnector());
             }
 
-            primaryHost.Children.Add(CreateBookmarkBarButton(node));
+            primaryHost.Children.Add(CreateBookmarkBarButton(visibleNodes[i]));
+        }
+        if (barPickedIndex >= 0)
+        {
+            AddBookmarkReorderGap(primaryHost, visibleNodes, visibleNodes.Count, barPickedIndex, vertical: false);
         }
 
         if (overflowNodes.Count > 0)
@@ -769,7 +804,7 @@ public sealed partial class MainWindow
             return Math.Min(nodes.Count, 20);
         }
 
-        var metrics = ResolveUiDensityMetrics(_uiDensity);
+        var metrics = ResolveEffectiveUiDensityMetrics();
         // 16 (pas 6) depuis le 2026-08-22 : BookmarksBarPanel/BookmarksBottomBarPanel
         // Spacing releve pour que le separateur "✦" respire reellement entre les
         // favoris ("option A" choisie sur maquette, demande explicite utilisateur).
@@ -854,10 +889,10 @@ public sealed partial class MainWindow
         IsHitTestVisible = false
     };
 
-    private Button CreateBookmarkBarButton(BookmarkNode node)
+    private FrameworkElement CreateBookmarkBarButton(BookmarkNode node)
     {
         var sideLayout = UsesSideBookmarksRail(_bookmarksBarPosition);
-        var metrics = ResolveUiDensityMetrics(_uiDensity);
+        var metrics = ResolveEffectiveUiDensityMetrics();
         var button = new Button
         {
             Content = BookmarkButtonContent(node),
@@ -914,7 +949,169 @@ public sealed partial class MainWindow
             button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(BookmarkBarButton_PointerPressed), true);
         }
 
+        // Aide accessibilite "Reordonner sans glisser" (Accessibilite > Avance
+        // > Motricite) : jamais sur les 2 dossiers racine, memes freres non
+        // reordonnables que le glisser-depose ci-dessus (node.IsRoot).
+        if (_uiSettings.AccessibilityClickToReorderEnabled && !node.IsRoot)
+        {
+            return WrapBookmarkButtonWithReorderGrip(button, node, sideLayout, metrics);
+        }
+
         return button;
+    }
+
+    // Poignee SOEUR du bouton favori dans une Grid, jamais IMBRIQUEE dedans -
+    // le bouton favori intercepte deja PointerPressed pour son propre Click
+    // (voir le commentaire juste au-dessus, meme piege documente 3 fois pour
+    // le glisser-depose) : un controle cliquable a l'interieur relancerait
+    // exactement ce probleme. Meme motif que les steppers Monter/Descendre de
+    // MainWindow.ToolbarCustomization.cs (chip/nom/steppers en colonnes
+    // separees d'une meme Grid).
+    private Grid WrapBookmarkButtonWithReorderGrip(Button favoriteButton, BookmarkNode node, bool sideLayout, UiDensityMetrics metrics)
+    {
+        var isPicked = _bookmarkReorderPickedId == node.Id;
+        var label = AccessibleBookmarkLabel(node);
+
+        var grid = new Grid
+        {
+            ColumnSpacing = 2,
+            HorizontalAlignment = sideLayout ? HorizontalAlignment.Stretch : HorizontalAlignment.Left,
+            Opacity = _bookmarkReorderPickedId is not null && !isPicked ? 0.55 : 1.0
+        };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = sideLayout ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
+
+        // NovaAccentBrush (pas AccentFillColorDefaultBrush) : ce dernier ne
+        // vit QUE dans App.xaml/{ThemeResource} (walk de portee XAML), jamais
+        // ajoute litteralement a RootShell.Resources - l'indexeur direct en
+        // code plantait le processus SANS exception catchable (2026-09-12,
+        // trouve par instrumentation WinUiRuntimeTrace pas a pas, aucune
+        // ligne UNHANDLED produite malgre le crash). NovaAccentBrush (ambre,
+        // meme teinte que le reste de l'accent Lumora) est une vraie cle du
+        // dictionnaire de la fenetre.
+        var grip = new Button
+        {
+            Content = new TextBlock { Text = "⋮⋮", FontSize = 10, VerticalAlignment = VerticalAlignment.Center },
+            Style = (Style)RootShell.Resources["NovaCompactButtonStyle"],
+            MinWidth = 0,
+            Width = 22,
+            Height = metrics.BookmarkChipHeight,
+            Padding = new Thickness(0),
+            Background = isPicked
+                ? (Brush)RootShell.Resources["NovaAccentBrush"]
+                : (Brush)RootShell.Resources["NovaChromeButtonBackgroundBrush"]
+        };
+        ApplyNovaControlAccessibility(grip, isPicked ? $"Annuler le décrochage de {label}" : $"Décrocher {label} pour le réordonner");
+        grip.Click += (_, _) => ToggleBookmarkReorderPick(node.Id, label);
+        Grid.SetColumn(grip, 0);
+        grid.Children.Add(grip);
+
+        if (isPicked)
+        {
+            favoriteButton.BorderBrush = (Brush)RootShell.Resources["NovaAccentBrush"];
+            favoriteButton.BorderThickness = new Thickness(1.5);
+        }
+        Grid.SetColumn(favoriteButton, 1);
+        grid.Children.Add(favoriteButton);
+
+        return grid;
+    }
+
+    // Decroche/annule au clic sur la poignee - jamais de reconstruction
+    // SYNCHRONE de la barre pendant que ce meme clic est encore sur la pile
+    // d'appels (DispatcherQueue.TryEnqueue), meme piege deja documente 2 fois
+    // dans ce fichier (steppers Toolbar, glisser-depose favoris).
+    private void ToggleBookmarkReorderPick(string nodeId, string label)
+    {
+        var wasPicked = _bookmarkReorderPickedId == nodeId;
+        _bookmarkReorderPickedId = wasPicked ? null : nodeId;
+        var announcement = wasPicked
+            ? $"Décrochage de « {label} » annulé."
+            : $"« {label} » décroché — cliquez un emplacement pour le poser, Échap pour annuler.";
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            RenderBookmarksBar();
+            UpdateStatusText(announcement);
+        });
+    }
+
+    private void CancelBookmarkReorderPick()
+    {
+        if (_bookmarkReorderPickedId is null) return;
+        _bookmarkReorderPickedId = null;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            RenderBookmarksBar();
+            UpdateStatusText("Décrochage annulé.");
+        });
+    }
+
+    // Depose l'element decroche a l'emplacement clique - ReorderNode refuse
+    // silencieusement (retourne false) tout deplacement hors perimetre (meme
+    // convention que le glisser-depose, MainWindow.BookmarksDragDrop.cs).
+    private void DropBookmarkReorder(string movedId, string? beforeId, string movedLabel, int displayPosition)
+    {
+        _bookmarkReorderPickedId = null;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_bookmarks.ReorderNode(movedId, beforeId))
+            {
+                ReloadBookmarks();
+                UpdateStatusText($"« {movedLabel} » reposé en position {displayPosition}.");
+            }
+            else
+            {
+                RenderBookmarksBar();
+                UpdateStatusText("Impossible de déplacer ce favori ici.");
+            }
+        });
+    }
+
+    // Emplacement cliquable entre 2 favoris (ou avant le 1er/apres le
+    // dernier) pour y reposer l'element decroche - n'existe/n'est cliquable
+    // QUE pendant un decrochage (voir ClickToReorder.IsDropTarget), sinon la
+    // barre resterait polluee d'espaces morts en usage normal.
+    private void AddBookmarkReorderGap(Panel host, IReadOnlyList<BookmarkNode> orderedNodes, int gapIndex, int pickedIndex, bool vertical)
+    {
+        var isTarget = ClickToReorder.IsDropTarget(gapIndex, pickedIndex);
+
+        // Les 2 gaps qui encadrent l'element decroche (jamais des cibles,
+        // voir ClickToReorder.IsDropTarget) restent un simple Border inerte -
+        // ni Tapped ni focus clavier n'ont de sens dessus, pas besoin d'un
+        // Button pour un espace purement visuel.
+        if (!isTarget)
+        {
+            host.Children.Add(new Border
+            {
+                Width = vertical ? 24 : 4,
+                Height = vertical ? 4 : 24,
+                Margin = vertical ? new Thickness(0, 1, 0, 1) : new Thickness(1, 0, 1, 0)
+            });
+            return;
+        }
+
+        var orderedIds = orderedNodes.Select(n => n.Id).ToList();
+        var beforeId = ClickToReorder.BeforeIdForGap(orderedIds, gapIndex);
+        var movedLabel = AccessibleBookmarkLabel(orderedNodes[pickedIndex]);
+        var displayPosition = ClickToReorder.DisplayPositionForGap(gapIndex, pickedIndex);
+
+        // Un Button plutot qu'un Border+Tapped manuel : herite gratuitement
+        // du clavier (Entree/Espace), du focus visible et des etats survol/
+        // presse deja coherents avec le reste de la chrome - un Border seul
+        // n'expose rien de tout ca sans le reconstruire a la main.
+        var gap = new Button
+        {
+            Background = (Brush)RootShell.Resources["NovaCoolAccentBrush"],
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(2),
+            Padding = new Thickness(0),
+            Width = vertical ? 24 : 10,
+            Height = vertical ? 10 : 24,
+            Margin = vertical ? new Thickness(0, 1, 0, 1) : new Thickness(1, 0, 1, 0)
+        };
+        ApplyNovaControlAccessibility(gap, $"Poser {movedLabel} ici (position {displayPosition})");
+        gap.Click += (_, _) => DropBookmarkReorder(orderedNodes[pickedIndex].Id, beforeId, movedLabel, displayPosition);
+        host.Children.Add(gap);
     }
 
     // Chevron de debordement fidele au COMPORTEMENT de Chrome (2026-08-23,
@@ -963,7 +1160,7 @@ public sealed partial class MainWindow
 
     private Button CreateBookmarksOverflowButton(IReadOnlyList<BookmarkNode> overflowNodes)
     {
-        var metrics = ResolveUiDensityMetrics(_uiDensity);
+        var metrics = ResolveEffectiveUiDensityMetrics();
         var button = CreateOverflowButtonVisual(metrics);
         button.Flyout = CreateBookmarksOverflowFlyout(overflowNodes);
         ApplyNovaControlAccessibility(button, $"Afficher {overflowNodes.Count} favori(s) supplémentaire(s)");
@@ -1090,7 +1287,7 @@ public sealed partial class MainWindow
         OpenBookmarkNode(node);
     }
 
-    private static StackPanel BookmarkButtonContent(BookmarkNode node)
+    private StackPanel BookmarkButtonContent(BookmarkNode node)
     {
         var panel = new StackPanel
         {
@@ -1115,7 +1312,7 @@ public sealed partial class MainWindow
         return panel;
     }
 
-    private static FrameworkElement BookmarkIconElement(BookmarkNode node, double size)
+    private FrameworkElement BookmarkIconElement(BookmarkNode node, double size)
     {
         if (node.Kind == BookmarkKind.Url &&
             !string.IsNullOrWhiteSpace(node.IconPath) &&
@@ -1139,7 +1336,30 @@ public sealed partial class MainWindow
         // nom) redonne un repere visuel propre a chaque favori.
         if (node.Kind == BookmarkKind.Folder)
         {
-            return new SymbolIcon { Symbol = Symbol.Folder, Width = size, Height = size };
+            // Refonte organique "Encre chaude" (2026-09-12) : dernier symbole
+            // Segoe MDL2 Assets (police systeme) de toute la barre de favoris
+            // - le reste (chips transparentes, halo "Constellation") collait
+            // deja a la direction organique avant cette refonte, voir
+            // MEMORY.md. Silhouette de dossier pleine plutot que le symbole
+            // systeme - geometrie construite en code (pas de Geometry.Parse
+            // en WinUI3, contrairement a WPF) plutot qu'analysee depuis une
+            // chaine, pour rester sur des types dont l'existence est certaine.
+            var figure = new PathFigure { StartPoint = new Windows.Foundation.Point(4, 7), IsClosed = true };
+            figure.Segments.Add(new LineSegment { Point = new Windows.Foundation.Point(10, 7) });
+            figure.Segments.Add(new LineSegment { Point = new Windows.Foundation.Point(12, 9) });
+            figure.Segments.Add(new LineSegment { Point = new Windows.Foundation.Point(20, 9) });
+            figure.Segments.Add(new LineSegment { Point = new Windows.Foundation.Point(20, 18) });
+            figure.Segments.Add(new LineSegment { Point = new Windows.Foundation.Point(4, 18) });
+            var geometry = new PathGeometry();
+            geometry.Figures.Add(figure);
+            return new Microsoft.UI.Xaml.Shapes.Path
+            {
+                Data = geometry,
+                Fill = (Brush)RootShell.Resources["NovaBookmarkFolderGlyphBrush"],
+                Stretch = Stretch.Uniform,
+                Width = size,
+                Height = size
+            };
         }
 
         return BookmarkLetterAvatar(node, size);
