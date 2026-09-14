@@ -91,13 +91,19 @@ internal sealed class UiSettings
     public string CompanionCreativePostIt { get; set; } = string.Empty;
     public string CompanionResearchTrail { get; set; } = string.Empty;
     public string CompanionNightReminder { get; set; } = string.Empty;
-    // Couleur personnalisee par mode d'usage ("#RRGGBB", vide = couleur Nova
-    // par defaut du mode, codee en dur dans ResolveModeChromePalette). Le
-    // second ton du degrade (CoolAccent/WarmAccent) est toujours derive
-    // automatiquement de cette seule couleur (DeriveModeAccentTones,
-    // MainWindow.ModeAccentColor.cs), jamais stocke separement. "Equilibre"
-    // (balanced) n'a pas d'entree ici : hors perimetre de ce palier, garde sa
-    // palette par defaut.
+    // Couleur d'accentuation globale ("#RRGGBB", vide = couleur Nova par
+    // defaut du mode/de la palette actifs). Remplace le 2026-09-14 (session
+    // "3.5") les 6 champs ModeAccentColor* ci-dessous (un reglage PAR mode
+    // d'usage) par UN SEUL reglage global, facon Windows - retour
+    // utilisateur explicite. Le second ton du degrade (CoolAccent/WarmAccent)
+    // est toujours derive automatiquement de cette seule couleur
+    // (DeriveModeAccentTones, MainWindow.AccentColor.cs), jamais stocke
+    // separement.
+    public string AccentColor { get; set; } = string.Empty;
+    // Anciens champs "couleur personnalisee par mode d'usage" (2026-08-10 ->
+    // 2026-09-13), conserves dans le schema pour ne pas perdre les donnees
+    // d'un profil existant, mais plus lus/ecrits par l'UI (voir AccentColor
+    // ci-dessus) depuis le 2026-09-14.
     public string ModeAccentColorNeutral { get; set; } = string.Empty;
     public string ModeAccentColorFocus { get; set; } = string.Empty;
     public string ModeAccentColorReading { get; set; } = string.Empty;
@@ -110,6 +116,24 @@ internal sealed class UiSettings
     public bool NewTabFocusSearchOnOpen { get; set; }
     public bool NewTabShortcutsVisible { get; set; }
     public List<NewTabShortcut> NewTabShortcuts { get; set; } = [];
+    // Menu contextuel personnalisable (2026-09-11, chantier "Reglages
+    // sur-mesure"). Catalogue AUTO-DECOUVERT : chaque entree reellement vue
+    // dans un clic droit (CoreWebView2ContextMenuItem.Name/Label) est
+    // enregistree ici la premiere fois qu'elle apparait - jamais de liste
+    // figee a l'avance, qui risquerait de proposer des reglages pour des
+    // entrees qui n'existent meme pas dans cette version de Chromium (voir
+    // MainWindow.PageContextMenu.cs). Plafonne pour ne pas grossir sans fin.
+    public List<ContextMenuKnownItem> ContextMenuKnownItems { get; set; } = [];
+    // Identifiants (ContextMenuKnownItem.Name) masques du menu contextuel.
+    public List<string> ContextMenuHiddenItems { get; set; } = [];
+    // Ordre voulu des identifiants encore visibles ; les entrees absentes de
+    // cette liste gardent l'ordre naturel de Chromium, ajoutees a la suite.
+    public List<string> ContextMenuOrder { get; set; } = [];
+    // Reglages epingles (2026-09-11, chantier "Reglages sur-mesure") :
+    // identifiants stables (voir PinnableSettingsCatalog, MainWindow.Settings.cs)
+    // choisis par l'utilisateur via l'etoile a cote de chaque reglage pinnable,
+    // affiches dans la bande "Epingles" en haut du panneau Reglages.
+    public List<string> PinnedSettingIds { get; set; } = [];
     // Verrouillage auto par défaut à 10 min (valeur présente dans le sélecteur).
     // Les profils existants conservent la valeur enregistrée dans leur ui-settings.
     public int SessionTimeoutMinutes { get; set; } = 10;
@@ -219,6 +243,70 @@ internal sealed class UiSettings
     // explicite requise (contrairement a la traduction, poids nettement
     // plus lourd et fonctionnalite plus proche de l'experimental).
     public bool SearchAssistEnabled { get; set; }
+
+    // --- Chantier "Ajustement n°2" (2026-09-11) : nouvelles aides
+    // d'accessibilite validees dans la maquette Artifact "Lumora Sur-Mesure"
+    // (categorie Accessibilite > Avance > Nouvelles aides). Les sous-titres
+    // automatiques et la navigation par balayage restent hors-perimetre
+    // (marques "a l'etude" / chantier a part dans la maquette).
+
+    // Motricite : reordonner un element en cliquant pour le decrocher puis
+    // en recliquant sur sa destination, sans avoir a maintenir le bouton de
+    // la souris enfonce pendant tout le glisser-depose. Pattern generique,
+    // pense pour s'appliquer a toute liste reordonnable de l'app (menu
+    // contextuel personnalisable, barre de favoris...), pas a une seule liste.
+    public bool AccessibilityClickToReorderEnabled { get; set; }
+
+    // Motricite : clic par survol (dwell click) - rester immobile sur un
+    // element cliquable le declenche apres un delai, sans avoir besoin de
+    // cliquer precisement. Delai en millisecondes, 1300 par defaut (valeur
+    // de la demo de la maquette).
+    public bool AccessibilityDwellClickEnabled { get; set; }
+    public int AccessibilityDwellClickDelayMs { get; set; } = 1300;
+
+    // Vision : chaque site rouvre au niveau de zoom ou il a ete laisse la
+    // derniere fois, au lieu de repartir a 100% a chaque nouvel onglet.
+    // Active Ctrl+Plus/Ctrl+Moins/Ctrl+0 (MainWindow.AccessibilityZoom.cs),
+    // absents de Lumora jusqu'ici - pas de nouvelle donnee a persister : ces
+    // raccourcis pilotent directement SiteComfortRules ci-dessous (Controle
+    // de site > "Zoom prefere pour ce site"), deja fiable et deja branche
+    // sur la navigation. Voir Accessibility/ZoomStepPolicy.cs.
+    public bool AccessibilityZoomPerSiteEnabled { get; set; }
+
+    // Vision : curseur de souris agrandi et contraste au-dessus des pages
+    // et de la chrome Lumora, pour les basses visions qui perdent le
+    // pointeur systeme standard.
+    public bool AccessibilityLargeCursorEnabled { get; set; }
+
+    // Cognitif/attention : masque les boutons avances de la barre d'outils
+    // pour ne garder que l'essentiel (navigation, adresse, favoris).
+    public bool AccessibilitySimplifiedModeEnabled { get; set; }
+
+    // Cognitif/attention : rappel discret apres une session continue.
+    // 0 = jamais (valeur "Jamais" de la maquette), sinon minutes ecoulees
+    // avant le rappel (45 ou 90 dans la maquette, mais pas fige a ces deux
+    // valeurs cote modele).
+    public int AccessibilityBreakReminderMinutes { get; set; }
+
+    // Auditif : remplace les sons de notification de Lumora (pas ceux des
+    // pages web, qui ne dependent pas de nous) par un flash visuel discret.
+    public bool AccessibilitySoundsAsVisualFlashEnabled { get; set; }
+
+    // --- "Sons & ambiance" (chantier "Ajustement n2", 2026-09-11, demande
+    // explicite utilisateur - Reglages > Profils locaux). Distinct de
+    // AccessibilitySoundsAsVisualFlashEnabled ci-dessus : ceci ajoute une
+    // identite sonore (pack de clics/bascules + ambiance de fond en boucle,
+    // jamais de la musique), l'autre coupe les sons systeme WinUI.
+    public bool SoundThemeEnabled { get; set; }
+    // "base", "doux", "mecanique" ou "arcade" - voir Sound/SoundThemeService.cs.
+    public string SoundEffectsPack { get; set; } = "base";
+    // "none", "cascade", "mer" ou "pluie".
+    public string SoundAmbianceId { get; set; } = "none";
+    // 0.35 par defaut plutot que 0.5 (retour utilisateur 2026-09-11 : le
+    // volume par defaut etait "beaucoup trop fort, beaucoup trop agressif"
+    // - combine a la reduction de gain appliquee directement sur les
+    // fichiers, voir Assets/Sound/Ambiance/LICENSE-pixabay.txt).
+    public double SoundAmbianceVolume { get; set; } = 0.35;
     // Recherche semantique locale dans l'historique : indexe le contenu texte
     // des pages visitees via des embeddings calcules localement (modele
     // multilingual-e5-small, ONNX), permet de retrouver une page par le sens
@@ -485,3 +573,10 @@ internal sealed class UiSettings
 }
 
 internal sealed record NewTabShortcut(string Title, string Url);
+
+// Name = identifiant stable CoreWebView2ContextMenuItem.Name (ex. "copy",
+// "openLinkNewTab", "inspectElement"...), jamais le Label affiche (variable :
+// "Rechercher Google pour «...»" change a chaque selection). Label = le
+// texte Chromium vu la premiere fois, gardee comme repli d'affichage tant
+// qu'aucune traduction francaise maison n'existe pour ce Name precis.
+internal sealed record ContextMenuKnownItem(string Name, string Label);

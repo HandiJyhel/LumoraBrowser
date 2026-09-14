@@ -20,10 +20,53 @@ public sealed partial class MainWindow
     // grande surface de XAML, avec un vrai risque de confondre description
     // statique et texte d'etat dynamique (ex. SettingsPendingText,
     // AccessibilityRescueStatusText) - laisse pour une passe separee.
-    private sealed record SettingsSearchEntry(string Section, string? SubGroup, string Label, string Path, string Keywords);
+    //
+    // TargetControlName (2026-09-11, chantier "Reglages sur-mesure") : passe
+    // partielle vers la granularite controle-par-controle, sur les reglages
+    // les plus probables a etre cherches par leur nom precis plutot que par
+    // categorie (deja tous convertis en application instantanee - inutile de
+    // sauter dessus s'il faut encore chercher un bouton Appliquer). Reste
+    // null pour toutes les entrees section/sous-onglet non converties : la
+    // recherche continue de fonctionner pour elles exactement comme avant,
+    // juste sans l'atterrissage precis.
+    private sealed record SettingsSearchEntry(string Section, string? SubGroup, string Label, string Path, string Keywords, string? TargetControlName = null);
 
     private static readonly SettingsSearchEntry[] SettingsSearchIndex =
     [
+        // ── Entrees a granularite controle precis (voir TargetControlName ci-dessus) ──
+        new("appearance", "theme", "Thème (sombre, clair, système)", "Mon Lumora › Thème et couleurs",
+            "thème sombre clair système", "ThemeModeCombo"),
+        new("appearance", "theme", "Mode d'usage", "Mon Lumora › Thème et couleurs",
+            "mode d'usage neutre équilibre focus lecture création recherche nuit", "UsageModeCombo"),
+        new("appearance", "layout", "Taille de l'interface", "Mon Lumora › Disposition",
+            "taille interface densité confortable standard petit boutons", "UiDensityCombo"),
+        new("appearance", "layout", "Barre de favoris visible", "Mon Lumora › Disposition",
+            "barre favoris visible masquer", "BookmarksBarSwitch"),
+        new("appearance", "layout", "Mise en veille des onglets inactifs", "Mon Lumora › Disposition",
+            "mise en veille onglets inactifs mémoire processeur délai inactivité", "TabSuspensionEnabledSwitch"),
+        new("appearance", "newtab", "Titre affiché du nouvel onglet", "Mon Lumora › Nouvel onglet",
+            "titre affiché nom logiciel personnalisé nouvel onglet", "NewTabTitleBox"),
+        // Pas de TargetControlName ici : ListView.Focus() echoue sur
+        // ContextMenuItemsList (trouve en verifiant en direct, cause non
+        // elucidee - peut-etre lie a son remplissage dynamique). Atterrir sur
+        // le bon sous-onglet fonctionne parfaitement sans cette derniere
+        // etape ; pas de quoi bloquer l'entree pour ca.
+        new("appearance", "advanced", "Menu contextuel (clic droit)", "Mon Lumora › Avancé",
+            "menu contextuel clic droit personnaliser masquer réordonner"),
+        new("profile", null, "Verrouillage automatique par inactivité", "Profils locaux",
+            "verrouillage automatique session inactivité délai", "SessionTimeoutCombo"),
+        new("profile", null, "Sons & ambiance", "Profils locaux › Sons & ambiance",
+            "son clic bascule pack arcade ambiance cascade mer pluie musique fond relaxant"),
+        new("navigation", null, "Moteur de recherche", "Espace de travail",
+            "moteur recherche google duckduckgo bing brave", "SearchEngineCombo"),
+        new("privacy", "ads", "Bloqueur de publicités et traceurs", "Confidentialité › Publicités",
+            "bloqueur publicité pub traceurs adblock", "NetworkBlockerSwitch"),
+        new("accessibility", "advanced", "Rappel de pause", "Accessibilité › Avancé",
+            "rappel pause temps usage continu cognitif attention", "AccessibilityBreakReminderCombo"),
+        new("accessibility", "advanced", "Remplacer les sons par un flash visuel", "Accessibilité › Avancé",
+            "son notification flash visuel auditif silencieux muet", "AccessibilitySoundsAsVisualFlashSwitch"),
+
+        // ── Entrees a granularite section/sous-onglet (historique, 21 entrees) ──
         new("overview", null, "Vue d'ensemble", "Vue d'ensemble", "aperçu tableau de bord accueil"),
         new("navigation", null, "Espace de travail", "Espace de travail",
             "recherche moteur google duckduckgo bing brave suggestions adresse traduction traduire assistant ia phi-3 historique sémantique intelligent onglets verticaux palette commande ctrl+k raccourci"),
@@ -49,6 +92,8 @@ public sealed partial class MainWindow
             "lecture à voix haute loupe captcha guide immersif vocal audio"),
         new("accessibility", "keyboard", "Navigation clavier", "Accessibilité › Navigation clavier",
             "raccourcis clavier ctrl+alt tab échap lecteur d'écran"),
+        new("accessibility", "advanced", "Avancé — Nouvelles aides", "Accessibilité › Avancé",
+            "réordonner sans clic maintenu survol dwell zoom mémorisé par site curseur agrandi contrasté mode simplifié rappel de pause sons flash visuel"),
         new("startup", null, "Ouverture", "Ouverture",
             "démarrage session précédente accueil page restaurer"),
         new("privacy", "ads", "Publicités et traceurs", "Confidentialité › Publicités",
@@ -87,6 +132,8 @@ public sealed partial class MainWindow
             .OrderByDescending(x => x.score)
             .Select(x => x.entry)
             .ToList();
+        WinUiRuntimeTrace.Write($"SettingsSearchBox_TextChanged: query='{query}' matches={matches.Count}" +
+            (matches.Count > 0 ? $" premier='{matches[0].Label}' target='{matches[0].TargetControlName}'" : ""));
 
         if (matches.Count == 0)
         {
@@ -163,12 +210,14 @@ public sealed partial class MainWindow
             ("appearance", "theme") => AppearanceSubNavTheme,
             ("appearance", "layout") => AppearanceSubNavLayout,
             ("appearance", "newtab") => AppearanceSubNavNewTab,
+            ("appearance", "advanced") => AppearanceSubNavAdvanced,
             ("appearance", "discovery") => AppearanceSubNavDiscovery,
             ("accessibility", "profiles") => AccessibilitySubNavProfiles,
             ("accessibility", "display") => AccessibilitySubNavDisplay,
             ("accessibility", "webcontent") => AccessibilitySubNavWebContent,
             ("accessibility", "reading") => AccessibilitySubNavReading,
             ("accessibility", "keyboard") => AccessibilitySubNavKeyboard,
+            ("accessibility", "advanced") => AccessibilitySubNavAdvanced,
             ("privacy", "ads") => PrivacySubNavAds,
             ("privacy", "tracking") => PrivacySubNavTracking,
             ("privacy", "connection") => PrivacySubNavConnection,
@@ -185,5 +234,53 @@ public sealed partial class MainWindow
             case "accessibility": AccessibilitySubNav_Click(sub, new RoutedEventArgs()); break;
             case "privacy": PrivacySubNav_Click(sub, new RoutedEventArgs()); break;
         }
+
+        BringSearchTargetIntoFocus(entry.TargetControlName);
+    }
+
+    // Atterrissage precis (2026-09-11) : une fois la bonne page affichee,
+    // fait defiler jusqu'au controle exact et lui donne le focus - le
+    // rectangle de focus WinUI sert lui-meme de "surlignage", sans storyboard
+    // maison a ecrire/maintenir. Reste silencieux (pas d'exception) pour tout
+    // nom absent de la table : les entrees sans TargetControlName (recherche
+    // a granularite section) continuent de fonctionner exactement comme
+    // avant, seul l'atterrissage precis est un bonus quand il est defini.
+    private void BringSearchTargetIntoFocus(string? controlName)
+    {
+        if (string.IsNullOrEmpty(controlName)) return;
+
+        Control? target = controlName switch
+        {
+            "ThemeModeCombo" => ThemeModeCombo,
+            "UsageModeCombo" => UsageModeCombo,
+            "UiDensityCombo" => UiDensityCombo,
+            "BookmarksBarSwitch" => BookmarksBarSwitch,
+            "TabSuspensionEnabledSwitch" => TabSuspensionEnabledSwitch,
+            "NewTabTitleBox" => NewTabTitleBox,
+            "ContextMenuItemsList" => ContextMenuItemsList,
+            "SessionTimeoutCombo" => SessionTimeoutCombo,
+            "SearchEngineCombo" => SearchEngineCombo,
+            "NetworkBlockerSwitch" => NetworkBlockerSwitch,
+            _ => null
+        };
+        if (target is null)
+        {
+            WinUiRuntimeTrace.Write($"BringSearchTargetIntoFocus: controlName='{controlName}' non resolu");
+            return;
+        }
+
+        // Differe au prochain passage de mise en page (2026-09-11, trouve en
+        // verifiant en direct) : appele juste apres avoir bascule la
+        // Visibility de plusieurs groupes (SettingsNav_Click/
+        // AppearanceSubNav_Click), le controle cible n'a pas encore ete
+        // mesure/arrange par XAML - Focus() echoue silencieusement (renvoie
+        // false) si on l'appelle dans le meme passage synchrone. Un aller-
+        // retour DispatcherQueue suffit a laisser la mise en page se faire.
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            target.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.2 });
+            var focused = target.Focus(FocusState.Programmatic);
+            WinUiRuntimeTrace.Write($"BringSearchTargetIntoFocus: controlName='{controlName}' focus reussi={focused}");
+        });
     }
 }

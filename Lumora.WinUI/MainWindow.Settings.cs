@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -209,28 +210,54 @@ public sealed partial class MainWindow
             : "En plein écran, la barre compacte reste visible.";
     }
 
-    private void NewTabTitleBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (_suppressUiSettingsSave) return;
-        MarkAppearanceOptionsPending();
-    }
-
+    // Application instantanee (2026-09-11, "sur-mesure") : ce groupe faisait
+    // exception au reste des Reglages (toggles/combos deja instantanes
+    // partout ailleurs, y compris en Accessibilite) en exigeant un clic sur
+    // "Appliquer les changements" separe - incoherence reelle trouvee en
+    // testant l'app, pas un choix delibere. Titre/raccourcis sauvegardes au
+    // LostFocus (pas a chaque frappe, pour ne pas ecrire un titre a moitie
+    // tape ni reparser les raccourcis en boucle) - voir
+    // NewTabTitleBox_LostFocus/NewTabShortcutsBox_LostFocus. Seuls
+    // avatar/fond d'ecran/couleurs de mode restent en attente+Appliquer :
+    // previsualisation legitime avant validation, pas une incoherence.
     private void NewTabFocusSearchSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
-        MarkAppearanceOptionsPending();
+        _uiSettings.NewTabFocusSearchOnOpen = NewTabFocusSearchSwitch.IsOn;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        UpdateStatusText(NewTabFocusSearchSwitch.IsOn
+            ? "Le curseur se placera dans la recherche du nouvel onglet."
+            : "Le curseur ne se place plus automatiquement dans la recherche.");
     }
 
     private void NewTabShortcutsSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
-        MarkAppearanceOptionsPending();
+        _uiSettings.NewTabShortcutsVisible = NewTabShortcutsSwitch.IsOn;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        RefreshNovaHomePages();
+        UpdateStatusText(NewTabShortcutsSwitch.IsOn ? "Raccourcis affichés." : "Raccourcis masqués.");
     }
 
-    private void NewTabShortcutsBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void NewTabTitleBox_LostFocus(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
-        MarkAppearanceOptionsPending();
+        var normalized = BrandingText.NormalizeLegacyProductTitle(NewTabTitleBox.Text);
+        if (string.Equals(_uiSettings.NewTabTitle, normalized, StringComparison.Ordinal)) return;
+        NewTabTitleBox.Text = normalized;
+        _uiSettings.NewTabTitle = normalized;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        RefreshNovaHomePages();
+        UpdateStatusText("Titre du nouvel onglet mis à jour.");
+    }
+
+    private void NewTabShortcutsBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        _uiSettings.NewTabShortcuts = ParseNewTabShortcuts(NewTabShortcutsBox.Text);
+        _uiSettings.Save(_profile.UiSettingsFile);
+        RefreshNovaHomePages();
+        UpdateStatusText("Raccourcis du nouvel onglet mis à jour.");
     }
 
     private void CommandPaletteEnabledSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -331,6 +358,107 @@ public sealed partial class MainWindow
             : "Renforcement des couleurs désactivé.");
     }
 
+    private void AccessibilityZoomPerSiteSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        UpdateStatusText(AccessibilityZoomPerSiteSwitch.IsOn
+            ? "Zoom mémorisé par site activé."
+            : "Zoom mémorisé par site désactivé.");
+    }
+
+    private void AccessibilityLargeCursorSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        _ = ApplyAccessibilityVisionToAllTabsAsync();
+        UpdateStatusText(AccessibilityLargeCursorSwitch.IsOn
+            ? "Curseur agrandi et contrasté activé sur les pages."
+            : "Curseur agrandi et contrasté désactivé.");
+    }
+
+    // Cognitif/attention : masque/reaffiche les boutons "avances" de la
+    // barre d'outils (StackPanel gere par ToolbarCustomizationService), ne
+    // touche ni la navigation (retour/avancer/recharger), ni la barre
+    // d'adresse, ni la barre de favoris - qui vivent ailleurs dans la grille
+    // de la toolbar.
+    private void AccessibilitySimplifiedModeSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        ApplySimplifiedModeUi();
+        UpdateStatusText(AccessibilitySimplifiedModeSwitch.IsOn
+            ? "Mode simplifié activé : boutons avancés masqués."
+            : "Mode simplifié désactivé.");
+    }
+
+    private void ApplySimplifiedModeUi()
+    {
+        ToolbarButtonsPanel.Visibility = _uiSettings.AccessibilitySimplifiedModeEnabled
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
+    // Motricite : premiere liste a consommer le pattern generique
+    // "decrocher/reposer" (voir Accessibility/ClickToReorder.cs) - annule tout
+    // decrochage en cours avant de rafraichir, la poignee elle-meme disparait
+    // du meme coup si on vient de desactiver le reglage.
+    private void AccessibilityClickToReorderSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        _bookmarkReorderPickedId = null;
+        RenderBookmarksBar();
+        UpdateStatusText(AccessibilityClickToReorderSwitch.IsOn
+            ? "Réordonner sans glisser activé : une poignée apparaît sur chaque favori."
+            : "Réordonner sans glisser désactivé.");
+    }
+
+    // Construit les deux services d'alerte d'accessibilite (rappel de pause,
+    // flash visuel - voir Accessibility/BreakReminderService.cs et
+    // VisualFlashService.cs) et les relie entre eux : le rappel de pause est
+    // aujourd'hui le seul declencheur reel du flash, avec la demande de
+    // notification d'un site (voir ShowNotificationPermissionBar,
+    // MainWindow.SiteControl.cs). Appele une fois depuis le constructeur,
+    // juste apres InitializeComponent (VisualFlashOverlay doit exister).
+    private void InitializeAccessibilityAlertServices()
+    {
+        _visualFlashService = new Lumora.WinUI.Accessibility.VisualFlashService(VisualFlashOverlay);
+        _breakReminderService.ReminderDue += () =>
+        {
+            // Note discrete et non bloquante (pas de fenetre modale) : le
+            // meme canal d'annonce d'accessibilite que le reste des
+            // reglages, pour rester coherent avec un eventuel lecteur
+            // d'ecran deja branche.
+            UpdateStatusText(
+                "Pause suggérée — Lumora est ouvert depuis un moment.",
+                notificationKind: Microsoft.UI.Xaml.Automation.Peers.AutomationNotificationKind.Other);
+            _visualFlashService?.FlashIfEnabled();
+        };
+    }
+
+    private void AccessibilityBreakReminderCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        _breakReminderService.Restart(_uiSettings.AccessibilityBreakReminderMinutes);
+        var minutesText = (AccessibilityBreakReminderCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Jamais";
+        UpdateStatusText(_uiSettings.AccessibilityBreakReminderMinutes == 0
+            ? "Rappel de pause désactivé."
+            : $"Rappel de pause : {minutesText.ToLowerInvariant()}.");
+    }
+
+    private void AccessibilitySoundsAsVisualFlashSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        SaveUiSettings();
+        _visualFlashService?.SetEnabled(AccessibilitySoundsAsVisualFlashSwitch.IsOn);
+        UpdateElementSoundMuteState();
+        UpdateStatusText(AccessibilitySoundsAsVisualFlashSwitch.IsOn
+            ? "Sons remplacés par un flash visuel."
+            : "Sons de Lumora réactivés.");
+    }
+
     private void AddressSuggestionsSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
@@ -364,13 +492,50 @@ public sealed partial class MainWindow
     private void ThemeModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
-        MarkAppearanceOptionsPending();
+        if (ThemeModeCombo.SelectedItem is ComboBoxItem item)
+            ApplyThemeModeImmediate(item.Tag?.ToString() ?? "dark");
     }
 
+    // Mode d'usage : reutilise le meme chemin instantane que le selecteur du
+    // pied de fenetre (ApplyUsageModeFromUi) plutot que d'en refaire un -
+    // meme comportement (application du preset, rafraichissement de
+    // l'accueil) qu'on l'ouvre depuis les Reglages ou depuis le footer.
+    private void UsageModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        if (UsageModeCombo.SelectedItem is ComboBoxItem item)
+            ApplyUsageModeFromUi(item.Tag?.ToString() ?? "neutral");
+    }
+
+    // Palette Lumora / Style du nouvel onglet / Animations : partagent ce
+    // gestionnaire de longue date (peu importe lequel des 3 a change, les 3
+    // sont relus et sauvegardes ensemble - sans effet indesirable, chacun
+    // reflete deja sa propre selection courante).
     private void AppearanceOption_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
-        MarkAppearanceOptionsPending();
+        if (AccentPaletteCombo.SelectedItem is ComboBoxItem accentItem)
+            _uiSettings.AccentPalette = accentItem.Tag?.ToString() ?? "lumora";
+        if (NewTabStyleCombo.SelectedItem is ComboBoxItem styleItem)
+            _uiSettings.NewTabStyle = styleItem.Tag?.ToString() ?? "signature";
+        if (PersonalizationMotionCombo.SelectedItem is ComboBoxItem motionItem)
+            _uiSettings.PersonalizationMotionStyle = motionItem.Tag?.ToString() ?? "luminous";
+        _uiSettings.Save(_profile.UiSettingsFile);
+        ApplyAppearanceSideEffects();
+        UpdateStatusText("Personnalisation mise à jour.");
+    }
+
+    // Meme filet de securite que la queue (desormais instantanee) de
+    // ApplySettingsChangesButton_Click : rejoue les recalculs qui peuvent
+    // deprendre d'un des 3 reglages ci-dessus, sans avoir a savoir lequel
+    // precisement (couts nuls, deja idempotents).
+    private void ApplyAppearanceSideEffects()
+    {
+        ApplyAccessibilitySettings();
+        ApplyBookmarksBarVisibility();
+        ApplyCompactModeLayout();
+        ApplyFullScreenLayout();
+        RefreshNovaHomePages();
     }
 
     private void WorkspacePresetButton_Click(object sender, RoutedEventArgs e)
@@ -397,6 +562,106 @@ public sealed partial class MainWindow
         ApplyWorkspacePresetImmediate(parts[0], parts[1], status);
     }
 
+    // ── Reglages epingles (2026-09-11, chantier "Reglages sur-mesure") ──────
+    // Catalogue volontairement restreint aux reglages deja convertis en
+    // application instantanee ci-dessus (theme, mode d'usage, densite, titre
+    // nouvel onglet) : les epingler n'a de sens que si cliquer la puce
+    // retrouve un etat a jour sans etape supplementaire.
+    private sealed record PinnableSetting(string Id, string Label, string AppearanceSubNavTag, Button Star);
+
+    private List<PinnableSetting> BuildPinnableSettingsCatalog() =>
+    [
+        new("theme.mode", "Thème", "theme", PinThemeModeButton),
+        new("theme.usagemode", "Mode d'usage", "theme", PinUsageModeButton),
+        new("layout.density", "Taille de l'interface", "layout", PinDensityButton),
+        new("newtab.title", "Titre affiché", "newtab", PinNewTabTitleButton),
+    ];
+
+    private void PinSettingButton_Click(object sender, RoutedEventArgs e)
+    {
+        WinUiRuntimeTrace.Write($"PinSettingButton_Click: sender={sender?.GetType().Name} tag={(sender as Button)?.Tag}");
+        if (sender is not Button { Tag: string id }) return;
+        var pinned = _uiSettings.PinnedSettingIds;
+        if (pinned.Contains(id)) pinned.Remove(id);
+        else pinned.Add(id);
+        WinUiRuntimeTrace.Write($"PinSettingButton_Click: id={id} pinned.Count apres bascule={pinned.Count}");
+        _uiSettings.Save(_profile.UiSettingsFile);
+        RefreshPinnedSettingsUi();
+    }
+
+    private void RefreshPinnedSettingsUi()
+    {
+        var catalog = BuildPinnableSettingsCatalog();
+        var pinned = _uiSettings.PinnedSettingIds;
+        foreach (var entry in catalog)
+        {
+            entry.Star.Content = pinned.Contains(entry.Id) ? "★" : "☆";
+        }
+
+        PinnedSettingsStrip.Children.Clear();
+        foreach (var id in pinned)
+        {
+            var entry = catalog.FirstOrDefault(c => c.Id == id);
+            if (entry is null) continue; // identifiant epingle d'une version anterieure disparue : ignore proprement
+            var chip = new Button
+            {
+                Content = entry.Label,
+                Style = (Style)RootShell.Resources["NovaCompactButtonStyle"]
+            };
+            AutomationProperties.SetName(chip, $"Aller à {entry.Label}");
+            chip.Click += (_, _) => NavigateToSettingsSection("appearance", entry.AppearanceSubNavTag);
+            PinnedSettingsStrip.Children.Add(chip);
+        }
+        PinnedSettingsCard.Visibility = PinnedSettingsStrip.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        WinUiRuntimeTrace.Write($"RefreshPinnedSettingsUi: pinned.Count={pinned.Count} chips construites={PinnedSettingsStrip.Children.Count} visibility={PinnedSettingsCard.Visibility}");
+    }
+
+    // Reutilisable au-dela des puces epinglees (ex. futur clic sur un resultat
+    // de recherche granulaire) : bascule le rail principal ET, pour "Mon
+    // Lumora", le sous-onglet demande, en rejouant les memes gestionnaires
+    // que des clics reels (SettingsNav_Click/AppearanceSubNav_Click) plutot
+    // que de dupliquer leur logique d'affichage/effets de bord.
+    private void NavigateToSettingsSection(string topSection, string? appearanceSubNavTag = null)
+    {
+        ShowPanel(SettingsPanel, "Paramètres");
+
+        RadioButton? topButton = topSection switch
+        {
+            "overview" => SettingsNavOverview,
+            "appearance" => SettingsNavAppearance,
+            "navigation" => SettingsNavNavigation,
+            "privacy" => SettingsNavPrivacy,
+            "vault" => SettingsNavVault,
+            "profile" => SettingsNavProfile,
+            "accessibility" => SettingsNavAccessibility,
+            "startup" => SettingsNavStartup,
+            "storage" => SettingsNavStorage,
+            _ => null
+        };
+        if (topButton is null) return;
+        topButton.IsChecked = true;
+        SettingsNav_Click(topButton, new RoutedEventArgs());
+
+        if (topSection == "appearance" && appearanceSubNavTag is not null)
+        {
+            RadioButton? subButton = appearanceSubNavTag switch
+            {
+                "identity" => AppearanceSubNavIdentity,
+                "theme" => AppearanceSubNavTheme,
+                "layout" => AppearanceSubNavLayout,
+                "newtab" => AppearanceSubNavNewTab,
+                "advanced" => AppearanceSubNavAdvanced,
+                "discovery" => AppearanceSubNavDiscovery,
+                _ => null
+            };
+            if (subButton is not null)
+            {
+                subButton.IsChecked = true;
+                AppearanceSubNav_Click(subButton, new RoutedEventArgs());
+            }
+        }
+    }
+
     private void MarkAppearanceOptionsPending()
     {
         MarkSettingsChangesPending("Changements de personnalisation en attente.");
@@ -416,10 +681,12 @@ public sealed partial class MainWindow
 
     private void ApplySettingsChangesButton_Click(object sender, RoutedEventArgs e)
     {
+        WinUiRuntimeTrace.Write("ApplySettingsChangesButton_Click: debut");
         var avatarWasPending = HasPendingAvatarChange();
         var avatarChanged = ApplyPendingAvatarChange();
         if (avatarWasPending && !avatarChanged)
         {
+            WinUiRuntimeTrace.Write("ApplySettingsChangesButton_Click: retour anticipe (avatar)");
             SettingsPendingText.Text = "L'avatar n'a pas pu être appliqué. Vérifiez l'image choisie.";
             return;
         }
@@ -428,6 +695,7 @@ public sealed partial class MainWindow
         var wallpaperChanged = ApplyPendingWallpaperChange();
         if (wallpaperWasPending && !wallpaperChanged)
         {
+            WinUiRuntimeTrace.Write("ApplySettingsChangesButton_Click: retour anticipe (fond d'ecran)");
             SettingsPendingText.Text = "Le fond d'écran n'a pas pu être appliqué. Vérifiez l'image choisie.";
             return;
         }
@@ -453,6 +721,7 @@ public sealed partial class MainWindow
         StatusText.Text = avatarChanged || wallpaperChanged || modeAccentColorsChanged
             ? "Personnalisation appliquée."
             : "Paramètres appliqués.";
+        WinUiRuntimeTrace.Write($"ApplySettingsChangesButton_Click: fin, StatusText.Text='{StatusText.Text}'");
     }
 
     private void ResetSettingsChangesButton_Click(object sender, RoutedEventArgs e)
@@ -651,6 +920,7 @@ public sealed partial class MainWindow
             NewTabShortcutsSwitch.IsOn = _uiSettings.NewTabShortcutsVisible;
             NewTabShortcutsBox.Text = NewTabShortcutsToText(_uiSettings.NewTabShortcuts);
             SelectComboByTag(ThemeModeCombo, _uiSettings.ThemeMode, "dark");
+            RefreshPinnedSettingsUi();
 
             AccessibilityHighContrastSwitch.IsOn = _uiSettings.AccessibilityHighContrast;
             AccessibilityLargeTextSwitch.IsOn = _uiSettings.AccessibilityLargeText;
@@ -666,6 +936,15 @@ public sealed partial class MainWindow
             SelectComboByTag(ReadingGuideBandHeightCombo, NormalizeReadingGuideBandHeight(_uiSettings.AccessibilityReadingGuideBandHeight).ToString(), "160");
             SelectComboByTag(AccessibilityTextSpacingCombo, _uiSettings.AccessibilityTextSpacing, "normal");
             AccessibilityColorBoostSwitch.IsOn = _uiSettings.AccessibilityColorBoostEnabled;
+            AccessibilityZoomPerSiteSwitch.IsOn = _uiSettings.AccessibilityZoomPerSiteEnabled;
+            AccessibilityLargeCursorSwitch.IsOn = _uiSettings.AccessibilityLargeCursorEnabled;
+            AccessibilitySimplifiedModeSwitch.IsOn = _uiSettings.AccessibilitySimplifiedModeEnabled;
+            ApplySimplifiedModeUi();
+            AccessibilityClickToReorderSwitch.IsOn = _uiSettings.AccessibilityClickToReorderEnabled;
+            SelectComboByTag(AccessibilityBreakReminderCombo, _uiSettings.AccessibilityBreakReminderMinutes.ToString(), "0");
+            _breakReminderService.Restart(_uiSettings.AccessibilityBreakReminderMinutes);
+            AccessibilitySoundsAsVisualFlashSwitch.IsOn = _uiSettings.AccessibilitySoundsAsVisualFlashEnabled;
+            _visualFlashService?.SetEnabled(_uiSettings.AccessibilitySoundsAsVisualFlashEnabled);
             UpdateAccessibilityComfortProfileFromControls();
             TranslationEnabledSwitch.IsOn = _uiSettings.TranslationEnabled;
             SearchAssistEnabledSwitch.IsOn = _uiSettings.SearchAssistEnabled;
@@ -677,6 +956,7 @@ public sealed partial class MainWindow
             ApplyWindowBackdrop();
             ApplyAccessibilitySettings();
             ApplyUiDensity();
+            LoadSoundThemeSettings();
 
             // Démarrage
             var startupMode = _uiSettings.StartupMode;
@@ -802,7 +1082,7 @@ public sealed partial class MainWindow
             //    barre d'adresse desormais dans cette ligne (voir ce correctif la-bas) -
             //    c'est la cause du tout premier echec (drag interceptant les clics).
             TopTabsRow.Height = horizontalTabsVisible
-                ? new GridLength(52)
+                ? new GridLength(_compactModeEnabled ? CompactHorizontalTabRowHeight : 52)
                 : new GridLength(0);
             Grid.SetRowSpan(ChromeTitleBackdrop, horizontalTabsVisible ? 1 : 2);
             Grid.SetRow(BrowserTabs, tabsAtBottom ? 5 : 1);
@@ -843,14 +1123,22 @@ public sealed partial class MainWindow
     // sa vraie hauteur de bande d'onglets.
     private void ApplyFlattenedToolbarCapsule(bool horizontalTabsVisible)
     {
+        // Marge verticale compacte (2026-09-12) : cette marge (6 DIP en haut ET
+        // en bas, jamais touchee par la densite avant ce correctif) mangeait
+        // silencieusement le gain de hauteur qu'AddressBoxMinHeight demandait
+        // en Interface compacte - trouve seulement APRES avoir deja remonte
+        // NavigationRowHeight sans effet visible en mesure directe (34px avant/
+        // apres un 1er correctif). Reduite ici plutot que de continuer a
+        // gonfler NavigationRowHeight pour compenser une marge fixe ailleurs.
+        var verticalMargin = _compactModeEnabled ? 2 : 6;
         if (horizontalTabsVisible)
         {
-            NavigationToolbarCapsule.Margin = new Thickness(66, 6, 14, 6);
+            NavigationToolbarCapsule.Margin = new Thickness(66, verticalMargin, 14, verticalMargin);
             NavigationToolbarCapsule.CornerRadius = new CornerRadius(22);
         }
         else
         {
-            NavigationToolbarCapsule.Margin = new Thickness(66, 0, _titleBarSafeRight, 6);
+            NavigationToolbarCapsule.Margin = new Thickness(66, 0, _titleBarSafeRight, verticalMargin);
             NavigationToolbarCapsule.CornerRadius = new CornerRadius(0, 0, 22, 22);
         }
     }
@@ -908,6 +1196,16 @@ public sealed partial class MainWindow
         _uiSettings.AccessibilityReadingGuideBandHeight = SelectedReadingGuideBandHeight();
         _uiSettings.AccessibilityTextSpacing = (AccessibilityTextSpacingCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "normal";
         _uiSettings.AccessibilityColorBoostEnabled = AccessibilityColorBoostSwitch.IsOn;
+        _uiSettings.AccessibilityZoomPerSiteEnabled = AccessibilityZoomPerSiteSwitch.IsOn;
+        _uiSettings.AccessibilityLargeCursorEnabled = AccessibilityLargeCursorSwitch.IsOn;
+        _uiSettings.AccessibilitySimplifiedModeEnabled = AccessibilitySimplifiedModeSwitch.IsOn;
+        _uiSettings.AccessibilityClickToReorderEnabled = AccessibilityClickToReorderSwitch.IsOn;
+        if (AccessibilityBreakReminderCombo.SelectedItem is ComboBoxItem breakReminderItem
+            && int.TryParse(breakReminderItem.Tag?.ToString(), out var breakReminderMinutes))
+        {
+            _uiSettings.AccessibilityBreakReminderMinutes = breakReminderMinutes;
+        }
+        _uiSettings.AccessibilitySoundsAsVisualFlashEnabled = AccessibilitySoundsAsVisualFlashSwitch.IsOn;
         _uiSettings.TranslationEnabled = TranslationEnabledSwitch.IsOn;
         _uiSettings.SearchAssistEnabled = SearchAssistEnabledSwitch.IsOn;
         _uiSettings.HistorySemanticSearchEnabled = HistorySemanticSearchEnabledSwitch.IsOn;
@@ -921,7 +1219,9 @@ public sealed partial class MainWindow
 
     private void ApplyVerticalTabsWidth()
     {
-        VerticalTabsRail.Width = _verticalTabsCompact ? VerticalTabsCompactWidth : _verticalTabsExpandedWidth;
+        VerticalTabsRail.Width = _compactModeEnabled
+            ? (_verticalTabsCompact ? CompactVerticalTabsIconOnlyRailWidth : CompactVerticalTabsExpandedRailWidth)
+            : (_verticalTabsCompact ? VerticalTabsCompactWidth : _verticalTabsExpandedWidth);
         ApplyVerticalTabsPresentation();
     }
 
@@ -1031,7 +1331,11 @@ public sealed partial class MainWindow
         }
 
         NavigationRow.Height = new GridLength(ResolveNavigationRowHeight());
-        TopTabsRow.Height = new GridLength(52);
+        // Valeur reelle recalculee juste apres par ApplyVerticalTabsLayout()
+        // (qui tient aussi compte de horizontalTabsVisible) - gardee ici
+        // coherente avec elle plutot que 52 en dur, simple filet avant cet
+        // appel.
+        TopTabsRow.Height = new GridLength(_compactModeEnabled ? CompactHorizontalTabRowHeight : 52);
         RootShell.RowDefinitions[0].Height = new GridLength(0);
         FullScreenTopBar.Visibility = Visibility.Collapsed;
         NavigationToolbar.Visibility = Visibility.Visible;
@@ -1040,6 +1344,7 @@ public sealed partial class MainWindow
         UpdateFullScreenButton();
         ApplyBookmarksBarVisibility();
         ApplyVerticalTabsLayout();
+        RefreshHorizontalTabHeaders();
         ApplyCommandPalettePlacement();
     }
 
@@ -1054,7 +1359,7 @@ public sealed partial class MainWindow
         var sideVisible = visible && UsesSideBookmarksRail(_bookmarksBarPosition);
         var bookmarksOnRight = _bookmarksBarPosition == "right";
 
-        var densityMetrics = ResolveUiDensityMetrics(_uiDensity);
+        var densityMetrics = ResolveEffectiveUiDensityMetrics();
         BookmarksRow.Height = topVisible ? new GridLength(densityMetrics.BookmarksRowHeight) : new GridLength(0);
         BookmarksBarRow.Visibility = topVisible ? Visibility.Visible : Visibility.Collapsed;
         WorkspaceBottomBookmarksRow.Height = bottomVisible ? new GridLength(densityMetrics.BookmarksBottomRowHeight) : new GridLength(0);
