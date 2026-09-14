@@ -68,9 +68,13 @@ public sealed partial class MainWindow
             AddressIdentityBadgeSize: 30, AddressIdentityBadgeCornerRadius: 15,
             AddressIdentityBadgeMargin: new Thickness(10, 0, 0, 0), AddressIdentityIconSize: 12,
             BookmarksRowHeight: 60, BookmarksBottomRowHeight: 42,
-            BookmarkChipHeight: 36, BookmarkChipPaddingText: new Thickness(12, 0, 14, 0), BookmarkChipPaddingIcon: new Thickness(10, 0, 10, 0),
-            BookmarkChipCornerRadius: 14, BookmarkChipFontSize: 13,
-            BookmarksOverflowChipSize: 36, BookmarksOverflowChipCornerRadius: 14,
+            // Puces resserrees (2026-09-10, session "interface") : 36/14 lisait
+            // encore "boule" a cote des puces quasi rectangulaires de Chrome -
+            // ecarts entre paliers conserves a l'identique, voir maquette
+            // "Lumora Epure" (palier standard).
+            BookmarkChipHeight: 32, BookmarkChipPaddingText: new Thickness(10, 0, 12, 0), BookmarkChipPaddingIcon: new Thickness(8, 0, 8, 0),
+            BookmarkChipCornerRadius: 8, BookmarkChipFontSize: 13,
+            BookmarksOverflowChipSize: 32, BookmarksOverflowChipCornerRadius: 8,
             FooterPillMinHeight: 30, FooterPillPaddingHorizontal: 10,
             FooterBoldFontSize: 11.5, FooterLabelFontSize: 10.5, FooterIconFontSize: 11.5,
             FooterChevronFontSize: 8, FooterAccentBarHeight: 14, FooterDividerHeight: 12,
@@ -82,9 +86,10 @@ public sealed partial class MainWindow
             AddressIdentityBadgeSize: 22, AddressIdentityBadgeCornerRadius: 11,
             AddressIdentityBadgeMargin: new Thickness(7, 0, 0, 0), AddressIdentityIconSize: 9,
             BookmarksRowHeight: 44, BookmarksBottomRowHeight: 34,
-            BookmarkChipHeight: 26, BookmarkChipPaddingText: new Thickness(8, 0, 10, 0), BookmarkChipPaddingIcon: new Thickness(6, 0, 6, 0),
-            BookmarkChipCornerRadius: 10, BookmarkChipFontSize: 11,
-            BookmarksOverflowChipSize: 26, BookmarksOverflowChipCornerRadius: 10,
+            // Voir note du palier "comfortable" ci-dessus (memes ecarts conserves).
+            BookmarkChipHeight: 22, BookmarkChipPaddingText: new Thickness(6, 0, 8, 0), BookmarkChipPaddingIcon: new Thickness(4, 0, 4, 0),
+            BookmarkChipCornerRadius: 4, BookmarkChipFontSize: 11,
+            BookmarksOverflowChipSize: 22, BookmarksOverflowChipCornerRadius: 4,
             FooterPillMinHeight: 24, FooterPillPaddingHorizontal: 7,
             FooterBoldFontSize: 10, FooterLabelFontSize: 9, FooterIconFontSize: 10,
             FooterChevronFontSize: 7, FooterAccentBarHeight: 11, FooterDividerHeight: 10,
@@ -96,27 +101,98 @@ public sealed partial class MainWindow
             AddressIdentityBadgeSize: 26, AddressIdentityBadgeCornerRadius: 13,
             AddressIdentityBadgeMargin: new Thickness(9, 0, 0, 0), AddressIdentityIconSize: 10,
             BookmarksRowHeight: 52, BookmarksBottomRowHeight: 38,
-            BookmarkChipHeight: 30, BookmarkChipPaddingText: new Thickness(10, 0, 12, 0), BookmarkChipPaddingIcon: new Thickness(8, 0, 8, 0),
-            BookmarkChipCornerRadius: 12, BookmarkChipFontSize: 12,
-            BookmarksOverflowChipSize: 30, BookmarksOverflowChipCornerRadius: 12,
+            BookmarkChipHeight: 26, BookmarkChipPaddingText: new Thickness(8, 0, 10, 0), BookmarkChipPaddingIcon: new Thickness(6, 0, 6, 0),
+            BookmarkChipCornerRadius: 6, BookmarkChipFontSize: 12,
+            BookmarksOverflowChipSize: 26, BookmarksOverflowChipCornerRadius: 6,
             FooterPillMinHeight: 27, FooterPillPaddingHorizontal: 9,
             FooterBoldFontSize: 11, FooterLabelFontSize: 10, FooterIconFontSize: 11,
             FooterChevronFontSize: 7.5, FooterAccentBarHeight: 13, FooterDividerHeight: 11,
             StatusTextFontSize: 11.5),
     };
 
-    // Priorite "mode compact gagne" sur la ligne d'outils : CompactModeEnabled
-    // (Interface compacte, mode plein ecran/immersif) garde sa taille reduite
-    // existante (58px) quelle que soit la densite choisie - la densite ne
-    // s'applique a la ligne d'outils que si le mode compact est desactive.
-    // Centralise ici la formule auparavant dupliquee dans
-    // ApplyCompactModeLayout() et ApplyFullScreenLayout()
-    // (MainWindow.Settings.cs).
-    private double ResolveNavigationRowHeight() =>
-        _compactModeEnabled ? 58 : ResolveUiDensityMetrics(_uiDensity).NavigationRowHeight;
+    // Palier "ultra-compact" (2026-09-12, retour utilisateur : "Interface
+    // compacte" ne changeait jusqu'ici QUE NavigationRowHeight/Padding -
+    // 60->58px en Standard, un ecart de 2px imperceptible, "j'ai pas
+    // l'impression qu'il soit si compact que ca"). Jamais choisi via
+    // UiDensityCombo (n'entre pas dans NormalizeUiDensity/UiSettings.UiDensity,
+    // qui restent Standard/Confortable/Dense) - active UNIQUEMENT par
+    // CompactModeEnabled, qui prend le dessus sur TOUTES les dimensions de la
+    // densite choisie, pas seulement la ligne d'outils. Valeurs approuvees sur
+    // maquette Artifact (comparaison a l'echelle Standard/Dense/Ultra) avant
+    // codage, plus petites que Dense sur chaque dimension.
+    // AddressBoxMinHeight/Padding corriges le 2026-09-12 (2e retour utilisateur,
+    // meme session) : 34/(36,1,10,1) rendait le texte "prend toute la barre,
+    // deborde, plus centre" - le FontSize de AddressBox (18, XAML, JAMAIS
+    // touche par la densite, y compris en Dense) ne retrecit lui-meme jamais.
+    // Retrecir le remplissage haut/bas plus vite que la taille de texte fixe
+    // qu'il entoure (4px confortable -> 1px ici) l'a rendu visuellement
+    // "colle" au bord de la pilule des que le padding est devenu trop faible
+    // pour laisser respirer un texte qui, lui, n'a pas change. Corrige en
+    // gardant une marge verticale proche de celle de "Dense" (2px) plutot que
+    // de continuer a la reduire pour un gain qui n'existe pas cote texte.
+    // NavigationRowHeight remonte dans la foulee (42->46) : le 1er correctif
+    // (juste AddressBoxMinHeight/Padding) restait SANS EFFET mesure en direct
+    // (34px avant et apres) - NavigationRowHeight est une hauteur de ligne
+    // FIXE (pas Auto), et 42px moins le rembourrage de la ligne d'outils
+    // (NavigationToolbarPadding) ne laissait que ~37px de haut disponibles a
+    // AddressBox, un plafond plus bas que le nouveau MinHeight (38) qui
+    // l'annulait silencieusement. Toutes les autres paliers (Dense 50/40,
+    // Standard 60/44, Confortable 72/46) gardent un ecart net entre les 2 -
+    // Ultra en avait un de 8 (42/34), agrandi ici a 8 aussi (46/38) plutot que
+    // de repartir de 4 comme la 1ere correction l'aurait fait sans le remarquer.
+    private static readonly UiDensityMetrics UltraCompactMetrics = new(
+        IconButtonSize: 20, ModulesButtonSize: 26,
+        NavigationRowHeight: 46, NavigationToolbarPadding: new Thickness(6, 3, 6, 4),
+        AddressBoxMinHeight: 38, AddressBoxPadding: new Thickness(34, 3, 10, 3), AddressBoxCornerRadius: 16,
+        AddressIdentityBadgeSize: 18, AddressIdentityBadgeCornerRadius: 9,
+        AddressIdentityBadgeMargin: new Thickness(5, 0, 0, 0), AddressIdentityIconSize: 7,
+        BookmarksRowHeight: 36, BookmarksBottomRowHeight: 28,
+        BookmarkChipHeight: 18, BookmarkChipPaddingText: new Thickness(5, 0, 6, 0), BookmarkChipPaddingIcon: new Thickness(3, 0, 3, 0),
+        BookmarkChipCornerRadius: 3, BookmarkChipFontSize: 10,
+        BookmarksOverflowChipSize: 18, BookmarksOverflowChipCornerRadius: 3,
+        FooterPillMinHeight: 20, FooterPillPaddingHorizontal: 6,
+        FooterBoldFontSize: 9.5, FooterLabelFontSize: 8.5, FooterIconFontSize: 9,
+        FooterChevronFontSize: 6.5, FooterAccentBarHeight: 9, FooterDividerHeight: 8,
+        StatusTextFontSize: 10.5);
 
-    private Thickness ResolveNavigationToolbarPadding() =>
-        _compactModeEnabled ? new Thickness(10, 3, 10, 4) : ResolveUiDensityMetrics(_uiDensity).NavigationToolbarPadding;
+    // Point d'entree UNIQUE a utiliser partout a la place de
+    // ResolveUiDensityMetrics(_uiDensity) directement (8 appels avant cette
+    // passe, tous mis a jour) : garantit que CompactModeEnabled prend le
+    // dessus de facon uniforme, plutot que le mecanisme precedent qui ne
+    // couvrait que 2 des ~29 dimensions de UiDensityMetrics.
+    private UiDensityMetrics ResolveEffectiveUiDensityMetrics() =>
+        _compactModeEnabled ? UltraCompactMetrics : ResolveUiDensityMetrics(_uiDensity);
+
+    // Extension du mode compact aux onglets (2026-09-12, retour utilisateur :
+    // "il faut que le mode compact fonctionne partout... sur la barre des
+    // onglets que ca soit en vertical ou en horizontal") - jusqu'ici
+    // CompactModeEnabled ne touchait NI TopTabsRow ni le rail vertical, une
+    // exclusion deliberee et documentee depuis l'origine de la Densite
+    // d'interface (ni Standard/Confortable/Dense ne les ont jamais fait
+    // varier). Portee confirmee avec l'utilisateur : Compact SEUL les
+    // rétrécit desormais, Standard/Confortable/Dense restent inchanges pour
+    // les onglets (comportement historique). Egalement volontairement limite
+    // aux elements les plus visibles (hauteur de ligne, favicon, bouton
+    // fermer, largeur du rail) - pas chaque detail (poignee de glissement,
+    // badge de groupe), decision actee avec l'utilisateur plutot que
+    // reprendre tout MainWindow.TabGroups.cs au pixel pres.
+    private const double CompactHorizontalTabRowHeight = 40;
+    private const double CompactHorizontalTabIconWrapSize = 18;
+    private const double CompactHorizontalTabIconSize = 11;
+    private const double CompactHorizontalTabPinnedWrapSize = 22;
+    private const double CompactHorizontalTabPinnedIconSize = 13;
+    private const double CompactVerticalTabsIconOnlyRailWidth = 30;
+    private const double CompactVerticalTabsExpandedRailWidth = 150;
+    private const double CompactVerticalTabTileWidth = 22;
+    private const double CompactVerticalTabTileHeight = 20;
+    private const double CompactVerticalTabCompactIconSize = 11;
+    private const double CompactVerticalTabCompactCloseSize = 14;
+    private const double CompactVerticalTabRowIconSize = 12;
+    private const double CompactVerticalTabCloseSize = 18;
+
+    private double ResolveNavigationRowHeight() => ResolveEffectiveUiDensityMetrics().NavigationRowHeight;
+
+    private Thickness ResolveNavigationToolbarPadding() => ResolveEffectiveUiDensityMetrics().NavigationToolbarPadding;
 
     private string SelectedUiDensity() =>
         NormalizeUiDensity((UiDensityCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? _uiDensity);
@@ -160,7 +236,7 @@ public sealed partial class MainWindow
     // fenetre Incognito (styles/reglages totalement separes).
     private void ApplyUiDensity()
     {
-        var metrics = ResolveUiDensityMetrics(_uiDensity);
+        var metrics = ResolveEffectiveUiDensityMetrics();
 
         ModulesButton.Width = metrics.ModulesButtonSize;
         ModulesButton.Height = metrics.ModulesButtonSize;
@@ -203,18 +279,52 @@ public sealed partial class MainWindow
     // comparables a IconButtonSize/NavigationRowHeight.
     private void ApplyFooterDensity(UiDensityMetrics metrics)
     {
-        var pillPadding = new Thickness(metrics.FooterPillPaddingHorizontal, 0, metrics.FooterPillPaddingHorizontal, 0);
+        // Pastilles -> icone + point d'etat (2026-09-10, session "interface") :
+        // les 3 boutons suivent desormais NovaChromeIconButtonStyle (meme
+        // famille que les boutons de la barre d'outils) plutot que la largeur
+        // variable en pilule (FooterPillMinHeight/PaddingHorizontal devenus
+        // sans objet ici, encore utilises par ApplyIconButtonSizing ailleurs -
+        // non retires). Reutilise IconButtonSize (deja partage par la barre
+        // d'outils) plutot que MinHeight+Padding pour continuer de suivre la
+        // Taille de l'interface - sans quoi la demande explicite du 2026-08-09
+        // ("elle aussi doit etre plus petite, moyenne ou plus grande")
+        // cesserait de s'appliquer a ces 3 boutons. Le point reprend
+        // FooterAccentBarHeight comme diametre (Width ET Height, pas
+        // seulement Height comme avant) pour rester un cercle net a chaque
+        // palier plutot que s'ovaliser.
+        var footerIconSize = metrics.IconButtonSize;
+        ModeUsageButton.Width = footerIconSize;
+        ModeUsageButton.Height = footerIconSize;
+        ModeUsageButton.MinWidth = footerIconSize;
+        CompanionButton.Width = footerIconSize;
+        CompanionButton.Height = footerIconSize;
+        CompanionButton.MinWidth = footerIconSize;
+        AccessibilityMenuButton.Width = footerIconSize;
+        AccessibilityMenuButton.Height = footerIconSize;
+        AccessibilityMenuButton.MinWidth = footerIconSize;
+        // Filet de securite : meme taille posee explicitement sur le Grid
+        // interne (icone + point), au cas ou HorizontalContentAlignment=
+        // Stretch sur le bouton ne suffirait pas a lui seul a le faire
+        // occuper tout le bouton (ContentPresenter/Grid par defaut sinon
+        // "colle" au contenu, ce qui centre le point sur l'icone au lieu de
+        // l'envoyer dans le coin).
+        ModeUsageIconGrid.Width = footerIconSize;
+        ModeUsageIconGrid.Height = footerIconSize;
+        CompanionIconGrid.Width = footerIconSize;
+        CompanionIconGrid.Height = footerIconSize;
+        AccessibilityQuickIconGrid.Width = footerIconSize;
+        AccessibilityQuickIconGrid.Height = footerIconSize;
 
-        ModeUsageButton.MinHeight = metrics.FooterPillMinHeight;
-        ModeUsageButton.Padding = pillPadding;
-        CompanionButton.MinHeight = metrics.FooterPillMinHeight;
-        CompanionButton.Padding = pillPadding;
-        AccessibilityMenuButton.MinHeight = metrics.FooterPillMinHeight;
-        AccessibilityMenuButton.Padding = pillPadding;
-
-        UsageModeAccentBar.Height = metrics.FooterAccentBarHeight;
-        CompanionAccentBar.Height = metrics.FooterAccentBarHeight;
-        AccessibilityQuickAccentBar.Height = metrics.FooterAccentBarHeight;
+        var dotSize = metrics.FooterAccentBarHeight;
+        UsageModeAccentBar.Width = dotSize;
+        UsageModeAccentBar.Height = dotSize;
+        UsageModeAccentBar.CornerRadius = new CornerRadius(dotSize / 2);
+        CompanionAccentBar.Width = dotSize;
+        CompanionAccentBar.Height = dotSize;
+        CompanionAccentBar.CornerRadius = new CornerRadius(dotSize / 2);
+        AccessibilityQuickAccentBar.Width = dotSize;
+        AccessibilityQuickAccentBar.Height = dotSize;
+        AccessibilityQuickAccentBar.CornerRadius = new CornerRadius(dotSize / 2);
 
         UsageModeIcon.FontSize = metrics.FooterIconFontSize;
         CompanionIcon.FontSize = metrics.FooterIconFontSize;

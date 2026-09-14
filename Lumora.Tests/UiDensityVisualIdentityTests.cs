@@ -32,22 +32,48 @@ public sealed class UiDensityVisualIdentityTests
         var settingsThemeCode = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
 
         Assert.Contains(
-            "_uiSettings.AccessibilityLargeTargets ? 44d : ResolveUiDensityMetrics(_uiDensity).IconButtonSize",
+            "_uiSettings.AccessibilityLargeTargets ? 44d : ResolveEffectiveUiDensityMetrics().IconButtonSize",
             settingsThemeCode,
             StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Mode_compact_garde_priorite_sur_la_densite_pour_la_ligne_d_outils()
+    public void Mode_compact_est_un_4e_palier_complet_plus_petit_que_dense()
     {
-        // Regle de priorite actee : CompactModeEnabled ("Interface compacte",
-        // mode plein ecran/immersif) garde sa hauteur reduite existante
-        // (58px) quelle que soit la densite choisie - centralise dans
-        // ResolveNavigationRowHeight()/ResolveNavigationToolbarPadding().
+        // Regle de priorite actee : CompactModeEnabled ("Interface compacte")
+        // prend le dessus sur la densite choisie via
+        // ResolveEffectiveUiDensityMetrics - depuis le 2026-09-12 (retour
+        // utilisateur : l'ancien mecanisme ne changeait que 2 des ~29
+        // dimensions, un ecart de 2px en Standard, "j'ai pas l'impression
+        // qu'il soit si compact que ca"), un vrai 4e palier UltraCompactMetrics
+        // couvre TOUTES les dimensions, plus petit que Dense sur chacune.
         var densityCode = ReadRepoFile("Lumora.WinUI", "MainWindow.UiDensity.cs");
 
-        Assert.Contains("_compactModeEnabled ? 58 : ResolveUiDensityMetrics(_uiDensity).NavigationRowHeight", densityCode, StringComparison.Ordinal);
-        Assert.Contains("_compactModeEnabled ? new Thickness(10, 3, 10, 4) : ResolveUiDensityMetrics(_uiDensity).NavigationToolbarPadding", densityCode, StringComparison.Ordinal);
+        Assert.Contains(
+            "_compactModeEnabled ? UltraCompactMetrics : ResolveUiDensityMetrics(_uiDensity)",
+            densityCode,
+            StringComparison.Ordinal);
+
+        var ultraIndex = densityCode.IndexOf("UltraCompactMetrics = new(", StringComparison.Ordinal);
+        Assert.True(ultraIndex >= 0, "UltraCompactMetrics introuvable dans MainWindow.UiDensity.cs.");
+        var ultraBlock = densityCode.Substring(ultraIndex, Math.Min(1200, densityCode.Length - ultraIndex));
+
+        // Plus petit que Dense (IconButtonSize 24, NavigationRowHeight 50,
+        // AddressBoxMinHeight 40, BookmarkChipHeight 22) sur chaque dimension.
+        Assert.Contains("IconButtonSize: 20", ultraBlock, StringComparison.Ordinal);
+        // 42 -> 46 (2026-09-12, meme session) : ligne fixe (pas Auto), le 1er
+        // correctif du remplissage de AddressBox restait SANS EFFET tant que
+        // la ligne elle-meme (moins son propre rembourrage) plafonnait sous
+        // le nouveau AddressBoxMinHeight - mesure en direct (34px avant/apres,
+        // aucun changement) avant de comprendre la cause reelle.
+        Assert.Contains("NavigationRowHeight: 46", ultraBlock, StringComparison.Ordinal);
+        // 34 -> 38 (2026-09-12, 2e retour utilisateur meme session) : le texte
+        // de AddressBox (FontSize 18, jamais retreci par la densite) rendait
+        // "deborde, plus centre" avec un remplissage vertical trop reduit
+        // (1px) - remonte pres du niveau "Dense" (2px) plutot que continuer a
+        // le reduire pour un gain qui n'existe pas cote texte.
+        Assert.Contains("AddressBoxMinHeight: 38", ultraBlock, StringComparison.Ordinal);
+        Assert.Contains("BookmarkChipHeight: 18", ultraBlock, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -60,13 +86,19 @@ public sealed class UiDensityVisualIdentityTests
 
         var comfortableIndex = densityCode.IndexOf("\"comfortable\" => new UiDensityMetrics(", StringComparison.Ordinal);
         Assert.True(comfortableIndex >= 0, "Palier \"comfortable\" introuvable dans ResolveUiDensityMetrics.");
-        var comfortableBlock = densityCode.Substring(comfortableIndex, Math.Min(700, densityCode.Length - comfortableIndex));
+        // 700 -> 1000 (2026-09-10) : commentaire ajoute au-dessus de
+        // BookmarkChipHeight (revision favoris, session "interface") pousse
+        // ce champ plus loin dans le bloc.
+        var comfortableBlock = densityCode.Substring(comfortableIndex, Math.Min(1000, densityCode.Length - comfortableIndex));
 
         Assert.Contains("IconButtonSize: 32", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("NavigationRowHeight: 72", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("AddressBoxMinHeight: 46", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("AddressBoxPadding: new Thickness(54, 4, 18, 4)", comfortableBlock, StringComparison.Ordinal);
-        Assert.Contains("BookmarkChipHeight: 36", comfortableBlock, StringComparison.Ordinal);
+        // 36 -> 32 (2026-09-10, session "interface") : puces de favoris
+        // resserrees, ecarts entre paliers conserves - voir maquette
+        // "Lumora Epure".
+        Assert.Contains("BookmarkChipHeight: 32", comfortableBlock, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -78,35 +110,85 @@ public sealed class UiDensityVisualIdentityTests
         // les valeurs historiques (aucune regression), meme principe que les
         // autres paliers deja verrouilles ci-dessus. Depuis le 2026-08-10 la
         // barre porte 3 menus independants (Mode/Compagnon/Accessibilite) qui
-        // suivent tous les 3 la meme metrique.
+        // suivent tous les 3 la meme metrique. Depuis le 2026-09-10 (session
+        // "interface"), les 3 pastilles etiquetees sont devenues des boutons
+        // icone+point (NovaChromeIconButtonStyle) : la taille ne passe plus
+        // par FooterPillMinHeight/Padding mais reutilise IconButtonSize (deja
+        // partage par la barre d'outils) - le principe verrouille par ce test
+        // (la barre du bas suit la Taille de l'interface) reste inchange,
+        // seul le mecanisme change.
         var densityCode = ReadRepoFile("Lumora.WinUI", "MainWindow.UiDensity.cs");
 
         Assert.Contains("ApplyFooterDensity(metrics);", densityCode, StringComparison.Ordinal);
-        Assert.Contains("ModeUsageButton.MinHeight = metrics.FooterPillMinHeight;", densityCode, StringComparison.Ordinal);
-        Assert.Contains("CompanionButton.MinHeight = metrics.FooterPillMinHeight;", densityCode, StringComparison.Ordinal);
-        Assert.Contains("AccessibilityMenuButton.MinHeight = metrics.FooterPillMinHeight;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("var footerIconSize = metrics.IconButtonSize;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("ModeUsageButton.Width = footerIconSize;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("CompanionButton.Width = footerIconSize;", densityCode, StringComparison.Ordinal);
+        Assert.Contains("AccessibilityMenuButton.Width = footerIconSize;", densityCode, StringComparison.Ordinal);
         Assert.Contains("StatusText.FontSize = metrics.StatusTextFontSize;", densityCode, StringComparison.Ordinal);
 
         var comfortableIndex = densityCode.IndexOf("\"comfortable\" => new UiDensityMetrics(", StringComparison.Ordinal);
         Assert.True(comfortableIndex >= 0, "Palier \"comfortable\" introuvable dans ResolveUiDensityMetrics.");
-        var comfortableBlock = densityCode.Substring(comfortableIndex, Math.Min(1400, densityCode.Length - comfortableIndex));
+        // 1400 -> 1700 (2026-09-10) : meme raison que ci-dessus.
+        var comfortableBlock = densityCode.Substring(comfortableIndex, Math.Min(1700, densityCode.Length - comfortableIndex));
 
-        Assert.Contains("FooterPillMinHeight: 30", comfortableBlock, StringComparison.Ordinal);
+        Assert.Contains("IconButtonSize: 32", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("FooterBoldFontSize: 11.5", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("StatusTextFontSize: 12", comfortableBlock, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Fenetre_incognito_et_barre_d_onglets_restent_hors_perimetre()
+    public void Fenetre_incognito_reste_hors_perimetre_onglets_suivent_desormais_le_mode_compact()
     {
-        // Non-regression explicite : ce reglage ne doit toucher ni la fenetre
-        // Incognito (styles/reglages totalement separes) ni TopTabsRow (la
-        // barre d'onglets, hors demande utilisateur initiale).
+        // Non-regression explicite : la fenetre Incognito (styles/reglages
+        // totalement separes) reste hors de portee. La barre d'onglets, elle,
+        // a rejoint le PERIMETRE DU MODE COMPACT SEUL le 2026-09-12 (retour
+        // utilisateur : "il faut que le mode compact fonctionne partout... sur
+        // la barre des onglets") - Standard/Confortable/Dense continuent de
+        // ne JAMAIS la faire varier (52 reste le repli quand
+        // CompactModeEnabled est desactive), seul CompactModeEnabled la
+        // retrecit desormais (CompactHorizontalTabRowHeight).
         var incognitoCode = ReadRepoFile("Lumora.WinUI", "LumoraIncognitoWindow.xaml.cs");
         var settingsCode = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
 
         Assert.DoesNotContain("UiDensity", incognitoCode, StringComparison.Ordinal);
-        Assert.Contains("TopTabsRow.Height = new GridLength(52);", settingsCode, StringComparison.Ordinal);
+        Assert.Contains("new GridLength(_compactModeEnabled ? CompactHorizontalTabRowHeight : 52)", settingsCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Interface_compacte_retrecit_le_rail_vertical_et_ses_boutons_daction()
+    {
+        // Rail vertical (ApplyVerticalTabsWidth, MainWindow.Settings.cs) et
+        // boutons d'action du rail (ApplyIconButtonSizing, MainWindow.SettingsTheme.cs)
+        // ne suivaient ni la Densite ni CompactModeEnabled avant le
+        // 2026-09-12 : VerticalTabsRail n'etait jamais parcouru par
+        // ApplyIconButtonSizeRecursive (seuls NavigationToolbar/FullScreenTopBar
+        // l'etaient), d'ou des boutons de rail restes a taille normale malgre
+        // le reglage active (capture d'ecran utilisateur a l'appui).
+        var settingsCode = ReadRepoFile("Lumora.WinUI", "MainWindow.Settings.cs");
+        var settingsThemeCode = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
+
+        Assert.Contains(
+            "_compactModeEnabled\n            ? (_verticalTabsCompact ? CompactVerticalTabsIconOnlyRailWidth : CompactVerticalTabsExpandedRailWidth)",
+            settingsCode,
+            StringComparison.Ordinal);
+        Assert.Contains("ApplyIconButtonSizeRecursive(VerticalTabsRail, styles, size);", settingsThemeCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Interface_compacte_retrecit_favicon_et_bouton_fermer_des_onglets()
+    {
+        // Barre d'onglets horizontale (TabHeaderContent) et verticale
+        // (RenderVerticalTabs) : favicon et bouton fermer suivent desormais
+        // CompactModeEnabled - portee volontairement limitee aux elements les
+        // plus visibles (pas la poignee de glissement ni le badge de groupe),
+        // decision actee avec l'utilisateur plutot que reprendre tout le
+        // rendu au pixel pres.
+        var tabGroupsCode = ReadRepoFile("Lumora.WinUI", "MainWindow.TabGroups.cs");
+
+        Assert.Contains("_compactModeEnabled ? CompactHorizontalTabIconWrapSize : 24", tabGroupsCode, StringComparison.Ordinal);
+        Assert.Contains("_compactModeEnabled ? CompactHorizontalTabIconSize : 14", tabGroupsCode, StringComparison.Ordinal);
+        Assert.Contains("_compactModeEnabled ? CompactVerticalTabCompactIconSize : 14", tabGroupsCode, StringComparison.Ordinal);
+        Assert.Contains("_compactModeEnabled ? CompactVerticalTabCloseSize : 26", tabGroupsCode, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)
