@@ -54,6 +54,18 @@
          associee a l'extension par l'installateur (Program.cs.template). -->
     <Content Include="Assets\LumoraLum.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\LumoraLum.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Sons & ambiance (2026-09-11) : packs de sons d'interface (CC0,
+         Kenney.nl) et ambiances de fond (licence Pixabay, integration en
+         application) - voir Sound/SoundThemeService.cs et les fichiers
+         LICENSE-*.txt a cote de chaque source pour le detail des licences. -->
+    <!-- WAV, pas OGG (2026-09-11, retour utilisateur : le son de clic ne
+         changeait jamais - Windows Media Foundation n'a pas de decodeur OGG
+         integre sans extension tierce, contrairement au WAV/MP3). -->
+    <Content Include="Assets\Sound\Effects\**\*.wav" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Sound\Ambiance\*.mp3" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Sound\Effects\LICENSE-*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Sound\Effects\PROCESSING.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Sound\Ambiance\LICENSE-*.txt" CopyToOutputDirectory="PreserveNewest" />
     <!-- Public Suffix List (Mozilla, licence MPL 2.0) — https://publicsuffix.org -->
     <EmbeddedResource Include="Credentials\public_suffix_list.dat" />
   </ItemGroup>

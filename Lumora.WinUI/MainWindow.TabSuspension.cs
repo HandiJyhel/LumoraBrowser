@@ -33,8 +33,14 @@ public sealed partial class MainWindow
         // Tick toutes les minutes : suffisant face a un seuil exprime en
         // dizaines de minutes, pas besoin d'une precision plus fine.
         _tabSuspensionTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
-        _tabSuspensionTimer.Tick += (_, _) => SuspendEligibleTabs(manual: false);
+        _tabSuspensionTimer.Tick += (_, _) =>
+        {
+            WinUiRuntimeTrace.Write("TabSuspensionTimer_Tick: debut");
+            SuspendEligibleTabs(manual: false);
+            WinUiRuntimeTrace.Write("TabSuspensionTimer_Tick: fin");
+        };
         _tabSuspensionTimer.Start();
+        WinUiRuntimeTrace.Write($"InitTabSuspensionTimer: minuteur demarre, seuil={_uiSettings.TabSuspensionThresholdMinutes}min");
     }
 
     // Decharge tous les onglets inactifs depuis au moins le seuil regle (ou
@@ -60,8 +66,14 @@ public sealed partial class MainWindow
             if (tab.Id == activeId) continue;
             if (tab.View is null) continue; // deja en veille, ou jamais encore ouvert
             if (IsTabInSplitView(tab.Id)) continue;
-            if (!manual && now - tab.LastActiveAt < threshold) continue;
+            var idle = now - tab.LastActiveAt;
+            if (!manual && idle < threshold)
+            {
+                WinUiRuntimeTrace.Write($"SuspendEligibleTabs: onglet {tab.Id} ({tab.Address}) pas encore eligible, idle={idle.TotalSeconds:F0}s < seuil={threshold.TotalSeconds:F0}s");
+                continue;
+            }
 
+            WinUiRuntimeTrace.Write($"SuspendEligibleTabs: mise en veille onglet {tab.Id} ({tab.Address}), idle={idle.TotalSeconds:F0}s, manual={manual}");
             CloseTabView(tab);
             tab.IsDormant = true;
             suspendedAny = true;
@@ -72,6 +84,7 @@ public sealed partial class MainWindow
             RenderVerticalTabs();
             RefreshHorizontalTabHeaders();
         }
+        WinUiRuntimeTrace.Write($"SuspendEligibleTabs: termine, suspendedAny={suspendedAny}, nb_onglets={_tabs.Count}");
     }
 
     private void TabSuspensionEnabledSwitch_Toggled(object sender, RoutedEventArgs e)

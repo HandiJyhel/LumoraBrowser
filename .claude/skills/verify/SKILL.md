@@ -336,3 +336,48 @@ de bug. Deux causes reelles rencontrees ce genre de symptome muet :
   levee - seul le journal instrumente le revele (le crash COMException,
   ci-dessus, log deja son "UNHANDLED" sans instrumentation ; celui-ci non,
   il faut l'ajouter expres).
+
+## Cluster de boutons invisible en UIA : cause trouvee (largeur de fenetre)
+
+**Cause identifiee le 2026-09-14 (session "etape 3.5")**, apres plusieurs
+sessions ou ce symptome etait note "non resolu" : au lancement, la fenetre
+occupe par defaut toute la largeur physique de l'ecran (2880px dans cet
+environnement). A cette largeur, un cluster entier de boutons - `Menu
+Lumora`, `Mode d'usage : ...`, `Compagnon, ...`, `Confort : ...` - devient
+invisible dans l'arbre UIA : ni `FindAll(TreeScope.Descendants)` natif ni
+une marche manuelle ne les retrouve (confirme : 26 boutons au lieu de ~35),
+et ce de facon **reproductible a 100%** sur plusieurs lancements, quel que
+soit le chemin (mode invite via `CreateProfileGuestLink`/`RestartApp`, ou
+profil pre-configure sans onboarding) - donc PAS lie a `RestartApp` comme on
+pouvait le croire d'apres les sessions precedentes, plutot une consequence
+de la largeur de fenetre au moment du rendu initial.
+
+**Contournement fiable** : juste apres avoir recupere `MainWindowHandle`,
+redimensionner la fenetre a une taille "normale" via `user32.SetWindowPos`
+(ex. 1600x1000 ou plus grand si le contenu a verifier a besoin de hauteur) -
+les boutons manquants reapparaissent immediatement (confirme : 35 boutons
+apres redimensionnement, sur le MEME process/fenetre). Rechercher ensuite
+`MainMenuButton` par son **Name accessible** ("Menu Lumora") plutot que par
+`AutomationId` - `FindFirst` avec une `PropertyCondition` sur
+`AutomationIdProperty="MainMenuButton"` a echoue meme apres le
+redimensionnement (x:Name XAML ne s'expose pas forcement comme
+AutomationId sur ce controle), alors qu'une recherche par `NameProperty` +
+`ControlTypeProperty=Button` a fonctionne du premier coup :
+
+```powershell
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+}
+"@
+$proc.Refresh()
+[Win32]::SetWindowPos($proc.MainWindowHandle, [IntPtr]::Zero, 50, 20, 1700, 1400, 0x0040) | Out-Null
+Start-Sleep -Seconds 2
+# ... puis chercher par Name="Menu Lumora" + ControlType=Button, pas par AutomationId
+```
+
+A tenter en premier reflexe des qu'un bouton visible a l'ecran reste
+introuvable en UIA juste apres un lancement/redemarrage, avant de conclure a
+une flakiness non reproductible ou de changer de strategie de verification.

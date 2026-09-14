@@ -412,6 +412,7 @@ public sealed partial class MainWindow
 
         NotificationPermissionText.Text = $"{rootDomain} souhaite vous envoyer des notifications";
         NotificationPermissionBar.Visibility = Visibility.Visible;
+        _visualFlashService?.FlashIfEnabled();
     }
 
     // Termine proprement (ou pas du tout, si aucune demande n'est en attente)
