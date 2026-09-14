@@ -1,0 +1,27 @@
+Ambiances de fond "Sons & ambiance" (2026-09-11)
+
+Source : Pixabay (https://pixabay.com), licence Pixabay Content License
+(https://pixabay.com/service/license-summary/) - integration dans une
+application/logiciel autorisee sans attribution obligatoire. Ne pas
+redistribuer ces fichiers bruts seuls, hors de l'application.
+
+Reencodes a 128 kbps (etaient a 160/256 kbps a l'origine) pour reduire le
+poids de l'installateur - qualite quasi transparente pour une ambiance de
+fond, duree inchangee (verifie via ffprobe).
+
+Retour utilisateur (2026-09-11, meme session) : volume par defaut trop fort/
+agressif, et cascade/pluie se ressemblaient trop (les deux etaient un bruit
+large-bande assez proche). Corrige :
+- cascade.mp3, pluie.mp3 : filtre passe-bas (6500 Hz) + volume -9 dB, pour
+  adoucir le cote "dur" du bruit large-bande.
+- mer.mp3 : volume -7 dB seul (le caractere du son convenait deja).
+- pluie.mp3 remplace par une source differente et plus distincte (pluie sur
+  toit en tole, texture avec des gouttes audibles plutot qu'un bruit continu
+  proche de la cascade).
+
+- cascade.mp3 : "Waterfall 01 (loop)", freesound_community
+  https://pixabay.com/sound-effects/nature-waterfall-01-loop-74884/
+- mer.mp3 : "Ocean Sea Soft Waves", SoundsForYou
+  https://pixabay.com/sound-effects/nature-ocean-sea-soft-waves-121349/
+- pluie.mp3 : "Light Rain On Tin Roof", stormguy1
+  https://pixabay.com/sound-effects/nature-light-rain-on-tin-roof-287011/

@@ -1,0 +1,8 @@
+Traitement applique aux sons de clic/bascule (2026-09-11, retour utilisateur)
+
+Les fichiers originaux Kenney (CC0, voir LICENSE-kenney-*.txt) ont ete
+convertis OGG -> WAV (Windows Media Foundation n'a pas de decodeur OGG
+integre, voir Sound/SoundThemeService.cs), puis, sur retour utilisateur
+("trop agressifs, comme un coup dans la tronche"), adoucis :
+filtre passe-bas (7500 Hz) + volume -10 dB, sur les 4 packs x 2 sons
+(click/toggle) - duree inchangee, verifie via ffprobe.
