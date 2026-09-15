@@ -27,23 +27,28 @@ internal static class Program
     }
 }
 
-// Assistant en 3 pages (Bienvenue / Dossier+options / Terminé), 2026-08-19 -
-// maquette validee par l'utilisateur : structure d'assistant Windows
-// classique (bandeau lateral, etapes numerotees, Precedent/Suivant/Annuler,
-// page de fin dediee) mais dans les tons reels du navigateur (LumoraPalette
-// ci-dessous alignee sur les brushes NovaAppBackgroundBrush/NovaAccentBrush/
+// Assistant en 3 pages (Bienvenue / Dossier+options / Terminé). Refonte
+// visuelle "carte centree minimaliste" (2026-09-15, maquette validee par
+// l'utilisateur - remplace le bandeau lateral du 2026-08-19) : plus de
+// panneau colore a gauche, un repere d'etapes en ligne de points centree
+// sous la barre de titre, et un contenu centre dans une colonne unique
+// (ContentWidth/ContentLeft) plutot qu'aligne a gauche a cote d'un bandeau.
+// Toujours dans les tons reels du navigateur (LumoraPalette ci-dessous
+// alignee sur les brushes NovaAppBackgroundBrush/NovaAccentBrush/
 // NovaCoolAccentBrush de MainWindow.xaml) et le style de bouton "Doux
 // moderne" deja utilise partout ailleurs dans l'app. Une seule Form, les 3
 // pages sont des Panel dont la Visibility bascule (pas de fenetres
 // separees) - logique d'installation strictement identique a l'ancienne
-// version a un seul ecran, seule la presentation change.
+// version, seule la presentation change.
 internal sealed class InstallerForm : Form
 {
     private const int FormWidth = 680;
     private const int FormHeight = 580;
     private const int TitleBarHeight = 40;
-    private const int SidebarWidth = 168;
+    private const int StepDotsHeight = 36;
     private const int FooterHeight = 64;
+    private const int ContentWidth = 480;
+    private const int ContentLeft = (FormWidth - ContentWidth) / 2;
     private const int WmNclButtonDown = 0xA1;
     private const int HtCaption = 0x2;
 
@@ -67,8 +72,7 @@ internal sealed class InstallerForm : Form
     private readonly LumoraOptionCheckBox _launchNowCheckBox = new();
 
     private readonly Panel[] _pages = new Panel[3];
-    private readonly Label[] _stepNumberLabels = new Label[3];
-    private readonly Label[] _stepTextLabels = new Label[3];
+    private readonly StepDotsControl _stepDots = new();
     private int _currentPage;
 
     private string? _installedAppExe;
@@ -121,16 +125,19 @@ internal sealed class InstallerForm : Form
         Text = windowTitle;
 
         BuildTitleBar(windowTitle);
-        var sidebar = BuildSidebar();
-        Controls.Add(sidebar);
+
+        _stepDots.Location = new Point(0, TitleBarHeight);
+        _stepDots.Size = new Size(FormWidth, StepDotsHeight);
+        _stepDots.BackColor = LumoraPalette.AppBackground;
+        Controls.Add(_stepDots);
 
         _pages[0] = BuildWelcomePage();
         _pages[1] = BuildOptionsPage(defaultInstallRoot);
         _pages[2] = BuildFinishPage();
         foreach (var page in _pages)
         {
-            page.Location = new Point(SidebarWidth, TitleBarHeight);
-            page.Size = new Size(FormWidth - SidebarWidth, FormHeight - TitleBarHeight - FooterHeight);
+            page.Location = new Point(0, TitleBarHeight + StepDotsHeight);
+            page.Size = new Size(FormWidth, FormHeight - TitleBarHeight - StepDotsHeight - FooterHeight);
             page.BackColor = LumoraPalette.ContentBackground;
             Controls.Add(page);
         }
@@ -203,115 +210,29 @@ internal sealed class InstallerForm : Form
         return button;
     }
 
-    // Bandeau lateral (168px, pleine hauteur sous la barre de titre) : logo
-    // dans son halo circulaire (meme motif que l'ecran de bienvenue de
-    // l'app, MainWindow.xaml WelcomeStep0), nom du produit, et repere
-    // d'etapes 1-2-3 pour savoir ou on en est sans avoir a compter les
-    // clics sur "Suivant".
-    private Panel BuildSidebar()
-    {
-        var sidebar = new RadialGlowPanel
-        {
-            Location = new Point(0, TitleBarHeight),
-            Size = new Size(SidebarWidth, FormHeight - TitleBarHeight),
-            BackColor = LumoraPalette.SidebarBackground
-        };
-
-        var logo = new LogoImageControl
-        {
-            Image = LoadInstallerLogo(),
-            Location = new Point((SidebarWidth - 60) / 2, 28),
-            Size = new Size(60, 60),
-            BackColor = Color.Transparent
-        };
-        sidebar.Controls.Add(logo);
-
-        var productLabel = new Label
-        {
-            Text = "Lumora Browser",
-            AutoSize = false,
-            TextAlign = ContentAlignment.MiddleCenter,
-            Location = new Point(8, 96),
-            Size = new Size(SidebarWidth - 16, 24),
-            ForeColor = LumoraPalette.Foreground,
-            BackColor = Color.Transparent,
-            Font = LumoraTypography.Text(11.5f, FontStyle.Bold)
-        };
-        sidebar.Controls.Add(productLabel);
-
-        var versionLabel = new Label
-        {
-            Text = "Version __PRODUCT_VERSION__",
-            AutoSize = false,
-            TextAlign = ContentAlignment.MiddleCenter,
-            Location = new Point(8, 120),
-            Size = new Size(SidebarWidth - 16, 18),
-            ForeColor = LumoraPalette.SidebarMutedForeground,
-            BackColor = Color.Transparent,
-            Font = LumoraTypography.Text(8f)
-        };
-        sidebar.Controls.Add(versionLabel);
-
-        var stepNames = new[] { "Bienvenue", "Dossier et options", "Installation" };
-        var stepY = 154;
-        for (var i = 0; i < stepNames.Length; i++)
-        {
-            var row = new Panel
-            {
-                Location = new Point(12, stepY),
-                Size = new Size(SidebarWidth - 24, 26),
-                BackColor = Color.Transparent
-            };
-
-            var number = new Label
-            {
-                Text = (i + 1).ToString(),
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point(0, 2),
-                Size = new Size(20, 20),
-                Font = LumoraTypography.Text(8.5f, FontStyle.Bold),
-                BackColor = Color.Transparent
-            };
-            var text = new Label
-            {
-                Text = stepNames[i],
-                AutoSize = false,
-                Location = new Point(26, 4),
-                Size = new Size(SidebarWidth - 24 - 26, 18),
-                Font = LumoraTypography.Text(8.75f),
-                BackColor = Color.Transparent
-            };
-
-            row.Controls.Add(number);
-            row.Controls.Add(text);
-            sidebar.Controls.Add(row);
-            _stepNumberLabels[i] = number;
-            _stepTextLabels[i] = text;
-            stepY += 30;
-        }
-
-        return sidebar;
-    }
-
     private void UpdateStepHighlight(int activeIndex)
     {
-        for (var i = 0; i < _stepNumberLabels.Length; i++)
-        {
-            var isActive = i == activeIndex;
-            var color = isActive ? LumoraPalette.Accent : LumoraPalette.SidebarMutedForeground;
-            _stepNumberLabels[i].ForeColor = color;
-            _stepTextLabels[i].ForeColor = color;
-            _stepTextLabels[i].Font = LumoraTypography.Text(8.75f, isActive ? FontStyle.Bold : FontStyle.Regular);
-        }
+        _stepDots.ActiveStep = activeIndex;
     }
 
     // ── Page 1 : Bienvenue ───────────────────────────────────────────────
 
+    // Logo seul, sans halo ni bandeau colore (2026-09-15, "seulement une
+    // presentation" - demande explicite utilisateur en remplacement du
+    // repere abstrait utilise dans la maquette de comparaison).
     private Panel BuildWelcomePage()
     {
         var page = new Panel();
-        var contentWidth = FormWidth - SidebarWidth - 48;
+
+        var logo = new PictureBox
+        {
+            Image = LoadInstallerLogo(),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            BackColor = Color.Transparent,
+            Location = new Point((FormWidth - 72) / 2, 68),
+            Size = new Size(72, 72)
+        };
+        page.Controls.Add(logo);
 
         var title = new Label
         {
@@ -319,37 +240,32 @@ internal sealed class InstallerForm : Form
                 ? "Bienvenue dans l'assistant de mise à jour de Lumora Browser"
                 : "Bienvenue dans l'assistant d'installation de Lumora Browser",
             AutoSize = false,
-            Location = new Point(24, 20),
-            Size = new Size(contentWidth, 44),
+            TextAlign = ContentAlignment.TopCenter,
+            Location = new Point(ContentLeft, 156),
+            Size = new Size(ContentWidth, 44),
             Font = LumoraTypography.Text(12.5f, FontStyle.Bold),
-            ForeColor = LumoraPalette.Foreground
+            ForeColor = LumoraPalette.Foreground,
+            BackColor = Color.Transparent
         };
         page.Controls.Add(title);
 
-        AddSectionLine(
+        AddCenteredLine(
             page,
             _isUpdate
                 ? "Une installation ou un profil Lumora existe déjà sur cet ordinateur. Cet assistant va mettre à jour l'application ; vos données sont conservées sauf si vous cochez le contraire à l'étape suivante."
                 : "Cet assistant va installer Lumora Browser sur votre ordinateur. Il est recommandé de fermer toutes les autres applications avant de continuer.",
-            70, LumoraPalette.BodyText, height: 40);
-        AddSectionLine(page, "Navigateur local, modules intégrés, aucune donnée personnelle n'est copiée dans l'installateur.", 114, LumoraPalette.BodyText, height: 40);
-
-        var divider = new Panel
-        {
-            Location = new Point(24, 162),
-            Size = new Size(FormWidth - SidebarWidth - 48, 1),
-            BackColor = LumoraPalette.StrokeSoft
-        };
-        page.Controls.Add(divider);
+            216, LumoraPalette.MutedForeground, height: 60, fontSize: 9.25f);
+        AddCenteredLine(page, "Navigateur local, modules intégrés, aucune donnée personnelle n'est copiée dans l'installateur.", 286, LumoraPalette.MutedForeground, height: 36, fontSize: 9.25f);
 
         var warning = new Label
         {
             Text = "Build de développement non signé. Windows peut afficher « Éditeur inconnu ». Le SHA256 est fourni avec Lumora.",
             AutoSize = false,
-            Location = new Point(24, 178),
-            Size = new Size(FormWidth - SidebarWidth - 48, 40),
+            TextAlign = ContentAlignment.TopCenter,
+            Location = new Point(ContentLeft, 352),
+            Size = new Size(ContentWidth, 40),
             ForeColor = LumoraPalette.Accent,
-            Font = LumoraTypography.Text(9.25f, FontStyle.Bold),
+            Font = LumoraTypography.Text(9f, FontStyle.Bold),
             BackColor = Color.Transparent
         };
         page.Controls.Add(warning);
@@ -362,13 +278,13 @@ internal sealed class InstallerForm : Form
     private Panel BuildOptionsPage(string defaultInstallRoot)
     {
         var page = new Panel();
-        var contentWidth = FormWidth - SidebarWidth - 48;
+        var contentWidth = ContentWidth;
 
         var title = new Label
         {
             Text = "Choisissez le dossier d'installation",
             AutoSize = false,
-            Location = new Point(24, 16),
+            Location = new Point(ContentLeft, 16),
             Size = new Size(contentWidth, 24),
             Font = LumoraTypography.Text(11.5f, FontStyle.Bold),
             ForeColor = LumoraPalette.Foreground
@@ -376,7 +292,7 @@ internal sealed class InstallerForm : Form
         page.Controls.Add(title);
 
         _installPathTextBox.Text = defaultInstallRoot;
-        _installPathTextBox.Location = new Point(24, 46);
+        _installPathTextBox.Location = new Point(ContentLeft, 46);
         _installPathTextBox.Size = new Size(contentWidth - 116, 26);
         _installPathTextBox.BorderStyle = BorderStyle.FixedSingle;
         _installPathTextBox.BackColor = LumoraPalette.InputBackground;
@@ -384,7 +300,7 @@ internal sealed class InstallerForm : Form
         page.Controls.Add(_installPathTextBox);
 
         _browseButton.Text = "Parcourir...";
-        _browseButton.Location = new Point(24 + contentWidth - 106, 44);
+        _browseButton.Location = new Point(ContentLeft + contentWidth - 106, 44);
         _browseButton.Size = new Size(106, 30);
         _browseButton.FlatStyle = FlatStyle.Flat;
         StyleSecondaryButton(_browseButton);
@@ -393,14 +309,14 @@ internal sealed class InstallerForm : Form
 
         AddSectionLine(page, "Pour installer dans Program Files, lancez l'installateur en administrateur.", 80, LumoraPalette.MutedForeground, height: 18, fontSize: 8.75f);
 
-        var divider1 = new Panel { Location = new Point(24, 106), Size = new Size(contentWidth, 1), BackColor = LumoraPalette.StrokeSoft };
+        var divider1 = new Panel { Location = new Point(ContentLeft, 106), Size = new Size(contentWidth, 1), BackColor = LumoraPalette.StrokeSoft };
         page.Controls.Add(divider1);
 
         var contentTitle = new Label
         {
             Text = "Contenu installé",
             AutoSize = false,
-            Location = new Point(24, 118),
+            Location = new Point(ContentLeft, 118),
             Size = new Size(contentWidth, 20),
             Font = LumoraTypography.Text(10.5f, FontStyle.Bold),
             ForeColor = LumoraPalette.Foreground
@@ -411,14 +327,14 @@ internal sealed class InstallerForm : Form
         AddSectionLine(page, "Non inclus : profils, favoris, historique, mots de passe et données personnelles.", 162, LumoraPalette.BodyText, height: 18, fontSize: 8.75f);
         AddSectionLine(page, "WebView2 : moteur embarqué avec Lumora, aucun téléchargement nécessaire.", 182, LumoraPalette.MutedForeground, height: 18, fontSize: 8.75f);
 
-        var divider2 = new Panel { Location = new Point(24, 210), Size = new Size(contentWidth, 1), BackColor = LumoraPalette.StrokeSoft };
+        var divider2 = new Panel { Location = new Point(ContentLeft, 210), Size = new Size(contentWidth, 1), BackColor = LumoraPalette.StrokeSoft };
         page.Controls.Add(divider2);
 
         var optionsTitle = new Label
         {
             Text = "Composants à installer",
             AutoSize = false,
-            Location = new Point(24, 222),
+            Location = new Point(ContentLeft, 222),
             Size = new Size(contentWidth, 20),
             Font = LumoraTypography.Text(10.5f, FontStyle.Bold),
             ForeColor = LumoraPalette.Foreground
@@ -431,10 +347,10 @@ internal sealed class InstallerForm : Form
         // Cochee par defaut UNIQUEMENT si aucune installation/profil existant
         // n'est detecte (rien a perdre) ; decochee par defaut en mise a jour,
         // maintenant que la case fait vraiment ce qu'elle dit (2026-08-30).
-        ConfigureCheckBox(_cleanProfileCheckBox, "Effacer aussi mon profil (favoris, mots de passe, historique) — repartir de zéro", new Point(20, 248), new Size(contentWidth - 20, 40), !_isUpdate);
-        ConfigureCheckBox(_desktopShortcutCheckBox, "Raccourci Bureau", new Point(20, 290), new Size(contentWidth - 20, 26), true);
-        ConfigureCheckBox(_startMenuShortcutCheckBox, "Raccourci Menu Démarrer", new Point(20, 318), new Size(contentWidth - 20, 26), true);
-        ConfigureCheckBox(_torCheckBox, "Installer et activer Tor (anonymat réseau)", new Point(20, 346), new Size(contentWidth - 20, 26), false);
+        ConfigureCheckBox(_cleanProfileCheckBox, "Effacer aussi mon profil (favoris, mots de passe, historique) — repartir de zéro", new Point(ContentLeft, 248), new Size(contentWidth, 40), !_isUpdate);
+        ConfigureCheckBox(_desktopShortcutCheckBox, "Raccourci Bureau", new Point(ContentLeft, 290), new Size(contentWidth, 26), true);
+        ConfigureCheckBox(_startMenuShortcutCheckBox, "Raccourci Menu Démarrer", new Point(ContentLeft, 318), new Size(contentWidth, 26), true);
+        ConfigureCheckBox(_torCheckBox, "Installer et activer Tor (anonymat réseau)", new Point(ContentLeft, 346), new Size(contentWidth, 26), false);
         page.Controls.Add(_cleanProfileCheckBox);
         page.Controls.Add(_desktopShortcutCheckBox);
         page.Controls.Add(_startMenuShortcutCheckBox);
@@ -443,7 +359,7 @@ internal sealed class InstallerForm : Form
         AddSectionLine(
             page,
             "Masque ton adresse IP réelle en faisant transiter le trafic par le réseau Tor. Ralentit la navigation : reste décoché par défaut. Sans cette case, le bouton Tor de la fenêtre Incognito proposera de l'installer plus tard.",
-            374, LumoraPalette.MutedForeground, height: 60, fontSize: 8.5f, left: 56, width: contentWidth - 56);
+            374, LumoraPalette.MutedForeground, height: 60, fontSize: 8.5f, left: ContentLeft + 32, width: contentWidth - 32);
 
         return page;
     }
@@ -453,12 +369,11 @@ internal sealed class InstallerForm : Form
     private Panel BuildFinishPage()
     {
         var page = new Panel();
-        var contentWidth = FormWidth - SidebarWidth - 48;
 
         var icon = new FinishIconControl
         {
-            Location = new Point(24, 24),
-            Size = new Size(48, 48),
+            Location = new Point((FormWidth - 64) / 2, 104),
+            Size = new Size(64, 64),
             BackColor = Color.Transparent
         };
         page.Controls.Add(icon);
@@ -467,36 +382,59 @@ internal sealed class InstallerForm : Form
         {
             Text = "Lumora est installé",
             AutoSize = false,
-            Location = new Point(24, 82),
-            Size = new Size(contentWidth, 26),
+            TextAlign = ContentAlignment.TopCenter,
+            Location = new Point(ContentLeft, 186),
+            Size = new Size(ContentWidth, 28),
             Font = LumoraTypography.Text(13f, FontStyle.Bold),
-            ForeColor = LumoraPalette.Foreground
+            ForeColor = LumoraPalette.Foreground,
+            BackColor = Color.Transparent
         };
         page.Controls.Add(title);
 
         _finishMessageLabel.Text = "Aucun profil utilisateur n'a été copié. Les modules Lumora sont inclus dans l'application, et vos données restent les vôtres.";
         _finishMessageLabel.AutoSize = false;
-        _finishMessageLabel.Location = new Point(24, 114);
-        _finishMessageLabel.Size = new Size(contentWidth, 60);
+        _finishMessageLabel.TextAlign = ContentAlignment.TopCenter;
+        _finishMessageLabel.Location = new Point(ContentLeft, 226);
+        _finishMessageLabel.Size = new Size(ContentWidth, 60);
         _finishMessageLabel.ForeColor = LumoraPalette.MutedForeground;
         _finishMessageLabel.Font = LumoraTypography.Text(9.5f);
         _finishMessageLabel.BackColor = Color.Transparent;
         page.Controls.Add(_finishMessageLabel);
 
-        ConfigureCheckBox(_launchNowCheckBox, "Lancer Lumora Browser maintenant", new Point(20, 182), new Size(contentWidth - 20, 26), true);
+        const int checkboxWidth = 280;
+        ConfigureCheckBox(_launchNowCheckBox, "Lancer Lumora Browser maintenant", new Point((FormWidth - checkboxWidth) / 2, 306), new Size(checkboxWidth, 26), true);
         page.Controls.Add(_launchNowCheckBox);
 
         return page;
     }
 
-    private static void AddSectionLine(Control parent, string text, int top, Color color, int height = 24, float fontSize = 9f, int left = 24, int? width = null)
+    private static void AddSectionLine(Control parent, string text, int top, Color color, int height = 24, float fontSize = 9f, int? left = null, int? width = null)
+    {
+        var resolvedLeft = left ?? ContentLeft;
+        parent.Controls.Add(new Label
+        {
+            Text = text,
+            AutoSize = false,
+            Location = new Point(resolvedLeft, top),
+            Size = new Size(width ?? (ContentLeft + ContentWidth - resolvedLeft), height),
+            ForeColor = color,
+            BackColor = Color.Transparent,
+            Font = LumoraTypography.Text(fontSize)
+        });
+    }
+
+    // Meme role que AddSectionLine, mais pour les ecrans "carte centree"
+    // (Bienvenue/Terminé) ou le texte est centre dans la colonne plutot
+    // qu'aligne a gauche.
+    private static void AddCenteredLine(Control parent, string text, int top, Color color, int height = 24, float fontSize = 9f)
     {
         parent.Controls.Add(new Label
         {
             Text = text,
             AutoSize = false,
-            Location = new Point(left, top),
-            Size = new Size(width ?? (FormWidth - SidebarWidth - 24 - left), height),
+            TextAlign = ContentAlignment.TopCenter,
+            Location = new Point(ContentLeft, top),
+            Size = new Size(ContentWidth, height),
             ForeColor = color,
             BackColor = Color.Transparent,
             Font = LumoraTypography.Text(fontSize)
@@ -520,8 +458,8 @@ internal sealed class InstallerForm : Form
     {
         var footer = new Panel
         {
-            Location = new Point(SidebarWidth, FormHeight - FooterHeight),
-            Size = new Size(FormWidth - SidebarWidth, FooterHeight),
+            Location = new Point(0, FormHeight - FooterHeight),
+            Size = new Size(FormWidth, FooterHeight),
             BackColor = LumoraPalette.ChromeSurface
         };
         var topStroke = new Panel { Location = new Point(0, 0), Size = new Size(footer.Width, 1), BackColor = LumoraPalette.StrokeSoft };
@@ -1218,7 +1156,6 @@ internal static class LumoraPalette
     public static readonly Color AppBackground = Color.FromArgb(9, 13, 20);
     public static readonly Color ChromeSurface = Color.FromArgb(16, 21, 31);
     public static readonly Color ContentBackground = Color.FromArgb(11, 15, 22);
-    public static readonly Color SidebarBackground = Color.FromArgb(13, 18, 25);
     public static readonly Color InputBackground = Color.FromArgb(13, 18, 25);
     public static readonly Color ButtonBackground = Color.FromArgb(18, 25, 37);
     public static readonly Color ButtonBackgroundHover = Color.FromArgb(24, 32, 46);
@@ -1227,7 +1164,6 @@ internal static class LumoraPalette
     public static readonly Color Foreground = Color.FromArgb(242, 245, 250);
     public static readonly Color BodyText = Color.FromArgb(224, 228, 236);
     public static readonly Color MutedForeground = Color.FromArgb(171, 178, 191);
-    public static readonly Color SidebarMutedForeground = Color.FromArgb(107, 114, 128);
     public static readonly Color Accent = Color.FromArgb(230, 170, 72);
     public static readonly Color AccentHover = Color.FromArgb(235, 184, 100);
     public static readonly Color AccentPressed = Color.FromArgb(200, 145, 55);
@@ -1280,12 +1216,36 @@ internal class RoundedPanel : Panel
     }
 }
 
-// Bandeau lateral : deux lueurs douces (doree en haut-gauche, bleue en
-// bas-droite) derriere le logo, meme esprit que WelcomeBlobWarm/
-// WelcomeBlobCool dans l'ecran de bienvenue de l'app (MainWindow.xaml).
-internal sealed class RadialGlowPanel : Panel
+// Repere d'etapes de l'assistant (2026-09-15, remplace les numeros 1-2-3 du
+// bandeau lateral retire) : une ligne de points centree, l'etape courante et
+// les etapes deja franchies en accent plein, les etapes a venir en simple
+// contour - meme esprit que les indicateurs de progression "carte
+// minimaliste" des installateurs Windows modernes.
+internal sealed class StepDotsControl : Control
 {
-    public RadialGlowPanel()
+    private const int StepCount = 3;
+    private const float DotSize = 8f;
+    private const float Gap = 10f;
+
+    private int _activeStep;
+
+    public int ActiveStep
+    {
+        get => _activeStep;
+        set
+        {
+            var clamped = Math.Max(0, Math.Min(StepCount - 1, value));
+            if (_activeStep == clamped)
+            {
+                return;
+            }
+
+            _activeStep = clamped;
+            Invalidate();
+        }
+    }
+
+    public StepDotsControl()
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
     }
@@ -1293,80 +1253,27 @@ internal sealed class RadialGlowPanel : Panel
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        using var fill = new SolidBrush(BackColor);
-        e.Graphics.FillRectangle(fill, ClientRectangle);
+        using var background = new SolidBrush(BackColor);
+        e.Graphics.FillRectangle(background, ClientRectangle);
 
-        using var warmGlow = new GraphicsPath();
-        warmGlow.AddEllipse(-60, -60, 220, 220);
-        using var warmBrush = new PathGradientBrush(warmGlow)
+        var totalWidth = StepCount * DotSize + (StepCount - 1) * Gap;
+        var startX = (Width - totalWidth) / 2f;
+        var y = (Height - DotSize) / 2f;
+
+        for (var i = 0; i < StepCount; i++)
         {
-            CenterColor = Color.FromArgb(36, LumoraPalette.Accent.R, LumoraPalette.Accent.G, LumoraPalette.Accent.B),
-            SurroundColors = new[] { Color.Transparent }
-        };
-        e.Graphics.FillPath(warmBrush, warmGlow);
-
-        using var coolGlow = new GraphicsPath();
-        coolGlow.AddEllipse(Width - 140, Height - 200, 200, 200);
-        using var coolBrush = new PathGradientBrush(coolGlow)
-        {
-            CenterColor = Color.FromArgb(30, LumoraPalette.CoolAccent.R, LumoraPalette.CoolAccent.G, LumoraPalette.CoolAccent.B),
-            SurroundColors = new[] { Color.Transparent }
-        };
-        e.Graphics.FillPath(coolBrush, coolGlow);
-
-        using var edge = new Pen(LumoraPalette.StrokeSoft, 1f);
-        e.Graphics.DrawLine(edge, Width - 1, 0, Width - 1, Height);
-    }
-}
-
-internal sealed class LogoImageControl : Control
-{
-    public Image? Image { get; set; }
-
-    public LogoImageControl()
-    {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-        e.Graphics.CompositingQuality = CompositingQuality.HighQuality;
-        e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-        var plateBounds = new RectangleF(2.5f, 2.5f, Width - 5f, Height - 5f);
-        using var plate = RoundedPanel.CreateRoundRect(plateBounds, 18f);
-        using var plateFill = new SolidBrush(Color.FromArgb(38, LumoraPalette.Accent.R, LumoraPalette.Accent.G, LumoraPalette.Accent.B));
-        using var plateBorder = new Pen(Color.FromArgb(110, LumoraPalette.CoolAccent.R, LumoraPalette.CoolAccent.G, LumoraPalette.CoolAccent.B), 1.2f);
-        e.Graphics.FillPath(plateFill, plate);
-        e.Graphics.DrawPath(plateBorder, plate);
-
-        if (Image is null)
-        {
-            return;
+            var bounds = new RectangleF(startX + i * (DotSize + Gap), y, DotSize, DotSize);
+            if (i <= _activeStep)
+            {
+                using var fill = new SolidBrush(LumoraPalette.Accent);
+                e.Graphics.FillEllipse(fill, bounds);
+            }
+            else
+            {
+                using var border = new Pen(LumoraPalette.Stroke, 1f);
+                e.Graphics.DrawEllipse(border, bounds);
+            }
         }
-
-        var imageBounds = FitImage(Image.Size, RectangleF.Inflate(plateBounds, -9f, -9f));
-        e.Graphics.DrawImage(Image, imageBounds);
-    }
-
-    private static RectangleF FitImage(Size sourceSize, RectangleF target)
-    {
-        if (sourceSize.Width <= 0 || sourceSize.Height <= 0)
-        {
-            return target;
-        }
-
-        var scale = Math.Min(target.Width / sourceSize.Width, target.Height / sourceSize.Height);
-        var width = sourceSize.Width * scale;
-        var height = sourceSize.Height * scale;
-        return new RectangleF(
-            target.Left + (target.Width - width) / 2f,
-            target.Top + (target.Height - height) / 2f,
-            width,
-            height);
     }
 }
 

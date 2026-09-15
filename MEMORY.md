@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Session "nouveaux visuels pour l'installeur"](#session-nouveaux-visuels-pour-linstalleur-2026-09-15) — 2026-09-15, direction "carte centrée minimaliste" choisie par l'utilisateur parmi 3 maquettes Artifact (bandeau latéral retiré, points de progression, colonne centrée, vrai logo Lumora), implémentée dans `scripts/installer/Program.cs.template` (3 pages Bienvenue/Dossier+options/Terminé), vérifiée en lançant le vrai binaire compilé (build+capture UIA, pas juste relecture) - 1 bug réel trouvé et corrigé en vérifiant (texte de bienvenue tronqué), build (harnais + Lumora.WinUI via MSBuild) + 949 tests OK -> `0.94.30.0-dev`, **rien committé**
 - [Session "présentation GitHub"](#session-presentation-github-2026-09-15) — 2026-09-15, README.md refondu pour la vitrine GitHub : maquette Artifact itérée en direct avec l'utilisateur (gabarits -> vraies captures -> texte de philosophie étoffé -> message de clôture signé), 4 captures réelles obtenues via pilotage UIA (fenêtre principale, Incognito, Réglages, écran de bienvenue), **la note du 2026-09-11 sur la capture d'écran "non fiable" s'est révélée fausse/obsolète cette session** (voir correctif noté dans la section), committé et poussé sur `origin/main` (`992d0db`) puis **attribution Claude retirée du message de commit sur demande de l'utilisateur** (`git commit --amend` + `push --force-with-lease` -> `f182e75`) - règle retenue : plus d'attribution Claude dans les commits de ce dépôt
 - [Session "couleur d'accentuation"](#session-couleur-daccentuation-2026-09-14) — 2026-09-14, roue chromatique RVB (session "3.5") remplacée par un nuancier de 7 pastilles nommées (Bleu/Rouge/Orange/Jaune/Vert/Violet + "Braise" signature, dérivée de l'accent du mode Ember existant) après retour utilisateur ("pas très beau", "je m'attendais à un système simple avec les couleurs les plus utilisées") ; 2 itérations de maquette Artifact avant code (vert sarcelle rejeté, Braise validée) ; idée de thème "rétro" complet évoquée puis explicitement reportée après la 1.0.0 ; implémenté (XAML+code-behind), build+949 tests OK, vérifié en direct de bout en bout (scénario complet : création profil, navigation Réglages, clic pastille, Appliquer persiste et rethème, Réinitialiser) -> `0.94.27.0-dev` ; **suite le même jour** : retour utilisateur "j'ai cliqué Appliquer et rien n'a changé" -> diagnostic en direct (pas un bug, contraste élevé actif) puis vrai bug trouvé ("il faut cliquer 2 fois") -> état/logique confirmés corrects dès le 1er clic par traces temporaires (aucune ressource de couleur manquante), donc probablement un problème de repeinture visuelle - **jamais corrigé côté code**, mais l'utilisateur confirme en clôture de session que le clic fonctionne bien en usage réel (pas de piste appliquée entre-temps - soit un faux positif de la 1re observation, soit non reproductible de façon fiable ; à garder à l'œil si ça revient) ; puis nuancier sorti du menu caché derrière la pastille unique -> 7 pastilles affichées à plat directement dans le panneau (maquette Artifact validée "c'est ça que je veux"), implémenté+vérifié en direct -> `0.94.28.0-dev` ; puis l'accentuation étendue au halo de survol des menus (rail Réglages, barre d'outils, onglets, tuiles, menus contextuels) - maquette interactive validée par un "go", `NovaChromeButtonHighlightBrush`/`MenuFlyoutItemBackgroundPointerOver`/`Pressed` reprennent `chrome.Accent` au lieu du blanc/ambre fixe, vérifié en direct par trace (valeurs calculées exactes) -> `0.94.29.0-dev` ; **committé en local** (`1e73c2d`), push vers GitHub prévu à la prochaine session (bundlé avec le nouvel installateur, voir [[github-publication-versions]])
 - [Session "correction et nettoyage"](#session-correction-et-nettoyage-2026-09-14) — 2026-09-14, fusion des étapes 4+5 (corriger+nettoyer) sur tout le dépôt : rattrapage du backlog en 9 commits locaux (rien poussé GitHub) puis audit `/code-review` (8 angles) -> 5 bugs réels corrigés (profils qui disparaissent du sélecteur, glisser-déposer des favoris cassé avec "Réordonner sans clic maintenu", 2 services jamais `Dispose()`, recherche Réglages incomplète, onglets verticaux invisibles au clavier), 9 doublons/inefficacités nettoyés, version rattrapée à `0.94.26.1-dev`, 2 nettoyages plus risqués (câblage accentuation, dimensions onglets) reportés avec l'accord de l'utilisateur (pas de vérification visuelle possible ici), vérifié en direct (0 UNHANDLED, trace confirmant le correctif recherche), build+949 tests OK, committé en local (10e commit de la journée) ; 1 doublon de glyphes trouvé après coup et corrigé (StartMenuGlyphs.Notes/BookmarkGlyphs.Link), pas encore committé ; prochaine session (2026-09-15) : exécutable + 1re mise en ligne GitHub
@@ -29422,3 +29423,101 @@ d'autre n'a eu le temps de tirer entre les deux push.
 LumoraBrowser, y compris pour les prochaines sessions - préférence
 explicite de l'utilisateur, motivée par la perception publique du
 projet (dépôt destiné au grand public, pas un dépôt interne/technique).
+
+## Session "nouveaux visuels pour l'installeur" (2026-09-15)
+
+Demande initiale : trouver de nouveaux visuels pour l'installeur final de
+la release 1.0.0, en local uniquement (pas d'action GitHub). Précisé par
+l'utilisateur : nouvelle direction structurelle/visuelle, pas juste
+retoucher les tons de l'assistant existant (celui du 2026-08-19, voir
+[[installeur-assistant-classique-tons-lumora]]).
+
+**Maquette avant code (Artifact)** : 3 pistes pour l'écran "Bienvenue"
+proposées côte à côte (680x580, échelle réelle) -
+1. barre de progression horizontale en haut, sans bandeau, contenu centré ;
+2. bloc accent diagonal asymétrique en bordure gauche ;
+3. carte centrée minimaliste façon installeur Windows 11 natif.
+Utilisateur : "j'aime bien" la maquette globale, choisit la piste 3,
+avec deux corrections : (a) remplacer le repère "L" abstrait par le
+vrai logo (`Lumora.WinUI/Assets/LumoraApp.png`, redimensionné 1024->256px
+pour la maquette, affiché seul sans halo/cadre - "seulement une
+présentation"), (b) voir la suite du parcours (écrans "Dossier et
+options" et "Terminé") pour juger si le contenu dense (cases à cocher,
+chemin d'installation) tient dans l'esprit minimaliste. Les 2 pistes
+écartées gardées sur une 2e page du canevas pour référence, pas
+supprimées.
+
+Point de vigilance utilisateur en cours de route : des mots sans accents
+repérés sur les captures de la maquette ("epure" au lieu d'"épuré") -
+clarifié que c'était uniquement une prudence d'encodage dans la maquette
+Artifact jetable, pas un risque pour le vrai code (qui reprend telle
+quelle les chaînes françaises déjà accentuées présentes dans
+`Program.cs.template`).
+
+**Implémentation** (`scripts/installer/Program.cs.template`) une fois le
+"Go" donné :
+- Bandeau latéral (168px, `RadialGlowPanel`, `LogoImageControl`,
+  labels d'étapes 1-2-3) entièrement retiré, avec les couleurs de
+  palette qui n'étaient plus utilisées qu'ici (`SidebarBackground`,
+  `SidebarMutedForeground`).
+- Nouveau `StepDotsControl` (dessiné en GDI+, pas d'image) : ligne de
+  points centrée sous la barre de titre, étape courante + étapes
+  franchies en accent plein, étapes à venir en contour.
+- Colonne de contenu centrée (`ContentWidth = 480`, `ContentLeft = 100`,
+  marges symétriques 100px de chaque côté) remplaçant l'ancien contenu
+  aligné à gauche à côté du bandeau ; nouveau helper `AddCenteredLine`
+  à côté de l'existant `AddSectionLine` (dont le défaut ne référençait
+  plus `SidebarWidth`, supprimée).
+- Page Bienvenue : logo réel via `PictureBox` (`SizeMode.Zoom`, pas de
+  halo/plate décoratif), titre/texte centrés.
+- Page Dossier et options : même contenu réel qu'avant (chemin
+  d'installation, "Contenu installé", 4 cases à cocher dont Tor
+  décochée par défaut) simplement recentré dans la colonne à 480px -
+  jugé lisible même dense, pas de simplification de contenu demandée
+  après vérification.
+- Page Terminé : icône de succès + titre + message + case "Lancer
+  maintenant" + bouton "Terminer", tous centrés.
+- Pied de page (Précédent/Suivant-Installer-Terminer/Annuler + barre de
+  progression + statut) conservé strictement identique dans son
+  mécanisme (nécessaire au fonctionnement réel de l'installation), juste
+  élargi sur toute la largeur de la fenêtre au lieu de
+  `FormWidth - SidebarWidth`.
+
+**Vérification réelle** (pas juste `dotnet build`) : harnais de test
+jetable construit dans le scratchpad (mêmes templates que
+`scripts/build-installer.ps1`, mais `dotnet build` classique + `app.zip`
+factice, pour ne pas dépendre d'un artefact `clean-test` complet ni
+lancer un vrai `dotnet publish` self-contained). Binaire réellement
+lancé et piloté par UIA (`InvokePattern`, pas d'injection clavier/souris,
+même méthode que le skill `verify`) :
+- Écran Bienvenue et Dossier+options capturés en pilotant le vrai bouton
+  "Suivant >" - **bug réel trouvé** : le texte de bienvenue (cas mise à
+  jour, plus long) était tronqué à 2 lignes visibles sur 3 nécessaires
+  (hauteur de label trop courte) - corrigé, revérifié, texte complet.
+- Écran Terminé vérifié **sans déclencher de vraie installation** (le
+  vrai `Install()` aurait copié le faux `app.zip` et écrit dans le
+  registre/les raccourcis réels) : ajout temporaire, uniquement dans la
+  copie de travail du scratchpad (jamais dans le dépôt), d'un point
+  d'entrée de prévisualisation (`LUMORA_SETUP_PREVIEW_PAGE`) appelant
+  `GoToPage(2)` directement - `GoToPage` rendue `internal` le temps du
+  test dans cette copie seulement. A révélé un déséquilibre vertical
+  (contenu trop remonté, grand vide en bas) - corrigé dans le vrai
+  template, revérifié.
+- `dotnet test Lumora.Tests` : 949/949 verts (dont le test de cohérence
+  de version, mis à jour).
+- `Lumora.WinUI` recompilé via MSBuild (le seul fichier touché côté app
+  étant la constante de version) : 0 erreur.
+
+**Version** : ajout de fonctionnalité (nouveaux visuels installeur) ->
+3e chiffre, `0.94.29.0-dev` -> `0.94.30.0-dev`, aligné aux 4 emplacements
+vérifiés par `Version_projet_est_alignee_sur_0_94_27_0`
+(`MainWindow.xaml.cs`, `AGENTS.md`, `build-clean-test-artifact.ps1`,
+`build-installer.ps1`) + assertions du test elles-mêmes.
+
+**Statut** : implémenté et vérifié en direct, **rien committé** - 6
+fichiers modifiés (`AGENTS.md`, `Lumora.Tests/UsageModeVisualIdentityTests.cs`,
+`Lumora.WinUI/MainWindow.xaml.cs`, `scripts/build-clean-test-artifact.ps1`,
+`scripts/build-installer.ps1`, `scripts/installer/Program.cs.template`).
+Reste à faire si voulu : générer un vrai `.exe` d'installeur via le
+pipeline complet (`build-clean-test-artifact.ps1` puis
+`build-installer.ps1`) pour la release 1.0.0 elle-même.
