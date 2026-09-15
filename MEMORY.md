@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [11e release 1.0.0](#11e-release-1-0-0-2026-09-15) — 2026-09-15, avec les nouveaux visuels d'installeur + l'audit orthographique de la même journée, même protocole worktree que les 10 précédentes (`C:\lumora100`, détaché sur `8ffa47c`), titre `"Lumora 1.0.0"` confirmé en direct, navigation réelle réussie, 0 UNHANDLED, SHA256 installeur `cf4651f8...d436c` vérifié 2x, ancien installeur (r10, 2026-09-02) supprimé pas renommé, worktree supprimé, dépôt principal intact (`ReleaseVersion` toujours `null`, rien à committer)
 - [Session "orthographe" : audit complet de l'app en 7 lots parallèles](#session-orthographe-2026-09-15) — 2026-09-15, suite directe de la session installeur, déclenché par une remarque utilisateur sur des fautes vues dans une maquette ; 7 agents en tâche de fond couvrant les 242 fichiers .xaml/.cs de Lumora.WinUI (texte utilisateur uniquement, commentaires épargnés), ~40 fautes/accents corrigés dans 31 fichiers, 6 tests cassés (attendaient l'ancien texte fautif) corrigés pour refléter le texte correct, build+949 tests OK, vérifié en lançant le vrai binaire (navigation Nouvel onglet réussie, 0 UNHANDLED) -> committé en local
 - [Session "nouveaux visuels pour l'installeur"](#session-nouveaux-visuels-pour-linstalleur-2026-09-15) — 2026-09-15, direction "carte centrée minimaliste" choisie par l'utilisateur parmi 3 maquettes Artifact (bandeau latéral retiré, points de progression, colonne centrée, vrai logo Lumora), implémentée dans `scripts/installer/Program.cs.template` (3 pages Bienvenue/Dossier+options/Terminé), vérifiée en lançant le vrai binaire compilé (build+capture UIA, pas juste relecture) - 1 bug réel trouvé et corrigé en vérifiant (texte de bienvenue tronqué), build (harnais + Lumora.WinUI via MSBuild) + 949 tests OK -> `0.94.30.0-dev`, **rien committé**
 - [Session "présentation GitHub"](#session-presentation-github-2026-09-15) — 2026-09-15, README.md refondu pour la vitrine GitHub : maquette Artifact itérée en direct avec l'utilisateur (gabarits -> vraies captures -> texte de philosophie étoffé -> message de clôture signé), 4 captures réelles obtenues via pilotage UIA (fenêtre principale, Incognito, Réglages, écran de bienvenue), **la note du 2026-09-11 sur la capture d'écran "non fiable" s'est révélée fausse/obsolète cette session** (voir correctif noté dans la section), committé et poussé sur `origin/main` (`992d0db`) puis **attribution Claude retirée du message de commit sur demande de l'utilisateur** (`git commit --amend` + `push --force-with-lease` -> `f182e75`) - règle retenue : plus d'attribution Claude dans les commits de ce dépôt
@@ -29577,3 +29578,50 @@ demande explicite). Étape suivante demandée par l'utilisateur : générer
 uniquement le `.exe` de la version 1.0.0 (pas de bump de version dev
 0.94.x - c'est le compteur de release séparé, voir
 [[version-release-distincte-version-dev]]).
+
+## 11e release 1.0.0 (2026-09-15)
+
+Troisième et dernière étape de la "grosse tâche" du jour (commit installeur
+-> orthographe -> `.exe` 1.0.0 "uniquement", rien d'autre demandé). 11e
+release depuis le 2026-08-30 (r10 construite le 2026-09-02, jamais détaillée
+dans ce fichier - fichiers datés retrouvés dans `artifacts/installer/`).
+
+**Même protocole que les 10 précédentes**, appliqué sans le redemander
+(déjà confirmé/documenté 10 fois, l'utilisateur a explicitement dit
+"uniquement le .exe de la version 1.0.0" ce qui vaut Go) :
+- Worktree jetable `C:\lumora100`, détaché sur `8ffa47c` (HEAD après les 2
+  commits du jour).
+- Runtime WebView2 Fixed Version (`150.0.4078.105`, 648 Mo, déjà présent en
+  local car gitignoré) copié par `robocopy` dans le worktree.
+- `ReleaseVersion` mis à `"1.0.0"` **uniquement dans le worktree** - vérifié
+  après coup : `git status` propre dans le dépôt principal, `ReleaseVersion
+  = null` toujours en place.
+- `build-clean-test-artifact.ps1 -Version "1.0.0"` puis
+  `build-installer.ps1 -Version "1.0.0"`, tous deux 0 erreur/0 avertissement
+  (~1min12 + le temps de publish self-contained).
+
+**Vérifié en direct** (profil isolé jetable, flux UIA groupé) sur
+l'exécutable de l'artefact propre (jamais l'installateur lui-même, même
+règle que les releases précédentes) : titre de fenêtre confirmé `"Lumora
+1.0.0"` avant navigation, démarrage complet sans erreur (`MainWindow
+constructed` -> `activated` -> `WebView2 created`), navigation réelle vers
+`lumora://accueil` réussie (`status=200`, `NavigationCompleted
+isSuccess=True`), **aucune ligne `UNHANDLED`** dans le journal. Recherche de
+la barre d'adresse après le passage en mode invité infructueuse (le clic sur
+"Continuer sans profil" relance le processus via `RestartApp()`, PID
+différent, piège déjà documenté dans le skill `verify`) - sans conséquence,
+la preuve utile (titre + démarrage + navigation initiale propre) était déjà
+obtenue avant ce point.
+
+SHA256 installateur : `cf4651f8051b5914066e7a10db0c021d88680e7a6ee255dc51e4c03f364d436c`
+- vérifié deux fois (sortie du script + `sha256sum` indépendant sur le
+fichier copié dans le dépôt principal, identique). Ancien
+`LumoraSetup-1.0.0-win-x64.exe` (r10, 2026-09-02, 554 Mo) + son
+`.VERIFICATION.txt` **supprimés avant** d'écrire les nouveaux, pas renommés.
+Manifeste `.sha256` de l'installeur et de l'artefact propre copiés vers le
+dépôt principal **avant** suppression du worktree (leçon retenue de l'écart
+constaté lors de la 9e release).
+
+Worktree supprimé (`git worktree remove --force`), confirmé absent du
+disque. Jamais lancé par moi. Rien à committer côté dépôt principal
+(installateur/manifestes tous gitignorés) - seul `MEMORY.md` a changé.
