@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Session "présentation GitHub"](#session-presentation-github-2026-09-15) — 2026-09-15, README.md refondu pour la vitrine GitHub : maquette Artifact itérée en direct avec l'utilisateur (gabarits -> vraies captures -> texte de philosophie étoffé -> message de clôture signé), 4 captures réelles obtenues via pilotage UIA (fenêtre principale, Incognito, Réglages, écran de bienvenue), **la note du 2026-09-11 sur la capture d'écran "non fiable" s'est révélée fausse/obsolète cette session** (voir correctif noté dans la section), README.md et `.github/readme/*.png` écrits dans le dépôt, **pas encore committé** (Go attendu)
 - [Session "couleur d'accentuation"](#session-couleur-daccentuation-2026-09-14) — 2026-09-14, roue chromatique RVB (session "3.5") remplacée par un nuancier de 7 pastilles nommées (Bleu/Rouge/Orange/Jaune/Vert/Violet + "Braise" signature, dérivée de l'accent du mode Ember existant) après retour utilisateur ("pas très beau", "je m'attendais à un système simple avec les couleurs les plus utilisées") ; 2 itérations de maquette Artifact avant code (vert sarcelle rejeté, Braise validée) ; idée de thème "rétro" complet évoquée puis explicitement reportée après la 1.0.0 ; implémenté (XAML+code-behind), build+949 tests OK, vérifié en direct de bout en bout (scénario complet : création profil, navigation Réglages, clic pastille, Appliquer persiste et rethème, Réinitialiser) -> `0.94.27.0-dev` ; **suite le même jour** : retour utilisateur "j'ai cliqué Appliquer et rien n'a changé" -> diagnostic en direct (pas un bug, contraste élevé actif) puis vrai bug trouvé ("il faut cliquer 2 fois") -> état/logique confirmés corrects dès le 1er clic par traces temporaires (aucune ressource de couleur manquante), donc probablement un problème de repeinture visuelle - **jamais corrigé côté code**, mais l'utilisateur confirme en clôture de session que le clic fonctionne bien en usage réel (pas de piste appliquée entre-temps - soit un faux positif de la 1re observation, soit non reproductible de façon fiable ; à garder à l'œil si ça revient) ; puis nuancier sorti du menu caché derrière la pastille unique -> 7 pastilles affichées à plat directement dans le panneau (maquette Artifact validée "c'est ça que je veux"), implémenté+vérifié en direct -> `0.94.28.0-dev` ; puis l'accentuation étendue au halo de survol des menus (rail Réglages, barre d'outils, onglets, tuiles, menus contextuels) - maquette interactive validée par un "go", `NovaChromeButtonHighlightBrush`/`MenuFlyoutItemBackgroundPointerOver`/`Pressed` reprennent `chrome.Accent` au lieu du blanc/ambre fixe, vérifié en direct par trace (valeurs calculées exactes) -> `0.94.29.0-dev` ; **committé en local** (`1e73c2d`), push vers GitHub prévu à la prochaine session (bundlé avec le nouvel installateur, voir [[github-publication-versions]])
 - [Session "correction et nettoyage"](#session-correction-et-nettoyage-2026-09-14) — 2026-09-14, fusion des étapes 4+5 (corriger+nettoyer) sur tout le dépôt : rattrapage du backlog en 9 commits locaux (rien poussé GitHub) puis audit `/code-review` (8 angles) -> 5 bugs réels corrigés (profils qui disparaissent du sélecteur, glisser-déposer des favoris cassé avec "Réordonner sans clic maintenu", 2 services jamais `Dispose()`, recherche Réglages incomplète, onglets verticaux invisibles au clavier), 9 doublons/inefficacités nettoyés, version rattrapée à `0.94.26.1-dev`, 2 nettoyages plus risqués (câblage accentuation, dimensions onglets) reportés avec l'accord de l'utilisateur (pas de vérification visuelle possible ici), vérifié en direct (0 UNHANDLED, trace confirmant le correctif recherche), build+949 tests OK, committé en local (10e commit de la journée) ; 1 doublon de glyphes trouvé après coup et corrigé (StartMenuGlyphs.Notes/BookmarkGlyphs.Link), pas encore committé ; prochaine session (2026-09-15) : exécutable + 1re mise en ligne GitHub
 - [Session "étape 3.5" — 3 petits correctifs](#session-etape-35-2026-09-14--3-petits-correctifs) — 2026-09-14, TERMINÉE : (1) bouton "+" du rail d'onglets verticaux déplacé sous la liste + fond bleu-marine du nouvel onglet neutralisé pour TOUTES les palettes (Océan/Forêt/Ambre, pas seulement Lumora), (2) lignes de "Vue d'ensemble" (Centre Lumora) passées de StackPanel à Grid 3 colonnes pour aligner les liens, (3) "Couleur du mode d'usage" (6 teintes par mode) remplacée par "Couleur d'accentuation" (1 réglage global façon Windows, dossiers de favoris/onglet actif/bouton principal/glow ambiant) - les 3 build+949 tests OK + vérifiés en direct par capture d'écran, piège réel trouvé et corrigé en vérifiant (SetBrush vs SetAppBrush, crash au démarrage)
@@ -29330,3 +29331,79 @@ diagnostic ci-dessus a été fait). Donc soit un faux positif de la toute
 première observation utilisateur, soit un aléa d'affichage non reproductible
 de façon fiable - à garder en tête si ça revient plutôt que de le considérer
 clos avec certitude.
+
+## Session "présentation GitHub" (2026-09-15)
+
+Demande initiale de l'utilisateur : préparer la vitrine du dépôt pour
+GitHub — un visuel avec le nom/logo et 2-3 belles captures représentatives,
+"pas des trucs dégueulasses, des vieilles captures d'écran pourries".
+Détour assumé par rapport à ce qui était prévu la session précédente
+(exécutable + 1re mise en ligne).
+
+**Méthode** : tout construit et validé par itérations sur une maquette
+Artifact (même URL redéployée à chaque étape) avant de toucher aux vrais
+fichiers du dépôt :
+1. Maquette avec gabarits (dégradé + icône, étiquetés "capture à venir")
+   pour valider la composition avant d'investir dans les vraies captures.
+2. Utilisateur : "montre-moi ce que tu aurais choisi" -> vraies captures
+   prises en direct (voir plus bas), gabarits remplacés dans la même
+   maquette.
+3. Texte de philosophie jugé "trop fait dans le rapide" -> réécrit avec un
+   vrai développement (le *pourquoi*, pas juste le *quoi*) + liste de
+   fonctionnalités étoffée (une phrase de contexte par point plutôt qu'un
+   fragment). Ton choisi après question : "convaincu mais sobre".
+4. Message de clôture demandé ("bonne navigation et à la découverte d'un
+   monde simple et protégé"), mis en avant visuellement, signé du pseudo
+   de l'utilisateur.
+5. Utilisateur : la présentation manque de "jovial" pour une vitrine
+   GitHub. Avis donné (pas juste exécuté sans discussion, cf. règle
+   distinction avis/action) : concentrer la chaleur aux deux extrémités
+   (accueil + signature) plutôt que rendre tout le texte enjoué, pour ne
+   pas nuire au sérieux du contenu confidentialité/sécurité au milieu -
+   approche acceptée.
+
+**Correctif important à la doc du skill `verify`** : la note du
+2026-09-11 ("Aucune des deux méthodes de capture d'écran testées à ce jour
+n'est fiable dans cet environnement pour cette app") **s'est révélée
+fausse ou obsolète cette session** - `CopyFromScreen` sur le
+`BoundingRectangle` UIA a capturé un rendu parfaitement net et complet à
+4 reprises (bienvenue, fenêtre principale, Incognito, Réglages), du
+premier coup, sans aucune retouche. Avant de reproposer "pas de capture
+possible ici" sur la seule foi de cette note, retester d'abord - la note
+datait de seulement 4 jours mais était déjà caduque (cause probable :
+`ShowWindow`+`SetForegroundWindow`+`SetWindowPos` systématiques avant la
+capture, peut-être pas faits de la même façon le 2026-09-11).
+
+**Piège réel trouvé en pilotage** : tuer par `Stop-Process -Force` le
+process Incognito (fenêtre Incognito = process Windows séparé, voir
+`IncognitoProcessLauncher`) a rendu le `hwnd` de la fenêtre principale
+inutilisable juste après (`AutomationElement.FromHandle` a échoué en
+boucle, "Erreur non reconnue") - la fenêtre principale semble affectée par
+la fermeture forcée d'une fenêtre Incognito qu'elle a elle-même lancée,
+alors que ce n'était pas attendu (process distinct). Contournement
+utilisé : relancer tout le flux dans un nouvel appel plutôt que
+d'insister sur le même process. Cause racine non creusée (pas nécessaire
+pour cette session, capture Réglages obtenue au 2e essai) - à
+re-vérifier si ça revient dans une session touchant Incognito+UIA.
+
+**Résultat livré dans le dépôt** (pas encore committé) :
+- `README.md` réécrit : hero centré (logo existant `Lumora.WinUI/Assets/LumoraLogoMark.png`,
+  pas de duplication), badges shields.io (licence/Windows/.NET, couleurs
+  de marque - CSS custom impossible sur GitHub, badges = vraies images
+  donc c'est la solution qui passe), texte de philosophie en 4
+  paragraphes, liste de fonctionnalités à 7 points étoffés, section
+  "Aperçu" (table HTML 2x2, compatible rendu GitHub), message de clôture
+  signé en bas (blockquote centrée - le dégradé de couleur de la maquette
+  Artifact ne pouvait pas être repris tel quel, GitHub sanitize les
+  `style=` inline).
+- `.github/readme/*.png` (4 fichiers, captures recadrées pour retirer un
+  léger débordement de bord droit/bas de ~20px dû à `CopyFromScreen`
+  débordant légèrement du rectangle fenêtre réel).
+- Pile technique / build / tests / licence / auteur : inchangés (contenu
+  du README existant conservé tel quel).
+
+**Statut** : rien codé côté application (pas de bump de version - travail
+purement documentaire). Fichiers écrits dans le dépôt, `git status`
+propre avant écriture, changements visibles (`README.md` modifié,
+`.github/readme/` nouveau) mais **rien ajouté à l'index git, rien
+committé, rien poussé** - Go de l'utilisateur attendu pour la suite.
