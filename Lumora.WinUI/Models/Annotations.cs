@@ -183,7 +183,7 @@ public sealed class AnnotationStore
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
             .FirstOrDefault(line => line.Length > 0) ?? string.Empty;
-        if (firstLine.Length == 0) return "Extrait surligne";
+        if (firstLine.Length == 0) return "Extrait surligné";
 
         return firstLine.Length <= 90 ? firstLine : firstLine[..87] + "...";
     }

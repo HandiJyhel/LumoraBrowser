@@ -9,7 +9,7 @@ internal sealed record LumoraProfileEntry(
     bool IsActive,
     bool IsCustom)
 {
-    public string Label => IsCustom ? $"{Name} - emplacement personnalise" : Name;
+    public string Label => IsCustom ? $"{Name} - emplacement personnalisé" : Name;
 
     // Lu a chaque acces (pas mis en cache) : ces entrees sont reconstruites a
     // chaque Discover(), un cache deviendrait perime des qu'un autre profil
@@ -50,7 +50,7 @@ internal static class LumoraProfileRegistry
     public static string QuarantineProfile(LumoraProfileEntry entry)
     {
         if (entry.IsActive)
-            throw new InvalidOperationException("Le profil actif ne peut pas etre mis en quarantaine.");
+            throw new InvalidOperationException("Le profil actif ne peut pas être mis en quarantaine.");
 
         if (string.IsNullOrWhiteSpace(entry.ProfileDir) || !Directory.Exists(entry.ProfileDir))
             throw new DirectoryNotFoundException("Dossier de profil introuvable.");

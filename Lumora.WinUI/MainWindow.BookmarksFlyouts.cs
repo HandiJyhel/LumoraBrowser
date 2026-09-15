@@ -27,8 +27,8 @@ public sealed partial class MainWindow
         return count switch
         {
             0 => "Dossier vide",
-            1 => "1 element",
-            _ => $"{count} elements"
+            1 => "1 élément",
+            _ => $"{count} éléments"
         };
     }
 

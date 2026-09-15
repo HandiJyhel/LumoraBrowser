@@ -27,9 +27,9 @@ internal sealed record DownloadHistoryEntry(
 
     public string StateLabel => State switch
     {
-        Completed => "Termine",
-        Failed => "Echec",
-        Canceled => "Annule",
+        Completed => "Terminé",
+        Failed => "Échec",
+        Canceled => "Annulé",
         _ => "En cours"
     };
 

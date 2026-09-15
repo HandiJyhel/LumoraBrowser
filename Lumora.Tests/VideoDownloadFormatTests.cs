@@ -41,7 +41,7 @@ public class VideoDownloadFormatTests
     }
 
     [Theory]
-    [InlineData("Best", "Meilleure qualite disponible")]
+    [InlineData("Best", "Meilleure qualité disponible")]
     [InlineData("Q1080", "1080p")]
     [InlineData("Q720", "720p")]
     [InlineData("Q480", "480p")]

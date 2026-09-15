@@ -51,7 +51,7 @@ internal sealed class PasswordManagerInteractionService
             return new PasswordManagerPageDecision(
                 PasswordManagerPromptKind.SuggestNewPassword,
                 Array.Empty<VaultCredential>(),
-                "Utiliser un mot de passe fort genere ?",
+                "Utiliser un mot de passe fort généré ?",
                 normalizedAddress,
                 pageState);
         }
@@ -71,7 +71,7 @@ internal sealed class PasswordManagerInteractionService
 
         var who = matches.Count == 1
             ? $"le compte {matches[0].Username}"
-            : $"un compte ({matches.Count} enregistres pour ce site)";
+            : $"un compte ({matches.Count} enregistrés pour ce site)";
 
         var hasPasswordField = pageState?.HasPasswordField;
         if (hasPasswordField == true)
@@ -102,7 +102,7 @@ internal sealed class PasswordManagerInteractionService
         return new PasswordManagerPageDecision(
             PasswordManagerPromptKind.WaitingForPasswordField,
             matches,
-            $"Identifiant trouve pour {display}. En attente du champ mot de passe.",
+            $"Identifiant trouvé pour {display}. En attente du champ mot de passe.",
             normalizedAddress,
             pageState);
     }

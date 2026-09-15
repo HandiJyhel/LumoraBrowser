@@ -69,10 +69,10 @@ internal static class YtDlpEngineProvider
         var destination = Path.Combine(InstallDir, "yt-dlp.exe");
         var tempPath = destination + ".part";
 
-        progress?.Report("Verification du hash officiel (SHA2-256SUMS)...");
+        progress?.Report("Vérification du hash officiel (SHA2-256SUMS)...");
         var expectedHash = await FetchExpectedHashAsync(cancellationToken);
 
-        progress?.Report("Telechargement de yt-dlp.exe (github.com/yt-dlp/yt-dlp)...");
+        progress?.Report("Téléchargement de yt-dlp.exe (github.com/yt-dlp/yt-dlp)...");
         using (var response = await Http.GetAsync(LatestExeUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
         {
             response.EnsureSuccessStatusCode();

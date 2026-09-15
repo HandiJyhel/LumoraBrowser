@@ -49,7 +49,7 @@ public class TorExitCountrySelectorTests
         var (success, message) = await TorExitCountrySelector.ApplyAsync(manager, "FR");
 
         Assert.False(success);
-        Assert.Equal("Le moteur Tor n'est pas connecte.", message);
+        Assert.Equal("Le moteur Tor n'est pas connecté.", message);
     }
 
     [Fact]
@@ -60,6 +60,6 @@ public class TorExitCountrySelectorTests
         var (success, message) = await TorExitCountrySelector.ApplyAsync(manager, null);
 
         Assert.False(success);
-        Assert.Equal("Le moteur Tor n'est pas connecte.", message);
+        Assert.Equal("Le moteur Tor n'est pas connecté.", message);
     }
 }

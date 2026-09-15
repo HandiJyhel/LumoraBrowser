@@ -360,10 +360,10 @@ public sealed partial class MainWindow
             "neutral" => "Neutre",
             "focus" => "Focus",
             "reading" => "Lecture",
-            "creative" => "Creation",
+            "creative" => "Création",
             "research" => "Recherche",
             "night" => "Nuit",
-            _ => "Equilibre"
+            _ => "Équilibre"
         };
 
     private static string ModuleDisplayName(string moduleId) =>
@@ -372,12 +372,12 @@ public sealed partial class MainWindow
             "reader" => "lecture",
             "notes" => "notes",
             "readAloud" => "lecture vocale",
-            "videoDownload" => "telechargement video",
+            "videoDownload" => "téléchargement vidéo",
             "searchAssist" => "assistant recherche",
             "translate" => "traduction",
             "webApps" => "applications web",
-            "dictation" => "dictee",
-            "detachVideo" => "video detachee",
+            "dictation" => "dictée",
+            "detachVideo" => "vidéo détachée",
             "rss" => "flux RSS",
             "readingLens" => "loupe de lecture",
             _ => moduleId

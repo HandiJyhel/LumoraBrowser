@@ -637,7 +637,7 @@ public sealed class BookmarkStore
         if (_legacyFavoritesFile is not null && File.Exists(_legacyFavoritesFile))
         {
             var folderId = "legacy-flat-favorites";
-            nodes.Add(new BookmarkNode(folderId, OtherRootId, BookmarkKind.Folder, 0, "Anciens favoris importes", string.Empty));
+            nodes.Add(new BookmarkNode(folderId, OtherRootId, BookmarkKind.Folder, 0, "Anciens favoris importés", string.Empty));
             var index = 0u;
             foreach (var line in File.ReadLines(_legacyFavoritesFile))
             {
@@ -1232,7 +1232,7 @@ public static class BookmarkTreePresenter
         var title = string.IsNullOrWhiteSpace(node.Title) ? "(sans nom)" : node.Title;
         if (BookmarkStore.IsIconOnlyTitle(node.Title))
         {
-            title = "(icone seule)";
+            title = "(icône seule)";
         }
 
         // Pluriel resolu (2026-08-10, "choses a revoir" - bug releve par

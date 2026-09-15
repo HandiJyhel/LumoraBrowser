@@ -17,13 +17,13 @@ internal static class SitePermissionPolicy
 
     public static readonly IReadOnlyList<SitePermissionDescriptor> KnownPermissions =
     [
-        new("camera", "Camera", "Acces a la camera"),
-        new("microphone", "Microphone", "Acces au micro"),
-        new("geolocation", "Localisation", "Position approximative ou precise"),
-        new("notifications", "Notifications", "Alertes envoyees par le site"),
+        new("camera", "Caméra", "Accès à la caméra"),
+        new("microphone", "Microphone", "Accès au micro"),
+        new("geolocation", "Localisation", "Position approximative ou précise"),
+        new("notifications", "Notifications", "Alertes envoyées par le site"),
         new("clipboard-read", "Presse-papiers", "Lecture du presse-papiers"),
-        new("multiple-automatic-downloads", "Telechargements multiples", "Plusieurs telechargements lances par le site"),
-        new("file-read-write", "Fichiers locaux", "Acces lecture/ecriture demande par le site")
+        new("multiple-automatic-downloads", "Téléchargements multiples", "Plusieurs téléchargements lancés par le site"),
+        new("file-read-write", "Fichiers locaux", "Accès lecture/écriture demandé par le site")
     ];
 
     public static string NormalizeRootDomain(string rootDomain) =>
@@ -95,8 +95,8 @@ internal static class SitePermissionPolicy
     public static string StateLabel(string state) =>
         NormalizeState(state) switch
         {
-            Allow => "Autorise",
-            Block => "Bloque",
+            Allow => "Autorisé",
+            Block => "Bloqué",
             _ => "Demander"
         };
 

@@ -64,7 +64,7 @@ public sealed partial class MainWindow
         });
 
         var unlockBtn = new Button { Content = "Déverrouiller", FontSize = AccessibilitySecondaryFontSize() };
-        ApplyNovaControlAccessibility(unlockBtn, "Deverrouiller le coffre");
+        ApplyNovaControlAccessibility(unlockBtn, "Déverrouiller le coffre");
         unlockBtn.Click += async (_, _) =>
         {
             if (await UnlockVaultIfNeededAsync())

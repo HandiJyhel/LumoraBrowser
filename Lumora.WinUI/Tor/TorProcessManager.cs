@@ -30,7 +30,7 @@ internal sealed class TorProcessManager : IDisposable
     private DateTime? _lastNewCircuitUtc;
 
     public TorEngineState State { get; private set; } = TorEngineState.NotInstalled;
-    public string StatusMessage { get; private set; } = "Moteur Tor non installe.";
+    public string StatusMessage { get; private set; } = "Moteur Tor non installé.";
     public int SocksPort { get; private set; } = DefaultSocksPort;
     public int ControlPort { get; private set; } = DefaultControlPort;
 
@@ -103,7 +103,7 @@ internal sealed class TorProcessManager : IDisposable
         var exePath = ExpectedExecutablePath(profile);
         if (!File.Exists(exePath))
         {
-            SetState(TorEngineState.NotInstalled, "Moteur Tor non installe.");
+            SetState(TorEngineState.NotInstalled, "Moteur Tor non installé.");
             return false;
         }
 
@@ -159,21 +159,21 @@ internal sealed class TorProcessManager : IDisposable
                 WinUiRuntimeTrace.Write($"tor.exe exited (code={SafeExitCode(process)})");
                 if (State != TorEngineState.Error)
                 {
-                    SetState(TorEngineState.Stopped, "Moteur Tor arrete.");
+                    SetState(TorEngineState.Stopped, "Moteur Tor arrêté.");
                 }
             };
 
             if (!process.Start())
             {
                 WinUiRuntimeTrace.Write("tor.exe: process.Start() a retourne false");
-                SetState(TorEngineState.Error, "Impossible de demarrer le moteur Tor.");
+                SetState(TorEngineState.Error, "Impossible de démarrer le moteur Tor.");
                 return false;
             }
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
             _process = process;
-            SetState(TorEngineState.Starting, "Connexion au reseau Tor en cours...");
+            SetState(TorEngineState.Starting, "Connexion au réseau Tor en cours...");
             return true;
         }
         catch (Exception ex)
@@ -202,7 +202,7 @@ internal sealed class TorProcessManager : IDisposable
     {
         if (_process is not { HasExited: false } || State != TorEngineState.Connected)
         {
-            return (false, "Le moteur Tor n'est pas connecte.");
+            return (false, "Le moteur Tor n'est pas connecté.");
         }
 
         var (allowed, remaining) = EvaluateCooldown(_lastNewCircuitUtc, DateTime.UtcNow, NewCircuitCooldown);
@@ -240,19 +240,19 @@ internal sealed class TorProcessManager : IDisposable
             var authResponse = await reader.ReadLineAsync(linkedToken);
             if (authResponse is null || !authResponse.StartsWith("250", StringComparison.Ordinal))
             {
-                return (false, "Authentification aupres du controle Tor refusee.");
+                return (false, "Authentification auprès du contrôle Tor refusée.");
             }
 
             await writer.WriteLineAsync("SIGNAL NEWNYM");
             var signalResponse = await reader.ReadLineAsync(linkedToken);
             if (signalResponse is null || !signalResponse.StartsWith("250", StringComparison.Ordinal))
             {
-                return (false, "Le moteur Tor a refuse la demande de nouveau circuit.");
+                return (false, "Le moteur Tor a refusé la demande de nouveau circuit.");
             }
 
             await writer.WriteLineAsync("QUIT");
             _lastNewCircuitUtc = DateTime.UtcNow;
-            return (true, "Nouveau circuit Tor demande.");
+            return (true, "Nouveau circuit Tor demandé.");
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -303,7 +303,7 @@ internal sealed class TorProcessManager : IDisposable
         {
             _process.Dispose();
             _process = null;
-            SetState(TorEngineState.Stopped, "Moteur Tor arrete.");
+            SetState(TorEngineState.Stopped, "Moteur Tor arrêté.");
         }
     }
 
@@ -328,11 +328,11 @@ internal sealed class TorProcessManager : IDisposable
         {
             if (percent >= 100)
             {
-                SetState(TorEngineState.Connected, "Connecte au reseau Tor.");
+                SetState(TorEngineState.Connected, "Connecté au réseau Tor.");
             }
             else
             {
-                SetState(TorEngineState.Starting, $"Connexion au reseau Tor... {percent}%");
+                SetState(TorEngineState.Starting, $"Connexion au réseau Tor... {percent}%");
             }
         }
     }

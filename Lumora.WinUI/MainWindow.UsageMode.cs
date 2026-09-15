@@ -623,7 +623,7 @@ public sealed partial class MainWindow : Window
             "creative" => "Création",
             "research" => "Recherche",
             "night" => "Nuit",
-            _ => "Equilibre"
+            _ => "Équilibre"
         };
 
 

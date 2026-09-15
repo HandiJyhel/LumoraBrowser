@@ -41,7 +41,7 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("ApplyNovaControlAccessibility(forgetBtn, $\"Oublier les cookies du site {rootDomain}\")", sessions, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(editBtn, $\"Modifier la carte {title}\")", wallet, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(fillBtn, $\"Utiliser la carte {title} sur la page active\")", wallet, StringComparison.Ordinal);
-        Assert.Contains("ApplyNovaControlAccessibility(unlockBtn, \"Deverrouiller le coffre\")", vaultQuickAccess, StringComparison.Ordinal);
+        Assert.Contains("ApplyNovaControlAccessibility(unlockBtn, \"Déverrouiller le coffre\")", vaultQuickAccess, StringComparison.Ordinal);
         Assert.Contains("ApplyNovaControlAccessibility(copyTotpBtn, $\"Copier le code TOTP pour", vaultQuickAccess, StringComparison.Ordinal);
         // Clé d'accès fusionnée dans le Coffre (0.93.46) : la fiche détaillée
         // n'affiche qu'un identifiant sélectionné à la fois (pas de nom
@@ -218,7 +218,7 @@ public sealed class AccessibilityRegressionTests
         // interrupteur ou un melange arbitraire.
         Assert.DoesNotContain("Mode calme", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Lecture profonde", xaml, StringComparison.Ordinal);
-        Assert.Contains("Vision fatiguee", xaml, StringComparison.Ordinal);
+        Assert.Contains("Vision fatiguée", xaml, StringComparison.Ordinal);
         Assert.Contains("Mode secours", xaml, StringComparison.Ordinal);
         // Le bouton micro "Dictee vocale" ne faisait rien de plus qu'attenuer
         // son opacite : retire le 2026-07-20, plus de toggle Confort dedie.

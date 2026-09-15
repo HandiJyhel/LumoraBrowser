@@ -41,7 +41,7 @@ public sealed partial class MainWindow
         {
             ReadAloudState.Playing => "Lecture en cours...",
             ReadAloudState.Paused => "En pause.",
-            _ => "Pret.",
+            _ => "Prêt.",
         };
         ReadAloudIcon.Glyph = state switch
         {

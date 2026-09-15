@@ -96,7 +96,7 @@ public sealed partial class MainWindow
             }
 
             breachSection.Children.Add(HealthSectionHeader(
-                $"Trouves dans une fuite connue ({breachedCredentials.Count})",
+                $"Trouvés dans une fuite connue ({breachedCredentials.Count})",
                 "Changez ces mots de passe dès que possible : ils sont déjà connus des attaquants."));
             foreach (var cred in breachedCredentials)
             {

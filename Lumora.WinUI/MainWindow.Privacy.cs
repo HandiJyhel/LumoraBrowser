@@ -337,8 +337,8 @@ public sealed partial class MainWindow
         await RegisterGeolocationSpoofScriptsAsync();
         SyncTogglePair(GeolocationSpoofingSwitch, ModulesGeolocationSwitch, enabled);
         StatusText.Text = enabled
-            ? "Position fictive activee pour la geolocalisation."
-            : "Position fictive desactivee : les sites autorises recoivent la vraie position.";
+            ? "Position fictive activée pour la géolocalisation."
+            : "Position fictive désactivée : les sites autorisés reçoivent la vraie position.";
     }
 
     private async void GeolocationSpoofApplyButton_Click(object sender, RoutedEventArgs e)
@@ -405,8 +405,8 @@ public sealed partial class MainWindow
         await RegisterFingerprintProtectionScriptsAsync();
         SyncTogglePair(FingerprintProtectionSwitch, ModulesFingerprintSwitch, enabled);
         StatusText.Text = enabled
-            ? "Protection anti-fingerprinting activee."
-            : "Protection anti-fingerprinting desactivee.";
+            ? "Protection anti-fingerprinting activée."
+            : "Protection anti-fingerprinting désactivée.";
     }
 
     private async void UpdatePrivacyListsButton_Click(object sender, RoutedEventArgs e)

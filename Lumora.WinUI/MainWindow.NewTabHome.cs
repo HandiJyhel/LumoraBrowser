@@ -702,9 +702,9 @@ public sealed partial class MainWindow
                 "Un vrai post-it de création : une idée maintenant, enregistrée dans les Notes Lumora.",
                 "Ex. Ajouter une animation au changement de mode, tester un panneau plus vivant...",
                 "Coller le post-it",
-                "Post-it Creation",
+                "Post-it Création",
                 "Saisir une idée créative",
-                "Outil Creation",
+                "Outil Création",
                 [("notes", "Ouvrir Notes"), ("search_assist", "Relancer l'idée"), ("add_shortcut", "Ajouter un repère")]),
             "research" => new NewTabModeContext(
                 "Collecte locale",
@@ -734,7 +734,7 @@ public sealed partial class MainWindow
                 "Enregistrer la note",
                 "Note rapide Lumora",
                 "Saisir une note rapide",
-                "Outil Equilibre",
+                "Outil Équilibre",
                 [("personalize", "Mon Lumora"), ("modules", "Modules")])
         };
 

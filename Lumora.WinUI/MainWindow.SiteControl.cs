@@ -212,7 +212,7 @@ public sealed partial class MainWindow
         var passwordCount = PasswordCountForRootDomain(site.RootDomain);
         SiteControlPasswordText.Text = passwordCount switch
         {
-            null => "Coffre verrouille ou indisponible.",
+            null => "Coffre verrouillé ou indisponible.",
             0 => "Aucun identifiant local connu pour ce domaine.",
             1 => "1 identifiant local connu pour ce domaine.",
             _ => $"{passwordCount} identifiants locaux connus pour ce domaine."
@@ -222,7 +222,7 @@ public sealed partial class MainWindow
         var historyEntries = HistoryEntriesForRootDomain(site.RootDomain).ToList();
         SiteControlHistoryText.Text = historyEntries.Count == 0
             ? "Aucune page de ce domaine dans l'historique local."
-            : $"{historyEntries.Count} visite(s) locale(s) retrouvee(s).";
+            : $"{historyEntries.Count} visite(s) locale(s) retrouvée(s).";
 
         RenderSitePermissions(site.RootDomain);
         RenderSiteRecentHistory(historyEntries.Take(5).ToList());
@@ -307,7 +307,7 @@ public sealed partial class MainWindow
 
         AutomationProperties.SetHelpText(
             combo,
-            $"{descriptor.Detail} Etat actuel : {SitePermissionPolicy.StateLabel(state)}.");
+            $"{descriptor.Detail} État actuel : {SitePermissionPolicy.StateLabel(state)}.");
 
         Grid.SetColumn(combo, 1);
         row.Children.Add(combo);
@@ -469,16 +469,16 @@ public sealed partial class MainWindow
     {
         var root = RootDomainOf(domain);
         var trust = IsTrustedSessionSite(root)
-            ? "session conservee"
-            : "session ephemere";
+            ? "session conservée"
+            : "session éphémère";
         var passwordCount = PasswordCountForRootDomain(root);
         var passwordPart = passwordCount is null
-            ? "coffre verrouille"
+            ? "coffre verrouillé"
             : passwordCount == 0
                 ? "aucun identifiant"
                 : $"{passwordCount} identifiant(s)";
         var compatibility = IsLoginCompatibilitySite(root)
-            ? ", compatibilite connexion"
+            ? ", compatibilité connexion"
             : string.Empty;
         var diagnostic = IsLoginDiagnosticSite(root)
             ? ", diagnostic connexion"

@@ -143,7 +143,7 @@ public class TorProcessManagerTests
         var (success, message) = await manager.RequestNewCircuitAsync();
 
         Assert.False(success);
-        Assert.Equal("Le moteur Tor n'est pas connecte.", message);
+        Assert.Equal("Le moteur Tor n'est pas connecté.", message);
     }
 
     [Fact]

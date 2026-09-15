@@ -73,8 +73,8 @@ public sealed partial class MainWindow
         {
             var saved = _savedTabGroups.Save(pending.Name, pending.ColorIndex, pending.Tabs, DateTimeOffset.Now);
             StatusText.Text = saved is not null
-                ? $"Groupe « {pending.Name} » garde. Naviguer > Groupes enregistres."
-                : "Rien a enregistrer dans ce groupe.";
+                ? $"Groupe « {pending.Name} » gardé. Naviguer > Groupes enregistrés."
+                : "Rien à enregistrer dans ce groupe.";
         }
 
         DismissSaveGroupBar();
@@ -93,7 +93,7 @@ public sealed partial class MainWindow
     private void SavedTabGroupsMenu_Click(object sender, RoutedEventArgs e)
     {
         RenderSavedTabGroups();
-        ShowPanel(SavedTabGroupsPanel, "Groupes enregistres");
+        ShowPanel(SavedTabGroupsPanel, "Groupes enregistrés");
     }
 
     private void RenderSavedTabGroups()
@@ -208,7 +208,7 @@ public sealed partial class MainWindow
     private static string SavedGroupWhen(DateTimeOffset savedAt)
     {
         var age = DateTimeOffset.Now - savedAt;
-        if (age < TimeSpan.FromMinutes(1)) return "a l'instant";
+        if (age < TimeSpan.FromMinutes(1)) return "à l'instant";
         if (age < TimeSpan.FromHours(1)) return $"il y a {(int)age.TotalMinutes} min";
         if (age < TimeSpan.FromDays(1)) return $"il y a {(int)age.TotalHours} h";
         if (age < TimeSpan.FromDays(30)) return $"il y a {(int)age.TotalDays} j";

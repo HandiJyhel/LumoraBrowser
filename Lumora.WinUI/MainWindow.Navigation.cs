@@ -368,7 +368,7 @@ public sealed partial class MainWindow
             _fingerprintProtectionScriptIds.Remove(core);
             if (ReferenceEquals(_contentFullScreenCore, core))
             {
-                CompleteContentFullScreenExit("Mode plein ecran quitte.");
+                CompleteContentFullScreenExit("Mode plein écran quitté.");
             }
         }
 
@@ -1527,7 +1527,7 @@ public sealed partial class MainWindow
                 _browserView = popupView;
                 StatusText.Text = isFederatedIdentity
                     ? "Connexion Google ouverte dans un onglet Lumora."
-                    : "Fenetre de connexion ouverte dans un onglet Lumora.";
+                    : "Fenêtre de connexion ouverte dans un onglet Lumora.";
             }
             else
             {

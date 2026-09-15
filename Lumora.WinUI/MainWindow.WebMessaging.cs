@@ -196,7 +196,7 @@ public sealed partial class MainWindow
             "neutral" => "Note neutre",
             "focus" => "Objectif Focus",
             "reading" => "Note de lecture",
-            "creative" => "Post-it Creation",
+            "creative" => "Post-it Création",
             "research" => "Piste de recherche",
             "night" => "Rappel Nuit",
             _ => "Note rapide Lumora"

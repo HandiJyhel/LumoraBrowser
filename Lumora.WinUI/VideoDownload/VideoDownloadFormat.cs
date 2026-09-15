@@ -35,6 +35,6 @@ internal static class VideoDownloadFormat
         VideoQuality.Q1080 => "1080p",
         VideoQuality.Q720 => "720p",
         VideoQuality.Q480 => "480p",
-        _ => "Meilleure qualite disponible"
+        _ => "Meilleure qualité disponible"
     };
 }

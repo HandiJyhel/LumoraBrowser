@@ -632,8 +632,8 @@ public sealed partial class MainWindow
     {
         AddLumoraMenuHeader(
             flyout.Items,
-            $"{selection.Count} onglets selectionnes",
-            "actions groupees",
+            $"{selection.Count} onglets sélectionnés",
+            "actions groupées",
             "");
 
         var groupSubItem = new MenuFlyoutSubItem { Text = "Regrouper la sélection" };

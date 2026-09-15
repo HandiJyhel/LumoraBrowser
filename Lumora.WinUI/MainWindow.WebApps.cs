@@ -98,8 +98,8 @@ public sealed partial class MainWindow
             Padding = new Thickness(8, 4, 8, 4),
             Content = new FontIcon { Glyph = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 }
         };
-        ApplyNovaControlAccessibility(deleteBtn, $"Desinstaller l'application {app.Title}");
-        ToolTipService.SetToolTip(deleteBtn, $"Desinstaller {app.Title}");
+        ApplyNovaControlAccessibility(deleteBtn, $"Désinstaller l'application {app.Title}");
+        ToolTipService.SetToolTip(deleteBtn, $"Désinstaller {app.Title}");
         deleteBtn.Click += async (_, _) => await DeleteWebAppAsync(app);
         Grid.SetColumn(deleteBtn, 3);
         headerGrid.Children.Add(deleteBtn);

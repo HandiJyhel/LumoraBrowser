@@ -47,7 +47,7 @@ public sealed partial class MainWindow
         }
         catch { }
 
-        return "Picture-in-Picture : reponse inattendue de la page.";
+        return "Picture-in-Picture : réponse inattendue de la page.";
     }
 
     // Cible la vidéo la plus probablement « active » : en lecture en priorité,
@@ -66,7 +66,7 @@ public sealed partial class MainWindow
                 var videos=Array.prototype.slice.call(document.querySelectorAll('video'))
                     .filter(function(v){return !v.disablePictureInPicture;});
                 if(videos.length===0){
-                    return JSON.stringify({success:false,message:'Aucune video trouvee sur cette page.'});
+                    return JSON.stringify({success:false,message:'Aucune vidéo trouvée sur cette page.'});
                 }
                 var playing=videos.filter(function(v){return !v.paused && !v.ended;});
                 var target=(playing[0])||videos.sort(function(a,b){
@@ -76,10 +76,10 @@ public sealed partial class MainWindow
                     await document.exitPictureInPicture();
                 }
                 await target.requestPictureInPicture();
-                return JSON.stringify({success:true,message:'Video detachee en Picture-in-Picture.'});
+                return JSON.stringify({success:true,message:'Vidéo détachée en Picture-in-Picture.'});
             }catch(err){
                 var detail=(err&&err.message)?err.message:String(err);
-                return JSON.stringify({success:false,message:'Picture-in-Picture refuse : '+detail});
+                return JSON.stringify({success:false,message:'Picture-in-Picture refusé : '+detail});
             }
         })();
         """;

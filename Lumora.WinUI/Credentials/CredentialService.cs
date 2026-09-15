@@ -198,7 +198,7 @@ internal sealed class CredentialService
         if (filledUsername)
             return new CredentialFillResult(true, "Identifiant rempli. Mot de passe attendu.");
         if (foundAnyField)
-            return new CredentialFillResult(false, "Champ detecte, mais le site a refuse l'ecriture.");
+            return new CredentialFillResult(false, "Champ détecté, mais le site a refusé l'écriture.");
         if (scriptError is not null)
             return new CredentialFillResult(false, $"Remplissage impossible: {scriptError}");
         return new CredentialFillResult(false, "Aucun champ de connexion visible.");

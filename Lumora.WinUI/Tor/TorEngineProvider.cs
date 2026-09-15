@@ -40,7 +40,7 @@ internal static class TorEngineProvider
         {
             var archivePath = Path.Combine(workDir, TorTrustedRelease.ArchiveFileName);
 
-            progress?.Report($"Telechargement du moteur Tor {TorTrustedRelease.Version} (dist.torproject.org)...");
+            progress?.Report($"Téléchargement du moteur Tor {TorTrustedRelease.Version} (dist.torproject.org)...");
             using (var response = await Http.GetAsync(
                 TorTrustedRelease.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {
@@ -53,7 +53,7 @@ internal static class TorEngineProvider
                     // 2026-08-21). Un 404 brut ("Response status code does not indicate
                     // success") ne dit pas ca a l'utilisateur ; message explicite a la place.
                     throw new InvalidOperationException(
-                        $"Le moteur Tor {TorTrustedRelease.Version} n'est plus disponible sur le miroir officiel dist.torproject.org (version retiree). " +
+                        $"Le moteur Tor {TorTrustedRelease.Version} n'est plus disponible sur le miroir officiel dist.torproject.org (version retirée). " +
                         "Une mise à jour de Lumora est nécessaire pour pointer vers une version plus récente et vérifiée.");
                 }
 
@@ -78,7 +78,7 @@ internal static class TorEngineProvider
                 throw new InvalidOperationException("tor.exe introuvable dans l'archive officielle.");
             }
 
-            progress?.Report("Verification du binaire extrait...");
+            progress?.Report("Vérification du binaire extrait...");
             var exeHash = await ComputeSha256Async(extractedExePath, cancellationToken);
             if (!TorTrustedRelease.TrustedFileHashes.TryGetValue("tor.exe", out var expectedExeHash)
                 || !string.Equals(exeHash, expectedExeHash, StringComparison.OrdinalIgnoreCase))
@@ -91,7 +91,7 @@ internal static class TorEngineProvider
                 ?? throw new InvalidOperationException("Chemin de destination du moteur Tor invalide.");
             Directory.CreateDirectory(torDir);
             File.Copy(extractedExePath, destinationExePath, overwrite: true);
-            progress?.Report("Moteur Tor installe.");
+            progress?.Report("Moteur Tor installé.");
         }
         finally
         {

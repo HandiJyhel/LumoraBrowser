@@ -209,7 +209,7 @@
             if (report.filledUsername && report.filledPassword) report.message = "Identifiants remplis.";
             else if (report.filledPassword) report.message = "Mot de passe rempli.";
             else if (report.filledUsername) report.message = "Identifiant rempli. Mot de passe attendu.";
-            else if (passwordField || usernameField) report.message = "Champ detecte, mais le site a refuse l'ecriture.";
+            else if (passwordField || usernameField) report.message = "Champ détecté, mais le site a refusé l'écriture.";
             else report.message = "Aucun champ de connexion visible.";
 
             // Verification differee : certains frameworks (re-render
@@ -229,7 +229,7 @@
                                 t: "nova.credential.fill-report",
                                 origin: location.origin,
                                 success: false,
-                                message: "Le site a efface la valeur remplie ; reessayez apres un clic dans le champ."
+                                message: "Le site a effacé la valeur remplie ; réessayez après un clic dans le champ."
                             });
                         }
                     } catch (_) { }

@@ -401,17 +401,17 @@ public sealed partial class LumoraAppWindow : Window
         var counters = _privacy.GlobalCounters;
         ShieldQuickCounterText.Text = counters.Total == 0
             ? "Aucun blocage depuis l'ouverture de cette application."
-            : $"{counters.Total:N0} element(s) bloque(s) - {counters.Ads:N0} pub(s), {counters.Trackers:N0} tracker(s).";
+            : $"{counters.Total:N0} élément(s) bloqué(s) - {counters.Ads:N0} pub(s), {counters.Trackers:N0} tracker(s).";
 
         ShieldQuickModulesPanel.Children.Clear();
         ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Bloqueur de pubs et trackers", _uiSettings.NetworkBlockerEnabled));
-        ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Anti-telemetrie", _uiSettings.TelemetryBlockerEnabled));
+        ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Anti-télémétrie", _uiSettings.TelemetryBlockerEnabled));
         ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Masquage visuel des pubs", _uiSettings.CosmeticFilterEnabled));
-        ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Refus automatique des bannieres cookies", _uiSettings.ConsentManagerEnabled));
+        ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Refus automatique des bannières cookies", _uiSettings.ConsentManagerEnabled));
         ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Blocage des popups publicitaires", _uiSettings.PopupBlockerEnabled));
         ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Blocage des redirections publicitaires", _uiSettings.StrictAdBlockEnabled));
         ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Promotion HTTPS", _uiSettings.HttpsEnforcerEnabled));
-        ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Nettoyage des parametres de tracking", _uiSettings.ParameterCleanerEnabled));
+        ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Nettoyage des paramètres de tracking", _uiSettings.ParameterCleanerEnabled));
         ShieldQuickModulesPanel.Children.Add(BuildModuleStatusRow("Anti-camouflage CNAME", _uiSettings.CnameUncloakerEnabled));
     }
 

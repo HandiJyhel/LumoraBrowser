@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Session "orthographe" : audit complet de l'app en 7 lots parallèles](#session-orthographe-2026-09-15) — 2026-09-15, suite directe de la session installeur, déclenché par une remarque utilisateur sur des fautes vues dans une maquette ; 7 agents en tâche de fond couvrant les 242 fichiers .xaml/.cs de Lumora.WinUI (texte utilisateur uniquement, commentaires épargnés), ~40 fautes/accents corrigés dans 31 fichiers, 6 tests cassés (attendaient l'ancien texte fautif) corrigés pour refléter le texte correct, build+949 tests OK, vérifié en lançant le vrai binaire (navigation Nouvel onglet réussie, 0 UNHANDLED) -> committé en local
 - [Session "nouveaux visuels pour l'installeur"](#session-nouveaux-visuels-pour-linstalleur-2026-09-15) — 2026-09-15, direction "carte centrée minimaliste" choisie par l'utilisateur parmi 3 maquettes Artifact (bandeau latéral retiré, points de progression, colonne centrée, vrai logo Lumora), implémentée dans `scripts/installer/Program.cs.template` (3 pages Bienvenue/Dossier+options/Terminé), vérifiée en lançant le vrai binaire compilé (build+capture UIA, pas juste relecture) - 1 bug réel trouvé et corrigé en vérifiant (texte de bienvenue tronqué), build (harnais + Lumora.WinUI via MSBuild) + 949 tests OK -> `0.94.30.0-dev`, **rien committé**
 - [Session "présentation GitHub"](#session-presentation-github-2026-09-15) — 2026-09-15, README.md refondu pour la vitrine GitHub : maquette Artifact itérée en direct avec l'utilisateur (gabarits -> vraies captures -> texte de philosophie étoffé -> message de clôture signé), 4 captures réelles obtenues via pilotage UIA (fenêtre principale, Incognito, Réglages, écran de bienvenue), **la note du 2026-09-11 sur la capture d'écran "non fiable" s'est révélée fausse/obsolète cette session** (voir correctif noté dans la section), committé et poussé sur `origin/main` (`992d0db`) puis **attribution Claude retirée du message de commit sur demande de l'utilisateur** (`git commit --amend` + `push --force-with-lease` -> `f182e75`) - règle retenue : plus d'attribution Claude dans les commits de ce dépôt
 - [Session "couleur d'accentuation"](#session-couleur-daccentuation-2026-09-14) — 2026-09-14, roue chromatique RVB (session "3.5") remplacée par un nuancier de 7 pastilles nommées (Bleu/Rouge/Orange/Jaune/Vert/Violet + "Braise" signature, dérivée de l'accent du mode Ember existant) après retour utilisateur ("pas très beau", "je m'attendais à un système simple avec les couleurs les plus utilisées") ; 2 itérations de maquette Artifact avant code (vert sarcelle rejeté, Braise validée) ; idée de thème "rétro" complet évoquée puis explicitement reportée après la 1.0.0 ; implémenté (XAML+code-behind), build+949 tests OK, vérifié en direct de bout en bout (scénario complet : création profil, navigation Réglages, clic pastille, Appliquer persiste et rethème, Réinitialiser) -> `0.94.27.0-dev` ; **suite le même jour** : retour utilisateur "j'ai cliqué Appliquer et rien n'a changé" -> diagnostic en direct (pas un bug, contraste élevé actif) puis vrai bug trouvé ("il faut cliquer 2 fois") -> état/logique confirmés corrects dès le 1er clic par traces temporaires (aucune ressource de couleur manquante), donc probablement un problème de repeinture visuelle - **jamais corrigé côté code**, mais l'utilisateur confirme en clôture de session que le clic fonctionne bien en usage réel (pas de piste appliquée entre-temps - soit un faux positif de la 1re observation, soit non reproductible de façon fiable ; à garder à l'œil si ça revient) ; puis nuancier sorti du menu caché derrière la pastille unique -> 7 pastilles affichées à plat directement dans le panneau (maquette Artifact validée "c'est ça que je veux"), implémenté+vérifié en direct -> `0.94.28.0-dev` ; puis l'accentuation étendue au halo de survol des menus (rail Réglages, barre d'outils, onglets, tuiles, menus contextuels) - maquette interactive validée par un "go", `NovaChromeButtonHighlightBrush`/`MenuFlyoutItemBackgroundPointerOver`/`Pressed` reprennent `chrome.Accent` au lieu du blanc/ambre fixe, vérifié en direct par trace (valeurs calculées exactes) -> `0.94.29.0-dev` ; **committé en local** (`1e73c2d`), push vers GitHub prévu à la prochaine session (bundlé avec le nouvel installateur, voir [[github-publication-versions]])
@@ -29521,3 +29522,58 @@ fichiers modifiés (`AGENTS.md`, `Lumora.Tests/UsageModeVisualIdentityTests.cs`,
 Reste à faire si voulu : générer un vrai `.exe` d'installeur via le
 pipeline complet (`build-clean-test-artifact.ps1` puis
 `build-installer.ps1`) pour la release 1.0.0 elle-même.
+
+## Session "orthographe" (2026-09-15)
+
+Enchaînement direct de la session installeur (même journée) : "grosse tâche"
+en 3 étapes demandée par l'utilisateur - (1) committer l'installeur, (2)
+vérifier/corriger l'orthographe de toute l'application, sans détail à
+rapporter ("je veux pas le savoir"), (3) générer uniquement le `.exe` de la
+version 1.0.0. Déclencheur : l'utilisateur avait repéré des mots sans accent
+sur une capture de la maquette installeur (voir session précédente) et
+craignait d'en retrouver dans la version finale.
+
+**Ampleur du périmètre** : 242 fichiers `.xaml`/`.cs` dans `Lumora.WinUI`,
+~65 000 lignes. Découpé en 7 lots thématiques (chrome/navigation ;
+réglages+accueil ; favoris/onglets ; accessibilité/confort ;
+coffre/identité ; confidentialité/Tor ; contenu/webapps/modèles), chaque lot
+confié à un agent en tâche de fond en parallèle (même message, 7 appels
+Agent), avec consigne stricte : ne corriger QUE le texte visible par
+l'utilisateur (XAML `Text=`/`Content=`/`Header=`/`ToolTipService.ToolTip=`,
+chaînes C# assignées à `.Text`/`.Content`, HTML/JS injecté dans WebView2,
+messages `ContentDialog`/statut) et NE JAMAIS toucher aux commentaires de
+code, qui omettent délibérément les accents par convention du dépôt (pas une
+faute).
+
+**Résultat** : ~40 fautes/accents corrigés dans 31 fichiers (XAML + C# +
+2 fichiers `.js` de capture d'identifiants). Le plus gros contributeur :
+`MainWindow.xaml` (~50 occurrences, un seul agent dédié au chrome). Fautes
+notables au-delà de simples accents manquants : un bug de frappe "Creation"/
+"Equilibre" (libellés de mode d'usage) répété à l'identique à 3 endroits
+différents du code (`MainWindow.SetupWizard.cs`, `WebMessaging.cs`,
+`NewTabHome.cs`, `UsageMode.cs`) - signe d'un copier-coller d'origine plutôt
+que 4 fautes indépendantes.
+
+**Effet de bord attendu et corrigé** : 6 tests `dotnet test` ont commencé à
+échouer après les corrections - pas des régressions, des tests qui
+asserraient l'ANCIEN texte fautif comme valeur attendue
+(`AccessibilityRegressionTests`, `TorProcessManagerTests`,
+`TorExitCountrySelectorTests`, `VideoDownloadFormatTests`). Mis à jour pour
+refléter le texte correct (jamais l'inverse). `dotnet test` : 949/949 verts
+après correction.
+
+**Vérification réelle** : `Lumora.WinUI` recompilé via MSBuild (0 erreur),
+puis lancé en conditions réelles (profil isolé, trace activée) - passage de
+l'écran de bienvenue (capture d'écran confirmant un rendu propre, accents
+corrects) au mode invité, navigation effective vers `lumora://accueil`
+(réponse HTTP 200, `NavigationCompleted isSuccess=True`), **aucune ligne
+`UNHANDLED`** dans `winui-runtime-trace.log` - confirme qu'aucune correction
+n'a cassé une chaîne C# brute (`$$"""..."""`) ni un script JS injecté
+(risque réel vu le volume de HTML/JS touché dans `NewTabHome.cs`/
+`WebMessaging.cs`/`Credentials/*.js`).
+
+**Statut** : committé en local (pas de push GitHub, jamais fait sans
+demande explicite). Étape suivante demandée par l'utilisateur : générer
+uniquement le `.exe` de la version 1.0.0 (pas de bump de version dev
+0.94.x - c'est le compteur de release séparé, voir
+[[version-release-distincte-version-dev]]).

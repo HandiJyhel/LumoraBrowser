@@ -53,7 +53,7 @@ internal static class TorExitCountrySelector
     {
         if (tor.State != TorEngineState.Connected)
         {
-            return (false, "Le moteur Tor n'est pas connecte.");
+            return (false, "Le moteur Tor n'est pas connecté.");
         }
 
         var cookiePath = tor.CookieAuthPath;
@@ -84,7 +84,7 @@ internal static class TorExitCountrySelector
             var authResponse = await reader.ReadLineAsync(linkedToken);
             if (authResponse is null || !authResponse.StartsWith("250", StringComparison.Ordinal))
             {
-                return (false, "Authentification aupres du controle Tor refusee.");
+                return (false, "Authentification auprès du contrôle Tor refusée.");
             }
 
             // Chaine vide = RESETCONF (retour a "Automatique", laisse Tor

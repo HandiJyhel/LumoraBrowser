@@ -142,11 +142,11 @@
     window.__novaFillNewPassword = function (value) {
         try {
             var fields = Password.newPasswordFields(document);
-            if (!fields.length) return { success: false, message: "Aucun champ nouveau mot de passe detecte." };
+            if (!fields.length) return { success: false, message: "Aucun champ nouveau mot de passe détecté." };
             var ok = fields.map(function (el) { return Dom.setValue(el, value); }).some(function (x) { return x; });
             return ok
-                ? { success: true, message: "Mot de passe genere rempli." }
-                : { success: false, message: "Champ detecte, mais le site a refuse l'ecriture." };
+                ? { success: true, message: "Mot de passe généré rempli." }
+                : { success: false, message: "Champ détecté, mais le site a refusé l'écriture." };
         } catch (error) {
             return { success: false, message: "Erreur: " + error.message };
         }
