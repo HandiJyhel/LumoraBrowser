@@ -411,7 +411,7 @@ public sealed partial class MainWindow
                 </div>
                 {{NewTabSearchFormHtml()}}
                 {{NewTabShortcutsHtml()}}
-                <p class="hint">{{Version}}</p>
+                <p class="hint">{{DisplayVersion}}</p>
               </div>
               <div class="mode-side">
                 <section class="mode-panel" aria-label="Mode Lumora">

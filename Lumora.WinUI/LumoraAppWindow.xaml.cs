@@ -55,7 +55,7 @@ public sealed partial class LumoraAppWindow : Window
         // Version incluse (comme MainWindow) : sans ca, impossible de voir a
         // l'oeil qu'une fenetre d'application tourne sur une copie perimee
         // d'un lancement de developpement anterieur (constate le 2026-07-26).
-        Title = $"{_app.Title} — Lumora {MainWindow.Version}";
+        Title = $"{_app.Title} — Lumora {MainWindow.DisplayVersion}";
         CustomTitleBarText.Text = _app.Title;
 
         var hwnd = WindowNative.GetWindowHandle(this);

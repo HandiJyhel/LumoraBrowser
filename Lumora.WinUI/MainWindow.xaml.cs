@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.30.3-dev";
+    internal const string Version = "0.94.30.4-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -58,6 +58,13 @@ public sealed partial class MainWindow : Window
     // public au lieu du compteur dev. A ne renseigner ("1.0.0") que dans le
     // commit/worktree precis qui sert a produire un vrai installateur.
     internal const string? ReleaseVersion = null;
+    // Version VISIBLE (titres de fenetres, page d'accueil) : le numero public
+    // sur une release, le compteur dev sinon. Trouve le 2026-09-24 en
+    // verifiant la release 1.0.0 : le titre en mode invite, celui des
+    // fenetres d'applications web et la page d'accueil affichaient encore
+    // "0.94.x-dev" dans l'installateur public (seul le titre principal
+    // utilisait ReleaseVersion). Les diagnostics techniques gardent Version.
+    internal static string DisplayVersion => ReleaseVersion ?? Version;
     // 64 -> 40 (round 3, 2026-08-12) : retour utilisateur avec capture d'ecran
     // d'un vrai rail Edge reduit a l'appui - notre grille 2x2 de 4 icones
     // n'existait que pour loger 4 boutons d'action dans le rail. Ces 4
@@ -396,7 +403,7 @@ public sealed partial class MainWindow : Window
         // propos, voir ApplyVersionDisplay) - bug reel trouve le 2026-08-30 en
         // inspectant une instance en cours ("Lumora 0.94.5.2-dev" au lieu de
         // "Lumora 1.0.0"). Meme regle que l'ecran A propos desormais.
-        Title = $"Lumora {ReleaseVersion ?? Version}";
+        Title = $"Lumora {DisplayVersion}";
         UpdateAddressIdentityChrome(string.Empty);
         InitializeOpenPanelsTaskbar();
 

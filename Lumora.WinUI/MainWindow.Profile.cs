@@ -1177,7 +1177,7 @@ public sealed partial class MainWindow
         _closedTabs.Clear();
         AddTab("Nouvel onglet", "lumora://accueil", select: true);
         _suppressTabSave = false;
-        Title = $"Lumora {Version} — Mode invité";
+        Title = $"Lumora {DisplayVersion} — Mode invité";
     }
 
     // Icones disquette/dossier a cote du bandeau Lumora sur l'ecran "Bienvenue"
