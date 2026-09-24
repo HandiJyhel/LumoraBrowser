@@ -30005,3 +30005,109 @@ concerné. Worktree supprimé, `ReleaseVersion = null` reconfirmé sur `main`,
 
 **Protocole mis à jour** : l'étape de vérification en direct doit contrôler
 le titre au démarrage ET après passage en mode invité.
+
+**Après la release (même jour)** :
+- L'utilisateur a publié lui-même l'installeur r12 sur GitHub en
+  REMPLAÇANT le fichier joint de la release existante "Lumora 1.0.0"
+  (créée le 2026-08-29, tag `private`). Le texte de la release gardait
+  l'empreinte d'une ancienne construction (`77a609c6...51f5`) : corrigé
+  par Claude à la demande explicite de l'utilisateur ("tu peux le corriger
+  toi-même") via l'API GitHub (PATCH du seul corps, identifiant git déjà
+  enregistré sur la machine, jamais affiché), ligne SHA256 -> `dc58a506...
+  68283`. Vérifié sur la page publique (nouvelle présente, ancienne
+  absente ; l'API publique non authentifiée sert un cache de quelques
+  secondes). `gh` n'est pas installé sur cette machine.
+- **À chaque nouvel installeur publié** : la ligne SHA256 du texte de la
+  release doit être mise à jour aussi (remplacer le fichier ne la change
+  pas) - proposé à l'utilisateur de s'en charger.
+- **Décision utilisateur (précisée juste après)** : on RESTE en 1.0.0,
+  sans notion de "version finale" - l'installeur 1.0.0 est simplement
+  remplacé quand il le faut. Raison donnée : c'est l'utilisateur lui-même
+  qui trouve les bugs pour l'instant, changer de numéro n'aurait aucun
+  intérêt. C'est lui qui annoncera le passage à une version supérieure -
+  ne jamais monter le numéro public sans cette annonce explicite.
+
+## 2026-09-25 — Session "les onglets verticaux encore le retour" : croix qui ferme au lieu de revenir au site, enquête freeze ouverte -> 0.94.30.5-dev
+
+**Bug réel signalé par l'utilisateur, avec capture d'écran** : rail vertical
+réduit, l'utilisateur dit ne plus pouvoir naviguer ("ça les fermait
+automatiquement") et constate aussi que revenir sur le site depuis les
+Réglages ne fait "rien". Diagnostic posé en lisant le code (pas deviné) :
+même bug sous deux angles. Le correctif du 24/09 (`f78e810`,
+[[session-precedente]] non indexée sous ce nom) n'affiche plus la croix de
+fermeture que sur l'onglet ACTIF du rail compact (`MainWindow.TabGroups.cs`,
+`showCompactClose`) - ça réglait "changer d'onglet ferme le site". Mais ça
+suppose que cliquer l'onglet actif ne fait jamais rien, faux depuis un
+panneau interne (Réglages, Coffre, Historique...) où cliquer CETTE tuile
+est justement le geste `VerticalTabButton_Click -> ActivateTab ->
+ReturnToBrowserIfHidden` pour revenir au site. La croix y couvrait la
+quasi-totalité de la tuile (18px sur 30x28) : le clic fermait l'onglet au
+lieu d'y revenir. Correctif du 24/09 repris ici : c'est le commit `f78e810`
+("Retours d'usage réel et audit de sécurité", 0.94.30.3-dev).
+
+**Correctif** : `showCompactClose` conditionné en plus à
+`BrowserPanel.Visibility == Visibility.Visible`. Depuis un panneau interne,
+repli sur un repère purement visuel `showReturnHint` (Viewbox +
+`SymbolIcon(Symbol.Back)`, teinte `NovaAccentBrush`, **`IsHitTestVisible =
+false`**) - décoratif, pas un bouton séparé, pour ne pas recréer une hitbox
+étroite ; toute la tuile reste le bouton cliquable. Ajouté après retour
+utilisateur explicite ("surtout que ça soit un petit peu plus visible") sur
+une 1ère maquette où la tuile active en contexte Réglages n'avait plus aucun
+indice visuel (régression sur l'exigence de découvrabilité au repos du
+2026-08-07). Maquette Artifact itérée en 2 passes avant le Go :
+https://claude.ai/artifact/Uv9USesMKsDoJKhKcs5uco.
+
+**Tests** : `VerticalTabsCompactCloseTests.cs` étendu (nouveau test
+`Rail_compact_remplace_la_croix_par_un_repere_retour_hors_navigateur`),
+assertions du 1er test mises à jour sur la nouvelle condition. 1027/1027
+`dotnet test Lumora.Tests`. Build MSBuild propre (0 erreur) avant et après
+bump de version.
+
+**Vérification en direct : tentée, pas aboutie - limite documentée
+reconfirmée.** Script UIA complet (lancement isolé, mode invité, ouverture
+Réglages > Espace de travail, activation onglets verticaux + rail compact)
+butte de façon répétée (4 essais avec ré-invocation à chaque tentative) sur
+l'ouverture du flyout "Menu Lumora" > `MenuFlyoutItem "Paramètres"` - item
+introuvable ni dans le sous-arbre de la fenêtre principale ni parmi les
+enfants du Desktop filtrés par PID, alors que `MainMenuButton` est bien
+trouvé et invoqué sans erreur. Cohérent avec la limite déjà documentée dans
+`SKILL.md` `verify` sur les `Button.Flyout`/popups XAML (contrairement à un
+`MenuFlyoutItem` invoqué avec succès lors d'une session antérieure,
+2026-09-11 - la fiabilité de ce chemin semble varier d'une session à
+l'autre). Piège rencontré en cours de route : un littéral accentué
+("Paramètres") écrit dans le script `.ps1` lui-même ressortait corrompu à
+l'affichage console (`ParamÃ¨tres`) - contourné en matchant par préfixe
+ASCII + longueur + `ControlType.MenuItem` plutôt que par égalité exacte
+accentuée. **Ce qui a été confirmé en direct malgré tout** : l'app se lance,
+passe en mode invité (`RestartApp`, nouveau PID), navigue réellement vers
+`https://example.com` (`NavigationCompleted isSuccess=True` dans
+`winui-runtime-trace.log`) - **aucune ligne `UNHANDLED` sur tout le
+scénario**, donc pas de risque de plantage identifié, mais le clic réel sur
+la tuile active en contexte Réglages n'a pas pu être observé bout en bout.
+Décision : ne pas s'acharner davantage sur l'automatisation du flyout (déjà
+4 tentatives + repli), s'appuyer sur build+tests source-level (qui verrouille
+la logique exacte générée) et le dire explicitement à l'utilisateur plutôt
+que de prétendre une vérification live complète.
+
+**Enquête freeze ("ça freeze de temps en temps" après un moment d'usage) -
+en attente de réponses utilisateur, rien codé.** Historique relu dans
+`MEMORY.md` avant de répondre (règle : ne jamais redeviner un sujet déjà
+creusé) : gel post-connexion Google déjà confirmé corrigé (session
+"2026-08-31 — Correctif du gel confirmé en direct") - probablement pas celui
+décrit ici (pas de connexion mentionnée). Gel général du 11/09 (session
+"petits ajustements") : minuteur de mise en veille
+des onglets INNOCENTÉ par preuve concrète (trace + 80s d'attente réelle,
+app restée réactive) ; verrouillage auto par inactivité, flux RSS et veille
+plein écran JAMAIS tranchés faute de repro, pas faute d'avoir cherché. 4
+questions posées à l'utilisateur avant tout correctif (durée avant freeze /
+nb d'onglets, interface totalement bloquée ou partiellement - page web
+répond-elle encore, usage RSS/verrouillage auto/plein écran, un redémarrage
+repart-il à zéro). Ne pas relancer une hypothèse non vérifiée comme les
+sessions précédentes.
+
+**Versionnement** : micro-correction (bug fix sur fonctionnalité existante,
+pas un ajout) -> 4e chiffre seul bouge, `0.94.30.4-dev` -> `0.94.30.5-dev`.
+Test `Version_projet_est_alignee_sur_0_94_27_0` (`UsageModeVisualIdentityTests.cs`)
+verrouille la cohérence entre 4 fichiers (`MainWindow.xaml.cs`, `AGENTS.md`,
+`scripts/build-clean-test-artifact.ps1`, `scripts/build-installer.ps1`) - les
+4 mis à jour ensemble, sinon ce test casse. Rien commité (pas demandé).

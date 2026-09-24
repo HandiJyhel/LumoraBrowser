@@ -176,13 +176,45 @@ public sealed partial class MainWindow
                 // selectionne toujours, et la croix reste visible (demande du
                 // 2026-08-07) la ou cliquer ne changerait rien de toute facon.
                 // Onglets inactifs : clic molette ou clic droit > Fermer.
-                var showCompactClose = current?.Id == tab.Id;
+                //
+                // Bug reel signale par l'utilisateur (2026-09-25) : la regle
+                // ci-dessus suppose que cliquer l'onglet actif ne fait jamais
+                // rien - faux depuis un panneau interne (Reglages, Coffre,
+                // Historique...), ou cliquer CETTE tuile est justement le
+                // geste pour revenir au site (VerticalTabButton_Click ->
+                // ReturnToBrowserIfHidden). La croix y couvrait alors la
+                // quasi-totalite de la cible : le clic fermait l'onglet au
+                // lieu d'y revenir, et comme CloseTab n'affiche pas forcement
+                // CE panneau navigateur, ca pouvait passer pour une appli qui
+                // ne repond plus. Croix desormais conditionnee a la visibilite
+                // du panneau navigateur ; repli sur un simple repere visuel
+                // "retour" (non cliquable en soi, IsHitTestVisible=false -
+                // toute la tuile reste le bouton) pour ne pas perdre la
+                // decouvrabilite au repos exigee le 2026-08-07.
+                var browserPanelVisible = BrowserPanel.Visibility == Visibility.Visible;
+                var showCompactClose = current?.Id == tab.Id && browserPanelVisible;
+                var showReturnHint = current?.Id == tab.Id && !browserPanelVisible;
                 var iconRestOpacity = icon.Opacity;
                 var compactContent = new Grid();
                 compactContent.Children.Add(icon);
                 if (showCompactClose)
                 {
                     compactContent.Children.Add(compactClose);
+                }
+                if (showReturnHint)
+                {
+                    var returnHint = new Viewbox
+                    {
+                        Width = compactCloseGlyphSize,
+                        Height = compactCloseGlyphSize,
+                        IsHitTestVisible = false,
+                        Child = new SymbolIcon(Symbol.Back)
+                        {
+                            Foreground = (Brush)RootShell.Resources["NovaAccentBrush"]
+                        },
+                        Opacity = 0.6
+                    };
+                    compactContent.Children.Add(returnHint);
                 }
                 content = compactContent;
 
@@ -214,6 +246,13 @@ public sealed partial class MainWindow
                     button.PointerEntered += (_, _) => { compactClose.Opacity = 1; icon.Opacity = 0.3; };
                     button.PointerExited += (_, _) => { compactClose.Opacity = 0.6; icon.Opacity = iconRestOpacity; };
                     ToolTipService.SetToolTip(button, tab.Title);
+                }
+                else if (showReturnHint)
+                {
+                    var returnHintElement = (Viewbox)compactContent.Children[^1];
+                    button.PointerEntered += (_, _) => { returnHintElement.Opacity = 1; icon.Opacity = 0.3; };
+                    button.PointerExited += (_, _) => { returnHintElement.Opacity = 0.6; icon.Opacity = iconRestOpacity; };
+                    ToolTipService.SetToolTip(button, $"{tab.Title}\nRevenir au site");
                 }
                 else
                 {

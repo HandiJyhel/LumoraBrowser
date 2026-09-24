@@ -27,13 +27,25 @@ namespace Lumora.Tests;
 // reduite PROPORTIONNELLEMENT a la tuile (~30%), pas re-arbitree a part :
 // le debat "24 vs 30 vs 20" ci-dessus reste tranche, seule l'echelle change.
 //
-// Cinquieme version, actuelle (2026-09-24) : bug reel signale par
-// l'utilisateur - la croix centree couvrait presque toute la tuile, vouloir
-// changer d'onglet fermait le site. Croix visible uniquement sur l'onglet
-// ACTIF (regle de Chrome quand ses onglets deviennent trop etroits), la ou
-// cliquer ne change rien d'autre ; clic molette ou clic droit pour les
-// inactifs, dont l'infobulle le dit. Garde anti double-clic : un clic sur la
-// croix juste apres l'activation de la tuile est ignore.
+// Cinquieme version (2026-09-24) : bug reel signale par l'utilisateur - la
+// croix centree couvrait presque toute la tuile, vouloir changer d'onglet
+// fermait le site. Croix visible uniquement sur l'onglet ACTIF (regle de
+// Chrome quand ses onglets deviennent trop etroits), la ou cliquer ne change
+// rien d'autre ; clic molette ou clic droit pour les inactifs, dont
+// l'infobulle le dit. Garde anti double-clic : un clic sur la croix juste
+// apres l'activation de la tuile est ignore.
+//
+// Sixieme version, actuelle (2026-09-25) : bug reel signale par
+// l'utilisateur - la regle ci-dessus suppose que cliquer l'onglet actif ne
+// fait jamais rien, faux depuis un panneau interne (Reglages, Coffre,
+// Historique...) ou cliquer cette tuile ramene au site
+// (VerticalTabButton_Click -> ReturnToBrowserIfHidden). La croix y couvrait
+// la cible : le clic fermait l'onglet au lieu d'y revenir, et comme
+// CloseTab n'affiche pas forcement ce panneau navigateur, ca passait pour
+// une appli qui ne repond plus. Croix desormais conditionnee a
+// BrowserPanel.Visibility ; repli sur un repere visuel "retour"
+// (Symbol.Back, IsHitTestVisible=false) visible au repos - la tuile entiere
+// reste le bouton, pas de nouvelle hitbox etroite.
 public sealed class VerticalTabsCompactCloseTests
 {
     [Fact]
@@ -50,7 +62,10 @@ public sealed class VerticalTabsCompactCloseTests
         // Sur l'onglet actif, visible au repos (pas de Visibility.Collapsed,
         // decouvrabilite exigee le 2026-08-07) : seule l'opacite bouge au survol.
         // Sur les autres, absente : la tuile entiere selectionne l'onglet.
-        Assert.Contains("var showCompactClose = current?.Id == tab.Id;", compactBranch, StringComparison.Ordinal);
+        // Depuis le 2026-09-25, conditionnee aussi a la visibilite du panneau
+        // navigateur (sinon cliquer l'onglet actif = revenir au site, pas fermer).
+        Assert.Contains("var browserPanelVisible = BrowserPanel.Visibility == Visibility.Visible;", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("var showCompactClose = current?.Id == tab.Id && browserPanelVisible;", compactBranch, StringComparison.Ordinal);
         Assert.Contains("if (showCompactClose)", compactBranch, StringComparison.Ordinal);
         Assert.DoesNotContain("compactClose.Visibility", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Opacity = 0.6", compactBranch, StringComparison.Ordinal);
@@ -68,6 +83,30 @@ public sealed class VerticalTabsCompactCloseTests
         Assert.Contains("_compactModeEnabled ? CompactVerticalTabCompactCloseSize : 18", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Width = compactCloseSize,", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Height = compactCloseSize,", compactBranch, StringComparison.Ordinal);
+    }
+
+    // Bug reel signale par l'utilisateur (2026-09-25) : depuis un panneau
+    // interne, l'onglet actif du rail compact est la tuile qui ramene au
+    // site - la croix ne doit plus y capturer le clic. A la place, un repere
+    // purement visuel (non cliquable en soi) garde la decouvrabilite au repos.
+    [Fact]
+    public void Rail_compact_remplace_la_croix_par_un_repere_retour_hors_navigateur()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.TabGroups.cs");
+        var compactBranch = ExtractCompactBranch(code);
+
+        Assert.Contains("var showReturnHint = current?.Id == tab.Id && !browserPanelVisible;", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("if (showReturnHint)", compactBranch, StringComparison.Ordinal);
+
+        // Purement decoratif : IsHitTestVisible=false garantit que le clic
+        // traverse jusqu'au bouton de la tuile (ActivateTab ->
+        // ReturnToBrowserIfHidden), jamais une nouvelle hitbox etroite comme
+        // celle qui a cause le bug de la croix.
+        Assert.Contains("IsHitTestVisible = false,", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("Child = new SymbolIcon(Symbol.Back)", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("Foreground = (Brush)RootShell.Resources[\"NovaAccentBrush\"]", compactBranch, StringComparison.Ordinal);
+
+        Assert.Contains("ToolTipService.SetToolTip(button, $\"{tab.Title}\\nRevenir au site\");", compactBranch, StringComparison.Ordinal);
     }
 
     // Verrouille que le bouton reutilise bien le meme gestionnaire que la
