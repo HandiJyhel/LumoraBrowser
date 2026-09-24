@@ -78,7 +78,7 @@ public sealed partial class LumoraIncognitoWindow
             {
                 var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
                 var openBtn = new Button { Content = "Ouvrir", Padding = new Thickness(10, 3, 10, 3), FontSize = 11.5 };
-                openBtn.Click += (_, _) => OpenIncognitoDownload(entry.LocalPath);
+                openBtn.Click += async (_, _) => await DownloadOpenConfirmation.OpenAsync(entry.LocalPath, Content.XamlRoot);
                 actions.Children.Add(openBtn);
                 var folderBtn = new Button { Content = "Dossier", Padding = new Thickness(10, 3, 10, 3), FontSize = 11.5 };
                 folderBtn.Click += (_, _) => OpenIncognitoDownloadFolder(entry.LocalPath);
@@ -88,16 +88,6 @@ public sealed partial class LumoraIncognitoWindow
 
             IncognitoDownloadsList.Children.Add(item);
         }
-    }
-
-    private static void OpenIncognitoDownload(string path)
-    {
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
-        }
-        catch { }
     }
 
     private static void OpenIncognitoDownloadFolder(string path)

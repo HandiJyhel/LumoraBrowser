@@ -77,4 +77,18 @@ public sealed class PasswordManagerOfferTests : IDisposable
         Assert.NotNull(offer);
         Assert.True(offer!.IsUpdate);
     }
+
+    [Fact]
+    public void Sans_identifiant_ne_repropose_pas_un_mot_de_passe_deja_enregistre_pour_ce_site()
+    {
+        _manager.Save(new PasswordManagerEntryDraft("https://exemple.fr", "alice", "s3cret", "https://exemple.fr", ""));
+        Assert.Null(_interaction.BuildSaveOffer(Capture("https://exemple.fr", "", "s3cret")));
+    }
+
+    [Fact]
+    public void Sans_identifiant_propose_un_nouveau_mot_de_passe_meme_si_le_site_est_connu()
+    {
+        _manager.Save(new PasswordManagerEntryDraft("https://exemple.fr", "alice", "s3cret", "https://exemple.fr", ""));
+        Assert.NotNull(_interaction.BuildSaveOffer(Capture("https://exemple.fr", "", "autre-mot-de-passe")));
+    }
 }

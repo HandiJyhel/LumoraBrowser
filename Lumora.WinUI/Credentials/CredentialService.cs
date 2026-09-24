@@ -14,8 +14,32 @@ internal sealed class CredentialService
     // EN DIRECT via ActiveTabIdProvider. Aucune comparaison de référence d'objet
     // WebView2/CoreWebView2 : ce sont deux entiers qu'on compare, la même source
     // d'ID que celle qui pilote déjà la barre d'adresse et le titre de fenêtre.
-    private readonly Dictionary<CoreWebView2, int> _tabIdByCore = new();
-    private readonly Dictionary<CoreWebView2, List<CoreWebView2Frame>> _framesByCore = new();
+    //
+    // Tout est indexe par ID d'onglet, capture dans les gestionnaires a
+    // l'attache : l'objet CoreWebView2 recu en "sender" d'un evenement n'est PAS
+    // le meme wrapper que celui passe a AttachAsync (confirme en direct le
+    // 2026-09-24 : found=False, ReferenceEquals=False). L'ancien
+    // Dictionary<CoreWebView2, int> rejetait donc silencieusement TOUS les
+    // page-states et rapports de remplissage, et ne suivait aucune iframe.
+    private readonly Dictionary<int, TabAttachment> _attachments = new();
+    private readonly Dictionary<int, List<TrackedFrame>> _framesByTab = new();
+
+    private sealed record TabAttachment(
+        CoreWebView2 Core,
+        Windows.Foundation.TypedEventHandler<CoreWebView2, CoreWebView2WebMessageReceivedEventArgs> MessageHandler,
+        Windows.Foundation.TypedEventHandler<CoreWebView2, CoreWebView2FrameCreatedEventArgs> FrameHandler);
+
+    // Iframe suivie et adresse du document qu'elle affiche (voir
+    // CredentialFillTargetPolicy) : CurrentUrl reste null tant qu'une
+    // navigation est en cours ou que rien n'a encore ete charge - aucun secret
+    // n'est envoye dans ce cas. Un seul objet par iframe, stocke dans la liste
+    // de l'onglet : aucun dictionnaire indexe par wrapper WinRT.
+    private sealed class TrackedFrame(CoreWebView2Frame frame)
+    {
+        public CoreWebView2Frame Frame { get; } = frame;
+        public string? CurrentUrl { get; set; }
+        public string? PendingUrl { get; set; }
+    }
     private readonly Dictionary<string, string> _recentUsersByRoot = new(StringComparer.OrdinalIgnoreCase);
 
     public event Action<CredentialCapture>? CredentialCaptured;
@@ -29,30 +53,36 @@ internal sealed class CredentialService
 
     public async Task AttachAsync(CoreWebView2 core, int tabId)
     {
-        if (!_tabIdByCore.TryAdd(core, tabId))
-        {
-            return;
-        }
+        // Un onglet reveille (veille) ou dont le moteur a ete recree recoit un
+        // NOUVEAU CoreWebView2 sous le meme ID : l'ancien branchement est
+        // remplace, jamais conserve (sinon le Coffre restait muet sur cet
+        // onglet jusqu'a la fin de la session - relecture 2026-09-24).
+        Detach(tabId);
 
-        core.WebMessageReceived += Core_WebMessageReceived;
-        _framesByCore[core] = new List<CoreWebView2Frame>();
-        core.FrameCreated += Core_FrameCreated;
+        var attachment = new TabAttachment(
+            core,
+            (_, e) => Core_WebMessageReceived(tabId, e),
+            (_, e) => Core_FrameCreated(tabId, e));
+        _attachments[tabId] = attachment;
+        _framesByTab[tabId] = new List<TrackedFrame>();
+        core.WebMessageReceived += attachment.MessageHandler;
+        core.FrameCreated += attachment.FrameHandler;
 
         var script = await LoadCredentialCaptureScriptAsync();
         await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
         Lumora.WinUI.WinUiRuntimeTrace.Write($"CredentialService: script de capture attache (onglet {tabId})");
     }
 
-    public void Detach(CoreWebView2 core)
+    public void Detach(int tabId)
     {
-        if (!_tabIdByCore.Remove(core))
+        if (!_attachments.Remove(tabId, out var attachment))
         {
             return;
         }
 
-        core.WebMessageReceived -= Core_WebMessageReceived;
-        core.FrameCreated -= Core_FrameCreated;
-        _framesByCore.Remove(core);
+        attachment.Core.WebMessageReceived -= attachment.MessageHandler;
+        attachment.Core.FrameCreated -= attachment.FrameHandler;
+        _framesByTab.Remove(tabId);
     }
 
     // Suivi des iframes de premier niveau : le script de capture y est injecte
@@ -60,23 +90,30 @@ internal sealed class CredentialService
     // mais ExecuteScriptAsync sur le CoreWebView2 ne touche QUE la frame
     // principale. Pour remplir un formulaire de connexion loge dans une iframe
     // cross-origin, il faut appeler chaque CoreWebView2Frame individuellement.
-    private void Core_FrameCreated(object? sender, CoreWebView2FrameCreatedEventArgs e)
+    private void Core_FrameCreated(int tabId, CoreWebView2FrameCreatedEventArgs e)
     {
-        if (sender is not CoreWebView2 core || !_framesByCore.TryGetValue(core, out var frames))
+        if (!_framesByTab.TryGetValue(tabId, out var frames))
         {
             return;
         }
 
         var frame = e.Frame;
-        frames.Add(frame);
-        frame.Destroyed += (_, _) => frames.Remove(frame);
+        var tracked = new TrackedFrame(frame);
+        frames.Add(tracked);
+        frame.Destroyed += (_, _) => frames.Remove(tracked);
+        frame.NavigationStarting += (_, args) =>
+        {
+            tracked.CurrentUrl = null;
+            tracked.PendingUrl = args.Uri;
+        };
+        frame.ContentLoading += (_, _) => tracked.CurrentUrl = tracked.PendingUrl;
         // Seul le rapport differe de remplissage est ecoute ici : router les
         // page-states des iframes vers l'UI ferait clignoter/masquer la barre au
         // gre des frames tierces (pubs, widgets) qui publient un etat sans champ.
-        frame.WebMessageReceived += (_, args) => HandleFrameMessage(core, args.WebMessageAsJson);
+        frame.WebMessageReceived += (_, args) => HandleFrameMessage(tabId, args.WebMessageAsJson);
     }
 
-    private void HandleFrameMessage(CoreWebView2 core, string webMessageAsJson)
+    private void HandleFrameMessage(int tabId, string webMessageAsJson)
     {
         var message = ParseMessage(webMessageAsJson);
         if (message is null)
@@ -87,19 +124,14 @@ internal sealed class CredentialService
         var type = GetString(message, "t") ?? GetString(message, "type");
         if (type == "nova.credential.fill-report")
         {
-            PublishFillReport(core, message);
+            PublishFillReport(tabId, message);
         }
     }
 
-    private void PublishFillReport(CoreWebView2 core, JsonObject message)
+    private void PublishFillReport(int ownerTabId, JsonObject message)
     {
-        // Meme garde que le page-state : seul l'onglet visible pilote l'UI. Sens
-        // volontairement "fail-closed" : si ce core n'est pas retrouvé dans
-        // _tabIdByCore (identité de wrapper WinRT potentiellement instable, piège déjà
-        // documenté dans NavigationHealthTracker.cs), on ne publie PAS plutôt que de
-        // publier en silence pour un onglet non identifié (audit du 2026-08-19).
-        if (!_tabIdByCore.TryGetValue(core, out var ownerTabId) ||
-            ownerTabId != ActiveTabIdProvider?.Invoke())
+        // Meme garde que le page-state : seul l'onglet visible pilote l'UI.
+        if (ownerTabId != ActiveTabIdProvider?.Invoke())
         {
             return;
         }
@@ -126,6 +158,14 @@ internal sealed class CredentialService
             return new CredentialFillResult(false, "Moteur web indisponible.");
         }
 
+        // Page principale : elle a pu naviguer entre l'offre et le clic.
+        if (!CredentialFillTargetPolicy.IsAllowedTarget(activeCore.Source, credential.Origin, credential.LoginUrl))
+        {
+            Lumora.WinUI.WinUiRuntimeTrace.Write(
+                $"FillAsync refuse: page {PublicSuffixService.OriginOf(activeCore.Source)} hors du site de l'identifiant {credential.Origin}");
+            return new CredentialFillResult(false, "Remplissage refusé : cette page n'appartient pas au site de cet identifiant.");
+        }
+
         var wantsUsername = !string.IsNullOrEmpty(credential.Username);
         var filledUsername = false;
         var filledPassword = false;
@@ -136,11 +176,20 @@ internal sealed class CredentialService
         {
             script => activeCore.ExecuteScriptAsync(script).AsTask()
         };
-        if (_framesByCore.TryGetValue(activeCore, out var frames))
+        if (ActiveTabIdProvider?.Invoke() is int activeTabId &&
+            _framesByTab.TryGetValue(activeTabId, out var frames))
         {
             // Copie : la liste peut bouger (frame detruite) pendant les awaits.
-            foreach (var frame in frames.ToArray())
+            // Seules les iframes du MEME site que l'identifiant recoivent le
+            // secret (faille corrigee le 2026-09-24, voir
+            // CredentialFillTargetPolicy) - jamais une pub ou un widget tiers.
+            foreach (var tracked in frames.ToArray())
             {
+                if (!CredentialFillTargetPolicy.IsAllowedTarget(tracked.CurrentUrl, credential.Origin, credential.LoginUrl))
+                {
+                    continue;
+                }
+                var frame = tracked.Frame;
                 targets.Add(script => frame.ExecuteScriptAsync(script).AsTask());
             }
         }
@@ -249,6 +298,12 @@ internal sealed class CredentialService
             return new CredentialFillResult(false, "Moteur web indisponible.");
         }
 
+        var pageUrl = activeCore.Source;
+        if (!CredentialFillTargetPolicy.IsSameSiteFrame(pageUrl, pageUrl))
+        {
+            return new CredentialFillResult(false, "Remplissage impossible sur cette page.");
+        }
+
         var payload = JsonSerializer.Serialize(generatedPassword);
         var script = $"window.__novaFillNewPassword ? window.__novaFillNewPassword({payload}) : null";
         CredentialFillResult? lastFailure = null;
@@ -266,13 +321,20 @@ internal sealed class CredentialService
 
         // Frame principale sans champ : tenter les iframes suivies (meme logique
         // multi-frames que FillAsync, un formulaire d'inscription peut y vivre).
-        if (_framesByCore.TryGetValue(activeCore, out var frames))
+        if (ActiveTabIdProvider?.Invoke() is int activeTabId &&
+            _framesByTab.TryGetValue(activeTabId, out var frames))
         {
-            foreach (var frame in frames.ToArray())
+            foreach (var tracked in frames.ToArray())
             {
+                // Meme site que la page uniquement : le mot de passe genere sera
+                // enregistre pour CE site, il ne doit jamais partir chez un tiers.
+                if (!CredentialFillTargetPolicy.IsSameSiteFrame(tracked.CurrentUrl, pageUrl))
+                {
+                    continue;
+                }
                 try
                 {
-                    var result = ParseScriptResult(await frame.ExecuteScriptAsync(script));
+                    var result = ParseScriptResult(await tracked.Frame.ExecuteScriptAsync(script));
                     if (result is { Success: true }) return result;
                     lastFailure ??= result;
                 }
@@ -283,7 +345,7 @@ internal sealed class CredentialService
         return lastFailure ?? new CredentialFillResult(false, "Champ nouveau mot de passe introuvable.");
     }
 
-    private void Core_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    private void Core_WebMessageReceived(int ownerTabId, CoreWebView2WebMessageReceivedEventArgs e)
     {
         var message = ParseMessage(e.WebMessageAsJson);
         if (message is null)
@@ -293,12 +355,24 @@ internal sealed class CredentialService
 
         var type = GetString(message, "t") ?? GetString(message, "type");
 
+        // Adresse ATTESTEE par WebView2 (document qui a reellement poste le
+        // message), jamais celle que la page declare dans son JSON : sinon
+        // evil.com pouvait poster {origin:"https://banque.fr", ...} et obtenir
+        // une offre "Mettre a jour le mot de passe pour banque.fr" qui, acceptee,
+        // ecrasait la vraie entree du Coffre (relecture securite 2026-09-24).
+        if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var attestedSource) ||
+            (attestedSource.Scheme != Uri.UriSchemeHttps && attestedSource.Scheme != Uri.UriSchemeHttp))
+        {
+            return;
+        }
+        message["origin"] = PublicSuffixService.OriginOf(e.Source);
+        message["loginUrl"] = e.Source;
+        message.Remove("o");
+        message.Remove("login_url");
+
         if (type == "nova.credential.fill-report")
         {
-            if (sender is CoreWebView2 reportCore)
-            {
-                PublishFillReport(reportCore, message);
-            }
+            PublishFillReport(ownerTabId, message);
             return;
         }
 
@@ -315,9 +389,7 @@ internal sealed class CredentialService
             // déclencher de proposition pour une page que l'utilisateur ne voit pas.
             // Comparaison par ID d'onglet (entiers), jamais par référence d'objet.
             // Fail-closed (2026-08-19) : cf. PublishFillReport ci-dessus, même raisonnement.
-            if (sender is CoreWebView2 core &&
-                (!_tabIdByCore.TryGetValue(core, out var ownerTabId) ||
-                 ownerTabId != ActiveTabIdProvider?.Invoke()))
+            if (ownerTabId != ActiveTabIdProvider?.Invoke())
             {
                 return;
             }
@@ -348,10 +420,12 @@ internal sealed class CredentialService
             username = RecentUsernameFor(origin);
         }
 
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            return;
-        }
+        // Identifiant introuvable : on transmet quand meme. Un mot de passe
+        // soumis suffit a justifier l'offre d'enregistrement (voir
+        // PasswordManagerInteractionService.BuildSaveOffer), l'utilisateur
+        // complete l'identifiant dans la barre. Le rejet silencieux d'avant
+        // privait de toute offre des qu'une heuristique ratait le champ
+        // (bug reel 2026-09-24, dailyuploads.io).
 
         if (string.IsNullOrWhiteSpace(loginUrl))
         {

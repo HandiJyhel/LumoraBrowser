@@ -71,6 +71,20 @@ public sealed partial class MainWindow
         }
     }
 
+    // Fenêtre d'application web ouverte DANS ce process (panneau Applications) :
+    // un lien externe va directement dans la fenêtre principale la plus
+    // récente, sans relancer un process complet juste pour se rediriger vers
+    // soi-même (voir MainBrowserLauncher). false = aucune fenêtre principale
+    // dans ce process (appli lancée seule depuis un raccourci).
+    internal static bool TryOpenUrlInExistingWindow(string url)
+    {
+        var target = _liveInstances.LastOrDefault();
+        if (target is null) return false;
+
+        target.OpenUrlInNewTab(url);
+        return true;
+    }
+
     // Même garde que OpenNewWindow : tant que le profil courant n'est pas
     // déverrouillé (barre d'onglets pas encore prête), le lien ne peut pas
     // s'ouvrir immédiatement. Corrigé le 2026-08-31 (retour utilisateur) :

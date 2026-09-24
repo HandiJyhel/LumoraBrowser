@@ -43,6 +43,7 @@ public sealed partial class LumoraAppWindow : Window
     private Microsoft.UI.Windowing.AppWindow? _appWindow;
     private double _titleBarSafeRight = 138;
     private readonly WheelScrollSupport _wheelSupport = new();
+    private readonly LinkClickSignal _linkClicks = new();
 
     internal LumoraAppWindow(LumoraWebApp app, LumoraProfilePaths profile)
     {
@@ -229,9 +230,12 @@ public sealed partial class LumoraAppWindow : Window
         core.NavigationStarting += Core_NavigationStarting;
         core.NavigationCompleted += Core_NavigationCompleted;
         core.NewWindowRequested += Core_NewWindowRequested;
+        core.WebMessageReceived += Core_WebMessageReceived;
         core.DownloadStarting += Core_DownloadStarting;
         core.SourceChanged += (_, _) => UpdateExternalDomainBar(core.Source);
         core.DocumentTitleChanged += (_, _) => { /* titre de fenêtre volontairement stable (nom de l'app) */ };
+
+        await _linkClicks.RegisterAsync(core);
 
         // Enregistrés AVANT la première navigation pour s'appliquer dès la
         // première page (pas seulement à partir de la deuxième) : masquage
@@ -311,27 +315,91 @@ public sealed partial class LumoraAppWindow : Window
     // fenetre popup par defaut (bare, sans chrome Lumora ni protections) pour
     // TOUTE popup, y compris les pubs automatiques - constate reellement sur
     // Vidlox le 2026-07-26 (redirection vers tureenspappies.cfd).
-    private void Core_NewWindowRequested(CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
+    //
+    // 2026-09-24 (audit sécurité + retour utilisateur) : un vrai lien cliqué
+    // vers un autre site y était bloqué sans aucun recours, et toute popup
+    // autorisée s'ouvrait dans la fenêtre WebView2 BRUTE (aucune protection
+    // Lumora). Désormais, comme les applications web de Chrome/Edge :
+    //  - vrai lien cliqué (LinkClickSignal) = autorisé, sauf domaine pub ;
+    //  - popup autorisée DANS le périmètre de l'appli ou fenêtre de connexion
+    //    (Google, Microsoft...) = fenêtre WebView2 comme avant (window.opener
+    //    indispensable aux flux de connexion) ;
+    //  - popup autorisée vers un AUTRE site = ouverte dans le navigateur Lumora
+    //    principal, avec toutes ses protections (MainBrowserLauncher).
+    private const int LinkClickKey = 0;
+
+    private async void Core_NewWindowRequested(CoreWebView2 sender, CoreWebView2NewWindowRequestedEventArgs args)
     {
-        var blocker = _privacy.Get<NetworkBlockerModule>();
-        var verdict = PopupPolicy.Decide(
-            args.Uri,
-            sender.Source,
-            args.IsUserInitiated,
-            blockerEnabled: blocker?.IsEnabled == true,
-            host => blocker?.IsBlocked(host) == true,
-            host => blocker?.IsWhitelisted(host) == true);
+        var deferral = args.GetDeferral();
+        try
+        {
+            var opener = sender.Source;
+            var blocker = _privacy.Get<NetworkBlockerModule>();
+            PopupVerdict Decide(bool clickedLink) => PopupPolicy.Decide(
+                args.Uri,
+                opener,
+                args.IsUserInitiated,
+                blockerEnabled: blocker?.IsEnabled == true,
+                host => blocker?.IsBlocked(host) == true,
+                host => blocker?.IsWhitelisted(host) == true,
+                isClickedLinkTarget: clickedLink);
 
-        if (verdict == PopupVerdict.Allow) return; // repli WebView2 par defaut, inchange
+            // Attente du signal « lien cliqué » seulement si la popup allait être
+            // refusée (même raison que MainWindow : aucun délai sinon).
+            var verdict = Decide(false);
+            if (verdict != PopupVerdict.Allow && args.IsUserInitiated &&
+                await _linkClicks.IsClickedLinkTargetAsync(LinkClickKey, args.Uri))
+            {
+                verdict = Decide(true);
+            }
 
-        args.Handled = true;
-        _privacy.RecordManualBlock(
-            "popup-blocker",
-            "Bloqueur de popups",
-            string.IsNullOrWhiteSpace(args.Uri) ? "about:blank" : args.Uri,
-            sender.Source ?? string.Empty);
-        RefreshShieldQuickCount();
-        WinUiRuntimeTrace.Write($"App window popup blocked ({verdict}): {args.Uri}");
+            if (verdict != PopupVerdict.Allow)
+            {
+                args.Handled = true;
+                _privacy.RecordManualBlock(
+                    "popup-blocker",
+                    "Bloqueur de popups",
+                    string.IsNullOrWhiteSpace(args.Uri) ? "about:blank" : args.Uri,
+                    opener ?? string.Empty);
+                RefreshShieldQuickCount();
+                WinUiRuntimeTrace.Write($"App window popup blocked ({verdict}): {args.Uri}");
+                return;
+            }
+
+            if (WebAppUrlPolicy.IsWithinAppScope(_app.RootDomain, args.Uri) ||
+                PopupPolicy.IsKnownIdentityProviderHost(args.Uri) ||
+                PopupPolicy.IsLikelyAuthenticationPopup(args.Uri, args.IsUserInitiated))
+            {
+                return; // fenêtre WebView2 par défaut, inchangé
+            }
+
+            args.Handled = true;
+            var opened = MainBrowserLauncher.OpenUrl(args.Uri);
+            WinUiRuntimeTrace.Write($"App window: lien externe {(opened ? "ouvert dans le navigateur principal" : "non ouvert")} : {args.Uri}");
+        }
+        finally
+        {
+            deferral.Complete();
+        }
+    }
+
+    private void Core_WebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            var json = System.Text.Json.Nodes.JsonNode.Parse(e.WebMessageAsJson);
+            if (json is System.Text.Json.Nodes.JsonValue value && value.TryGetValue<string>(out var nested))
+            {
+                json = System.Text.Json.Nodes.JsonNode.Parse(nested);
+            }
+
+            if (json is System.Text.Json.Nodes.JsonObject obj &&
+                obj["t"]?.GetValue<string>() == LinkClickSignal.MessageType)
+            {
+                _linkClicks.Record(LinkClickKey, obj);
+            }
+        }
+        catch { }
     }
 
     private async void Core_NavigationCompleted(CoreWebView2 sender, CoreWebView2NavigationCompletedEventArgs args)

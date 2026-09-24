@@ -61,4 +61,34 @@ internal static class ContextMenuOrdering
         }
         return result;
     }
+
+    // Chromium fournit ses libelles au format menu Win32 : "&" marque la
+    // lettre de raccourci clavier (Alt+lettre), "&&" un vrai "&". Le menu
+    // natif les interprete, nos MenuFlyoutItem les affichaient tels quels
+    // ("&Retour", "Outi&ls supplementaires" - bug reel signale le
+    // 2026-09-24). Aucun raccourci Alt n'etant cable sur notre menu, on
+    // retire simplement les marqueurs.
+    public static string DisplayLabel(string? label)
+    {
+        if (string.IsNullOrEmpty(label) || !label.Contains('&'))
+        {
+            return label ?? string.Empty;
+        }
+
+        var sb = new System.Text.StringBuilder(label.Length);
+        for (var i = 0; i < label.Length; i++)
+        {
+            if (label[i] == '&')
+            {
+                if (i + 1 < label.Length && label[i + 1] == '&')
+                {
+                    sb.Append('&');
+                    i++;
+                }
+                continue;
+            }
+            sb.Append(label[i]);
+        }
+        return sb.ToString();
+    }
 }

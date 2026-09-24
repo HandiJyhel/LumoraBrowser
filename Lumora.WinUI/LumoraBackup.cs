@@ -121,11 +121,20 @@ internal static class LumoraBackup
             WriteEntry(zip, "vault-cards.json", JsonSerializer.Serialize(cards));
         }
 
+        WriteEncryptedArchive(destPath, password, zipStream.ToArray());
+
+        return new ExportResult(credentials.Count, cards.Count);
+    }
+
+    // Enveloppe chiffree d'une archive deja construite. Separee d'Export pour
+    // que les tests puissent fabriquer une sauvegarde volontairement piegee
+    // (entrees au nom malveillant) exactement comme le ferait un attaquant.
+    internal static void WriteEncryptedArchive(string destPath, string password, byte[] plaintext)
+    {
         var salt  = RandomNumberGenerator.GetBytes(SaltSize);
         var nonce = RandomNumberGenerator.GetBytes(GcmNonce);
         var key   = DeriveKey(password, salt);
 
-        var plaintext = zipStream.ToArray();
         var cipher    = new byte[plaintext.Length];
         var tag       = new byte[GcmTag];
         using (var aes = new AesGcm(key, GcmTag))
@@ -138,8 +147,6 @@ internal static class LumoraBackup
         file.Write(nonce);
         file.Write(tag);
         file.Write(cipher);
-
-        return new ExportResult(credentials.Count, cards.Count);
     }
 
     public static void Import(string srcPath, string password, LumoraProfilePaths profile, VaultStore vault)
@@ -199,9 +206,13 @@ internal static class LumoraBackup
                 WriteAccountFile(profile.ProfileFile, reader.ReadToEnd());
             }
 
-            var avatarEntry = zip.Entries.FirstOrDefault(entry =>
-                entry.FullName.StartsWith("avatar.", StringComparison.Ordinal));
-            if (avatarEntry is not null)
+            // Nom EXACT "avatar.<extension image connue>" uniquement : l'ancien
+            // StartsWith("avatar.") + Path.Combine(FullName) laissait un nom
+            // piege ("avatar./../../...") ecrire n'importe ou sur le disque, ex.
+            // dans le dossier Demarrage de Windows (audit securite 2026-09-24).
+            var avatarEntry = zip.Entries.FirstOrDefault(entry => IsAvatarEntryName(entry.FullName));
+            var avatarPath = avatarEntry is null ? null : SafeExtractionPath(profile.ProfileDir, avatarEntry.FullName);
+            if (avatarEntry is not null && avatarPath is not null)
             {
                 Directory.CreateDirectory(profile.ProfileDir);
                 foreach (var ext in ProfileAvatarResolver.Extensions)
@@ -209,7 +220,7 @@ internal static class LumoraBackup
                     var existing = Path.Combine(profile.ProfileDir, "avatar" + ext);
                     if (File.Exists(existing)) File.Delete(existing);
                 }
-                using var destStream = File.Create(Path.Combine(profile.ProfileDir, avatarEntry.FullName));
+                using var destStream = File.Create(avatarPath);
                 using var avatarStream = avatarEntry.Open();
                 avatarStream.CopyTo(destStream);
             }
@@ -371,6 +382,30 @@ internal static class LumoraBackup
             WriteBinaryEntry(zip, $"{zipDirPrefix}/{Path.GetFileName(filePath)}", File.ReadAllBytes(filePath));
     }
 
+    internal static bool IsAvatarEntryName(string entryName) =>
+        ProfileAvatarResolver.Extensions.Any(ext =>
+            entryName.Equals("avatar" + ext, StringComparison.OrdinalIgnoreCase));
+
+    // Chemin de destination d'une entree d'archive, garanti DANS destDir : seul
+    // le nom de fichier final est garde (jamais de dossier, de "..", de lecteur
+    // ni de flux NTFS "a:b"), puis le chemin complet resolu est reverifie.
+    // null = entree ignoree (dossier, nom vide ou invalide).
+    internal static string? SafeExtractionPath(string destDir, string entryName)
+    {
+        var fileName = Path.GetFileName(entryName.Replace('/', Path.DirectorySeparatorChar));
+        if (string.IsNullOrWhiteSpace(fileName) ||
+            fileName is "." or ".." ||
+            fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return null;
+        }
+
+        var root = Path.GetFullPath(destDir);
+        var full = Path.GetFullPath(Path.Combine(root, fileName));
+        var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
+        return full.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase) ? full : null;
+    }
+
     private static void ReadDirectoryEntries(ZipArchive zip, string zipDirPrefix, string destDir)
     {
         var entries = zip.Entries
@@ -381,7 +416,8 @@ internal static class LumoraBackup
         Directory.CreateDirectory(destDir);
         foreach (var entry in entries)
         {
-            var destPath = Path.Combine(destDir, Path.GetFileName(entry.FullName));
+            var destPath = SafeExtractionPath(destDir, entry.FullName);
+            if (destPath is null) continue;
             using var destStream = File.Create(destPath);
             using var entryStream = entry.Open();
             entryStream.CopyTo(destStream);

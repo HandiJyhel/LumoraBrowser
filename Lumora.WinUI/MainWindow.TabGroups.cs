@@ -165,11 +165,25 @@ public sealed partial class MainWindow
                 };
                 ToolTipService.SetToolTip(compactClose, "Fermer l'onglet");
                 Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(compactClose, $"Fermer {tab.Title}");
-                compactClose.Click += VerticalTabCloseButton_Click;
+                compactClose.Click += VerticalCompactTabCloseButton_Click;
 
+                // Bug reel signale par l'utilisateur (2026-09-24) : la croix
+                // centree couvrait presque toute la tuile (18px sur 30x28,
+                // 14px sur 22x20 en interface compacte) - vouloir changer
+                // d'onglet fermait le site. Croix affichee uniquement sur
+                // l'onglet ACTIF (meme regle que Chrome quand ses onglets
+                // deviennent trop etroits) : cliquer un onglet inactif le
+                // selectionne toujours, et la croix reste visible (demande du
+                // 2026-08-07) la ou cliquer ne changerait rien de toute facon.
+                // Onglets inactifs : clic molette ou clic droit > Fermer.
+                var showCompactClose = current?.Id == tab.Id;
+                var iconRestOpacity = icon.Opacity;
                 var compactContent = new Grid();
                 compactContent.Children.Add(icon);
-                compactContent.Children.Add(compactClose);
+                if (showCompactClose)
+                {
+                    compactContent.Children.Add(compactClose);
+                }
                 content = compactContent;
 
                 var compactTileWidth = _compactModeEnabled ? CompactVerticalTabTileWidth : 30;
@@ -195,8 +209,16 @@ public sealed partial class MainWindow
                     Background = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBackgroundBrush" : "NovaTabPillInactiveBackgroundBrush"],
                     BorderBrush = (Brush)RootShell.Resources[isActive ? "NovaTabPillActiveBorderBrush" : "NovaTabPillInactiveBorderBrush"]
                 };
-                button.PointerEntered += (_, _) => { compactClose.Opacity = 1; icon.Opacity = 0.3; };
-                button.PointerExited += (_, _) => { compactClose.Opacity = 0.6; icon.Opacity = 1; };
+                if (showCompactClose)
+                {
+                    button.PointerEntered += (_, _) => { compactClose.Opacity = 1; icon.Opacity = 0.3; };
+                    button.PointerExited += (_, _) => { compactClose.Opacity = 0.6; icon.Opacity = iconRestOpacity; };
+                    ToolTipService.SetToolTip(button, tab.Title);
+                }
+                else
+                {
+                    ToolTipService.SetToolTip(button, $"{tab.Title}\nClic molette ou clic droit pour fermer");
+                }
             }
             else
             {
@@ -404,9 +426,18 @@ public sealed partial class MainWindow
                 button.BorderThickness = new Thickness(2);
             }
 
-            ToolTipService.SetToolTip(button, tab.Title);
+            if (!isCompactTile)
+            {
+                // Tuile reduite : infobulle deja posee plus haut (elle
+                // indique comment fermer un onglet inactif sans croix).
+                ToolTipService.SetToolTip(button, tab.Title);
+            }
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, tab.Title);
             button.Click += VerticalTabButton_Click;
+            // Clic molette = fermer, comme dans la barre horizontale et dans
+            // Chrome/Edge. handledEventsToo : Button marque deja l'appui
+            // comme traite, le gestionnaire ne serait jamais appele sinon.
+            button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(VerticalTabButton_PointerPressed), true);
             button.ContextFlyout = CreateTabContextFlyout(tab);
             button.CanDrag = true;
             button.AllowDrop = true;
@@ -1043,6 +1074,36 @@ public sealed partial class MainWindow
         SaveTabSession();
     }
 
+    // Double-clic sur une tuile reduite inactive : le 1er clic la rend active,
+    // la tuile est redessinee avec sa croix au meme endroit, et le 2e clic
+    // tomberait dessus. Tout clic sur la croix trop proche d'une activation
+    // est ignore.
+    private DateTime _verticalTabActivatedAtUtc = DateTime.MinValue;
+    private static readonly TimeSpan VerticalCompactCloseGuard = TimeSpan.FromMilliseconds(600);
+
+    private void VerticalCompactTabCloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DateTime.UtcNow - _verticalTabActivatedAtUtc < VerticalCompactCloseGuard)
+        {
+            return;
+        }
+        VerticalTabCloseButton_Click(sender, e);
+    }
+
+    private void VerticalTabButton_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: int id } button ||
+            !e.GetCurrentPoint(button).Properties.IsMiddleButtonPressed)
+        {
+            return;
+        }
+        e.Handled = true;
+        if (_tabs.FirstOrDefault(tab => tab.Id == id) is { } tab)
+        {
+            CloseTab(tab);
+        }
+    }
+
     private void VerticalTabCloseButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: int id } &&
@@ -1423,6 +1484,11 @@ public sealed partial class MainWindow
         }
 
         HandleTabSelectionModifiers(tab);
+
+        if (CurrentTab()?.Id != id)
+        {
+            _verticalTabActivatedAtUtc = DateTime.UtcNow;
+        }
 
         var item = BrowserTabs.TabItems
             .OfType<TabViewItem>()

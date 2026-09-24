@@ -175,11 +175,35 @@ public partial class App : Application
         return null;
     }
 
+    // Bug reel trouve le 2026-09-24 : un lancement autonome d'application web
+    // (raccourci Menu Demarrer/Bureau, --app=...) lisait webapps.lumora AVANT
+    // que l'entropie de profil ne soit posee (seul MainWindow le faisait,
+    // volet 2 du 2026-09-10). Pour un profil sans mot de passe, la lecture
+    // echouait en silence, l'appli etait "introuvable" et le raccourci ouvrait
+    // le navigateur normal a la place. Meme regle que MainWindow (lecture
+    // anticipee de profile.lumora) : entropie posee seulement pour un profil
+    // SANS mot de passe (ou deja migre, illisible sans elle), jamais creee
+    // ici - un dossier sans profile-entropy.dat n'en a pas besoin.
+    private static void ApplyProfileEntropyForStandaloneLaunch(LumoraProfilePaths profile)
+    {
+        if (LumoraFile.CurrentProfileEntropyOrNull() is not null || !File.Exists(profile.EntropyFile))
+        {
+            return;
+        }
+
+        var peek = UserProfile.Load(profile.ProfileFile, profile.LegacyProfileFile);
+        if (peek is null || !peek.HasAccountPassword)
+        {
+            LumoraFile.SetProfileEntropy(ProfileEntropyStore.LoadOrCreate(profile));
+        }
+    }
+
     private static LumoraWebApp? TryFindWebApp(string appId)
     {
         try
         {
             var profile = LumoraProfilePaths.Default();
+            ApplyProfileEntropyForStandaloneLaunch(profile);
             return new WebAppStore(profile.WebAppsFile).Find(appId);
         }
         catch (Exception ex)

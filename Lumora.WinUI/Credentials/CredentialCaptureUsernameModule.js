@@ -48,6 +48,24 @@
         return Dom.topmost(el);
     };
 
+    // Champ mot de passe VOISIN (dans les 4 conteneurs les plus proches du
+    // champ), actuel ou bascule en texte par un oeil "afficher". Jamais le
+    // <form> entier : une page WebForms/ASP.NET englobe toute la page dans un
+    // seul formulaire, et le champ "Inscrivez-vous a la newsletter" du pied de
+    // page aurait perdu sa penalite a cause du mot de passe de connexion
+    // (relecture 2026-09-24).
+    function nearPasswordField(el) {
+        for (var node = el.parentElement, depth = 0; node && depth < 4; node = node.parentElement, depth++) {
+            var inputs = node.querySelectorAll("input");
+            for (var j = 0; j < inputs.length; j++) {
+                var input = inputs[j];
+                if (input === el) continue;
+                if ((input.type || "").toLowerCase() === "password" || Password.wasEverPassword(input)) return true;
+            }
+        }
+        return false;
+    }
+
     Username.scoreUsername = function (el) {
         var text = Dom.fieldText(el);
         var context = Dom.contextText(el);
@@ -79,7 +97,16 @@
             score += 70;
         }
 
-        if (/\b(newsletter|inscrivez|actualit|offres|commercial|marketing|désabonnement|desabonnement|footer|presse|recrutement|paypal|visa|mastercard)\b/.test(all)) score -= 160;
+        // Penalite "newsletter/marketing" levee quand un champ mot de passe est
+        // voisin du champ : une inscription newsletter n'en a jamais,
+        // alors que "Pas encore de compte ? Inscrivez-vous" figure sous
+        // presque toutes les pages de connexion. Bug reel (2026-09-24,
+        // dailyuploads.io) : ce seul mot faisait tomber le vrai champ
+        // identifiant a -35, capture partie sans identifiant puis jetee.
+        // Mot-cle teste d'abord (peu couteux), parcours du DOM seulement s'il
+        // correspond.
+        if (/\b(newsletter|inscrivez|actualit|offres|commercial|marketing|désabonnement|desabonnement|footer|presse|recrutement|paypal|visa|mastercard)\b/.test(all) &&
+            !nearPasswordField(el)) score -= 160;
         if (/\b(current-password|new-password|otp|code|search|recherche|coupon|promo|quantity|qty|quantite|quantité)\b/.test(all)) score -= 80;
 
         // Signal le plus fiable qui existe : un site qui pose explicitement

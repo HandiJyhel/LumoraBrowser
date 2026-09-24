@@ -12,6 +12,10 @@
     var Site = window.__novaCredSite;
     var Password = window.__novaCredPassword;
     var Username = window.__novaCredUsername;
+    // Reference capturee AVANT tout script de la page (injection a la
+    // creation du document) : relue au moment du remplissage, elle aurait pu
+    // etre remplacee par la page entre-temps.
+    var Dom = window.__novaCredDom;
 
     if (Site.isAutomationSuppressed()) return;
 
@@ -187,7 +191,7 @@
     } catch (_) { }
 
     // ── Remplissage a la demande (declenche par l'app hote) ──────────────
-    window.__novaFillCredential = function (payload) {
+    var fillCredential = function (payload) {
         try {
             payload = payload || {};
             var passwordField = payload.password ? Password.pickPasswordFieldForFill() : null;
@@ -201,7 +205,6 @@
                 foundPasswordField: !!passwordField
             };
 
-            var Dom = window.__novaCredDom;
             if (usernameField) report.filledUsername = Dom.setValueForFill(usernameField, payload.username);
             if (passwordField) report.filledPassword = Dom.setValueForFill(passwordField, payload.password);
 
@@ -248,6 +251,22 @@
             };
         }
     };
+
+    // Verrouillage (audit securite 2026-09-24) : ces fonctions recoivent des
+    // secrets du Coffre. Definies non modifiables et non reconfigurables avant
+    // que la page ne s'execute, un script du site ne peut ni les remplacer par
+    // une fonction espionne, ni alterer les modules qu'elles utilisent.
+    function lock(name, value) {
+        try {
+            Object.defineProperty(window, name, { value: value, writable: false, configurable: false, enumerable: false });
+        } catch (_) { }
+    }
+    ["__novaCredDom", "__novaCredSite", "__novaCredPassword", "__novaCredUsername"].forEach(function (name) {
+        try { Object.freeze(window[name]); } catch (_) { }
+        lock(name, window[name]);
+    });
+    lock("__novaFillCredential", fillCredential);
+    lock("__novaFillNewPassword", window.__novaFillNewPassword);
 
     Username.loadRememberedUser();
     scheduleState("document-created");

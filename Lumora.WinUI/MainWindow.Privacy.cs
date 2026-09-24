@@ -288,16 +288,16 @@ public sealed partial class MainWindow
 
     private async Task RegisterGeolocationSpoofScriptsAsync()
     {
-        foreach (var core in AttachedCores().ToList())
-            await RegisterGeolocationSpoofScriptOnCoreAsync(core);
+        foreach (var (tabId, core) in AttachedTabCores().ToList())
+            await RegisterGeolocationSpoofScriptOnCoreAsync(tabId, core);
     }
 
-    private async Task RegisterGeolocationSpoofScriptOnCoreAsync(CoreWebView2 core)
+    private async Task RegisterGeolocationSpoofScriptOnCoreAsync(int tabId, CoreWebView2 core)
     {
-        if (_geolocationSpoofScriptIds.TryGetValue(core, out var oldId))
+        if (_geolocationSpoofScriptIds.TryGetValue(tabId, out var oldId))
         {
             try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
-            _geolocationSpoofScriptIds.Remove(core);
+            _geolocationSpoofScriptIds.Remove(tabId);
         }
 
         if (!_uiSettings.GeolocationSpoofingEnabled) return;
@@ -315,7 +315,7 @@ public sealed partial class MainWindow
             _uiSettings.GeolocationSpoofLongitude,
             exemptRootDomains);
 
-        _geolocationSpoofScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
+        _geolocationSpoofScriptIds[tabId] = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
     }
 
     private async void GeolocationSpoofingSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -368,22 +368,22 @@ public sealed partial class MainWindow
 
     private async Task RegisterFingerprintProtectionScriptsAsync()
     {
-        foreach (var core in AttachedCores().ToList())
-            await RegisterFingerprintProtectionScriptOnCoreAsync(core);
+        foreach (var (tabId, core) in AttachedTabCores().ToList())
+            await RegisterFingerprintProtectionScriptOnCoreAsync(tabId, core);
     }
 
-    private async Task RegisterFingerprintProtectionScriptOnCoreAsync(CoreWebView2 core)
+    private async Task RegisterFingerprintProtectionScriptOnCoreAsync(int tabId, CoreWebView2 core)
     {
-        if (_fingerprintProtectionScriptIds.TryGetValue(core, out var oldId))
+        if (_fingerprintProtectionScriptIds.TryGetValue(tabId, out var oldId))
         {
             try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
-            _fingerprintProtectionScriptIds.Remove(core);
+            _fingerprintProtectionScriptIds.Remove(tabId);
         }
 
         if (!_uiSettings.FingerprintProtectionEnabled) return;
 
         var script = FingerprintProtectionScript.Build(_fingerprintSessionSeed);
-        _fingerprintProtectionScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
+        _fingerprintProtectionScriptIds[tabId] = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
     }
 
     private async void FingerprintProtectionSwitch_Toggled(object sender, RoutedEventArgs e)
@@ -473,6 +473,15 @@ public sealed partial class MainWindow
     private IEnumerable<CoreWebView2> AttachedCores() =>
         _tabs.Select(tab => tab.View?.CoreWebView2).OfType<CoreWebView2>();
 
+    // Scripts de protection memorises PAR ID D'ONGLET (2026-09-24) : meme piege
+    // que CredentialService - un Dictionary<CoreWebView2, ...> depend de
+    // l'identite du wrapper WinRT, non garantie d'un acces a l'autre. Un ID
+    // introuvable laisserait l'ancien script en place : protection qu'on croit
+    // desactivee mais toujours active, ou scripts empiles a chaque changement.
+    private IEnumerable<(int TabId, CoreWebView2 Core)> AttachedTabCores() =>
+        _tabs.Where(tab => tab.View?.CoreWebView2 is not null)
+            .Select(tab => (tab.Id, tab.View!.CoreWebView2!));
+
     private async Task InitCosmeticAsync()
     {
         // Charge seed + listes en cache puis enregistre les scripts sur chaque moteur
@@ -500,24 +509,24 @@ public sealed partial class MainWindow
 
     private async Task RegisterCosmeticScriptsAsync()
     {
-        foreach (var core in AttachedCores().ToList())
-            await RegisterCosmeticScriptOnCoreAsync(core);
+        foreach (var (tabId, core) in AttachedTabCores().ToList())
+            await RegisterCosmeticScriptOnCoreAsync(tabId, core);
     }
 
-    private async Task RegisterCosmeticScriptOnCoreAsync(CoreWebView2 core)
+    private async Task RegisterCosmeticScriptOnCoreAsync(int tabId, CoreWebView2 core)
     {
         if (_cosmeticFilter is null) return;
 
         // Retirer l'ancien script s'il existait sur ce moteur
-        if (_cosmeticScriptIds.TryGetValue(core, out var oldId))
+        if (_cosmeticScriptIds.TryGetValue(tabId, out var oldId))
         {
             try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
-            _cosmeticScriptIds.Remove(core);
+            _cosmeticScriptIds.Remove(tabId);
         }
 
         if (_cosmeticFilter.IsEnabled)
         {
-            _cosmeticScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
+            _cosmeticScriptIds[tabId] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
                 _cosmeticFilter.BuildGenericInjectionScript());
         }
         else
@@ -542,22 +551,22 @@ public sealed partial class MainWindow
 
     private async Task RegisterConsentScriptsAsync()
     {
-        foreach (var core in AttachedCores().ToList())
-            await RegisterConsentScriptOnCoreAsync(core);
+        foreach (var (tabId, core) in AttachedTabCores().ToList())
+            await RegisterConsentScriptOnCoreAsync(tabId, core);
     }
 
-    private async Task RegisterConsentScriptOnCoreAsync(CoreWebView2 core)
+    private async Task RegisterConsentScriptOnCoreAsync(int tabId, CoreWebView2 core)
     {
         if (_consentModule is null) return;
 
-        if (_consentScriptIds.TryGetValue(core, out var oldId))
+        if (_consentScriptIds.TryGetValue(tabId, out var oldId))
         {
             try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
-            _consentScriptIds.Remove(core);
+            _consentScriptIds.Remove(tabId);
         }
 
         if (_consentModule.IsEnabled)
-            _consentScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
+            _consentScriptIds[tabId] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
                 _consentModule.BuildInjectionScript());
     }
 
@@ -581,42 +590,42 @@ public sealed partial class MainWindow
 
     private async Task RegisterLoginCompatibilityScriptsAsync()
     {
-        foreach (var core in AttachedCores().ToList())
-            await RegisterLoginCompatibilityScriptOnCoreAsync(core);
+        foreach (var (tabId, core) in AttachedTabCores().ToList())
+            await RegisterLoginCompatibilityScriptOnCoreAsync(tabId, core);
     }
 
-    private async Task RegisterLoginCompatibilityScriptOnCoreAsync(CoreWebView2 core)
+    private async Task RegisterLoginCompatibilityScriptOnCoreAsync(int tabId, CoreWebView2 core)
     {
-        if (_loginCompatibilityScriptIds.TryGetValue(core, out var oldId))
+        if (_loginCompatibilityScriptIds.TryGetValue(tabId, out var oldId))
         {
             try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
-            _loginCompatibilityScriptIds.Remove(core);
+            _loginCompatibilityScriptIds.Remove(tabId);
         }
 
         if (_uiSettings.LoginCompatibilitySites.Count > 0)
         {
-            _loginCompatibilityScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
+            _loginCompatibilityScriptIds[tabId] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
                 LoginCompatibilityScripts.BuildInjectionScript(_uiSettings.LoginCompatibilitySites));
         }
     }
 
     private async Task RegisterLoginDiagnosticScriptsAsync()
     {
-        foreach (var core in AttachedCores().ToList())
-            await RegisterLoginDiagnosticScriptOnCoreAsync(core);
+        foreach (var (tabId, core) in AttachedTabCores().ToList())
+            await RegisterLoginDiagnosticScriptOnCoreAsync(tabId, core);
     }
 
-    private async Task RegisterLoginDiagnosticScriptOnCoreAsync(CoreWebView2 core)
+    private async Task RegisterLoginDiagnosticScriptOnCoreAsync(int tabId, CoreWebView2 core)
     {
-        if (_loginDiagnosticScriptIds.TryGetValue(core, out var oldId))
+        if (_loginDiagnosticScriptIds.TryGetValue(tabId, out var oldId))
         {
             try { core.RemoveScriptToExecuteOnDocumentCreated(oldId); } catch { }
-            _loginDiagnosticScriptIds.Remove(core);
+            _loginDiagnosticScriptIds.Remove(tabId);
         }
 
         if (_uiSettings.LoginDiagnosticSites.Count > 0)
         {
-            _loginDiagnosticScriptIds[core] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
+            _loginDiagnosticScriptIds[tabId] = await core.AddScriptToExecuteOnDocumentCreatedAsync(
                 SiteLoginDiagnosticRecorder.BuildInjectionScript(_uiSettings.LoginDiagnosticSites));
         }
     }

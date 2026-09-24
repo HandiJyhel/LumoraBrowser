@@ -48,7 +48,8 @@ public static class PopupPolicy
         Func<string, bool> isAdHost,
         Func<string, bool> isWhitelistedHost,
         int popupsAlreadyOpenedForGesture = 0,
-        bool openerUnderAdPressure = false)
+        bool openerUnderAdPressure = false,
+        bool isClickedLinkTarget = false)
     {
         if (!blockerEnabled)
             return PopupVerdict.Allow;
@@ -69,6 +70,18 @@ public static class PopupPolicy
             return PopupVerdict.BlockAdDomain;
 
         if (IsLikelyAuthenticationPopup(popupUri, isUserInitiated))
+            return PopupVerdict.Allow;
+
+        // Vrai lien cliqué (2026-09-24, retour utilisateur : « je voulais pas
+        // que tu empêches un site de fonctionner quand on clique, je voulais
+        // que tu empêches les pubs nocives ») : l'adresse demandée est
+        // exactement celle du <a href> que l'utilisateur vient de cliquer.
+        // Ce n'est pas un détournement — un clic détourné ouvre une AUTRE
+        // adresse par script. Seul un domaine publicitaire répertorié
+        // (ci-dessus) l'arrête encore ; ni la rafale (le script publicitaire
+        // peut avoir ouvert sa fenêtre juste avant sur le même geste), ni la
+        // pression publicitaire, ni l'attente de choix ne s'appliquent.
+        if (isUserInitiated && isClickedLinkTarget)
             return PopupVerdict.Allow;
 
         if (!isUserInitiated)
@@ -197,6 +210,21 @@ public static class PopupPolicy
         return path.Contains("oauth", StringComparison.OrdinalIgnoreCase) ||
                path.Contains("/signin", StringComparison.OrdinalIgnoreCase) ||
                path.Contains("/login", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Adresse du lien cliqué vs adresse demandée pour la nouvelle fenêtre
+    // (voir MainWindow.LinkClickPopups.cs) : égalité stricte, à la
+    // normalisation d'Uri près (casse de l'hôte, port par défaut...).
+    public static bool IsSameLinkAddress(string clickedHref, string popupUri)
+    {
+        if (string.Equals(clickedHref, popupUri, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(clickedHref, UriKind.Absolute, out var a) &&
+               Uri.TryCreate(popupUri, UriKind.Absolute, out var b) &&
+               string.Equals(a.AbsoluteUri, b.AbsoluteUri, StringComparison.Ordinal);
     }
 
     private static string HostOf(string? uri) =>

@@ -54,7 +54,14 @@ public sealed partial class MainWindow
             var isNewTabMessage = type is "newtab_add_shortcut" or "newtab_edit_shortcut" or "newtab_delete_shortcut"
                 or "newtab_personalize" or "newtab_modules" or "newtab_mode_intro_dismiss"
                 or "newtab_mode_quick_note" or "newtab_mode_action";
-            if (isNewTabMessage && !tab.Address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase))
+            // Double verrou (audit securite 2026-09-24) : tab.Address n'est mis a
+            // jour qu'a la validation d'une navigation - un site qui vient de
+            // remplacer la page d'accueil pourrait poster pendant ce court
+            // intervalle. e.Source est l'adresse REELLE du document emetteur :
+            // la page d'accueil (NavigateToString) n'est jamais une adresse web.
+            if (isNewTabMessage &&
+                (!tab.Address.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase) ||
+                 BookmarkStore.IsWebUrl(e.Source)))
             {
                 return;
             }
@@ -95,6 +102,12 @@ public sealed partial class MainWindow
             if (type == "nova.payment.form")
             {
                 HandlePaymentFormDetected(tab);
+                return;
+            }
+
+            if (type == LinkClickSignal.MessageType)
+            {
+                _linkClicks.Record(tab.Id, obj);
                 return;
             }
 

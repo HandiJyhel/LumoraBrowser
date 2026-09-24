@@ -26,25 +26,37 @@ namespace Lumora.Tests;
 // avec ~15 onglets/session, meme la tuile 44x38 restait trop large. Taille
 // reduite PROPORTIONNELLEMENT a la tuile (~30%), pas re-arbitree a part :
 // le debat "24 vs 30 vs 20" ci-dessus reste tranche, seule l'echelle change.
+//
+// Cinquieme version, actuelle (2026-09-24) : bug reel signale par
+// l'utilisateur - la croix centree couvrait presque toute la tuile, vouloir
+// changer d'onglet fermait le site. Croix visible uniquement sur l'onglet
+// ACTIF (regle de Chrome quand ses onglets deviennent trop etroits), la ou
+// cliquer ne change rien d'autre ; clic molette ou clic droit pour les
+// inactifs, dont l'infobulle le dit. Garde anti double-clic : un clic sur la
+// croix juste apres l'activation de la tuile est ignore.
 public sealed class VerticalTabsCompactCloseTests
 {
     [Fact]
-    public void Rail_compact_expose_une_croix_de_fermeture_toujours_visible()
+    public void Rail_compact_expose_une_croix_de_fermeture_sur_l_onglet_actif()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.TabGroups.cs");
         var compactBranch = ExtractCompactBranch(code);
 
         Assert.Contains("var compactClose = new Button", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Child = new SymbolIcon(Symbol.Cancel)", compactBranch, StringComparison.Ordinal);
-        Assert.Contains("compactClose.Click += VerticalTabCloseButton_Click;", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("compactClose.Click += VerticalCompactTabCloseButton_Click;", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Tag = tab.Id,", compactBranch, StringComparison.Ordinal);
 
-        // Toujours visible (pas de Visibility.Collapsed sur le bouton lui-meme) :
-        // seule l'opacite bouge au survol, jamais la visibilite.
+        // Sur l'onglet actif, visible au repos (pas de Visibility.Collapsed,
+        // decouvrabilite exigee le 2026-08-07) : seule l'opacite bouge au survol.
+        // Sur les autres, absente : la tuile entiere selectionne l'onglet.
+        Assert.Contains("var showCompactClose = current?.Id == tab.Id;", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("if (showCompactClose)", compactBranch, StringComparison.Ordinal);
         Assert.DoesNotContain("compactClose.Visibility", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Opacity = 0.6", compactBranch, StringComparison.Ordinal);
         Assert.Contains("compactClose.Opacity = 1; icon.Opacity = 0.3;", compactBranch, StringComparison.Ordinal);
-        Assert.Contains("compactClose.Opacity = 0.6; icon.Opacity = 1;", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("compactClose.Opacity = 0.6; icon.Opacity = iconRestOpacity;", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("Clic molette ou clic droit pour fermer", compactBranch, StringComparison.Ordinal);
 
         // Cible reduite proportionnellement (round 3, 2026-08-12) : 18x18 par
         // defaut, suite au resserrement de la tuile elle-meme (44x38 -> 30x28)
@@ -68,6 +80,20 @@ public sealed class VerticalTabsCompactCloseTests
         Assert.Contains("private void VerticalTabCloseButton_Click(object sender, RoutedEventArgs e)", code, StringComparison.Ordinal);
         var handler = ExtractMethod(code, "private void VerticalTabCloseButton_Click(object sender, RoutedEventArgs e)");
         Assert.Contains("sender is Button { Tag: int id }", handler, StringComparison.Ordinal);
+        Assert.Contains("CloseTab(tab);", handler, StringComparison.Ordinal);
+
+        var guarded = ExtractMethod(code, "private void VerticalCompactTabCloseButton_Click(object sender, RoutedEventArgs e)");
+        Assert.Contains("VerticalCompactCloseGuard", guarded, StringComparison.Ordinal);
+        Assert.Contains("VerticalTabCloseButton_Click(sender, e);", guarded, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Clic_molette_ferme_un_onglet_du_rail()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.TabGroups.cs");
+        Assert.Contains("button.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(VerticalTabButton_PointerPressed), true);", code, StringComparison.Ordinal);
+        var handler = ExtractMethod(code, "private void VerticalTabButton_PointerPressed(object sender, PointerRoutedEventArgs e)");
+        Assert.Contains("IsMiddleButtonPressed", handler, StringComparison.Ordinal);
         Assert.Contains("CloseTab(tab);", handler, StringComparison.Ordinal);
     }
 

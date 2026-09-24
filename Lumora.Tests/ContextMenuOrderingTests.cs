@@ -60,4 +60,18 @@ public class ContextMenuOrderingTests
         var result = ContextMenuOrdering.Apply(items, n => n, hiddenNames: ["copy"], order: ["copy"]);
         Assert.Empty(result);
     }
+
+    [Theory]
+    [InlineData("&Retour", "Retour")]
+    [InlineData("Enregistrer &sous", "Enregistrer sous")]
+    [InlineData("Outi&ls supplémentaires", "Outils supplémentaires")]
+    [InlineData("I&nspecter", "Inspecter")]
+    [InlineData("Copier && coller", "Copier & coller")]
+    [InlineData("Envoyer l’onglet à vos appareils", "Envoyer l’onglet à vos appareils")]
+    [InlineData("", "")]
+    public void Libelle_Chromium_sans_marqueur_de_raccourci(string raw, string expected)
+    {
+        // Bug réel 2026-09-24 : les « & » des libellés Win32 s'affichaient tels quels.
+        Assert.Equal(expected, ContextMenuOrdering.DisplayLabel(raw));
+    }
 }

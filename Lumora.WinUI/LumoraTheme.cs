@@ -236,9 +236,16 @@ internal static class LumoraTheme
         titleBar.ButtonPressedForegroundColor = palette.Text;
     }
 
+    // TryGetValue, jamais l'indexeur : sur un ResourceDictionary WinUI, une
+    // cle absente LEVE une COMException au lieu de renvoyer null. Bug reel
+    // trouve le 2026-09-24 : LumoraAppWindow ne declare pas
+    // LumoraWindowButtonShadowBrush (propre au template Incognito) - chaque
+    // ouverture d'application web plantait des le constructeur, depuis le
+    // panneau Applications comme depuis un raccourci Menu Demarrer/Bureau.
+    // Une fenetre qui ne declare pas une cle n'a simplement pas cette teinte.
     private static void SetBrush(ResourceDictionary resources, string key, Windows.UI.Color color)
     {
-        if (resources[key] is SolidColorBrush brush)
+        if (resources.TryGetValue(key, out var value) && value is SolidColorBrush brush)
         {
             brush.Color = color;
         }
@@ -246,7 +253,8 @@ internal static class LumoraTheme
 
     private static void SetIdentityBrush(ResourceDictionary resources, Windows.UI.Color first, Windows.UI.Color second)
     {
-        if (resources["LumoraWindowIdentityBrush"] is LinearGradientBrush brush && brush.GradientStops.Count >= 2)
+        if (resources.TryGetValue("LumoraWindowIdentityBrush", out var value) &&
+            value is LinearGradientBrush brush && brush.GradientStops.Count >= 2)
         {
             brush.GradientStops[0].Color = first;
             brush.GradientStops[1].Color = second;

@@ -329,7 +329,7 @@ public sealed partial class MainWindow
         {
             var openBtn = new Button { Content = "Ouvrir", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
             ApplyNovaControlAccessibility(openBtn, $"Ouvrir le téléchargement {dl.FileName}");
-            openBtn.Click += (_, _) => OpenDownloadFile(dl.LocalPath);
+            openBtn.Click += async (_, _) => await DownloadOpenConfirmation.OpenAsync(dl.LocalPath, Content.XamlRoot);
             footerPanel.Children.Add(openBtn);
             var folderBtn = new Button { Content = "Dossier", Padding = new Thickness(12, 4, 12, 4), FontSize = AccessibilitySecondaryFontSize() };
             ApplyNovaControlAccessibility(folderBtn, $"Ouvrir le dossier du téléchargement {dl.FileName}");
@@ -359,16 +359,6 @@ public sealed partial class MainWindow
             Padding = new Thickness(14, 10, 14, 10),
             Child = body
         };
-    }
-
-    private static void OpenDownloadFile(string path)
-    {
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
-        }
-        catch { }
     }
 
     private static void OpenDownloadFolder(string path)

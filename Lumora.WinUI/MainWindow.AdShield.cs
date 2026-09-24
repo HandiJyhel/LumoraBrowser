@@ -26,7 +26,7 @@ public sealed partial class MainWindow
 
     // ── Popups ───────────────────────────────────────────────────────────────
 
-    private PopupVerdict DecidePopupVerdict(string? popupUri, string? openerUri, bool isUserInitiated, int? openerTabId)
+    private PopupVerdict DecidePopupVerdict(string? popupUri, string? openerUri, bool isUserInitiated, int? openerTabId, bool isClickedLinkTarget = false)
     {
         var blocker = NetworkBlocker;
         var popupsForGesture = openerTabId is int id
@@ -51,7 +51,8 @@ public sealed partial class MainWindow
             host => blocker?.IsBlocked(host) == true,
             host => blocker?.IsWhitelisted(host) == true,
             popupsForGesture,
-            openerUnderAdPressure: openerUnderAdPressure);
+            openerUnderAdPressure: openerUnderAdPressure,
+            isClickedLinkTarget: isClickedLinkTarget);
     }
 
     // Journalise un blocage de popup et met à jour le bouclier. Les verdicts

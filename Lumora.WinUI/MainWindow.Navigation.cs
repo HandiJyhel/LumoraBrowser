@@ -351,21 +351,25 @@ public sealed partial class MainWindow
         _federatedIdentityPopupTabIds.Remove(state.Id);
         _httpsUpgradeOriginals.Remove(view);
         _navHealth.ForgetTab(state.Id);
+        _linkClicks.Forget(state.Id);
+        // Indexés par ID d'onglet : nettoyés même si le moteur a déjà disparu
+        // (view.CoreWebView2 null), sinon une entrée périmée survivait à la mise
+        // en veille et bloquait le rebranchement au réveil (relecture 2026-09-24).
+        _credentialService.Detach(state.Id);
+        _cosmeticScriptIds.Remove(state.Id);
+        _consentScriptIds.Remove(state.Id);
+        _loginCompatibilityScriptIds.Remove(state.Id);
+        _loginDiagnosticScriptIds.Remove(state.Id);
+        // Oubliés ici avant le 2026-08-19 : comme AttachedCores() n'énumère que les
+        // onglets encore ouverts (_tabs), une entrée orpheline pour cet onglet fermé
+        // restait indéfiniment dans ces deux dictionnaires (fuite lente sur une
+        // session longue, bug réel trouvé en audit).
+        _geolocationSpoofScriptIds.Remove(state.Id);
+        _fingerprintProtectionScriptIds.Remove(state.Id);
         var core = view.CoreWebView2;
         if (core is not null)
         {
             core.ContainsFullScreenElementChanged -= BrowserCore_ContainsFullScreenElementChanged;
-            _credentialService.Detach(core);
-            _cosmeticScriptIds.Remove(core);
-            _consentScriptIds.Remove(core);
-            _loginCompatibilityScriptIds.Remove(core);
-            _loginDiagnosticScriptIds.Remove(core);
-            // Oubliés ici avant le 2026-08-19 : comme AttachedCores() n'énumère que les
-            // onglets encore ouverts (_tabs), une entrée orpheline pour cet onglet fermé
-            // restait indéfiniment dans ces deux dictionnaires (fuite lente sur une
-            // session longue, bug réel trouvé en audit).
-            _geolocationSpoofScriptIds.Remove(core);
-            _fingerprintProtectionScriptIds.Remove(core);
             if (ReferenceEquals(_contentFullScreenCore, core))
             {
                 CompleteContentFullScreenExit("Mode plein écran quitté.");
@@ -481,15 +485,16 @@ public sealed partial class MainWindow
         // ouverte via un nouvel onglet), son DOM peut se créer avant l'enregistrement
         // de ces scripts, qui ratent alors ce chargement sans jamais se rattraper.
         await Task.WhenAll(
-            RegisterCosmeticScriptOnCoreAsync(sender.CoreWebView2),
-            RegisterConsentScriptOnCoreAsync(sender.CoreWebView2),
-            RegisterGeolocationSpoofScriptOnCoreAsync(sender.CoreWebView2),
-            RegisterFingerprintProtectionScriptOnCoreAsync(sender.CoreWebView2),
-            RegisterLoginCompatibilityScriptOnCoreAsync(sender.CoreWebView2),
-            RegisterLoginDiagnosticScriptOnCoreAsync(sender.CoreWebView2),
+            RegisterCosmeticScriptOnCoreAsync(tab.Id, sender.CoreWebView2),
+            RegisterConsentScriptOnCoreAsync(tab.Id, sender.CoreWebView2),
+            RegisterGeolocationSpoofScriptOnCoreAsync(tab.Id, sender.CoreWebView2),
+            RegisterFingerprintProtectionScriptOnCoreAsync(tab.Id, sender.CoreWebView2),
+            RegisterLoginCompatibilityScriptOnCoreAsync(tab.Id, sender.CoreWebView2),
+            RegisterLoginDiagnosticScriptOnCoreAsync(tab.Id, sender.CoreWebView2),
             RegisterPasskeyMonitorAsync(sender.CoreWebView2),
             RegisterPaymentMonitorAsync(sender.CoreWebView2),
             RegisterFullScreenExitMonitorAsync(sender.CoreWebView2),
+            _linkClicks.RegisterAsync(sender.CoreWebView2),
             _credentialService.AttachAsync(sender.CoreWebView2, tab.Id));
         // Migration + nettoyage : importer ce que Chromium avait déjà, puis vider son coffre.
         // Ne bloque pas la navigation : sans lien avec la détection de page.
@@ -1480,27 +1485,42 @@ public sealed partial class MainWindow
     {
         RecordLoginDiagnosticForNavigation(sender.Source, "new-window-requested", args.Uri, args.IsUserInitiated ? "user-initiated" : "not-user-initiated");
 
-        // Popups indésirables (popunder automatique, clic détourné vers un domaine
-        // publicitaire, rafale sur un même geste) : bloquées AVANT toute création
-        // d'onglet. Politique pure dans PopupPolicy ; les fenêtres
-        // d'authentification passent toujours.
-        var popupVerdict = DecidePopupVerdict(args.Uri, sender.Source, args.IsUserInitiated, parentTab.Id);
-        if (popupVerdict != PopupVerdict.Allow)
-        {
-            ReportBlockedPopup(popupVerdict, args.Uri, sender.Source, parentTab.Id);
-            args.Handled = true;
-            return;
-        }
-
-        // Les flux OAuth (Google, Microsoft, etc.) utilisent souvent window.open puis
-        // window.opener/postMessage pour rendre la session au site d'origine. Il faut
-        // donc fournir un vrai CoreWebView2 a WebView2 au lieu de naviguer nous-mêmes
-        // vers l'URL dans un onglet standard.
-        args.Handled = true;
+        // Différé pris AVANT la décision : savoir si l'adresse est celle du lien
+        // réellement cliqué peut demander d'attendre un court instant le signal
+        // de la page (voir LinkClickSignal.cs).
         var deferral = args.GetDeferral();
-        var uri = string.IsNullOrWhiteSpace(args.Uri) ? "about:blank" : args.Uri;
         try
         {
+            var openerSource = sender.Source;
+
+            // Popups indésirables (popunder automatique, clic détourné vers un domaine
+            // publicitaire, rafale sur un même geste) : bloquées AVANT toute création
+            // d'onglet. Politique pure dans PopupPolicy ; les fenêtres
+            // d'authentification et les vrais liens cliqués passent toujours.
+            // L'attente du signal « lien cliqué » n'a lieu que si la popup allait
+            // être refusée : une popup déjà autorisée (connexion Google, même
+            // site...) s'ouvre sans délai.
+            var isClickedLink = false;
+            var popupVerdict = DecidePopupVerdict(args.Uri, openerSource, args.IsUserInitiated, parentTab.Id);
+            if (popupVerdict != PopupVerdict.Allow && args.IsUserInitiated &&
+                await _linkClicks.IsClickedLinkTargetAsync(parentTab.Id, args.Uri))
+            {
+                isClickedLink = true;
+                popupVerdict = DecidePopupVerdict(args.Uri, openerSource, args.IsUserInitiated, parentTab.Id, isClickedLinkTarget: true);
+            }
+            if (popupVerdict != PopupVerdict.Allow)
+            {
+                ReportBlockedPopup(popupVerdict, args.Uri, openerSource, parentTab.Id);
+                args.Handled = true;
+                return;
+            }
+
+            // Les flux OAuth (Google, Microsoft, etc.) utilisent souvent window.open puis
+            // window.opener/postMessage pour rendre la session au site d'origine. Il faut
+            // donc fournir un vrai CoreWebView2 a WebView2 au lieu de naviguer nous-mêmes
+            // vers l'URL dans un onglet standard.
+            args.Handled = true;
+            var uri = string.IsNullOrWhiteSpace(args.Uri) ? "about:blank" : args.Uri;
             var isFederatedIdentity = IsFederatedIdentityIntermediary(uri);
             // Toujours au premier plan : un flux Google (choix de compte, consentement...)
             // peut demander une vraie interaction, pas seulement un aller-retour silencieux
@@ -1527,7 +1547,9 @@ public sealed partial class MainWindow
                 _browserView = popupView;
                 StatusText.Text = isFederatedIdentity
                     ? "Connexion Google ouverte dans un onglet Lumora."
-                    : "Fenêtre de connexion ouverte dans un onglet Lumora.";
+                    : isClickedLink
+                        ? "Lien ouvert dans un nouvel onglet."
+                        : "Fenêtre de connexion ouverte dans un onglet Lumora.";
             }
             else
             {

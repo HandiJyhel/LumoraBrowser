@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.30.0-dev";
+    internal const string Version = "0.94.30.3-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -275,10 +275,12 @@ public sealed partial class MainWindow : Window
     private CosmeticFilterModule? _cosmeticFilter;
     private ConsentManagerModule? _consentModule;
     // Identifiants des scripts privacy enregistrés, PAR moteur (un WebView2 par onglet).
-    private readonly Dictionary<CoreWebView2, string> _cosmeticScriptIds = new();
-    private readonly Dictionary<CoreWebView2, string> _consentScriptIds = new();
-    private readonly Dictionary<CoreWebView2, string> _geolocationSpoofScriptIds = new();
-    private readonly Dictionary<CoreWebView2, string> _fingerprintProtectionScriptIds = new();
+    // Vrai lien cliqué → nouvel onglet autorisé (voir LinkClickSignal.cs).
+    private readonly LinkClickSignal _linkClicks = new();
+    private readonly Dictionary<int, string> _cosmeticScriptIds = new();
+    private readonly Dictionary<int, string> _consentScriptIds = new();
+    private readonly Dictionary<int, string> _geolocationSpoofScriptIds = new();
+    private readonly Dictionary<int, string> _fingerprintProtectionScriptIds = new();
     private readonly HashSet<ScrollViewer> _hoverFocusHookedScrollViewers = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<FlyoutBase> _overlayHookedFlyouts = new(ReferenceEqualityComparer.Instance);
     // Racines (ContentHost + racine de contenu de chaque popup/flyout ouvert)
@@ -293,8 +295,8 @@ public sealed partial class MainWindow : Window
     // fois ne doit pas voir une empreinte differente a chaque fois), mais change
     // d'un lancement a l'autre pour ne pas devenir lui-meme un identifiant stable.
     private readonly long _fingerprintSessionSeed = Random.Shared.NextInt64(1, int.MaxValue);
-    private readonly Dictionary<CoreWebView2, string> _loginCompatibilityScriptIds = new();
-    private readonly Dictionary<CoreWebView2, string> _loginDiagnosticScriptIds = new();
+    private readonly Dictionary<int, string> _loginCompatibilityScriptIds = new();
+    private readonly Dictionary<int, string> _loginDiagnosticScriptIds = new();
     private readonly SiteLoginDiagnosticRecorder _loginDiagnostics = new();
     private readonly Dictionary<int, int> _popupParentTabIds = new();
     private readonly HashSet<int> _federatedIdentityPopupTabIds = new();

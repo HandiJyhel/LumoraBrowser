@@ -94,6 +94,9 @@ public sealed partial class MainWindow
             {
                 break;
             }
+            // Libelle brut (marqueurs "&" compris) : ContextMenuFriendlyLabel le
+            // nettoie une seule fois a l'affichage - le nettoyer aussi ici
+            // transformait "&&" en "&" puis ce "&" en rien (relecture 2026-09-24).
             known.Add(new ContextMenuKnownItem(item.Name, item.Label));
             knownNames.Add(item.Name);
             learnedAny = true;
@@ -228,7 +231,7 @@ public sealed partial class MainWindow
     }
 
     private static string ContextMenuFriendlyLabel(ContextMenuKnownItem known) =>
-        ContextMenuNameLabels.TryGetValue(known.Name, out var french) ? french : known.Label;
+        ContextMenuNameLabels.TryGetValue(known.Name, out var french) ? french : ContextMenuOrdering.DisplayLabel(known.Label);
 
     // Traductions maison pour les identifiants Chromium les plus courants -
     // repli sur le Label natif (potentiellement en anglais, ou une variante
@@ -284,7 +287,7 @@ public sealed partial class MainWindow
 
             case CoreWebView2ContextMenuItemKind.Submenu:
                 {
-                    var sub = new MenuFlyoutSubItem { Text = item.Label, IsEnabled = item.IsEnabled };
+                    var sub = new MenuFlyoutSubItem { Text = ContextMenuOrdering.DisplayLabel(item.Label), IsEnabled = item.IsEnabled };
                     var sawSeparatorInSub = false;
                     foreach (var child in item.Children)
                     {
@@ -302,7 +305,7 @@ public sealed partial class MainWindow
                 {
                     var toggle = new ToggleMenuFlyoutItem
                     {
-                        Text = item.Label,
+                        Text = ContextMenuOrdering.DisplayLabel(item.Label),
                         IsEnabled = item.IsEnabled,
                         IsChecked = item.IsChecked,
                     };
@@ -316,7 +319,7 @@ public sealed partial class MainWindow
 
             default: // Command
                 {
-                    var mfi = new MenuFlyoutItem { Text = item.Label, IsEnabled = item.IsEnabled };
+                    var mfi = new MenuFlyoutItem { Text = ContextMenuOrdering.DisplayLabel(item.Label), IsEnabled = item.IsEnabled };
                     mfi.Click += (_, _) =>
                     {
                         args.SelectedCommandId = item.CommandId;

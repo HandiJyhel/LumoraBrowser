@@ -29,6 +29,7 @@
     <Compile Include="..\Lumora.WinUI\Credentials\PasswordGenerator.cs"  Link="Product\PasswordGenerator.cs" />
     <Compile Include="..\Lumora.WinUI\Credentials\TotpService.cs" Link="Product\TotpService.cs" />
     <Compile Include="..\Lumora.WinUI\Credentials\PublicSuffixService.cs" Link="Product\PublicSuffixService.cs" />
+    <Compile Include="..\Lumora.WinUI\Credentials\CredentialFillTargetPolicy.cs" Link="Product\CredentialFillTargetPolicy.cs" />
     <Compile Include="..\Lumora.WinUI\VaultStore.cs"                      Link="Product\VaultStore.cs" />
     <Compile Include="..\Lumora.WinUI\VaultCredential.cs"                 Link="Product\VaultCredential.cs" />
     <Compile Include="..\Lumora.WinUI\Wallet\VaultPaymentCard.cs"         Link="Product\VaultPaymentCard.cs" />
@@ -98,6 +99,7 @@
     <Compile Include="..\Lumora.WinUI\SiteNotFoundRecovery.cs" Link="Product\SiteNotFoundRecovery.cs" />
     <Compile Include="..\Lumora.WinUI\SiteRelocationStore.cs" Link="Product\SiteRelocationStore.cs" />
     <Compile Include="..\Lumora.WinUI\PopupPolicy.cs" Link="Product\PopupPolicy.cs" />
+    <Compile Include="..\Lumora.WinUI\DownloadRisk.cs" Link="Product\DownloadRisk.cs" />
     <Compile Include="..\Lumora.WinUI\NavigationHijackPolicy.cs" Link="Product\NavigationHijackPolicy.cs" />
     <Compile Include="..\Lumora.WinUI\NavigationHealthTracker.cs" Link="Product\NavigationHealthTracker.cs" />
     <Compile Include="..\Lumora.WinUI\PasswordManager\PasswordHealthAnalyzer.cs" Link="Product\PasswordHealthAnalyzer.cs" />

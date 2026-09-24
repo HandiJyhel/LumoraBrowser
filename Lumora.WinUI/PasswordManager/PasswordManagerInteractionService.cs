@@ -141,6 +141,17 @@ internal sealed class PasswordManagerInteractionService
             return null;
         }
 
+        // Identifiant non detecte : FindExistingLogin ne peut rien retrouver
+        // sans lui. Le meme mot de passe deja enregistre pour ce site suffit
+        // a savoir que rien n'est nouveau - sinon l'offre reviendrait a
+        // chaque connexion sur un site deja au Coffre.
+        if (string.IsNullOrWhiteSpace(username) &&
+            _passwordManager.FindAllForAddress(loginUrl.Length > 0 ? loginUrl : origin)
+                .Any(c => c.Password.Equals(capture.Password, StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
         // Aucun compte pour CE domaine, mais peut-etre le meme compte (identifiant +
         // mot de passe) sous un autre domaine : le site a change de nom de domaine.
         // On reprend son nom personnalise pour garder les deux entrees coherentes.

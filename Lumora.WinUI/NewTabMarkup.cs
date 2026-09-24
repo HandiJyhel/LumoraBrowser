@@ -30,6 +30,19 @@ internal static class NewTabMarkup
     public static string HtmlAttribute(string value) =>
         WebUtility.HtmlEncode(value);
 
+    // Chaîne JS entre apostrophes. Retours à la ligne et séparateurs Unicode
+    // échappés (sinon erreur de syntaxe), "<" aussi : dans un bloc <script>,
+    // "</script>" terminerait le bloc prématurément.
     public static string JsString(string value) =>
-        value.Replace("\\", "\\\\").Replace("'", "\\'");
+        value.Replace("\\", "\\\\").Replace("'", "\\'")
+            .Replace("\n", "\\n").Replace("\r", "\\r")
+            .Replace("\u2028", "\\u2028").Replace("\u2029", "\\u2029")
+            .Replace("<", "\\x3C");
+
+    // Chaîne JS placée DANS un attribut HTML (onclick="f('...')") : le
+    // navigateur décode l'attribut avant d'exécuter le JS, il faut donc
+    // l'échappement JS PUIS l'échappement HTML. JsString seul laissait un
+    // guillemet fermer l'attribut (audit sécurité 2026-09-24).
+    public static string JsAttribute(string value) =>
+        HtmlAttribute(JsString(value));
 }

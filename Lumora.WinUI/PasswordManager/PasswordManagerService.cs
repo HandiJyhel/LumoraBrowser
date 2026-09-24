@@ -48,6 +48,9 @@ internal sealed class PasswordManagerService
 
         return _vault.ListCredentials()
             .Where(c => !string.IsNullOrWhiteSpace(c.Password))
+            // Jamais proposer un identifiant enregistre en HTTPS sur une page
+            // HTTP (audit securite 2026-09-24, voir CredentialFillTargetPolicy).
+            .Where(c => CredentialFillTargetPolicy.IsAllowedTarget(address, c.Origin, c.LoginUrl))
             .Select(c => new { Credential = c, Score = ScoreForAddress(c, address, origin, root) })
             .Where(x => x.Score > 0)
             .OrderByDescending(x => x.Score)

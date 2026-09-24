@@ -605,7 +605,7 @@ public sealed partial class MainWindow
               <div class="mode-intro-text">{{NewTabMarkup.HtmlText(NewTabModeIntroText(mode))}}</div>
               <div class="mode-intro-points">{{pointHtml}}</div>
             </div>
-            <button class="mode-intro-button" type="button" onclick="dismissModeIntro('{{NewTabMarkup.JsString(mode)}}')">Compris</button>
+            <button class="mode-intro-button" type="button" onclick="dismissModeIntro('{{NewTabMarkup.JsAttribute(mode)}}')">Compris</button>
           </section>
         """;
     }
@@ -648,13 +648,13 @@ public sealed partial class MainWindow
         var actionsHtml = new StringBuilder();
 
         actionsHtml.AppendLine($"""
-              <button class="mode-context-button primary" type="button" onclick="saveModeQuickNote('{NewTabMarkup.JsString(mode)}','{NewTabMarkup.JsString(context.NoteTitle)}')">{NewTabMarkup.HtmlText(context.SaveLabel)}</button>
+              <button class="mode-context-button primary" type="button" onclick="saveModeQuickNote('{NewTabMarkup.JsAttribute(mode)}','{NewTabMarkup.JsAttribute(context.NoteTitle)}')">{NewTabMarkup.HtmlText(context.SaveLabel)}</button>
         """);
 
         foreach (var (action, label) in context.Actions)
         {
             actionsHtml.AppendLine($"""
-              <button class="mode-context-button" type="button" onclick="modeAction('{NewTabMarkup.JsString(action)}')">{NewTabMarkup.HtmlText(label)}</button>
+              <button class="mode-context-button" type="button" onclick="modeAction('{NewTabMarkup.JsAttribute(action)}')">{NewTabMarkup.HtmlText(label)}</button>
             """);
         }
 
@@ -1236,8 +1236,8 @@ public sealed partial class MainWindow
                 var title = NewTabMarkup.HtmlText(shortcut.Title);
                 var url = NewTabMarkup.HtmlAttribute(NewTabMarkup.NormalizeShortcutUrl(shortcut.Url));
                 var initial = NewTabMarkup.HtmlText(NewTabMarkup.ShortcutInitial(shortcut.Title));
-                var jsTitle = NewTabMarkup.JsString(shortcut.Title);
-                var jsUrl = NewTabMarkup.JsString(NewTabMarkup.NormalizeShortcutUrl(shortcut.Url));
+                var jsTitle = NewTabMarkup.JsAttribute(shortcut.Title);
+                var jsUrl = NewTabMarkup.JsAttribute(NewTabMarkup.NormalizeShortcutUrl(shortcut.Url));
                 html.AppendLine($"""
                 <div class="shortcut-card" style="--d:{i * 42}ms">
                   <a class="shortcut-link" href="{url}" title="{url}">

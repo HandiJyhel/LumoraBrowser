@@ -79,4 +79,22 @@ public sealed class NewTabMarkupTests
     {
         Assert.Equal("•", NewTabMarkup.ShortcutInitial("   "));
     }
+
+    [Fact]
+    public void JsAttribute_bloque_le_guillemet_qui_fermait_l_attribut_onclick()
+    {
+        // Avant (audit 2026-09-24) : JsString seul laissait passer le guillemet,
+        // qui refermait onclick="..." et permettait d'ajouter un attribut.
+        var encoded = NewTabMarkup.JsAttribute("x\" onmouseover=\"alert(1)");
+        Assert.DoesNotContain("\"", encoded);
+        Assert.Contains("&quot;", encoded);
+    }
+
+    [Fact]
+    public void JsString_echappe_retours_a_la_ligne_et_fin_de_script()
+    {
+        Assert.Equal(@"a\nb\rc", NewTabMarkup.JsString("a\nb\rc"));
+        Assert.Equal(@"\x3C/script>", NewTabMarkup.JsString("</script>"));
+        Assert.Equal(@"\u2028", NewTabMarkup.JsString("\u2028"));
+    }
 }

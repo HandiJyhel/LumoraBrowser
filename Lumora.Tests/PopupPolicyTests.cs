@@ -15,7 +15,8 @@ public class PopupPolicyTests
         string[]? whitelisted = null,
         string? opener = Opener,
         int popupsAlreadyOpenedForGesture = 0,
-        bool openerUnderAdPressure = false)
+        bool openerUnderAdPressure = false,
+        bool isClickedLinkTarget = false)
     {
         var ads = adHosts ?? [];
         var allow = whitelisted ?? [];
@@ -27,7 +28,8 @@ public class PopupPolicyTests
             host => ads.Contains(host, StringComparer.OrdinalIgnoreCase),
             host => allow.Contains(host, StringComparer.OrdinalIgnoreCase),
             popupsAlreadyOpenedForGesture,
-            openerUnderAdPressure);
+            openerUnderAdPressure,
+            isClickedLinkTarget);
     }
 
     [Fact]
@@ -216,5 +218,53 @@ public class PopupPolicyTests
         Assert.Equal(
             PopupVerdict.BlockAutomatic,
             Decide("https://www.youtube.com/", isUserInitiated: false, opener: "https://drive.google.com/drive/my-drive"));
+    }
+
+    // ── Vrai lien cliqué (2026-09-24) ────────────────────────────────────────
+
+    [Fact]
+    public void VraiLienClique_VersSiteInconnu_Autorise()
+    {
+        // Avant : BlockPendingUserChoice (« autoriser la popup ») pour un
+        // simple lien target=_blank vers un autre site.
+        Assert.Equal(PopupVerdict.Allow, Decide("https://documentation.example/page", isUserInitiated: true, isClickedLinkTarget: true));
+    }
+
+    [Fact]
+    public void VraiLienClique_SiteSousPression_Autorise()
+    {
+        Assert.Equal(PopupVerdict.Allow, Decide("https://documentation.example/page", isUserInitiated: true,
+            openerUnderAdPressure: true, popupsAlreadyOpenedForGesture: 1, isClickedLinkTarget: true));
+    }
+
+    [Fact]
+    public void VraiLienClique_VersDomainePublicitaire_ToujoursBloque()
+    {
+        Assert.Equal(PopupVerdict.BlockAdDomain, Decide("https://regie-pub.example/clic", isUserInitiated: true,
+            adHosts: ["regie-pub.example"], isClickedLinkTarget: true));
+    }
+
+    [Fact]
+    public void LienSansGeste_ResteBloque()
+    {
+        // Le signal « lien cliqué » n'a de sens qu'avec un vrai geste.
+        Assert.Equal(PopupVerdict.BlockAutomatic, Decide("https://documentation.example/page", isUserInitiated: false, isClickedLinkTarget: true));
+    }
+
+    [Fact]
+    public void ClicDetourneParScript_SiteSousPression_ResteBloque()
+    {
+        // Adresse différente du lien cliqué : clic détourné, comportement inchangé.
+        Assert.Equal(PopupVerdict.BlockUnderAdPressure, Decide("https://jeux-en-promo.example/", isUserInitiated: true, openerUnderAdPressure: true));
+    }
+
+    [Theory]
+    [InlineData("https://exemple.fr/a?b=1", "https://exemple.fr/a?b=1", true)]
+    [InlineData("https://EXEMPLE.fr:443/a", "https://exemple.fr/a", true)]
+    [InlineData("https://exemple.fr/a", "https://pub.example/a", false)]
+    [InlineData("https://exemple.fr/a", "https://exemple.fr/b", false)]
+    public void AdresseDuLienClique_Comparaison(string clicked, string popup, bool expected)
+    {
+        Assert.Equal(expected, PopupPolicy.IsSameLinkAddress(clicked, popup));
     }
 }
