@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [12e release 1.0.0](#12e-release-1-0-0-2026-09-24) — 2026-09-24, dernière étape du Go global de la session sécurité ; toujours nommée "1.0.0" (aucun retour des bêta-testeurs, décision utilisateur) ; 1re construction jetée (numéro dev visible en mode invité) puis refaite sur `e898e31` ; titre "Lumora 1.0.0" vérifié AU DÉMARRAGE ET EN MODE INVITÉ, navigation réelle example.com OK, 0 UNHANDLED ; SHA256 `dc58a506...68283` concordant x4 ; ancien installeur r11 (15/09) supprimé ; worktree supprimé ; rien poussé
 - [Session "restes sécurité + relecture avant release"](#session-restes-securite--relecture-avant-release-2026-09-24) — 2026-09-24, Go global donné (corrections -> contrôle -> commits locaux -> release 1.0.0) : scripts de protection réindexés par ID d'onglet (anti-empreinte vérifiée on/off en direct), liens externes des Web Apps -> navigateur principal ; **2 bugs antérieurs trouvés en vérifiant** : fenêtres d'applications web qui plantaient à l'ouverture (`LumoraTheme.SetBrush` indexeur sur clé absente) et raccourcis d'applis inopérants pour profils sans mot de passe (entropie non posée) ; relecture `/code-review` du diff du jour -> 10 constats dont 2 failles (origine déclarée par la page, signal de clic falsifiable) tous corrigés et revérifiés en direct -> `0.94.30.3-dev`, 1026 tests ; puis fuite du numéro dev (titre invité/applis/accueil) trouvée en vérifiant la release -> `DisplayVersion`, `0.94.30.4-dev`
 - [Session "audit de sécurité"](#session-audit-de-securite-2026-09-24) — 2026-09-24, suite directe des 4 retours d'usage réel, demande utilisateur ("je m'inquiète") : audit lecture seule -> plan présenté -> Go ; (1) CRITIQUE : le remplissage envoyait le mot de passe à toutes les iframes tierces + fonction de remplissage remplaçable par la page -> `CredentialFillTargetPolicy` (même site, jamais HTTPS->HTTP) + verrouillage JS ; (2) ÉLEVÉE : zip slip sur l'avatar à l'import de sauvegarde (écriture possible dans Démarrage) ; (3) MOYENNE : identifiant HTTPS proposé sur HTTP ; (4) renforcements (messages page d'accueil, encodage onclick, confirmation téléchargements exécutables) ; **bug réel trouvé en vérifiant** : `CredentialService` indexé par wrapper `CoreWebView2` -> TOUS les page-states jetés depuis toujours (barre "Remplir l'identifiant" morte sur connexions en 2 étapes), réindexé par ID d'onglet ; attaque rejouée en direct (cadre tiers : rien reçu) -> `0.94.30.2-dev`, 1022 tests OK, **rien committé**
 - [Session "4 retours d'usage réel"](#session-4-retours-dusage-reel-2026-09-24) — 2026-09-24, retour mécontent après usage réel, 4 bugs réels corrigés après explications + Go : (1) rail vertical réduit, la croix centrée couvrait presque toute la tuile → cliquer un onglet le fermait ; croix sur l'onglet ACTIF seulement (règle Chrome) + garde anti double-clic 600ms + clic molette, (2) liens target=_blank vers un autre site bloqués (« en attente » / « sous pression pub ») → vrai lien cliqué (signal JS à jeton, poussé au clic) toujours ouvert sauf domaine pub, (3) « & » des libellés Chromium (mnémoniques Win32) visibles dans le menu contextuel → retirés, (4) Coffre muet sur dailyuploads.io : « inscrivez » faisait tomber le champ identifiant à -35 puis `CredentialService` jetait la capture sans identifiant ; reproduit puis vérifié en direct (profil jetable, faux identifiants, CDP) -> `0.94.30.1-dev`, build+968 tests OK, **rien committé**
@@ -29960,3 +29961,47 @@ diagnostics techniques gardent `Version`. Micro-correction ->
 `0.94.30.4-dev`. Première construction r12 jetée (worktree supprimé et
 recréé sur le nouveau commit). **À ajouter au protocole de release** :
 vérifier aussi le titre APRÈS passage en mode invité.
+
+## 12e release 1.0.0 (2026-09-24)
+
+Étape 4 du Go global de la session "restes sécurité + relecture avant
+release". L'utilisateur confirme que la version publique reste "1.0.0" tant
+que les bêta-testeurs n'ont rien remonté (nouvelle construction, même
+numéro). Protocole habituel (worktree jetable `C:\lumora100`, runtime
+WebView2 Fixed Version 150.0.4078.105 copié par robocopy, `ReleaseVersion =
+"1.0.0"` posé UNIQUEMENT dans le worktree, `build-clean-test-artifact.ps1`
+puis `build-installer.ps1`, 0 erreur / 0 avertissement).
+
+**Première construction jetée** : sur `97a2cb7`, vérification en direct ->
+titre correct au démarrage mais "Lumora 0.94.30.3-dev — Mode invité" après
+passage en invité (défaut antérieur, jamais vu car les releases
+précédentes ne vérifiaient le titre qu'avant le mode invité). Corrigé
+(`MainWindow.DisplayVersion`, voir section précédente), committé
+`e898e31`, worktree supprimé puis recréé sur ce commit, tout reconstruit.
+
+**Vérification en direct de la construction finale** (exécutable de
+l'artefact propre `Lumora-1.0.0-win-x64-clean-20260924-042011`, jamais
+l'installateur, profil jetable isolé) : titre "Lumora 1.0.0" au démarrage,
+"Lumora 1.0.0 — Mode invité" après passage en invité (relance du process
+via `RestartApp`, nouveau PID), navigation réelle vers https://example.com/
+réussie (`NavigationCompleted isSuccess=True`), 0 `UNHANDLED`.
+
+**SHA256 installateur** :
+`dc58a50627aadd534ab18788feac9363cc721d9e326e2df4c820e0b3a3368283`,
+concordant 4 fois (sortie du script, `sha256sum` dans le worktree,
+`sha256sum` sur la copie du dépôt, manifeste + `.VERIFICATION.txt`).
+Exécutable de l'artefact propre :
+`c53b88629108dbb23d21498b598125f9e588fd3bf2198302f0490b726dd5e32f`.
+
+**Fichiers** : ancien `LumoraSetup-1.0.0-win-x64.exe` (r11, 15/09) + son
+`.VERIFICATION.txt` supprimés (accord utilisateur donné dans le Go
+global), nouveaux copiés dans `artifacts/installer/` ; manifestes
+`LumoraSetup-1.0.0-20260924-042207.sha256` et
+`Lumora-1.0.0-clean-20260924-042113.sha256` copiés dans
+`artifacts/signatures/` AVANT suppression du worktree. Le vieux
+`.VERIFICATION.txt` sans nom (122 octets, 02/09) laissé tel quel, non
+concerné. Worktree supprimé, `ReleaseVersion = null` reconfirmé sur `main`,
+`git status` propre. Installateur jamais lancé. Rien poussé sur GitHub.
+
+**Protocole mis à jour** : l'étape de vérification en direct doit contrôler
+le titre au démarrage ET après passage en mode invité.
