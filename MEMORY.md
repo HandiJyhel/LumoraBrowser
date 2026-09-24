@@ -2,6 +2,9 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Session "restes sécurité + relecture avant release"](#session-restes-securite--relecture-avant-release-2026-09-24) — 2026-09-24, Go global donné (corrections -> contrôle -> commits locaux -> release 1.0.0) : scripts de protection réindexés par ID d'onglet (anti-empreinte vérifiée on/off en direct), liens externes des Web Apps -> navigateur principal ; **2 bugs antérieurs trouvés en vérifiant** : fenêtres d'applications web qui plantaient à l'ouverture (`LumoraTheme.SetBrush` indexeur sur clé absente) et raccourcis d'applis inopérants pour profils sans mot de passe (entropie non posée) ; relecture `/code-review` du diff du jour -> 10 constats dont 2 failles (origine déclarée par la page, signal de clic falsifiable) tous corrigés et revérifiés en direct -> `0.94.30.3-dev`, 1026 tests
+- [Session "audit de sécurité"](#session-audit-de-securite-2026-09-24) — 2026-09-24, suite directe des 4 retours d'usage réel, demande utilisateur ("je m'inquiète") : audit lecture seule -> plan présenté -> Go ; (1) CRITIQUE : le remplissage envoyait le mot de passe à toutes les iframes tierces + fonction de remplissage remplaçable par la page -> `CredentialFillTargetPolicy` (même site, jamais HTTPS->HTTP) + verrouillage JS ; (2) ÉLEVÉE : zip slip sur l'avatar à l'import de sauvegarde (écriture possible dans Démarrage) ; (3) MOYENNE : identifiant HTTPS proposé sur HTTP ; (4) renforcements (messages page d'accueil, encodage onclick, confirmation téléchargements exécutables) ; **bug réel trouvé en vérifiant** : `CredentialService` indexé par wrapper `CoreWebView2` -> TOUS les page-states jetés depuis toujours (barre "Remplir l'identifiant" morte sur connexions en 2 étapes), réindexé par ID d'onglet ; attaque rejouée en direct (cadre tiers : rien reçu) -> `0.94.30.2-dev`, 1022 tests OK, **rien committé**
+- [Session "4 retours d'usage réel"](#session-4-retours-dusage-reel-2026-09-24) — 2026-09-24, retour mécontent après usage réel, 4 bugs réels corrigés après explications + Go : (1) rail vertical réduit, la croix centrée couvrait presque toute la tuile → cliquer un onglet le fermait ; croix sur l'onglet ACTIF seulement (règle Chrome) + garde anti double-clic 600ms + clic molette, (2) liens target=_blank vers un autre site bloqués (« en attente » / « sous pression pub ») → vrai lien cliqué (signal JS à jeton, poussé au clic) toujours ouvert sauf domaine pub, (3) « & » des libellés Chromium (mnémoniques Win32) visibles dans le menu contextuel → retirés, (4) Coffre muet sur dailyuploads.io : « inscrivez » faisait tomber le champ identifiant à -35 puis `CredentialService` jetait la capture sans identifiant ; reproduit puis vérifié en direct (profil jetable, faux identifiants, CDP) -> `0.94.30.1-dev`, build+968 tests OK, **rien committé**
 - [11e release 1.0.0](#11e-release-1-0-0-2026-09-15) — 2026-09-15, avec les nouveaux visuels d'installeur + l'audit orthographique de la même journée, même protocole worktree que les 10 précédentes (`C:\lumora100`, détaché sur `8ffa47c`), titre `"Lumora 1.0.0"` confirmé en direct, navigation réelle réussie, 0 UNHANDLED, SHA256 installeur `cf4651f8...d436c` vérifié 2x, ancien installeur (r10, 2026-09-02) supprimé pas renommé, worktree supprimé, dépôt principal intact (`ReleaseVersion` toujours `null`, rien à committer)
 - [Session "orthographe" : audit complet de l'app en 7 lots parallèles](#session-orthographe-2026-09-15) — 2026-09-15, suite directe de la session installeur, déclenché par une remarque utilisateur sur des fautes vues dans une maquette ; 7 agents en tâche de fond couvrant les 242 fichiers .xaml/.cs de Lumora.WinUI (texte utilisateur uniquement, commentaires épargnés), ~40 fautes/accents corrigés dans 31 fichiers, 6 tests cassés (attendaient l'ancien texte fautif) corrigés pour refléter le texte correct, build+949 tests OK, vérifié en lançant le vrai binaire (navigation Nouvel onglet réussie, 0 UNHANDLED) -> committé en local
 - [Session "nouveaux visuels pour l'installeur"](#session-nouveaux-visuels-pour-linstalleur-2026-09-15) — 2026-09-15, direction "carte centrée minimaliste" choisie par l'utilisateur parmi 3 maquettes Artifact (bandeau latéral retiré, points de progression, colonne centrée, vrai logo Lumora), implémentée dans `scripts/installer/Program.cs.template` (3 pages Bienvenue/Dossier+options/Terminé), vérifiée en lançant le vrai binaire compilé (build+capture UIA, pas juste relecture) - 1 bug réel trouvé et corrigé en vérifiant (texte de bienvenue tronqué), build (harnais + Lumora.WinUI via MSBuild) + 949 tests OK -> `0.94.30.0-dev`, **rien committé**
@@ -29625,3 +29628,323 @@ constaté lors de la 9e release).
 Worktree supprimé (`git worktree remove --force`), confirmé absent du
 disque. Jamais lancé par moi. Rien à committer côté dépôt principal
 (installateur/manifestes tous gitignorés) - seul `MEMORY.md` a changé.
+
+## Session "4 retours d'usage réel" (2026-09-24)
+
+Ouverture en colère ("tu te fous de ma gueule ?") après usage réel de la
+1.0.0 : 4 problèmes remontés, explications exigées AVANT toute action, travail
+en local uniquement. Diagnostic complet donné d'abord (code lu, rien modifié),
+puis reproduction du bug Coffre autorisée par l'utilisateur ("tu fais un profil
+vite fait test, tu vas sur le site" - ses vrais identifiants proposés et
+déclinés, de faux suffisaient), puis Go pour les 4 corrections.
+
+**Règle posée par l'utilisateur pour le Coffre** (à respecter désormais) :
+dès qu'un mot de passe est soumis sur un site pas encore au Coffre, Lumora
+DOIT proposer l'enregistrement, "un point c'est tout". La détection de
+l'identifiant ne sert qu'à préremplir, jamais à conditionner l'offre.
+Seules exceptions : mode invité (pas de Coffre), identifiants strictement
+identiques déjà enregistrés pour CE site.
+
+**1. Rail vertical réduit : cliquer un onglet le fermait.** Croix centrée
+18x18 dans une tuile 30x28 (14x14 dans 22x20 en interface compacte) = quasi
+toute la tuile. L'historique (2026-08-07) exigeait une croix VISIBLE : pas
+supprimée, affichée uniquement sur l'onglet actif (règle de Chrome pour les
+onglets étroits) ; onglets inactifs = clic molette (nouveau,
+`VerticalTabButton_PointerPressed`, `AddHandler` avec handledEventsToo)
+ou clic droit > Fermer, indiqué dans l'infobulle. Garde anti double-clic
+(`VerticalCompactTabCloseButton_Click`, 600ms après activation) : la tuile
+redessinée avec sa croix au même endroit aurait sinon pris le 2e clic.
+`VerticalTabsCompactCloseTests` mis à jour (5e version documentée en en-tête)
++ test clic molette. Vérifié en direct : 1 seule croix (onglet actif), clic
+sur tuile inactive = activation sans fermeture, clic croix immédiat ignoré,
+clic croix après pause = fermeture. Clic molette NON vérifiable en direct
+(pas de souris synthétique) - couvert par test de source uniquement.
+
+**2. Pop-ups : "autoriser" demandé sur un simple lien.** `PopupPolicy`
+traitait tout clic vers un domaine cross-site inconnu comme
+`BlockPendingUserChoice`, et bloquait net (`BlockUnderAdPressure`) sur un site
+"sous pression pub" - dailyuploads.io l'est (confirmé en direct), donc un vrai
+lien y subissait le même sort qu'une pub. Nouveau signal
+`isClickedLinkTarget` : `MainWindow.LinkClickPopups.cs` injecte un script qui,
+au clic/auxclick DE CONFIANCE sur un `<a href>`, POUSSE l'adresse vers l'app
+avec un jeton (Guid par fenêtre, dans la fermeture du script injecté avant
+toute page, `postMessage` capturé au même moment - un script publicitaire ne
+peut ni lire le jeton ni forger le signal). `NewWindowRequested` prend
+désormais son différé AVANT la décision et attend le signal 300ms au plus
+(ordre des événements WebView2 non garanti). **Piège évité** : ne PAS
+interroger la page par `ExecuteScriptAsync` depuis `NewWindowRequested` - le
+moteur de rendu attend lui-même la réponse à sa demande de fenêtre, risque
+d'interblocage. Vrai lien = Allow sauf domaine pub répertorié ; fenêtre
+ouverte par script (clic détourné) = comportement inchangé. Vérifié en direct
+sur la page dailyuploads (éléments de test injectés par CDP) : bouton
+`window.open` -> `BlockUnderAdPressure`, vrai lien target=_blank -> nouvel
+onglet ouvert. **Non traité (à proposer)** : `LumoraAppWindow` (fenêtres Web
+Apps) applique `PopupPolicy` sans ce signal et sans icône de récupération -
+un vrai lien cross-site y reste bloqué silencieusement.
+
+**3. Menu contextuel des pages : "&Retour", "Outi&ls supplémentaires"...**
+Les `Label` de `CoreWebView2ContextMenuItem` sont au format Win32 (& =
+mnémonique, && = &) et étaient affichés tels quels dans notre menu
+reconstruit. `ContextMenuOrdering.DisplayLabel` (pur, testé) appliqué aux
+3 types d'entrées + sous-menus + catalogue des Réglages. L'audit
+orthographique du 2026-09-15 ne pouvait pas le voir (texte fourni par le
+moteur à l'exécution). Vérifié en direct (clic droit CDP, lecture UIA des
+MenuItem) : 8 libellés propres.
+
+**4. Coffre muet sur dailyuploads.io.** Reproduit en direct (profil jetable
+non invité, faux identifiants saisis par événements CDP de confiance,
+Entrée). Cause trouvée en interrogeant les modules dans la page :
+`scoreUsername` du champ `login` = -35 (seuil -20), à cause de la pénalité
+-160 "newsletter/marketing" déclenchée par "inscrivez" dans le contexte
+("Pas encore de compte ? Inscrivez-vous gratuitement", présent sur presque
+toutes les pages de connexion). Capture partie sans identifiant puis
+**jetée par `CredentialService`** (identifiant vide -> return), alors que
+`BuildSaveOffer` était explicitement conçu pour proposer sans identifiant
+(test "Option A" existant, qui ne voyait pas ce rejet en amont).
+Corrections : pénalité levée quand un champ mot de passe partage le
+formulaire (`sharesFormWithPassword`), rejet supprimé dans
+`CredentialService`, et `BuildSaveOffer` ne repropose pas un mot de passe
+déjà au Coffre pour ce site quand l'identifiant manque (sinon offre à chaque
+connexion). Vérifié en direct : barre "Enregistrer le mot de passe pour
+https://dailyuploads.io ?" affichée, identifiant `lumoratest_fake` prérempli.
+
+**Outils de vérification découverts cette session** (à réutiliser) : le
+contenu WebView2 n'est PAS exposé à l'UIA dans cet environnement (aucun
+`Document`/`Edit` web trouvable), mais
+`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333` (posé
+dans le MÊME appel que le lancement) ouvre le protocole DevTools : Node 24
+(`fetch` + `WebSocket` natifs) suffit pour `Runtime.evaluate`,
+`Input.insertText`, `Input.dispatchKeyEvent`/`dispatchMouseEvent` (événements
+de confiance) et `/json` pour compter les onglets. Clics souris CDP sur une
+vraie page à pub : peuvent tomber sur une surcouche invisible (1er essai
+parti vers /register/) - préférer `focus()` + `insertText` + Entrée, ou des
+éléments de test injectés en `position:fixed` au-dessus de tout. Réglages de
+profil (`ui-settings.lumora`) non modifiables à la main depuis le volet 2
+(entropie DPAPI par profil, "Données non valides") - passer par les vrais
+Réglages en UIA (Menu Lumora -> "Paramètres" cherché depuis RootElement par
+PID -> `SettingsNavNavigation` -> `VerticalTabsSwitch` ->
+`ApplySettingsChangesButton`). Mise à l'échelle 150% : tuiles 30x28 lues
+45x42 en UIA. Ne tuer que les processus dont `Path` = l'exe de test, jamais
+tous les `Lumora.WinUI` (le vrai navigateur de l'utilisateur peut tourner).
+
+**Version** : 4 micro-corrections -> 4e chiffre, `0.94.30.0-dev` ->
+`0.94.30.1-dev` (4 emplacements + test de cohérence). Build MSBuild 0 erreur,
+968/968 tests, 0 `UNHANDLED` sur toute la vérification. **Rien committé,
+rien poussé.**
+
+## Session "audit de sécurité" (2026-09-24)
+
+Enchaînée directement après la session "4 retours d'usage réel" : l'utilisateur
+s'inquiète qu'on puisse "pirater facilement" Lumora, demande de corriger les
+failles s'il y en a, en présentant d'abord le plan. Audit en lecture seule ->
+plan à 4 niveaux présenté -> "go" (les Web Apps, question restée ouverte à la
+session précédente, NON incluses faute de réponse explicite).
+
+**Vérifié sain à l'audit (ne pas refaire)** : aucun `AddHostObjectToScript`
+(aucun objet natif exposé aux pages) ; coffre Argon2id + AES-GCM + DPAPI avec
+entropie par profil, comparaisons `FixedTimeEquals`, limite d'essais PIN ;
+Tor et modèles HuggingFace vérifiés par SHA256 épinglé ; lancements de
+process via `ArgumentList` ; arguments de démarrage limités à http(s) ;
+cartes bancaires remplies uniquement dans la frame principale et sur clic,
+CVV jamais stocké ; `public_suffix_list.dat` complet (section privée incluse :
+github.io, netlify.app...) ; permissions sensibles non accordées par défaut ;
+échappement du filtre cosmétique correct, listes de filtres en HTTPS depuis
+sources reconnues ; page d'accueil interne : aucune donnée venue des sites.
+
+**1. CRITIQUE - mot de passe envoyé aux iframes tierces.**
+`CredentialService.FillAsync` exécutait le remplissage dans la frame
+principale puis dans CHAQUE iframe de premier niveau, quel que soit son site,
+dès que la page n'avait pas tout rempli (connexions en 2 étapes typiquement) ;
+`window.__novaFillCredential` était de plus une simple propriété que la page
+pouvait remplacer par une fonction espionne. Corrigé : nouvelle classe pure
+`Credentials/CredentialFillTargetPolicy.cs` (même domaine enregistrable que
+l'origine OU l'adresse de connexion de l'identifiant, jamais HTTPS -> HTTP,
+about:/data:/inconnu refusé, origine importée sans schéma = domaine vérifié
+sans règle HTTPS) appliquée à la page principale (elle a pu naviguer entre
+l'offre et le clic) et à chaque iframe, dont l'adresse est désormais suivie
+(`NavigationStarting` -> en attente, `ContentLoading` -> validée, null pendant
+une navigation). Même règle "même site que la page" pour le mot de passe
+généré (`FillGeneratedPasswordAsync`). Côté JS
+(`CredentialCaptureOrchestrator.js`) : `__novaFillCredential`,
+`__novaFillNewPassword` et les 4 modules définis non modifiables / non
+reconfigurables (`Object.defineProperty`) et figés (`Object.freeze`) avant
+tout script de la page ; `Dom` capturé en fermeture au chargement.
+
+**Bug réel trouvé en vérifiant le point 1** (même famille que le piège déjà
+noté dans `pieges-webview2-evenements`) : `CredentialService` indexait tout
+par `Dictionary<CoreWebView2, ...>`. Le `sender` des événements n'est PAS le
+même wrapper que l'objet passé à `AttachAsync` (prouvé par trace temporaire :
+`found=False`, `ReferenceEquals=False`). Conséquences depuis toujours : TOUS
+les `nova.credential.page-state` et rapports de remplissage étaient jetés
+("fail-closed"), donc la barre "Remplir l'identifiant ?" ne pouvait jamais
+apparaître quand elle dépendait de l'état live (connexions en 2 étapes), et
+aucune iframe n'était jamais suivie (la faille du point 1 était donc
+probablement DORMANTE, mais aurait été réveillée par toute correction de ce
+suivi). Réindexé par ID d'onglet capturé dans les gestionnaires à l'attache
+(`TabAttachment`, `Detach(int tabId)`). Effet visible attendu : les
+page-states arrivent désormais (journal beaucoup plus bavard sur
+`PageStateChanged`/`EvaluatePage (etat live)`), et la barre de remplissage
+apparaît là où elle était conçue pour apparaître.
+
+**Vérifié en direct** (serveur `python -m http.server` local, page
+`localhost` avec identifiant seul + iframe `127.0.0.1` "voleuse" qui tente
+aussi de remplacer la fonction de remplissage + iframe `localhost` même site ;
+identifiant enregistré par le vrai parcours d'enregistrement, remplissage
+déclenché par le vrai bouton "Remplir") : identifiant rempli dans la page,
+mot de passe rempli dans l'iframe même site, iframe tierce : RIEN reçu ;
+fonction espionne non installée (propriété non modifiable, module figé),
+dans les deux iframes. 0 `UNHANDLED`.
+
+**2. ÉLEVÉE - zip slip à l'import de sauvegarde.** L'avatar était écrit via
+`Path.Combine(ProfileDir, entry.FullName)` après un simple
+`StartsWith("avatar.")` : une sauvegarde piégée (chiffrée avec le mot de passe
+fourni par l'attaquant, scénario "tiens, voilà mes favoris") pouvait écrire
+n'importe où, ex. dossier Démarrage de Windows. Corrigé : nom exact
+`avatar.<png|jpg|jpeg|webp|bmp>` (`IsAvatarEntryName`) + `SafeExtractionPath`
+(nom de fichier seul, pas de "..", lecteur ni flux NTFS, chemin final
+revérifié DANS le dossier) appliqué à toutes les extractions de l'archive.
+`WriteEncryptedArchive` extrait d'`Export` pour que les tests fabriquent une
+vraie sauvegarde piégée. **Preuve** : le test d'attaque ÉCHOUE sur l'ancien
+code (restauré temporairement puis remis), passe sur le nouveau.
+
+**3. MOYENNE - identifiant HTTPS sur page HTTP** : couvert par
+`CredentialFillTargetPolicy`, appliqué aussi en amont dans
+`PasswordManagerService.FindAllForAddress` (plus d'offre du tout). Tests
+unitaires uniquement (pas de HTTPS local pour un test en direct).
+
+**4. Renforcements** : messages `newtab_*` refusés si `e.Source` est une
+adresse web (en plus de `tab.Address`, qui n'est mis à jour qu'à la
+validation d'une navigation) ; `NewTabMarkup.JsAttribute` (JS puis HTML) pour
+les 5 chaînes placées dans des `onclick` (un guillemet refermait l'attribut),
+`JsString` échappe aussi retours à la ligne, U+2028/2029 et "<" ;
+`DownloadRisk` + `DownloadOpenConfirmation` : confirmation "Ouvrir quand
+même" pour ~40 extensions exécutables (exe, msi, bat, ps1, vbs, js, hta,
+lnk, chm, iso...), fenêtre normale ET Incognito. **Non vérifié en direct** :
+Chromium bloque lui-même un `.bat` servi en HTTP (entrée de téléchargement
+sans bouton "Ouvrir", fichier jamais écrit sur le disque) - couvert par tests
+unitaires seulement.
+
+**Non traité** : `LumoraAppWindow` (Web Apps) - liens cross-site bloqués
+silencieusement (session précédente), toujours en attente d'une réponse
+utilisateur. Les autres dictionnaires `Dictionary<CoreWebView2, ...>` de
+`MainWindow` (`_cosmeticScriptIds`, `_consentScriptIds`...) n'ont pas été
+audités pour le même piège de wrapper - à vérifier s'ils servent à autre
+chose qu'un nettoyage.
+
+**Pièges d'outillage de vérification** : l'assistant premier lancement
+revient à chaque relance de ce profil de test tant qu'il n'est pas terminé -
+le bouton `WizardNextButton` peut être `IsOffscreen` à l'étape 6 (contenu
+haut) : boucler sur le `Name` jusqu'à "Terminer" au lieu de s'arrêter sur
+`IsOffscreen`. Un `cmd.exe` "récent" dans `Get-Process` peut être
+l'enveloppe du propre outil PowerShell de Claude (vérifier `CommandLine` via
+`Win32_Process` avant de conclure à une exécution). Un garde-fou de l'outil
+refuse une commande PowerShell mêlant MSBuild (`/t:Build`) et `Remove-Item` :
+séparer build et lancement.
+
+**Version** : corrections -> 4e chiffre, `0.94.30.1-dev` -> `0.94.30.2-dev`.
+Build MSBuild 0 erreur, 1022/1022 tests (dont 4 nouveaux fichiers :
+`CredentialFillTargetPolicyTests`, `LumoraBackupPathTraversalTests`,
+`DownloadRiskTests`, + ajouts `NewTabMarkupTests`). **Rien committé, rien
+poussé.**
+
+## Session "restes sécurité + relecture avant release" (2026-09-24)
+
+Troisième passe de la journée. Rappel utilisateur : "le but du jeu c'est
+d'avoir le navigateur internet le plus sécurisé possible". Plan présenté
+(corrections restantes -> contrôle final + relecture complète du diff ->
+commits locaux -> release 1.0.0 r12), accord donné pour TOUTES les étapes
+d'un coup ("tu as mon accord pour toutes les étapes", puis "Go") - règle
+utilisée : enchaîner sans s'arrêter, sauf problème sérieux. Version dev
+0.94.30.3-dev ; la release reste nommée "1.0.0" (aucun retour des
+bêta-testeurs encore, décision utilisateur).
+
+**Corrections prévues au plan** :
+- Scripts de protection (`_cosmeticScriptIds`, `_consentScriptIds`,
+  `_geolocationSpoofScriptIds`, `_fingerprintProtectionScriptIds`,
+  `_loginCompatibilityScriptIds`, `_loginDiagnosticScriptIds`) réindexés
+  `Dictionary<int, string>` par ID d'onglet (`AttachedTabCores()`), même
+  piège de wrapper que le Coffre. Vérifié en direct : anti-empreinte coupée
+  -> marqueur `__lumora_fp_protect` absent et 16 cœurs réels exposés,
+  réactivée -> marqueur présent et 4 cœurs.
+- Web Apps (`LumoraAppWindow.Core_NewWindowRequested`) : signal "vrai lien
+  cliqué" partagé (`LinkClickSignal.cs`, sorti de MainWindow), popup
+  autorisée dans le périmètre de l'appli ou fenêtre de connexion = fenêtre
+  WebView2 comme avant ; popup autorisée vers un AUTRE site = navigateur
+  principal (`MainBrowserLauncher` : `MainWindow.TryOpenUrlInExistingWindow`
+  si une fenêtre principale vit dans le même process, sinon relance de
+  l'exe avec l'URL -> redirection mono-instance, même chemin que le
+  navigateur par défaut). Vérifié en direct (appli locale) : pub par script
+  bloquée, lien interne dans l'appli, lien externe dans la fenêtre
+  principale - via raccourci (process séparé, redirection) ET via panneau
+  (même process, 0 nouveau process).
+
+**Bugs antérieurs trouvés en vérifiant (hors plan, corrigés car bloquants)** :
+- **Fenêtres d'applications web impossibles à ouvrir** (depuis la refonte
+  thème des 13-14/09) : `LumoraTheme.SetBrush` utilisait l'indexeur de
+  `ResourceDictionary`, qui LÈVE une `COMException` sur clé absente ;
+  `LumoraAppWindow` ne déclare pas `LumoraWindowButtonShadowBrush` (propre
+  au template Incognito). Plantage dans le constructeur, depuis le panneau
+  comme depuis un raccourci. Corrigé par `TryGetValue` (idem
+  `SetIdentityBrush`). Diagnostic : `Web app launch failed: COMException`
+  dans le journal, pile complète obtenue par trace temporaire (retirée).
+  Même famille que le piège `SetBrush/SetAppBrush` de la session 3.5.
+- **Raccourcis d'applications web inopérants pour les profils SANS mot de
+  passe** (depuis le volet 2 du 10/09) : `App.TryFindWebApp` lisait
+  `webapps.lumora` avant que l'entropie de profil ne soit posée (seul
+  MainWindow le faisait) -> appli "introuvable" -> le raccourci ouvrait le
+  navigateur. `App.ApplyProfileEntropyForStandaloneLaunch` reprend la règle
+  de MainWindow (entropie posée seulement sans mot de passe / profil déjà
+  migré, jamais créée ici).
+- Le bouton "Ouvrir l'application" du panneau renvoyait une "erreur COM"
+  au pilotage UIA : ce n'était PAS une limite d'outil mais ce même
+  plantage de thème (fonctionne après correction). Leçon : une erreur COM
+  sur `InvokePattern.Invoke()` peut être une exception levée par le
+  gestionnaire Click lui-même.
+
+**Relecture complète du diff du jour** (`/code-review high`, demandée dans
+mon propre plan avant release) - 10 constats, tous traités :
+1. FAILLE : `CredentialService` prenait `origin`/`loginUrl` dans le JSON
+   posté par la page -> evil.com pouvait obtenir "Mettre à jour le mot de
+   passe pour banque.fr" et écraser la vraie entrée. Désormais écrasés par
+   `e.Source` (adresse attestée par WebView2), messages de pages non web
+   ignorés. Vérifié en direct : message forgé "banque.example" -> offre
+   affichée pour http://localhost.
+2. FAILLE : le script `LinkClickSignal` lisait `e.target`,
+   `closest`, `a.href` au moment du clic - redéfinissables par la page
+   (prototypes, `Function.prototype.call`). Tout est capturé à l'injection
+   (`Function.prototype.call.bind` sur les getters/méthodes natifs).
+   Vérifié en direct : page piégée (closest, call, getter href redéfinis) ->
+   pub toujours bloquée, vrai lien toujours ouvert.
+3. Levée de pénalité "inscrivez" limitée aux 4 conteneurs voisins
+   (`nearPasswordField`), plus au `<form>` entier (pages WebForms), regex
+   testée avant le parcours DOM. dailyuploads.io : score 125, offre OK.
+4. `CloseTabView` : nettoyage par ID d'onglet sorti du `if (core is not
+   null)` ; `AttachAsync` remplace un branchement existant (Detach) au lieu
+   de l'ignorer (onglet réveillé de veille = nouveau moteur).
+5. Catalogue du menu contextuel : libellé brut stocké, nettoyé une seule
+   fois à l'affichage ("&&" préservé).
+6. Attente du signal de clic seulement si la popup allait être refusée
+   (plus de 300 ms ajoutés aux connexions Google & co).
+7. Web app dans le même process -> `TryOpenUrlInExistingWindow` (pas de
+   relance d'exe).
+8. `DownloadRisk` : +.msc (GrimResource), .appinstaller, .diagcab, .xll,
+   .search-ms, .searchconnector-ms, .jnlp, .ps1xml, .psc1, .psd1, .vb, .ws,
+   .mht, .mhtml, .rdp, .gadget, .msh, .mshxml.
+9. Suivi des iframes : un objet `TrackedFrame` par iframe dans la liste de
+   l'onglet, plus de dictionnaires indexés par wrapper `CoreWebView2Frame`.
+10. MEMORY.md (cette section).
+
+**Nettoyage machine** : appli de test "AppliTest" installée pour vérifier
+-> son raccourci Menu Démarrer (`Lumora Apps\AppliTest - 61465f3a.lnk`)
+supprimé à la main ; le raccourci réel de l'utilisateur (Vidlox) dans le
+même dossier laissé intact ; aucun raccourci Bureau créé (case décochée).
+
+**Pièges d'outillage** : `cdpx.mjs nav` vise la PREMIÈRE page de `/json`,
+qui peut être une fenêtre d'application web et non l'onglet principal -
+cibler par URL/état. Deux pages de même URL (onglet + appli) : les
+distinguer par un état propre à chacune (ex. prototype natif ou non).
+`[IO.File]::ReadAllText` en PowerShell résout les chemins relatifs depuis
+le dossier courant .NET, pas celui de PowerShell : chemins absolus.
+
+**Version** : `0.94.30.3-dev`, build MSBuild 0 erreur, 1026/1026 tests,
+0 `UNHANDLED` sur toutes les vérifications en direct.
