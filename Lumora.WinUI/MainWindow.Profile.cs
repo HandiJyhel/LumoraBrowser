@@ -69,7 +69,7 @@ public sealed partial class MainWindow
             _ => 1,
         };
         var litBrush = StrengthBrush(password);
-        var emptyBrush = (Brush)Application.Current.Resources["NovaChromeStrokeBrush"];
+        var emptyBrush = (Brush)RootShell.Resources["NovaChromeStrokeBrush"];
         var bars = new[] { PasswordStrengthBar0, PasswordStrengthBar1, PasswordStrengthBar2, PasswordStrengthBar3 };
         for (var i = 0; i < bars.Length; i++)
         {

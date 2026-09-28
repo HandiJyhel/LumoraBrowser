@@ -30168,3 +30168,65 @@ prétendre avoir fait la mise à jour. Question ouverte pour une prochaine
 session : installer/authentifier `gh` réglerait ça proprement (jeton géré en
 interne par `gh`, jamais exposé à Claude) si l'utilisateur veut que ce
 sous-geste reste automatisable.
+
+## 2026-09-28 — Session "site internet, nouvel utilisateur" : crash confirmé et corrigé -> 0.94.30.6-dev
+
+**Contexte** : en préparant les captures d'écran pour la fiche produit du
+site vitrine (session précédente, hors dépôt), Claude avait relevé ne pas
+pouvoir créer de nouveau profil (Lumora se figeait puis se fermait).
+L'utilisateur a reproduit le même plantage sur sa propre machine, exactement
+au moment de taper le mot de passe après avoir saisi le nom — confirmé
+important puisque le site n'est pas encore en ligne mais que la release
+1.0.0 est sur le point d'être ouverte au public.
+
+**Cause trouvée par lecture de code** (pas par reproduction du vrai geste
+utilisateur — voir plus bas) : `MainWindow.Profile.cs`,
+`CreatePasswordBox_PasswordChanged` (indicateur de force du mot de passe,
+ajouté 0.94.3.0-dev) lisait `Application.Current.Resources["NovaChromeStrokeBrush"]`.
+Cette ressource n'existe que dans `RootShell.Resources` (`Grid.Resources` de
+`MainWindow.xaml`), jamais dans `App.xaml`/`Application.Resources` — vérifié
+explicitement par grep+lecture des deux fichiers. Résultat : dès le premier
+caractère tapé dans le champ mot de passe (n'importe quel profil, avec ou
+sans `NoPasswordSwitch`), l'indexeur cherchait une clé absente dans le
+mauvais dictionnaire de ressources → exception non gérée côté XAML runtime
+→ fermeture immédiate. Le reste du code (`MainWindow.VaultPanel.cs`,
+`SavedTabGroups.cs`, `ToolbarCustomization.cs`) lit déjà cette même
+ressource via `RootShell.Resources[...]`, jamais via `Application.Current` —
+un seul point d'écart, introduit avec la fonctionnalité elle-même. Corrigé
+en une ligne (`RootShell.Resources[...]`).
+
+**Vérification en direct, contredit une limite documentée du skill verify** :
+la note existante (2026-08-30) disait `PasswordBox.SetValue` via UIA
+"échoue toujours" sur `CreatePasswordBox` (`Erreur non reconnue`). Retesté
+cette session (profil isolé, `WelcomeSlidesShown` pré-rempli dans
+`config.json` pour sauter les slides) : `ValuePattern.SetValue("X")` puis
+`SetValue("Test-Password-123!")` ont **fonctionné** sans erreur cette fois,
+et `PasswordStrengthLabel` a bien affiché "Force du mot de passe : Robuste"
+— preuve directe que la ligne corrigée (juste après celle qui plantait)
+s'exécute sans exception. Process resté `Responding=True` après plusieurs
+saisies, 0 `UNHANDLED` dans `winui-runtime-trace.log`. Cette limite datée
+d'une session précédente est donc **obsolète** (comportement de l'environnement
+a changé depuis, ou spécifique à un contexte différent) — à retester en
+premier avant d'assumer l'échec la prochaine fois qu'un `PasswordBox` doit
+être piloté.
+
+**Build + tests** : MSBuild Debug x64 propre, `dotnet test Lumora.Tests` →
+1027/1027 avant ET après le bump de version (aucune régression).
+
+**Version** : correctif d'un bug déjà présent depuis 0.94.3.0-dev, pas un
+ajout → seul le 4e chiffre a bougé (`0.94.30.5-dev` → `0.94.30.6-dev`),
+conforme à la politique en vigueur. Mis à jour aux 4 emplacements verrouillés
+par le test `Version_projet_est_alignee_sur_0_94_27_0`
+(`MainWindow.xaml.cs`, `AGENTS.md`, `build-clean-test-artifact.ps1`,
+`build-installer.ps1`) + le test lui-même.
+
+**Portée du bug** : touchait la création de profil pour TOUT utilisateur
+tapant un mot de passe (que `NoPasswordSwitch` soit utilisé ou non, dès
+qu'un caractère est saisi dans `CreatePasswordBox`) — donc bien le chemin
+que suivrait quasiment tout nouvel utilisateur du site. Sans ce correctif,
+le premier lancement de Lumora par un visiteur du site aurait planté dans
+l'immense majorité des cas.
+
+**Rien commité** au moment de la rédaction — en attente de confirmation
+utilisateur avant commit/push (le Go donné portait sur "résoudre le
+problème", pas explicitement sur committer).
