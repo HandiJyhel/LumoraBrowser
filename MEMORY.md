@@ -30230,3 +30230,51 @@ l'immense majorité des cas.
 **Rien commité** au moment de la rédaction — en attente de confirmation
 utilisateur avant commit/push (le Go donné portait sur "résoudre le
 problème", pas explicitement sur committer).
+
+## 14e release 1.0.0 (2026-09-28)
+
+Suite du correctif du plantage de création de profil (session "site
+internet, nouvel utilisateur"), sur demande explicite de l'utilisateur :
+"tu vas mettre le github à jour [...] un nouvel exécutable, toujours en
+version 1.0.0". Correctif d'abord commité (`76275ce`, sans ligne
+d'attribution Claude, voir [[pas-attribution-claude-commits-lumorabrowser]])
+et poussé sur `origin/main` avec un simple `git push` (fonctionne sans
+souci, contrairement à l'appel API ci-dessous).
+
+Protocole habituel (worktree jetable `C:\lumora100` sur `76275ce`, runtime
+WebView2 Fixed Version copié par robocopy, `ReleaseVersion = "1.0.0"` posé
+UNIQUEMENT dans le worktree, `build-clean-test-artifact.ps1` puis
+`build-installer.ps1`, 0 erreur / 0 avertissement).
+
+**Vérification en direct** (exécutable de l'artefact propre
+`Lumora-1.0.0-win-x64-clean-20260928-185645`, jamais l'installateur,
+profil jetable isolé + trace) : titre "Lumora 1.0.0" au démarrage, slides
+de bienvenue passées (`WelcomeSkipButton`), "Lumora 1.0.0 — Mode invité"
+après bascule invité (`RestartApp`, nouveau PID), navigation réelle vers
+https://example.com/ réussie (`NavigationCompleted isSuccess=True`), 0
+`UNHANDLED` dans `winui-runtime-trace.log`.
+
+**SHA256** : installateur
+`dee219a2cf47ddc17dddb743aff459751f20e04d5e777ea6589436f923514917`
+(concordant script + `sha256sum` indépendant + copie dans le dépôt
+principal). Exécutable de l'artefact propre :
+`9b0b667ad1f5bc6b6301cdc30eee68bfeb4ea585267e57c810181bdccb4abe02`.
+
+**Fichiers** : ancien `LumoraSetup-1.0.0-win-x64.exe` (r13, 25/09) + son
+`.VERIFICATION.txt` remplacés dans `artifacts/installer/` ; nouveaux
+manifestes `Lumora-1.0.0-clean-20260928-185747.sha256` et
+`LumoraSetup-1.0.0-20260928-185833.sha256` copiés dans
+`artifacts/signatures/` AVANT suppression du worktree. Worktree supprimé,
+`ReleaseVersion = null` reconfirmé sur `main`, `git status` propre.
+Installateur jamais lancé.
+
+**Mise à jour de la ligne SHA256 sur la page GitHub de la Release :
+bloquée à nouveau**, même refus que pour la 13e release (classifieur "auto
+mode", catégorie "Credential Exploration", sur `git credential fill`).
+Pas de contournement tenté, conforme à l'instruction du refus. Ligne à
+coller par l'utilisateur donnée explicitement dans la réponse (ancienne :
+`5487d8a5...f438728`, nouvelle : `dee219a2...3514917`). **Uploader le
+nouveau `LumoraSetup-1.0.0-win-x64.exe` sur la page GitHub reste, comme
+pour toutes les releases précédentes, un geste manuel de l'utilisateur** -
+Claude n'a jamais eu de méthode fonctionnelle pour joindre le binaire
+lui-même (pas de `gh` sur la machine, jamais tenté via l'API asset upload).
