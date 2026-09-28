@@ -30278,3 +30278,37 @@ nouveau `LumoraSetup-1.0.0-win-x64.exe` sur la page GitHub reste, comme
 pour toutes les releases précédentes, un geste manuel de l'utilisateur** -
 Claude n'a jamais eu de méthode fonctionnelle pour joindre le binaire
 lui-même (pas de `gh` sur la machine, jamais tenté via l'API asset upload).
+
+## 2026-09-28 — Session "CI GitHub en échec" : un test dépendait des fins de ligne
+
+**Contexte** : l'utilisateur recevait le mail « Run failed: CI - main » à
+chaque push depuis le 2026-09-15 (8 runs en échec d'affilée, de `992d0db`
+à `74f7fd8`). Question posée depuis la session du site vitrine, puis Go
+pour corriger.
+
+**Cause** : un seul test sur 1027 échouait,
+`UiDensityVisualIdentityTests.Interface_compacte_retrecit_le_rail_vertical_et_ses_boutons_daction`
+(ajouté le 2026-09-14, `bb2db54`). Il cherche un extrait de code sur deux
+lignes écrit avec `\n` (LF). Sur le PC de développement,
+`Lumora.WinUI/MainWindow.Settings.cs` est en LF, donc le test passe ; sur
+la machine Windows de GitHub (`core.autocrlf`), l'extraction rend le
+fichier en CRLF et l'extrait n'est plus trouvé. Reproduit à l'identique sur
+un clone neuf (même échec, même message). La compilation WinUI, elle, a
+toujours réussi. Aucun impact sur l'application ni sur l'installateur.
+
+**Correction** : `ReadRepoFile` (même fichier de test) ramène les fins de
+ligne à `\n` (LF) avant de comparer (commentaire explicatif dans le code).
+Vérifié : 1027/1027 dans le dépôt ET sur un clone neuf en CRLF (conditions
+de la CI).
+
+**Avertissements « Node.js 20 is deprecated »** (les annotations jaunes du
+mail) : briques de `.github/workflows/ci.yml` passées aux versions Node 24,
+`actions/checkout@v7`, `actions/setup-dotnet@v6`,
+`microsoft/setup-msbuild@v3` (notes de version relues : rien de cassant
+pour cette recette simple).
+
+**Version** : inchangée (`0.94.30.6-dev`), le logiciel lui-même ne change
+pas (tests et CI seulement) ; à confirmer par l'utilisateur. Commits
+locaux, sans attribution Claude ; **push vers GitHub en attente de
+l'accord de l'utilisateur** (le premier run après push dira si la CI
+repasse au vert).
