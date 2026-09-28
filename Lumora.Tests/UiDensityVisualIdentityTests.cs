@@ -202,7 +202,13 @@ public sealed class UiDensityVisualIdentityTests
             var candidate = Path.Combine(new[] { current.FullName }.Concat(segments).ToArray());
             if (File.Exists(candidate))
             {
-                return File.ReadAllText(candidate);
+                // Fins de ligne ramenees a "\n" : les extraits sur plusieurs
+                // lignes attendus plus haut sont ecrits avec "\n", mais une
+                // extraction Git sous Windows (core.autocrlf, dont la machine
+                // Windows de la CI GitHub) peut rendre le fichier en "\r\n".
+                // Sans ca, le test passait sur le PC de developpement et
+                // echouait sur GitHub a chaque push depuis le 2026-09-15.
+                return File.ReadAllText(candidate).Replace("\r\n", "\n");
             }
 
             current = current.Parent;
