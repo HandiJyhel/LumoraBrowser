@@ -30309,6 +30309,7 @@ pour cette recette simple).
 
 **Version** : inchangée (`0.94.30.6-dev`), le logiciel lui-même ne change
 pas (tests et CI seulement) ; à confirmer par l'utilisateur. Commits
-locaux, sans attribution Claude ; **push vers GitHub en attente de
-l'accord de l'utilisateur** (le premier run après push dira si la CI
-repasse au vert).
+sans attribution Claude, poussés sur `origin/main` avec l'accord de
+l'utilisateur (`74f7fd8..9f273e7`). **Premier run après push : vert**
+(run 36475485650, tests et build WinUI réussis, plus aucun avertissement
+Node.js 20).
