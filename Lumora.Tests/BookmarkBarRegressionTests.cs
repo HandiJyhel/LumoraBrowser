@@ -401,11 +401,12 @@ public sealed class BookmarkBarRegressionTests
     }
 
     [Fact]
-    public void Barre_adresse_reste_a_18px_minimum()
+    public void Barre_adresse_est_a_15px_et_17px_en_grand_texte()
     {
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.SettingsTheme.cs");
 
-        Assert.Contains("AddressBox.FontSize = largeText ? 20 : 18;", code, StringComparison.Ordinal);
+        // 18 -> 15 le 2026-10-15 (variante B de la maquette validee).
+        Assert.Contains("AddressBox.FontSize = largeText ? 17 : 15;", code, StringComparison.Ordinal);
     }
 
     // 2026-08-22 (suite) : "option A" choisie sur maquette - garder le motif

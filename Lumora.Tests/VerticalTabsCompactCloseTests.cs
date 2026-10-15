@@ -80,9 +80,22 @@ public sealed class VerticalTabsCompactCloseTests
         // elle-meme le "sinon" d'un ternaire sur CompactModeEnabled (Interface
         // compacte descend a CompactVerticalTabCompactCloseSize) - le repli
         // reste inchange.
-        Assert.Contains("_compactModeEnabled ? CompactVerticalTabCompactCloseSize : 18", compactBranch, StringComparison.Ordinal);
+        Assert.Contains("_compactModeEnabled ? CompactVerticalTabCompactCloseSize : 20", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Width = compactCloseSize,", compactBranch, StringComparison.Ordinal);
         Assert.Contains("Height = compactCloseSize,", compactBranch, StringComparison.Ordinal);
+    }
+
+    // Bug reel signale par l'utilisateur (2026-10-15) : en mode clair, le texte
+    // des onglets verticaux etait illisible (gris clair 244/221 force en dur
+    // sur un fond de tuile clair). La couleur doit venir des brosses du theme.
+    [Fact]
+    public void Texte_des_onglets_verticaux_suit_les_brosses_du_theme()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "MainWindow.TabGroups.cs");
+
+        Assert.Contains("\"NovaTabTitleActiveForegroundBrush\"", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("? UiColor(244, 244, 244)", code, StringComparison.Ordinal);
+        Assert.DoesNotContain(": UiColor(221, 221, 221)", code, StringComparison.Ordinal);
     }
 
     // Bug reel signale par l'utilisateur (2026-09-25) : depuis un panneau

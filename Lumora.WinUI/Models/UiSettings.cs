@@ -32,6 +32,11 @@ internal sealed class UiSettings
     public bool VerticalTabsEnabled { get; set; }
     public string TabStripPosition { get; set; } = "top";
     public bool VerticalTabsCompact { get; set; }
+    // Survol du rail reduit (2026-10-15, retour utilisateur : meme comportement
+    // que les onglets verticaux de Chrome) : le rail s'ouvre par-dessus la page
+    // au passage de la souris, puis se referme. Actif par defaut ; desactivable
+    // pour ceux que le survol gene (le bouton du rail ouvre alors en clic).
+    public bool VerticalTabsHoverExpand { get; set; } = true;
     // 230 -> 310 (2026-08-12) : a 230, la rangee d'actions du rail elargi
     // ("+ Nouvel onglet" / muet / "Reduire") debordait de l'espace interieur
     // disponible - le bouton "Reduire" se faisait comprimer a ~26px et

@@ -190,7 +190,7 @@ public sealed class UiDensityVisualIdentityTests
 
         Assert.Contains("_compactModeEnabled ? CompactHorizontalTabIconWrapSize : 24", tabGroupsCode, StringComparison.Ordinal);
         Assert.Contains("_compactModeEnabled ? CompactHorizontalTabIconSize : 14", tabGroupsCode, StringComparison.Ordinal);
-        Assert.Contains("_compactModeEnabled ? CompactVerticalTabCompactIconSize : 14", tabGroupsCode, StringComparison.Ordinal);
+        Assert.Contains("_compactModeEnabled ? CompactVerticalTabCompactIconSize : 26", tabGroupsCode, StringComparison.Ordinal);
         Assert.Contains("_compactModeEnabled ? CompactVerticalTabCloseSize : 26", tabGroupsCode, StringComparison.Ordinal);
     }
 

@@ -168,7 +168,7 @@ public sealed partial class MainWindow
         _uiSettings.VerticalTabsEnabled = _verticalTabsEnabled;
         _uiSettings.TabStripPosition = _tabStripPosition;
         _uiSettings.UiDensity = _uiDensity;
-        _uiSettings.VerticalTabsCompact = _verticalTabsCompact;
+        _uiSettings.VerticalTabsCompact = _verticalTabsCompact || _verticalTabsHoverOpen;
         _uiSettings.VerticalTabsWidth = Math.Clamp(_verticalTabsExpandedWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
         _uiSettings.CompactModeEnabled = _compactModeEnabled;
         _uiSettings.CompactModeHidesBookmarks = CompactModeHideBookmarksSwitch.IsOn;

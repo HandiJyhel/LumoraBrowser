@@ -1797,9 +1797,9 @@
                     MinWidth="220"
                     Padding="54,4,18,4"
                     CornerRadius="22"
-                    FontSize="18"
-                    FontWeight="SemiBold"
-                    CharacterSpacing="30"
+                    FontSize="15"
+                    FontWeight="Normal"
+                    CharacterSpacing="0"
                     Background="Transparent"
                     BorderBrush="{StaticResource NovaAddressBorderBrush}"
                     BorderThickness="1"
@@ -3047,7 +3047,17 @@
                          des onglets, meme raison que VerticalTabsActionsPanel. -->
                     <StackPanel x:Name="VerticalTabsCompactActionsColumn"
                                 Visibility="Collapsed"
-                                Spacing="5" />
+                                Spacing="5">
+                        <!-- Recherche d'onglet en rail reduit (2026-10-15) : bouton
+                             reintroduit maintenant que le rail fait 64px (la maquette
+                             validee le prevoit, comme Chrome). Ajoute/retire par
+                             ApplyVerticalTabsActionsLayout. -->
+                        <Button x:Name="VerticalTabsCompactSearchButton"
+                                Style="{StaticResource NovaButtonStyle}"
+                                ToolTipService.ToolTip="Rechercher dans les onglets"
+                                AutomationProperties.Name="Rechercher dans les onglets"
+                                Click="VerticalTabsCompactSearchButton_Click" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -3966,6 +3976,9 @@
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Onglets" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
                             <ToggleSwitch x:Name="VerticalTabsSwitch" Header="Barre d'onglets verticale" Toggled="VerticalTabsSwitch_Toggled" />
+                            <ToggleSwitch x:Name="VerticalTabsHoverExpandSwitch" Header="Ouvrir la barre réduite au survol"
+                                          Toggled="VerticalTabsHoverExpandSwitch_Toggled"
+                                          ToolTipService.ToolTip="Quand la barre d'onglets verticale est réduite, elle s'ouvre par-dessus la page au passage de la souris puis se referme. Désactivé : elle ne s'ouvre qu'au clic sur le bouton du rail." />
                             <!-- Mise en veille (2026-08-31, retour utilisateur : optimiser
                                  memoire/CPU) : decharge le moteur d'un onglet inactif, sauf
                                  l'onglet actif - voir MainWindow.TabSuspension.cs. Le bouton
@@ -8709,6 +8722,70 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <TextBlock x:Name="WizardStepIndicator" Text="Étape 1 / 8"
                                    HorizontalAlignment="Center" Opacity="0.5"
                                    FontSize="12" Margin="0,0,0,20" />
+
+                        <!-- Choix Rapide / Avancee (2026-10-15, retour d'un utilisateur :
+                             l'assistant a 9 etapes est long pour un utilisateur lambda).
+                             Maquette validee. "Avancee" = l'assistant d'origine inchange
+                             (WizardStep0..7 ci-dessous) ; "Rapide" = WizardStepQuick,
+                             un seul ecran. Affiches par UpdateWizardStep selon _wizardMode. -->
+                        <StackPanel x:Name="WizardStepMode" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Bienvenue dans Lumora" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Comment voulez-vous configurer votre navigateur ?"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <RadioButton x:Name="WizardModeQuick" GroupName="WizardModeGroup" IsChecked="True">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Configuration rapide" FontWeight="SemiBold" />
+                                    <TextBlock Text="Un seul écran. Le reste prend des valeurs sûres, modifiables dans les Réglages."
+                                               TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="WizardModeAdvanced" GroupName="WizardModeGroup">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Configuration avancée" FontWeight="SemiBold" />
+                                    <TextBlock Text="9 étapes : profil, moteur de recherche, onglets, mode d'usage, modules, verrouillage…"
+                                               TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+
+                        <!-- Mode rapide : un seul ecran, memes reglages/handlers que les
+                             etapes avancees (Tag identiques) mais GroupName distincts. -->
+                        <StackPanel x:Name="WizardStepQuick" Spacing="12" Visibility="Collapsed">
+                            <TextBlock Text="Presque fini" FontSize="22" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Vous pourrez tout changer plus tard dans les Réglages."
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
+                            <TextBlock Text="Thème" FontWeight="SemiBold" FontSize="13" />
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <RadioButton x:Name="WizardQuickThemeDark" Content="Sombre" MinWidth="0"
+                                             GroupName="WizardQuickThemeGroup" Tag="dark" Checked="WizardTheme_Checked" />
+                                <RadioButton x:Name="WizardQuickThemeLight" Content="Clair" MinWidth="0"
+                                             GroupName="WizardQuickThemeGroup" Tag="light" Checked="WizardTheme_Checked" />
+                                <RadioButton x:Name="WizardQuickThemeSystem" Content="Suivre Windows" MinWidth="0"
+                                             GroupName="WizardQuickThemeGroup" Tag="system" Checked="WizardTheme_Checked" />
+                            </StackPanel>
+                            <TextBlock Text="Moteur de recherche" FontWeight="SemiBold" FontSize="13" />
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <RadioButton x:Name="WizardQuickSearchGoogle" Content="Google" MinWidth="0"
+                                             GroupName="WizardQuickSearchGroup" Tag="google" Checked="WizardSearch_Checked" />
+                                <RadioButton x:Name="WizardQuickSearchDuckDuckGo" Content="DuckDuckGo" MinWidth="0"
+                                             GroupName="WizardQuickSearchGroup" Tag="duckduckgo" Checked="WizardSearch_Checked" />
+                                <RadioButton x:Name="WizardQuickSearchBrave" Content="Brave" MinWidth="0"
+                                             GroupName="WizardQuickSearchGroup" Tag="brave" Checked="WizardSearch_Checked" />
+                            </StackPanel>
+                            <TextBlock Text="Onglets" FontWeight="SemiBold" FontSize="13" />
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <RadioButton x:Name="WizardQuickTabsTop" Content="En haut" MinWidth="0"
+                                             GroupName="WizardQuickTabsGroup" Tag="top" Checked="WizardTabsOrientation_Checked" />
+                                <RadioButton x:Name="WizardQuickTabsLeft" Content="Sur le côté" MinWidth="0"
+                                             GroupName="WizardQuickTabsGroup" Tag="left" Checked="WizardTabsOrientation_Checked" />
+                            </StackPanel>
+                            <HyperlinkButton Content="Configurer plus en détail" HorizontalAlignment="Center"
+                                             Click="WizardQuickToAdvanced_Click" />
+                        </StackPanel>
 
                         <!-- Etape 0 : Bienvenue -->
                         <StackPanel x:Name="WizardStep0" Spacing="14">

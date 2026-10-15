@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.30.6-dev";
+    internal const string Version = "0.94.31.0-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -73,7 +73,9 @@ public sealed partial class MainWindow : Window
     // rejoignent le menu clic droit du rail (deja cable, voir
     // WorkspaceLayoutSurface_RightTapped). 40px correspond a peu pres a la
     // largeur d'un favicon + marge, comme la reference montree.
-    private const double VerticalTabsCompactWidth = 40;
+    // 40 -> 64 (2026-10-15) : retour utilisateur, favicons de 14px illisibles.
+    // Maquette validee : rail 64px, tuile 48x44, favicon 26px, comme Chrome.
+    private const double VerticalTabsCompactWidth = 64;
     private const double VerticalTabsMinExpandedWidth = 120;
     // Valeur alignee sur UiSettings.VerticalTabsWidth (Models/UiSettings.cs) -
     // voir le commentaire la-bas pour le detail de la mesure (2026-08-12).

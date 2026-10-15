@@ -248,9 +248,11 @@ public sealed partial class MainWindow
 
         var mainFontSize = largeText ? 16 : 14;
         var smallFontSize = largeText ? 14 : 12;
-        // Taille dediee, plus grande que mainFontSize (2026-08-22), gardee
-        // a 18px minimum pour rester lisible avec les hampes fines de l'URL.
-        AddressBox.FontSize = largeText ? 20 : 18;
+        // Taille dediee, un cran au-dessus de mainFontSize. 18 -> 15 (2026-10-15,
+        // retour utilisateur : ecriture trop grosse par rapport au champ, variante
+        // B de la maquette validee : 15px / normal / espacement 0). Grand texte
+        // (accessibilite) : 17, toujours plus grand que la taille normale.
+        AddressBox.FontSize = largeText ? 17 : 15;
         CommandPaletteSearchBox.FontSize = mainFontSize;
         CommandPaletteHintText.FontSize = smallFontSize;
         StatusText.FontSize = smallFontSize;

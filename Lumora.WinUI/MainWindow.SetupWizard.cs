@@ -7,16 +7,20 @@ public sealed partial class MainWindow
 {
     private int _wizardStep;
 
+    // Mode de l'assistant (2026-10-15) : 0 = ecran de choix Rapide/Avancee,
+    // 1 = ecran unique "rapide", 2 = assistant a 9 etapes d'origine.
+    private const int WizardModeChoose = 0;
+    private const int WizardModeQuickScreen = 1;
+    private const int WizardModeAdvancedSteps = 2;
+    private int _wizardMode = WizardModeChoose;
+
     private void ShowSetupWizard()
     {
         _wizardStep = 0;
+        _wizardMode = WizardModeChoose;
+        WizardModeQuick.IsChecked = true;
         _suppressUiSettingsSave = true;
-        SelectWizardTheme(_uiSettings.ThemeMode);
-        WizardSearchGoogle.IsChecked    = _uiSettings.SearchEngine is not ("duckduckgo" or "brave" or "bing");
-        WizardSearchDuckDuckGo.IsChecked = _uiSettings.SearchEngine == "duckduckgo";
-        WizardSearchBrave.IsChecked     = _uiSettings.SearchEngine == "brave";
-        WizardSearchBing.IsChecked      = _uiSettings.SearchEngine == "bing";
-        SelectWizardTabsOrientation();
+        SyncWizardChoicesFromSettings();
         SelectWizardUsageMode(_uiSettings.UsageMode);
         SelectWizardModules();
         ResetPendingAvatarChange();
@@ -28,8 +32,65 @@ public sealed partial class MainWindow
         SetupWizardOverlay.Visibility = Visibility.Visible;
     }
 
+    // Theme, moteur et onglets existent a la fois dans l'assistant avance et
+    // dans l'ecran rapide : les deux jeux de boutons radio sont resynchronises
+    // depuis _uiSettings (appelant : _suppressUiSettingsSave deja a true).
+    private void SyncWizardChoicesFromSettings()
+    {
+        SelectWizardTheme(_uiSettings.ThemeMode);
+        var themeMode = (_uiSettings.ThemeMode ?? "dark").Trim().ToLowerInvariant();
+        WizardQuickThemeDark.IsChecked = themeMode == "dark";
+        WizardQuickThemeLight.IsChecked = themeMode == "light";
+        WizardQuickThemeSystem.IsChecked = themeMode == "system";
+        var engine = _uiSettings.SearchEngine;
+        WizardSearchGoogle.IsChecked    = engine is not ("duckduckgo" or "brave" or "bing");
+        WizardSearchDuckDuckGo.IsChecked = engine == "duckduckgo";
+        WizardSearchBrave.IsChecked     = engine == "brave";
+        WizardSearchBing.IsChecked      = engine == "bing";
+        WizardQuickSearchGoogle.IsChecked    = engine is not ("duckduckgo" or "brave" or "bing");
+        WizardQuickSearchDuckDuckGo.IsChecked = engine == "duckduckgo";
+        WizardQuickSearchBrave.IsChecked     = engine == "brave";
+        SelectWizardTabsOrientation();
+        var position = string.IsNullOrWhiteSpace(_uiSettings.TabStripPosition)
+            ? (_uiSettings.VerticalTabsEnabled ? "left" : "top")
+            : _uiSettings.TabStripPosition;
+        var vertical = position is "left" or "right";
+        WizardQuickTabsTop.IsChecked = !vertical;
+        WizardQuickTabsLeft.IsChecked = vertical;
+    }
+
+    private void WizardQuickToAdvanced_Click(object sender, RoutedEventArgs e)
+    {
+        _suppressUiSettingsSave = true;
+        SyncWizardChoicesFromSettings();
+        _suppressUiSettingsSave = false;
+        _wizardMode = WizardModeAdvancedSteps;
+        _wizardStep = 0;
+        UpdateWizardStep();
+    }
+
     private void UpdateWizardStep()
     {
+        var advanced = _wizardMode == WizardModeAdvancedSteps;
+        WizardStepMode.Visibility = _wizardMode == WizardModeChoose ? Visibility.Visible : Visibility.Collapsed;
+        WizardStepQuick.Visibility = _wizardMode == WizardModeQuickScreen ? Visibility.Visible : Visibility.Collapsed;
+        WizardStepIndicator.Visibility = advanced ? Visibility.Visible : Visibility.Collapsed;
+        if (!advanced)
+        {
+            WizardStep0.Visibility = Visibility.Collapsed;
+            WizardStepTheme.Visibility = Visibility.Collapsed;
+            WizardStep1.Visibility = Visibility.Collapsed;
+            WizardStep2.Visibility = Visibility.Collapsed;
+            WizardStep3.Visibility = Visibility.Collapsed;
+            WizardStep4.Visibility = Visibility.Collapsed;
+            WizardStep5.Visibility = Visibility.Collapsed;
+            WizardStep6.Visibility = Visibility.Collapsed;
+            WizardStep7.Visibility = Visibility.Collapsed;
+            WizardPrevButton.IsEnabled = _wizardMode == WizardModeQuickScreen;
+            WizardNextButton.Content = _wizardMode == WizardModeQuickScreen ? "Terminer" : "Continuer";
+            return;
+        }
+
         // Etape "Theme" inseree en position 1 (juste apres "Bienvenue", 2026-09-13) :
         // les noms WizardStep1..7 restent ceux d'origine, seul l'INDICE _wizardStep
         // auquel chacun s'affiche decale de 1 - evite de renommer 7 panneaux XAML
@@ -44,7 +105,8 @@ public sealed partial class MainWindow
         WizardStep5.Visibility = _wizardStep == 6 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep6.Visibility = _wizardStep == 7 ? Visibility.Visible : Visibility.Collapsed;
         WizardStep7.Visibility = _wizardStep == 8 ? Visibility.Visible : Visibility.Collapsed;
-        WizardPrevButton.IsEnabled = _wizardStep > 0;
+        // Etape 0 de l'assistant avance : "Precedent" ramene a l'ecran de choix.
+        WizardPrevButton.IsEnabled = true;
         WizardNextButton.Content = _wizardStep == 8 ? "Terminer" : "Suivant";
 
         if (_wizardStep == 8)
@@ -78,7 +140,12 @@ public sealed partial class MainWindow
 
     private void WizardPrevButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_wizardStep > 0)
+        if (_wizardMode == WizardModeQuickScreen || (_wizardMode == WizardModeAdvancedSteps && _wizardStep == 0))
+        {
+            _wizardMode = WizardModeChoose;
+            UpdateWizardStep();
+        }
+        else if (_wizardStep > 0)
         {
             _wizardStep--;
             UpdateWizardStep();
@@ -87,7 +154,17 @@ public sealed partial class MainWindow
 
     private void WizardNextButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_wizardStep < 8)
+        if (_wizardMode == WizardModeChoose)
+        {
+            _wizardStep = 0;
+            _wizardMode = WizardModeAdvanced.IsChecked == true ? WizardModeAdvancedSteps : WizardModeQuickScreen;
+            UpdateWizardStep();
+        }
+        else if (_wizardMode == WizardModeQuickScreen)
+        {
+            FinishWizard();
+        }
+        else if (_wizardStep < 8)
         {
             _wizardStep++;
             UpdateWizardStep();

@@ -130,8 +130,10 @@ public sealed partial class MainWindow
                 // Interface compacte (2026-09-12) : icone/bouton fermer
                 // reduits, meme portee que le reste du chrome (elements
                 // visibles seulement - voir MainWindow.UiDensity.cs).
-                var compactIconSize = _compactModeEnabled ? CompactVerticalTabCompactIconSize : 14;
-                var compactCloseSize = _compactModeEnabled ? CompactVerticalTabCompactCloseSize : 18;
+                // 14 -> 26 et 18 -> 20 (2026-10-15) : rail reduit passe de 40
+                // a 64px (voir VerticalTabsCompactWidth), favicon enfin lisible.
+                var compactIconSize = _compactModeEnabled ? CompactVerticalTabCompactIconSize : 26;
+                var compactCloseSize = _compactModeEnabled ? CompactVerticalTabCompactCloseSize : 20;
                 var compactCloseGlyphSize = compactCloseSize * 8 / 18;
                 var icon = TabIconElement(tab, compactIconSize);
                 if (tab.IsDormant)
@@ -218,8 +220,8 @@ public sealed partial class MainWindow
                 }
                 content = compactContent;
 
-                var compactTileWidth = _compactModeEnabled ? CompactVerticalTabTileWidth : 30;
-                var compactTileHeight = _compactModeEnabled ? CompactVerticalTabTileHeight : 28;
+                var compactTileWidth = _compactModeEnabled ? CompactVerticalTabTileWidth : 48;
+                var compactTileHeight = _compactModeEnabled ? CompactVerticalTabTileHeight : 44;
                 button = new Button
                 {
                     Width = compactTileWidth,
@@ -453,9 +455,14 @@ public sealed partial class MainWindow
                 button.Content = content;
             }
 
-            button.Foreground = new SolidColorBrush(isActive
-                ? UiColor(244, 244, 244)
-                : UiColor(221, 221, 221));
+            // Bug reel signale par l'utilisateur (2026-10-15) : en mode clair, le
+            // texte des onglets verticaux etait illisible - gris 244/221 force en
+            // dur, indifferent au theme, sur un fond de tuile clair. Les brosses
+            // du theme (deja utilisees par les onglets horizontaux) suivent
+            // clair/sombre/contraste eleve toutes seules.
+            button.Foreground = (Brush)RootShell.Resources[isActive
+                ? "NovaTabTitleActiveForegroundBrush"
+                : "NovaTabTitleInactiveForegroundBrush"];
 
             // Bordure accentuée : marque la sélection multiple (Ctrl/Shift+clic),
             // distincte du fond "actif" déjà posé ci-dessus.

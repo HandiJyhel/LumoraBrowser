@@ -759,8 +759,93 @@ public sealed partial class MainWindow
 
     // ── Onglets verticaux compact ─────────────────────────────────────────────
 
+    // ── Survol du rail reduit (2026-10-15) ───────────────────────────────────
+    // Le rail reste a 64px dans sa colonne ; au survol, la colonne est figee en
+    // pixels a cette largeur et le rail est etale sur 3 colonnes (comme le mode
+    // plein ecran immersif) a sa largeur elargie : il passe PAR-DESSUS la page
+    // sans la decaler. _verticalTabsCompact est mis a false le temps du survol
+    // (RenderVerticalTabs et la presentation suivent tout seuls) et les
+    // sauvegardes ecrivent "reduit" tant que _verticalTabsHoverOpen est vrai.
+    private bool _verticalTabsHoverOpen;
+    private DispatcherTimer? _verticalTabsHoverCloseTimer;
+
+    private bool CanHoverExpandVerticalTabs() =>
+        _verticalTabsEnabled && _verticalTabsCompact && !_verticalTabsHoverOpen
+        && _uiSettings.VerticalTabsHoverExpand && !IsImmersiveFullScreenActive();
+
+    private void OpenVerticalTabsHover()
+    {
+        var onRight = _tabStripPosition == "right";
+        var column = onRight ? WorkspaceRightTabsColumn : WorkspaceLeftTabsColumn;
+        column.Width = new GridLength(VerticalTabsRail.ActualWidth + VerticalTabsRail.Margin.Left + VerticalTabsRail.Margin.Right);
+        _verticalTabsHoverOpen = true;
+        _verticalTabsCompact = false;
+        Grid.SetColumn(VerticalTabsRail, onRight ? 3 : 1);
+        Grid.SetColumnSpan(VerticalTabsRail, 3);
+        VerticalTabsRail.HorizontalAlignment = onRight ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+        VerticalTabsResizeThumb.Visibility = Visibility.Collapsed;
+        ApplyVerticalTabsWidth();
+        RenderVerticalTabs();
+    }
+
+    private void EndVerticalTabsHover(bool backToCompact)
+    {
+        _verticalTabsHoverCloseTimer?.Stop();
+        if (!_verticalTabsHoverOpen) return;
+        _verticalTabsHoverOpen = false;
+        _verticalTabsCompact = backToCompact;
+        var onRight = _tabStripPosition == "right";
+        (onRight ? WorkspaceRightTabsColumn : WorkspaceLeftTabsColumn).Width = GridLength.Auto;
+        Grid.SetColumn(VerticalTabsRail, onRight ? 5 : 1);
+        Grid.SetColumnSpan(VerticalTabsRail, 1);
+        VerticalTabsRail.HorizontalAlignment = HorizontalAlignment.Stretch;
+        VerticalTabsResizeThumb.Visibility = _verticalTabsEnabled ? Visibility.Visible : Visibility.Collapsed;
+        ApplyVerticalTabsWidth();
+        RenderVerticalTabs();
+    }
+
+    private void ScheduleVerticalTabsHoverClose()
+    {
+        _verticalTabsHoverCloseTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        _verticalTabsHoverCloseTimer.Tick -= VerticalTabsHoverCloseTimer_Tick;
+        _verticalTabsHoverCloseTimer.Tick += VerticalTabsHoverCloseTimer_Tick;
+        _verticalTabsHoverCloseTimer.Stop();
+        _verticalTabsHoverCloseTimer.Start();
+    }
+
+    private void VerticalTabsHoverCloseTimer_Tick(object? sender, object e)
+    {
+        _verticalTabsHoverCloseTimer?.Stop();
+        EndVerticalTabsHover(backToCompact: true);
+    }
+
+    private void VerticalTabsHoverExpandSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        _uiSettings.VerticalTabsHoverExpand = VerticalTabsHoverExpandSwitch.IsOn;
+        if (!VerticalTabsHoverExpandSwitch.IsOn) EndVerticalTabsHover(backToCompact: true);
+        SaveWorkspaceUiSettings();
+        StatusText.Text = VerticalTabsHoverExpandSwitch.IsOn
+            ? "La barre d'onglets réduite s'ouvre au survol."
+            : "La barre d'onglets réduite ne s'ouvre qu'au clic.";
+    }
+
+    private void VerticalTabsCompactSearchButton_Click(object sender, RoutedEventArgs e)
+    {
+        ExpandVerticalTabsRailAndFocusSearch();
+    }
+
     private void VerticalTabsCompactButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_verticalTabsHoverOpen)
+        {
+            // "Garder ouvert" : le rail ouvert par le survol devient le rail
+            // elargi permanent.
+            EndVerticalTabsHover(backToCompact: false);
+            SaveWorkspaceUiSettings();
+            StatusText.Text = "Onglets verticaux élargis.";
+            return;
+        }
         _verticalTabsCompact = !_verticalTabsCompact;
         ApplyVerticalTabsWidth();
         RenderVerticalTabs();
@@ -787,7 +872,12 @@ public sealed partial class MainWindow
     // gestionnaire de clic de bouton.
     private void ExpandVerticalTabsRailAndFocusSearch()
     {
-        if (_verticalTabsCompact)
+        if (_verticalTabsHoverOpen)
+        {
+            EndVerticalTabsHover(backToCompact: false);
+            SaveWorkspaceUiSettings();
+        }
+        else if (_verticalTabsCompact)
         {
             _verticalTabsCompact = false;
             ApplyVerticalTabsWidth();
@@ -896,6 +986,7 @@ public sealed partial class MainWindow
             _verticalTabsExpandedWidth = Math.Clamp(_uiSettings.VerticalTabsWidth, VerticalTabsMinExpandedWidth, VerticalTabsMaxWidth);
             BookmarksBarSwitch.IsOn = _uiSettings.BookmarksBarVisible;
             VerticalTabsSwitch.IsOn = _verticalTabsEnabled;
+            VerticalTabsHoverExpandSwitch.IsOn = _uiSettings.VerticalTabsHoverExpand;
             TabSuspensionEnabledSwitch.IsOn = _uiSettings.TabSuspensionEnabled;
             SelectComboByTag(TabSuspensionThresholdCombo, _uiSettings.TabSuspensionThresholdMinutes.ToString(), "30");
             TabSuspensionThresholdCombo.IsEnabled = _uiSettings.TabSuspensionEnabled;
@@ -1042,6 +1133,7 @@ public sealed partial class MainWindow
 
     private void ApplyVerticalTabsLayout()
     {
+        EndVerticalTabsHover(backToCompact: true);
         _suppressTabNavigation = true;
         try
         {
@@ -1157,7 +1249,8 @@ public sealed partial class MainWindow
         _uiSettings.BookmarksBarPosition = _bookmarksBarPosition;
         _uiSettings.VerticalTabsEnabled = _verticalTabsEnabled;
         _uiSettings.TabStripPosition = _tabStripPosition;
-        _uiSettings.VerticalTabsCompact = _verticalTabsCompact;
+        _uiSettings.VerticalTabsCompact = _verticalTabsCompact || _verticalTabsHoverOpen;
+        _uiSettings.VerticalTabsHoverExpand = VerticalTabsHoverExpandSwitch.IsOn;
         _uiSettings.CompactModeEnabled = _compactModeEnabled;
         _uiSettings.CompactModeHidesBookmarks = CompactModeHideBookmarksSwitch.IsOn;
         _uiSettings.FullScreenAutoHideChrome = FullScreenAutoHideChromeSwitch.IsOn;
@@ -1232,6 +1325,8 @@ public sealed partial class MainWindow
         // rien pour les tuiles d'onglet. 3px de marge horizontale suffit pour
         // une tuile de 30px de large (40 - 2×3 = 34, marge de 2px de chaque
         // côté de la tuile).
+        // Rail reduit passe a 64px (2026-10-15) : tuile de 48px, marge de 3px
+        // de chaque cote du padding (64 - 2 bordure - 6 = 56 pour 48 de tuile).
         VerticalTabsRail.Padding = _verticalTabsCompact ? new Thickness(3, 6, 3, 6) : new Thickness(8);
         ApplyVerticalTabsActionsLayout();
 
@@ -1247,6 +1342,7 @@ public sealed partial class MainWindow
             // (MainWindow.LayoutStudio.cs). Seules les 2 actions les plus
             // fréquentes restent dans la colonne.
             SetCompactActionButton(VerticalTabsCompactButton, Symbol.OpenPane);
+            SetCompactActionButton(VerticalTabsCompactSearchButton, Symbol.Find);
             SetCompactActionButton(VerticalTabsNewTabButton, Symbol.Add);
         }
         else
@@ -1270,9 +1366,16 @@ public sealed partial class MainWindow
             VerticalTabsCompactButton.Height = double.NaN;
             VerticalTabsCompactButton.ClearValue(Button.PaddingProperty);
             VerticalTabsCompactButton.HorizontalAlignment = HorizontalAlignment.Stretch;
-            VerticalTabsCompactButton.Content = ExpandedRailAction(Symbol.ClosePane, "Réduire");
+            // Rail ouvert seulement par le survol : le bouton garde la barre
+            // ouverte (le rail n'est pas "reellement" elargi, voir
+            // OpenVerticalTabsHover) au lieu de la reduire.
+            VerticalTabsCompactButton.Content = _verticalTabsHoverOpen
+                ? ExpandedRailAction(Symbol.Pin, "Garder ouvert")
+                : ExpandedRailAction(Symbol.ClosePane, "Réduire");
         }
-        ToolTipService.SetToolTip(VerticalTabsCompactButton, _verticalTabsCompact ? "Agrandir les onglets verticaux" : "Réduire les onglets verticaux");
+        ToolTipService.SetToolTip(VerticalTabsCompactButton,
+            _verticalTabsHoverOpen ? "Garder les onglets verticaux ouverts"
+            : _verticalTabsCompact ? "Agrandir les onglets verticaux" : "Réduire les onglets verticaux");
     }
 
     // Bascule nouvel onglet + réduire/agrandir entre la rangée élargie
@@ -1291,6 +1394,7 @@ public sealed partial class MainWindow
         if (_verticalTabsCompact)
         {
             VerticalTabsCompactActionsColumn.Children.Add(VerticalTabsCompactButton);
+            VerticalTabsCompactActionsColumn.Children.Add(VerticalTabsCompactSearchButton);
             VerticalTabsCompactActionsColumn.Children.Add(VerticalTabsNewTabButton);
         }
         else
@@ -1306,10 +1410,17 @@ public sealed partial class MainWindow
     // (assortie à la tuile d'onglet compacte, 28px - voir
     // MainWindow.TabGroups.cs) : les 2 actions restantes gardent une cible de
     // clic confortable malgré la colonne étroite.
-    private static void SetCompactActionButton(Button button, Symbol symbol)
+    private void SetCompactActionButton(Button button, Symbol symbol)
     {
-        button.ClearValue(FrameworkElement.WidthProperty);
-        button.Height = 30;
+        // Largeur alignee sur la tuile d'onglet (48) pour que bascule, recherche
+        // et "+" aient la meme taille (le style des boutons icone du rail
+        // imposait sinon une largeur propre, 48 vs 85 mesures en reel).
+        if (_compactModeEnabled)
+            button.ClearValue(FrameworkElement.WidthProperty);
+        else
+            button.Width = 48;
+        button.HorizontalAlignment = _compactModeEnabled ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
+        button.Height = _compactModeEnabled ? 30 : 40;
         button.Padding = new Thickness(0);
         button.Content = new SymbolIcon(symbol);
     }
@@ -1374,6 +1485,7 @@ public sealed partial class MainWindow
 
     private void ApplyFullScreenLayout()
     {
+        EndVerticalTabsHover(backToCompact: true);
         if (IsImmersiveFullScreenActive())
         {
             var autoHide = _uiSettings.FullScreenAutoHideChrome;
@@ -1515,6 +1627,11 @@ public sealed partial class MainWindow
         {
             _verticalTabsRailAutoHideTimer?.Stop();
         }
+        _verticalTabsHoverCloseTimer?.Stop();
+        if (CanHoverExpandVerticalTabs())
+        {
+            OpenVerticalTabsHover();
+        }
     }
 
     private void VerticalTabsRail_PointerExited(object sender, PointerRoutedEventArgs e)
@@ -1522,6 +1639,10 @@ public sealed partial class MainWindow
         if (IsImmersiveFullScreenActive() && _uiSettings.FullScreenAutoHideChrome)
         {
             ScheduleVerticalTabsRailHide();
+        }
+        if (_verticalTabsHoverOpen)
+        {
+            ScheduleVerticalTabsHoverClose();
         }
     }
 
