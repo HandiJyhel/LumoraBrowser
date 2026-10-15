@@ -264,7 +264,15 @@ public sealed partial class MainWindow
         }
 
         var focusThickness = visibleFocus ? new Thickness(2) : new Thickness(1);
-        AddressBox.BorderThickness = focusThickness;
+        // Contour unique (2026-10-15, maquette validee) : la pilule derriere la
+        // barre d'adresse (NovaBrandChip*, MainWindow.xaml) dessine deja le
+        // contour ; le trait propre du champ (2px en permanence avec "Focus
+        // clavier plus visible", actif par defaut) faisait un double filet au
+        // repos. Au repos : aucun trait propre (contraste eleve excepte). A la
+        // prise de focus, le gabarit du TextBox et les visuels de focus
+        // systeme (UseSystemFocusVisuals + FocusVisual*Brush) dessinent
+        // l'indicateur : l'accessibilite du focus n'y perd rien.
+        AddressBox.BorderThickness = highContrast ? focusThickness : new Thickness(0);
         CommandPaletteSearchBox.BorderThickness = focusThickness;
 
         foreach (var control in new Control[]

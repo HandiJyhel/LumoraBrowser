@@ -76,8 +76,22 @@ public sealed partial class MainWindow
     // simplement été interrompue (alt-tab, effet de bord d'un Popup qui se ferme, ou
     // toute autre cause pas encore rencontrée) → on la laisse intacte, sans avoir
     // besoin de connaître la cause précise de l'interruption.
+    // Trait propre du champ (2026-10-15) : absent au repos pour ne laisser que
+    // le contour de la pilule (voir ApplyAccessibilitySettings,
+    // MainWindow.SettingsTheme.cs), mais bien visible tant que le champ a le
+    // focus quand "Focus clavier plus visible" est actif. Contraste eleve :
+    // le trait reste pilote par le theme, rien a faire ici.
+    private void UpdateAddressBoxFocusBorder(bool focused)
+    {
+        if (_uiSettings.AccessibilityHighContrast) return;
+        AddressBox.BorderThickness = focused && _uiSettings.AccessibilityVisibleFocus
+            ? new Thickness(2)
+            : new Thickness(0);
+    }
+
     private void AddressBox_GotFocus(object sender, RoutedEventArgs e)
     {
+        UpdateAddressBoxFocusBorder(true);
         var rawAddress = CurrentTab()?.Address;
         if (string.IsNullOrWhiteSpace(rawAddress) || rawAddress.Equals("lumora://accueil", StringComparison.OrdinalIgnoreCase))
         {
@@ -114,6 +128,7 @@ public sealed partial class MainWindow
     // asynchrone) et ne se declenchait jamais.
     private void AddressBox_LostFocus(object sender, RoutedEventArgs e)
     {
+        UpdateAddressBoxFocusBorder(false);
         // Un clic sur une suggestion retire d'abord le focus de la barre : ne pas
         // fermer le popup avant que ItemClick ait pu s'exécuter, ni revenir à
         // l'affichage simplifié avant que la navigation choisie ait eu lieu.

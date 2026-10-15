@@ -1766,7 +1766,13 @@
                 <Path Style="{StaticResource NovaChromeIconPathStyle}" Width="12" Height="12"
                       Data="M7,7 L17,7 L17,17 L7,17 Z" />
             </Button>
-            <Grid Grid.Column="4" Margin="6,0">
+            <!-- Fleche "Ouvrir l'adresse" retiree (2026-10-15, retour utilisateur :
+                 elle chevauchait le champ en onglets verticaux et plus personne ne
+                 s'en sert - Entree fait la meme chose, AddressBox_KeyDown). La
+                 colonne 5 (Auto) reste, vide : le champ l'occupe par ColumnSpan=2
+                 plutot que de renumerotee toutes les colonnes suivantes (un Grid
+                 garde le ColumnSpacing meme entre des colonnes vides). -->
+            <Grid Grid.Column="4" Grid.ColumnSpan="2" Margin="6,0">
                 <!-- Retour utilisateur (2026-08-08) : "trait au centre" sur la
                      barre d'adresse, meme signalement qu'au 2026-08-06 -
                      structure a 3 couches (ce Border + AddressBoxTintBorder +
@@ -1793,10 +1799,10 @@
                         IsHitTestVisible="False" />
                 <TextBox
                     x:Name="AddressBox"
-                    MinHeight="46"
-                    MinWidth="220"
-                    Padding="54,4,18,4"
-                    CornerRadius="22"
+                    MinHeight="38"
+                    MinWidth="160"
+                    Padding="42,3,14,3"
+                    CornerRadius="19"
                     FontSize="15"
                     FontWeight="Normal"
                     CharacterSpacing="0"
@@ -1976,14 +1982,6 @@
                     </StackPanel>
                 </Border>
             </Popup>
-            <Button Grid.Column="5"
-                    Style="{StaticResource NovaChromeAccentIconButtonStyle}"
-                    ToolTipService.ToolTip="Ouvrir l'adresse"
-                    AutomationProperties.Name="Ouvrir l'adresse"
-                    Click="GoButton_Click">
-                <SymbolIcon Style="{StaticResource NovaChromeAccentSymbolIconStyle}" Symbol="Forward" />
-            </Button>
-
             <!-- Favoris/Incognito/Bouclier/Coffre/Historique/Telechargements
                  (2026-08-14) : deplaces dans ToolbarButtonsPanel (voir plus
                  bas, groupe "Toujours dans la barre") - reordonnables au

@@ -1007,16 +1007,26 @@ public sealed record BrowserImportSource(string Browser, string Profile, string 
 
             foreach (var profileDir in Directory.EnumerateDirectories(userData).Where(InstalledChromiumBrowsers.IsProfileDir))
             {
-                var bookmarks = System.IO.Path.Combine(profileDir, "Bookmarks");
-                if (!File.Exists(bookmarks))
+                // "Bookmarks" = favoris locaux ; "AccountBookmarks" = favoris du
+                // compte Google/Microsoft (2026-10-15, bug reel signale : Chrome
+                // "non detecte" alors que ses 195 favoris etaient dans
+                // AccountBookmarks, le fichier Bookmarks n'ayant plus que 3
+                // dossiers vides depuis que le profil est connecte a un compte).
+                // Meme format JSON ; la source avec le plus de favoris est celle
+                // proposee a l'import (voir ShowMigrationOrDismiss).
+                foreach (var (fileName, profileSuffix) in new[] { ("Bookmarks", ""), ("AccountBookmarks", " (compte)") })
                 {
-                    continue;
-                }
+                    var bookmarks = System.IO.Path.Combine(profileDir, fileName);
+                    if (!File.Exists(bookmarks))
+                    {
+                        continue;
+                    }
 
-                var count = CountUrls(bookmarks);
-                if (count > 0)
-                {
-                    sources.Add(new BrowserImportSource(browser, System.IO.Path.GetFileName(profileDir), bookmarks, count));
+                    var count = CountUrls(bookmarks);
+                    if (count > 0)
+                    {
+                        sources.Add(new BrowserImportSource(browser, System.IO.Path.GetFileName(profileDir) + profileSuffix, bookmarks, count));
+                    }
                 }
             }
         }

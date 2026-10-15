@@ -1125,9 +1125,6 @@ public sealed partial class MainWindow
         StatusText.Text = "Chargement arrêté.";
     }
 
-    private void GoButton_Click(object sender, RoutedEventArgs e) =>
-        NavigateFromAddressBox();
-
     private void AddressBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         // Le popup de suggestions consomme flèches, Échap et Entrée-sur-sélection.

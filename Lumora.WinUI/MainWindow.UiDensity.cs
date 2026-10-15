@@ -51,6 +51,11 @@ public sealed partial class MainWindow
         double FooterDividerHeight,
         double StatusTextFontSize);
 
+    // Barre d'adresse resserree (2026-10-15, retour utilisateur : trop d'espace
+    // autour du texte, rendu identique en vertical et horizontal, reference
+    // Chrome - maquette validee) : hauteur du champ, pastille d'identite et
+    // marge gauche du texte reduites sur "standard" et "dense". "comfortable"
+    // garde ses valeurs historiques (promesse de ce palier).
     // "comfortable" reprend a l'identique les valeurs historiques de Lumora
     // (aucune regression pour qui choisit ce palier). "standard"/"dense" sont
     // des paliers intermediaires/reduits, verifies en conditions reelles.
@@ -82,9 +87,9 @@ public sealed partial class MainWindow
         "dense" => new UiDensityMetrics(
             IconButtonSize: 24, ModulesButtonSize: 32,
             NavigationRowHeight: 50, NavigationToolbarPadding: new Thickness(8, 3, 8, 4),
-            AddressBoxMinHeight: 40, AddressBoxPadding: new Thickness(44, 2, 14, 2), AddressBoxCornerRadius: 16,
-            AddressIdentityBadgeSize: 22, AddressIdentityBadgeCornerRadius: 11,
-            AddressIdentityBadgeMargin: new Thickness(7, 0, 0, 0), AddressIdentityIconSize: 9,
+            AddressBoxMinHeight: 34, AddressBoxPadding: new Thickness(36, 2, 12, 2), AddressBoxCornerRadius: 17,
+            AddressIdentityBadgeSize: 20, AddressIdentityBadgeCornerRadius: 10,
+            AddressIdentityBadgeMargin: new Thickness(6, 0, 0, 0), AddressIdentityIconSize: 8,
             BookmarksRowHeight: 44, BookmarksBottomRowHeight: 34,
             // Voir note du palier "comfortable" ci-dessus (memes ecarts conserves).
             BookmarkChipHeight: 22, BookmarkChipPaddingText: new Thickness(6, 0, 8, 0), BookmarkChipPaddingIcon: new Thickness(4, 0, 4, 0),
@@ -97,9 +102,9 @@ public sealed partial class MainWindow
         _ => new UiDensityMetrics(
             IconButtonSize: 28, ModulesButtonSize: 36,
             NavigationRowHeight: 60, NavigationToolbarPadding: new Thickness(10, 4, 10, 5),
-            AddressBoxMinHeight: 44, AddressBoxPadding: new Thickness(48, 3, 16, 3), AddressBoxCornerRadius: 18,
-            AddressIdentityBadgeSize: 26, AddressIdentityBadgeCornerRadius: 13,
-            AddressIdentityBadgeMargin: new Thickness(9, 0, 0, 0), AddressIdentityIconSize: 10,
+            AddressBoxMinHeight: 38, AddressBoxPadding: new Thickness(42, 3, 14, 3), AddressBoxCornerRadius: 19,
+            AddressIdentityBadgeSize: 24, AddressIdentityBadgeCornerRadius: 12,
+            AddressIdentityBadgeMargin: new Thickness(8, 0, 0, 0), AddressIdentityIconSize: 10,
             BookmarksRowHeight: 52, BookmarksBottomRowHeight: 38,
             BookmarkChipHeight: 26, BookmarkChipPaddingText: new Thickness(8, 0, 10, 0), BookmarkChipPaddingIcon: new Thickness(6, 0, 6, 0),
             BookmarkChipCornerRadius: 6, BookmarkChipFontSize: 12,

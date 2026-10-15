@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.31.0-dev";
+    internal const string Version = "0.94.31.1-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -1914,10 +1914,24 @@ public sealed partial class MainWindow : Window
         };
 
         // Tout ce qui n'est ni AddressBox ni ToolbarButtonsPanel (retour/
-        // avance/recharger, bouton "Ouvrir l'adresse", espacements de
+        // avance/recharger, espacements de
         // colonnes...) - stable quel que soit le nombre de modules pingles.
-        var fixedWidth = toolbarWidth - AddressBox.ActualWidth - ToolbarButtonsPanel.ActualWidth;
-        var budget = Math.Max(0, toolbarWidth - fixedWidth - AddressBox.MinWidth);
+        // 2026-10-15 (bug reel : fleche "Ouvrir l'adresse" qui recouvrait le
+        // champ en onglets verticaux) : on mesure la COLONNE de la barre
+        // d'adresse, pas AddressBox.ActualWidth. Quand le champ est force a
+        // son MinWidth dans une colonne plus etroite (barre d'outils retrecie
+        // par la reserve des boutons Windows en vertical), AddressBox.ActualWidth
+        // vaut MinWidth alors que la colonne est plus petite : l'ancien calcul
+        // surestimait la place libre et ne repliait pas assez de modules.
+        var addressSlotWidth = (AddressBox.Parent as FrameworkElement)?.ActualWidth ?? AddressBox.ActualWidth;
+        var fixedWidth = toolbarWidth - addressSlotWidth - ToolbarButtonsPanel.ActualWidth;
+        // Largeur souhaitee du champ (le repli des modules s'y refere). Le MinWidth
+        // XAML du champ est volontairement plus bas (160) : il ne sert plus qu'a
+        // garantir que le champ SE RETRECIT au lieu de passer sous la fleche
+        // quand les boutons non repliables (connexions, cookies, partage d'ecran)
+        // laissent moins de place que cette largeur.
+        const double addressPreferredWidth = 220;
+        var budget = Math.Max(0, toolbarWidth - fixedWidth - addressPreferredWidth);
 
         // Compte aussi l'espacement du StackPanel entre elements VISIBLES
         // (ToolbarButtonsPanel.Spacing, lu directement plutot qu'en dur - suit

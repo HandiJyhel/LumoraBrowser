@@ -392,9 +392,12 @@ public sealed class BookmarkBarRegressionTests
         var code = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml.cs");
 
         Assert.Contains("x:Name=\"AddressBox\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MinWidth=\"220\"", xaml, StringComparison.Ordinal);
+        // 220 -> 160 (2026-10-15) : le plancher XAML reste garanti mais plus bas, pour que le
+        // champ se retrecisse au lieu de passer sous la fleche "Ouvrir l'adresse" ; la largeur
+        // souhaitee (220) guide le repli des modules (addressPreferredWidth).
+        Assert.Contains("MinWidth=\"160\"", xaml, StringComparison.Ordinal);
         Assert.Contains("private void CollapseOverflowingToolbarModules(double toolbarWidth)", code, StringComparison.Ordinal);
-        Assert.Contains("var budget = Math.Max(0, toolbarWidth - fixedWidth - AddressBox.MinWidth);", code, StringComparison.Ordinal);
+        Assert.Contains("var budget = Math.Max(0, toolbarWidth - fixedWidth - addressPreferredWidth);", code, StringComparison.Ordinal);
         // Les 6 boutons "toujours dans la barre" ne font jamais partie de la
         // table des modules pingables - jamais masques par ce mecanisme.
         Assert.DoesNotContain("[AddBookmarkButton]", code, StringComparison.Ordinal);
@@ -502,6 +505,34 @@ public sealed class BookmarkBarRegressionTests
         Assert.Contains("hash = unchecked(hash * 31 + c);", code, StringComparison.Ordinal);
         Assert.Contains("return (int)(hash % 360);", code, StringComparison.Ordinal);
         Assert.DoesNotContain("new Random(", code, StringComparison.Ordinal);
+    }
+
+    // 2026-10-15 : la fleche "Ouvrir l'adresse" chevauchait le champ en onglets
+    // verticaux et plus personne ne s'en sert - retiree dans les deux
+    // dispositions. Entree (AddressBox_KeyDown) reste le moyen de valider.
+    [Fact]
+    public void Fleche_ouvrir_l_adresse_retiree_entree_valide_toujours()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var nav = ReadRepoFile("Lumora.WinUI", "MainWindow.Navigation.cs");
+
+        Assert.DoesNotContain("AutomationProperties.Name=\"Ouvrir l'adresse\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("GoButton_Click", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("GoButton_Click", nav, StringComparison.Ordinal);
+        Assert.Contains("Grid.Column=\"4\" Grid.ColumnSpan=\"2\" Margin=\"6,0\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("if (e.Key == VirtualKey.Enter)", nav, StringComparison.Ordinal);
+    }
+
+    // Bug reel signale par l'utilisateur (2026-10-15) : Chrome "non detecte" a
+    // l'import alors que ses favoris vivaient dans AccountBookmarks (profil
+    // connecte a un compte Google) - le fichier Bookmarks n'avait plus que 3
+    // dossiers vides.
+    [Fact]
+    public void Import_detecte_aussi_les_favoris_du_compte_AccountBookmarks()
+    {
+        var code = ReadRepoFile("Lumora.WinUI", "Models", "Bookmarks.cs");
+
+        Assert.Contains("(\"AccountBookmarks\", \" (compte)\")", code, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)
