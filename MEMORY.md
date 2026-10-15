@@ -30328,3 +30328,15 @@ Retour d'un utilisateur externe (cousin) : navigateur "pas mal, pas de bug", seu
 Build MSBuild VS2026 + 1027 tests OK. **Version** `0.94.31.0-dev` (ajout = 3e chiffre). Rien committé.
 
 **Suite le même jour** : bug réel (texte des onglets verticaux illisible en mode clair, gris 244/221 forcé en dur dans `MainWindow.TabGroups.cs`) corrigé avec les brosses du thème `NovaTabTitle*ForegroundBrush`, test de non-régression ajouté (1028 tests), vérifié sur capture réelle en mode clair. Barre d'adresse (18 px semi-gras, jugée trop grosse) : maquette 3 variantes, variante **B validée** (15 px / normal / espacement 0, grand texte 17) appliquée dans `MainWindow.xaml` + `MainWindow.SettingsTheme.cs` (remplace la règle du 22/08 "18 px minimum", décision explicite de l'utilisateur), test `Barre_adresse_est_a_15px_et_17px_en_grand_texte`, vérifié sur capture réelle, 1028 tests OK. Rien committé.
+
+## 15e release 1.0.0 (2026-10-15)
+
+Sur demande explicite de l'utilisateur ("fais-moi un nouvel exécutable comme ça je pourrai mettre à jour ce qu'il faut"), toujours nommée **1.0.0**. Contenu : session onglets verticaux 64 px + survol, assistant Rapide/Avancé, texte des onglets en mode clair, barre d'adresse 15 px (dev `0.94.31.0-dev`). Changements commités d'abord en local (`727cbc6`, sans attribution Claude, **non poussé**).
+
+Protocole habituel : worktree jetable `C:\lumora100` sur `727cbc6`, runtime WebView2 copié par robocopy, `ReleaseVersion = "1.0.0"` posé UNIQUEMENT dans le worktree, `build-clean-test-artifact.ps1` puis `build-installer.ps1` (0 erreur / 0 avertissement).
+
+**Vérification en direct** (exécutable de l'artefact propre `Lumora-1.0.0-win-x64-clean-20261015-200605`, jamais l'installateur, profil jetable) : titre "Lumora 1.0.0", écran de choix Rapide/Avancé puis écran rapide présents, navigation réelle vers https://example.com/ réussie, 0 `UNHANDLED`.
+
+**SHA256** : installateur `4f09f550bcf1bb6bdcfc9ce46faa76b007a8a17caf0d2b9cdad9a24d733e8840` (script = `Get-FileHash` indépendant = copie dans le dépôt). Exécutable de l'artefact propre : `199a2c9e826d4f2344681cd8558771b2f1044e60818dc0998da85f30b93bb71f`.
+
+**Fichiers** : `artifacts/installer/LumoraSetup-1.0.0-win-x64.exe` + `.VERIFICATION.txt` remplacés ; manifestes `Lumora-1.0.0-clean-20261015-200715.sha256` et `LumoraSetup-1.0.0-20261015-200819.sha256` copiés dans `artifacts/signatures/` AVANT suppression du worktree. Worktree supprimé, `ReleaseVersion = null` reconfirmé sur `main`. Installateur jamais lancé. Upload du binaire sur la page GitHub = geste manuel de l'utilisateur.
