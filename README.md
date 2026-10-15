@@ -53,7 +53,13 @@ navigateur principal au quotidien.
   intégrés à l'interface plutôt que relégués dans un sous-menu.
 - **Un navigateur qui se façonne** — thème, densité, disposition, mode
   d'usage : Lumora s'adapte à votre façon de travailler plutôt que
-  l'inverse.
+  l'inverse. Les onglets peuvent être placés sur le côté, réduits en une
+  colonne d'icônes et rouverts au simple survol de la souris.
+- **Une prise en main rapide** — au premier lancement, une configuration
+  rapide en un seul écran (thème, moteur de recherche, position des
+  onglets) ou, pour qui veut tout régler, la configuration avancée.
+- **Import de vos favoris** — Chrome, Edge, Brave, Opera, Vivaldi et
+  Firefox sont détectés, y compris les favoris rattachés à un compte.
 - **Sauvegarde et restauration complètes** du profil, et un installateur
   qui n'exige aucun prérequis système, pour changer de machine sans rien
   perdre.
@@ -79,6 +85,16 @@ navigateur principal au quotidien.
     <td align="center" width="50%">
       <img src=".github/readme/bienvenue.png" width="100%" alt="Écran de bienvenue du premier lancement"><br>
       <sub><b>Premier lancement</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src=".github/readme/assistant-choix.png" width="100%" alt="Choix entre configuration rapide et avancée"><br>
+      <sub><b>Configuration rapide ou avancée</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src=".github/readme/assistant-rapide.png" width="100%" alt="Configuration rapide en un seul écran"><br>
+      <sub><b>Configuration rapide, un seul écran</b></sub>
     </td>
   </tr>
 </table>

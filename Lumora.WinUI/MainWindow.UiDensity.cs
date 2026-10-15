@@ -56,6 +56,11 @@ public sealed partial class MainWindow
     // Chrome - maquette validee) : hauteur du champ, pastille d'identite et
     // marge gauche du texte reduites sur "standard" et "dense". "comfortable"
     // garde ses valeurs historiques (promesse de ce palier).
+    // Centrage vertical du texte (2026-10-15) : le TextBox WinUI colle le texte en
+    // haut de sa zone de contenu (VerticalContentAlignment n'y change rien), le
+    // texte se retrouvait ~5 DIP trop haut dans le champ - mesure sur capture
+    // reelle. Le remplissage haut/bas vaut maintenant (hauteur - ligne de 20) / 2 :
+    // 9 en standard (38), 7 en dense (34), 13 en confortable (46), 9 en ultra.
     // "comfortable" reprend a l'identique les valeurs historiques de Lumora
     // (aucune regression pour qui choisit ce palier). "standard"/"dense" sont
     // des paliers intermediaires/reduits, verifies en conditions reelles.
@@ -69,7 +74,7 @@ public sealed partial class MainWindow
         "comfortable" => new UiDensityMetrics(
             IconButtonSize: 32, ModulesButtonSize: 40,
             NavigationRowHeight: 72, NavigationToolbarPadding: new Thickness(12, 6, 12, 7),
-            AddressBoxMinHeight: 46, AddressBoxPadding: new Thickness(54, 4, 18, 4), AddressBoxCornerRadius: 22,
+            AddressBoxMinHeight: 46, AddressBoxPadding: new Thickness(54, 13, 18, 13), AddressBoxCornerRadius: 22,
             AddressIdentityBadgeSize: 30, AddressIdentityBadgeCornerRadius: 15,
             AddressIdentityBadgeMargin: new Thickness(10, 0, 0, 0), AddressIdentityIconSize: 12,
             BookmarksRowHeight: 60, BookmarksBottomRowHeight: 42,
@@ -87,7 +92,7 @@ public sealed partial class MainWindow
         "dense" => new UiDensityMetrics(
             IconButtonSize: 24, ModulesButtonSize: 32,
             NavigationRowHeight: 50, NavigationToolbarPadding: new Thickness(8, 3, 8, 4),
-            AddressBoxMinHeight: 34, AddressBoxPadding: new Thickness(36, 2, 12, 2), AddressBoxCornerRadius: 17,
+            AddressBoxMinHeight: 34, AddressBoxPadding: new Thickness(36, 7, 12, 7), AddressBoxCornerRadius: 17,
             AddressIdentityBadgeSize: 20, AddressIdentityBadgeCornerRadius: 10,
             AddressIdentityBadgeMargin: new Thickness(6, 0, 0, 0), AddressIdentityIconSize: 8,
             BookmarksRowHeight: 44, BookmarksBottomRowHeight: 34,
@@ -102,7 +107,7 @@ public sealed partial class MainWindow
         _ => new UiDensityMetrics(
             IconButtonSize: 28, ModulesButtonSize: 36,
             NavigationRowHeight: 60, NavigationToolbarPadding: new Thickness(10, 4, 10, 5),
-            AddressBoxMinHeight: 38, AddressBoxPadding: new Thickness(42, 3, 14, 3), AddressBoxCornerRadius: 19,
+            AddressBoxMinHeight: 38, AddressBoxPadding: new Thickness(42, 9, 14, 9), AddressBoxCornerRadius: 19,
             AddressIdentityBadgeSize: 24, AddressIdentityBadgeCornerRadius: 12,
             AddressIdentityBadgeMargin: new Thickness(8, 0, 0, 0), AddressIdentityIconSize: 10,
             BookmarksRowHeight: 52, BookmarksBottomRowHeight: 38,
@@ -148,7 +153,7 @@ public sealed partial class MainWindow
     private static readonly UiDensityMetrics UltraCompactMetrics = new(
         IconButtonSize: 20, ModulesButtonSize: 26,
         NavigationRowHeight: 46, NavigationToolbarPadding: new Thickness(6, 3, 6, 4),
-        AddressBoxMinHeight: 38, AddressBoxPadding: new Thickness(34, 3, 10, 3), AddressBoxCornerRadius: 16,
+        AddressBoxMinHeight: 38, AddressBoxPadding: new Thickness(34, 9, 10, 9), AddressBoxCornerRadius: 16,
         AddressIdentityBadgeSize: 18, AddressIdentityBadgeCornerRadius: 9,
         AddressIdentityBadgeMargin: new Thickness(5, 0, 0, 0), AddressIdentityIconSize: 7,
         BookmarksRowHeight: 36, BookmarksBottomRowHeight: 28,

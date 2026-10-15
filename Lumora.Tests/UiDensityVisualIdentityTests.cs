@@ -94,7 +94,7 @@ public sealed class UiDensityVisualIdentityTests
         Assert.Contains("IconButtonSize: 32", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("NavigationRowHeight: 72", comfortableBlock, StringComparison.Ordinal);
         Assert.Contains("AddressBoxMinHeight: 46", comfortableBlock, StringComparison.Ordinal);
-        Assert.Contains("AddressBoxPadding: new Thickness(54, 4, 18, 4)", comfortableBlock, StringComparison.Ordinal);
+        Assert.Contains("AddressBoxPadding: new Thickness(54, 13, 18, 13)", comfortableBlock, StringComparison.Ordinal);
         // 36 -> 32 (2026-09-10, session "interface") : puces de favoris
         // resserrees, ecarts entre paliers conserves - voir maquette
         // "Lumora Epure".

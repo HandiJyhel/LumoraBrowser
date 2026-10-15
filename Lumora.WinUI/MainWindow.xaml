@@ -1801,7 +1801,7 @@
                     x:Name="AddressBox"
                     MinHeight="38"
                     MinWidth="160"
-                    Padding="42,3,14,3"
+                    Padding="42,9,14,9"
                     CornerRadius="19"
                     FontSize="15"
                     FontWeight="Normal"
