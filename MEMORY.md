@@ -30372,3 +30372,5 @@ Refaite juste après la 16e parce que le centrage vertical du texte de l'adresse
 **Vérification en direct** (artefact propre `Lumora-1.0.0-win-x64-clean-20261015-205901`, jamais l'installateur) : titre "Lumora 1.0.0", "Google Chrome — 195 favori(s) détecté(s)", choix Rapide/Avancé, aucune flèche, navigation par Entrée réussie, 0 `UNHANDLED`.
 
 **SHA256** installateur `f38fb4b8aac28c3a1da1231a6c4a37c7068776f1fdca83240d16d6a6c337f7fa` (script = `Get-FileHash` = copie dépôt) ; exécutable propre `4a7173d138542940658a0260cb9e81288225df27f0243e215a713253076f9ecf`. Manifestes `Lumora-1.0.0-clean-20261015-210007.sha256` et `LumoraSetup-1.0.0-20261015-210045.sha256` copiés AVANT suppression du worktree. `ReleaseVersion = null` reconfirmé. Remplace la 16e (SHA `2437a96a…`) : **ne pas uploader la 16e**.
+
+**Poussé sur `origin/main`** (2026-10-15, demande utilisateur "mets à jour tout ce que tu peux sur le GitHub") : `9f273e7..7656301`, ce qui rend caduques les mentions "non poussé" des sections 15e/16e. Reste manuel pour l'utilisateur : upload du binaire 17e + texte/SHA de la Release (API bloquée).
