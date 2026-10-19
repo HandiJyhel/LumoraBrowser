@@ -15,7 +15,7 @@ namespace Lumora.WinUI;
 public sealed class VaultLockedForBackupException : Exception
 {
     public VaultLockedForBackupException()
-        : base("Le coffre est verrouillé. Déverrouillez-le avant de créer une sauvegarde.") { }
+        : base("Le coffre est verrouillé. Déverrouille-le avant de créer une sauvegarde.") { }
 }
 
 // Format de sauvegarde Lumora (extension .lum depuis le 2026-08-14, session

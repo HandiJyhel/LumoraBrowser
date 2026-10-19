@@ -128,7 +128,7 @@ public sealed partial class MainWindow
         var statusText = rescueActive
             ? "Mode secours actif. Le retour à l'état d'avant reste disponible."
             : HasAccessibilityRescueSnapshot()
-                ? "Un état précédent est mémorisé. Vous pouvez encore y revenir."
+                ? "Un état précédent est mémorisé. Tu peux encore y revenir."
                 : "Aucun retour mémorisé pour l'instant.";
 
         if (AccessibilityQuickRescueStatusText is not null)

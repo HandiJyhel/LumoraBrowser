@@ -168,7 +168,7 @@ public sealed partial class MainWindow
         {
             SessionsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Aucune session active. Les sites que vous visiterez apparaîtront ici.",
+                Text = "Aucune session active. Les sites que tu visiteras apparaîtront ici.",
                 Opacity = 0.65,
                 FontSize = AccessibilitySecondaryFontSize(),
                 Margin = new Thickness(0, 8, 0, 0)

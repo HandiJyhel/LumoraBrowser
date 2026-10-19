@@ -6,8 +6,8 @@ namespace Lumora.Tests;
 public class IncognitoWelcomeHtmlTests
 {
     private const string SessionEphemereClaim = "Cette session ne sera jamais sauvegardée";
-    private const string IpMasqueeClaim = "votre adresse IP réelle est masquée";
-    private const string IpNonMasqueeClaim = "Votre adresse IP réelle N'est PAS masquée";
+    private const string IpMasqueeClaim = "ton adresse IP réelle est masquée";
+    private const string IpNonMasqueeClaim = "Ton adresse IP réelle N'est PAS masquée";
 
     [Theory]
     [InlineData(true)]
@@ -71,7 +71,7 @@ public class IncognitoWelcomeHtmlTests
     {
         var html = IncognitoWelcomeHtml.Build(torEnabled);
 
-        Assert.Contains("Ça protège votre historique local, pas votre trafic réseau", html, StringComparison.Ordinal);
+        Assert.Contains("Ça protège ton historique local, pas ton trafic réseau", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class IncognitoWelcomeHtmlTests
     {
         var html = IncognitoWelcomeHtml.Build(torEnabled: false);
 
-        Assert.Contains("faisant transiter votre trafic par le réseau Tor", html, StringComparison.Ordinal);
+        Assert.Contains("faisant passer ton trafic par le réseau Tor", html, StringComparison.Ordinal);
     }
 
     // Demande explicite utilisateur (2026-08-01) : une barre de recherche sur

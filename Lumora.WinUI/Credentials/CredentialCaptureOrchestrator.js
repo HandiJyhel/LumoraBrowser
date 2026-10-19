@@ -232,7 +232,7 @@
                                 t: "nova.credential.fill-report",
                                 origin: location.origin,
                                 success: false,
-                                message: "Le site a effacé la valeur remplie ; réessayez après un clic dans le champ."
+                                message: "Le site a effacé la valeur remplie ; réessaie après un clic dans le champ."
                             });
                         }
                     } catch (_) { }

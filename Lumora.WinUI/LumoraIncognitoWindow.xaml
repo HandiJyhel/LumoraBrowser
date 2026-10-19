@@ -227,7 +227,7 @@
                 <ToggleSwitch x:Name="IncognitoTorSwitch" OnContent="Tor" OffContent="Tor"
                               Toggled="IncognitoTorSwitch_Toggled"
                               AutomationProperties.Name="Masquer l'adresse IP via Tor"
-                              ToolTipService.ToolTip="Change l'état de Tor : ferme cette fenêtre Incognito et en rouvre une nouvelle dans le nouvel état (les onglets ouverts sont perdus, vous restez en Incognito)" />
+                              ToolTipService.ToolTip="Change l'état de Tor : ferme cette fenêtre Incognito et en rouvre une nouvelle dans le nouvel état (les onglets ouverts sont perdus, tu restes en Incognito)" />
                 <!-- Telechargements (2026-08-31, retour utilisateur : "on ne peut
                      rien faire en Incognito/Tor, meme pas telecharger une video") -
                      fichier generique intercepte par Core_DownloadStarting
@@ -319,7 +319,7 @@
                                 <TextBlock Text="Anti-pistage technique" FontWeight="SemiBold" FontSize="14"
                                            Foreground="{StaticResource LumoraWindowTextBrush}" />
                                 <ToggleSwitch x:Name="IncognitoCnameSwitch" OnContent="Activé" OffContent="Désactivé"
-                                              Header="Détecter le CNAME cloaking"
+                                              Header="Détecter les traceurs cachés (CNAME)"
                                               Toggled="IncognitoCnameSwitch_Toggled" />
                                 <TextBlock Text="Anti-fuite WebRTC : toujours actif dans Incognito, non réglable ici."
                                            TextWrapping="Wrap" FontSize="11.5" Opacity="0.7"

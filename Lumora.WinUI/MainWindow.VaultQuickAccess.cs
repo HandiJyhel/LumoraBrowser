@@ -36,7 +36,7 @@ public sealed partial class MainWindow
         {
             VaultQuickAccessPanel.Children.Add(new TextBlock
             {
-                Text = "Ouvrez une page web pour voir ses identifiants.",
+                Text = "Ouvre une page web pour voir ses identifiants.",
                 Opacity = 0.65,
                 TextWrapping = TextWrapping.Wrap
             });

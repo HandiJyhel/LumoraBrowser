@@ -66,7 +66,7 @@ internal sealed class SiteLoginDiagnosticRecorder
         builder.AppendLine();
         builder.AppendLine($"Site: {root}");
         builder.AppendLine($"Date: {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
-        builder.AppendLine("Donnees sensibles: valeurs de cookies, mots de passe, tokens et parametres d'URL masques.");
+        builder.AppendLine("Données sensibles : valeurs de cookies, mots de passe, jetons et paramètres d'URL masqués.");
         builder.AppendLine();
         builder.AppendLine("Contexte");
         foreach (var line in contextLines)

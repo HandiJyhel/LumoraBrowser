@@ -913,7 +913,7 @@ public sealed partial class MainWindow
         var passkeyActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
 
         var manageBtn = new Button { Content = "Gérer dans Windows" };
-        ApplyNovaControlAccessibility(manageBtn, "Gérer cette clé d'accès dans les paramètres Windows");
+        ApplyNovaControlAccessibility(manageBtn, "Gérer cette clé d'accès dans les réglages Windows");
         manageBtn.Click += async (_, _) => await OpenWindowsPasskeysSettingsAsync();
         passkeyActions.Children.Add(manageBtn);
 
@@ -940,7 +940,7 @@ public sealed partial class MainWindow
         };
         var errorText = new TextBlock
         {
-            Text = "Secret invalide. Vérifiez qu'il s'agit bien d'un secret TOTP (base32) ou d'une URI otpauth://.",
+            Text = "Secret invalide. Vérifie qu'il s'agit bien d'un secret TOTP (base32) ou d'une URI otpauth://.",
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
             Visibility = Visibility.Collapsed
@@ -949,7 +949,7 @@ public sealed partial class MainWindow
         var panel = new StackPanel { Spacing = 8 };
         panel.Children.Add(new TextBlock
         {
-            Text = "Collez le secret fourni par le site (affiché généralement sous le QR code lors de l'activation), ou l'URI otpauth:// complète si vous l'avez exportée.",
+            Text = "Colle le secret fourni par le site (affiché généralement sous le QR code lors de l'activation), ou l'URI otpauth:// complète si tu l'as exportée.",
             Opacity = 0.7,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap
@@ -995,7 +995,7 @@ public sealed partial class MainWindow
             }
 
             box.Text = decoded;
-            scanStatus.Text = "QR code lu, vérifiez puis Enregistrer.";
+            scanStatus.Text = "QR code lu, vérifie puis clique sur Enregistrer.";
             scanStatus.Visibility = Visibility.Visible;
             errorText.Visibility = Visibility.Collapsed;
         };

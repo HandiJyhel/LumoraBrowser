@@ -28,7 +28,7 @@ public sealed partial class MainWindow
         {
             WebAppsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Aucune application installée. Utilisez « Installer la page active » ci-dessus, ou depuis le menu Lumora.",
+                Text = "Aucune application installée. Utilise « Installer la page active » ci-dessus, ou depuis le menu Lumora.",
                 Opacity = 0.65,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 8, 0, 0)

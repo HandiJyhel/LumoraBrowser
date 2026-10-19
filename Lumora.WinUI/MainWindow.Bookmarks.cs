@@ -890,8 +890,8 @@ public sealed partial class MainWindow
     // dessus du 0.3 juge invisible la fois precedente.
     private static TextBlock CreateConstellationConnector() => new()
     {
-        Text = "✦",
-        FontSize = 9,
+        Text = "·",
+        FontSize = 14,
         Opacity = 0.6,
         VerticalAlignment = VerticalAlignment.Center,
         IsHitTestVisible = false
@@ -1035,7 +1035,7 @@ public sealed partial class MainWindow
         _bookmarkReorderPickedId = wasPicked ? null : nodeId;
         var announcement = wasPicked
             ? $"Décrochage de « {label} » annulé."
-            : $"« {label} » décroché — cliquez un emplacement pour le poser, Échap pour annuler.";
+            : $"« {label} » décroché : clique sur un emplacement pour le poser, Échap pour annuler.";
         DispatcherQueue.TryEnqueue(() =>
         {
             RenderBookmarksBar();

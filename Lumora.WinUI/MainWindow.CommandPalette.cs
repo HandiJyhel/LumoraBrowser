@@ -173,7 +173,7 @@ public sealed partial class MainWindow
             () => OpenIncognitoWindow()), 98);
         Add(new("Naviguer", "Rouvrir l'onglet fermé", "Restaure le dernier onglet fermé (Ctrl+Shift+T)", "\uE7A7",
             () => ReopenLastClosedTab()), 97);
-        Add(new("Naviguer", "Groupes enregistrés", "Retrouver et rouvrir vos groupes d'onglets rangés", "\uE7C1",
+        Add(new("Naviguer", "Groupes enregistrés", "Retrouver et rouvrir tes groupes d'onglets rangés", "\uE7C1",
             () => SavedTabGroupsMenu_Click(this, new RoutedEventArgs())), 96);
         Add(new("Naviguer", "Accueil", "Retourne à la page d'accueil Lumora", "\uE80F",
             () => HomeMenu_Click(this, new RoutedEventArgs())), 95);
@@ -181,7 +181,7 @@ public sealed partial class MainWindow
             () => ShowSiteControlForCurrentPage()), 94);
         Add(new("Lumora", "Modules Lumora", "Ouvre les outils intégrés : lecture, média, traduction, actions rapides", "\uE7B8",
             () => ModulesMenu_Click(this, new RoutedEventArgs())), 93);
-        Add(new("Lumora", "Paramètres", "Ouvre les paramètres de Lumora", "\uE713",
+        Add(new("Lumora", "Réglages", "Ouvre les réglages de Lumora", "\uE713",
             () => SettingsMenu_Click(this, new RoutedEventArgs())), 90);
         Add(new("Coffre local", "Gestionnaire de mots de passe", "Ouvre le coffre local vault.lumora", "\uE72E",
             () => VaultMenu_Click(this, new RoutedEventArgs())), 88);

@@ -170,7 +170,7 @@ public sealed partial class MainWindow
                 var isFirstEverProfile = _userProfile is null && _profileEntries.Count == 0;
                 CreateProfileTitleText.Text = isFirstEverProfile ? "Bienvenue" : "Nouveau profil";
                 CreateProfileSubtitleText.Text = isFirstEverProfile
-                    ? "Créez votre profil pour protéger vos données."
+                    ? "Crée ton profil pour protéger tes données."
                     : "Ce profil aura ses propres favoris, historique et coffre, séparés des autres.";
                 // Annuler n'a de sens que s'il existe reellement une session ou un profil
                 // vers lequel revenir ; le lien invite n'a de sens que si aucun profil
@@ -264,7 +264,7 @@ public sealed partial class MainWindow
                 : Visibility.Collapsed;
         LoginStatusText.Text = _profileEntries.Count == 0
             ? "Aucun profil local trouvé."
-            : "Choisissez le profil à ouvrir.";
+            : "Choisis le profil à ouvrir.";
     }
 
     private void ProfilePickerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -410,7 +410,7 @@ public sealed partial class MainWindow
             ProfileFlyoutTitleText.Text = "Mode invité";
             ProfileFlyoutSubtitleText.Text = "Aucune donnée persistante n'est gardée à la fermeture tant qu'aucun profil n'est choisi.";
             ProfileFlyoutCurrentUserText.Text = "Session sans profil";
-            ProfileFlyoutCurrentStateText.Text = "Créer un utilisateur ou choisir un profil local pour retrouver vos données ensuite.";
+            ProfileFlyoutCurrentStateText.Text = "Créer un utilisateur ou choisir un profil local pour retrouver tes données ensuite.";
             return;
         }
 
@@ -420,14 +420,14 @@ public sealed partial class MainWindow
             ProfileFlyoutTitleText.Text = currentName;
             ProfileFlyoutSubtitleText.Text = "Ce menu regroupe les actions de profil, de compte local et de gestion d'utilisateurs.";
             ProfileFlyoutCurrentUserText.Text = $"Connecté : {currentName}";
-            ProfileFlyoutCurrentStateText.Text = "Changer d'utilisateur, ouvrir les paramètres du profil ou en créer un nouveau.";
+            ProfileFlyoutCurrentStateText.Text = "Changer d'utilisateur, ouvrir les réglages du profil ou en créer un nouveau.";
             return;
         }
 
         ProfileFlyoutTitleText.Text = "Profil Lumora";
-        ProfileFlyoutSubtitleText.Text = "Choisissez un profil local pour séparer vos données, sessions et réglages.";
+        ProfileFlyoutSubtitleText.Text = "Choisis un profil local pour séparer tes données, tes sessions et tes réglages.";
         ProfileFlyoutCurrentUserText.Text = "Aucun profil actif";
-        ProfileFlyoutCurrentStateText.Text = "Créer ou choisir un profil local pour garder vos données sur cet appareil.";
+        ProfileFlyoutCurrentStateText.Text = "Créer ou choisir un profil local pour garder tes données sur cet appareil.";
     }
 
     private void ProfileFlyoutSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -447,7 +447,7 @@ public sealed partial class MainWindow
         ProfileStatusFlyout.Hide();
         ModulesFlyout.Hide();
         ShowProfilePickerOverlay();
-        StatusText.Text = "Choisissez un autre utilisateur Lumora.";
+        StatusText.Text = "Choisis un autre utilisateur Lumora.";
     }
 
     private void ProfileFlyoutCreateButton_Click(object sender, RoutedEventArgs e)
@@ -1193,7 +1193,7 @@ public sealed partial class MainWindow
 
         await ShowSimpleDialogAsync(
             "Sauvegarde importée",
-            "Vos favoris, onglets, coffre et réglages ont été restaurés. Lumora va redémarrer pour appliquer la sauvegarde.",
+            "Tes favoris, onglets, coffre et réglages ont été restaurés. Lumora va redémarrer pour appliquer la sauvegarde.",
             closeButtonText: "OK");
         RestartApp();
     }
@@ -1243,7 +1243,7 @@ public sealed partial class MainWindow
         {
             Title = $"Profil trouvé : {candidate.Name}",
             Content = mentionBlankProfileLeftIntact
-                ? "Lumora va redémarrer sur ce profil. Le profil vierge que vous venez de créer reste inchangé sur le disque et restera accessible depuis le sélecteur de profils si besoin."
+                ? "Lumora va redémarrer sur ce profil. Le profil vierge que tu viens de créer reste inchangé sur le disque et restera accessible depuis le sélecteur de profils si besoin."
                 : "Lumora va redémarrer sur ce profil.",
             PrimaryButtonText = "Utiliser ce profil",
             CloseButtonText = "Annuler",
@@ -1263,7 +1263,7 @@ public sealed partial class MainWindow
         var name = ProfileNameBox.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(name))
-        { LoginStatusText.Text = "Veuillez entrer un prénom ou pseudo."; return; }
+        { LoginStatusText.Text = "Entre un prénom ou un pseudo."; return; }
 
         // Profil sans mot de passe (2026-08-13) : choix permanent, voir
         // MEMORY.md - aucune verification de force, aucun PIN (rien a
@@ -1538,7 +1538,7 @@ public sealed partial class MainWindow
     {
         var pw = LoginPasswordBox.Password;
         if (string.IsNullOrWhiteSpace(pw))
-        { LoginStatusText.Text = "Entrez votre mot de passe."; return; }
+        { LoginStatusText.Text = "Entre ton mot de passe."; return; }
 
         var ok = await Task.Run(() => _userProfile!.VerifyPassword(pw));
         if (ok)
@@ -1723,7 +1723,7 @@ public sealed partial class MainWindow
     {
         if (_pinFailCount >= 5)
         {
-            LoginStatusText.Text = "Trop de tentatives. Utilisez votre mot de passe.";
+            LoginStatusText.Text = "Trop de tentatives. Utilise ton mot de passe.";
             ShowLoginPanel("password");
             return;
         }
@@ -1769,7 +1769,7 @@ public sealed partial class MainWindow
             {
                 _pinFailCount++;
                 LoginStatusText.Text = _pinFailCount >= 5
-                    ? "Trop de tentatives. Utilisez votre mot de passe."
+                    ? "Trop de tentatives. Utilise ton mot de passe."
                     : $"Code PIN incorrect. ({_pinFailCount}/5)";
             }
         }
@@ -1879,7 +1879,7 @@ public sealed partial class MainWindow
         if (_userProfile.HasPinLogin && !_vault.IsLocked)
         {
             var pin = await PromptMasterPasswordAsync(
-                "Confirmez votre code PIN pour garder l'ouverture du coffre par PIN", confirm: false);
+                "Confirme ton code PIN pour garder l'ouverture du coffre par PIN", confirm: false);
             if (!string.IsNullOrWhiteSpace(pin) && _userProfile.VerifyPin(pin))
                 _vault.EnablePinUnlock(pin);
         }
@@ -1935,7 +1935,7 @@ public sealed partial class MainWindow
         var panel = new StackPanel { Spacing = 12 };
         panel.Children.Add(new TextBlock
         {
-            Text = "Notez cette clé maintenant. Elle permet de récupérer le profil et le coffre si le mot de passe est oublié. Lumora ne peut pas la retrouver à votre place.",
+            Text = "Note cette clé maintenant. Elle permet de récupérer le profil et le coffre si le mot de passe est oublié. Lumora ne peut pas la retrouver à ta place.",
             TextWrapping = TextWrapping.Wrap
         });
         panel.Children.Add(keyBox);
@@ -2022,12 +2022,12 @@ public sealed partial class MainWindow
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(new TextBlock
         {
-            Text = "Cette action supprime définitivement toutes vos données : favoris, historique, onglets, paramètres, coffre et identifiants de connexion. Cette opération est irréversible.",
+            Text = "Cette action supprime définitivement toutes tes données : favoris, historique, onglets, réglages, coffre et identifiants de connexion. Cette opération est irréversible.",
             TextWrapping = TextWrapping.Wrap
         });
         panel.Children.Add(new TextBlock
         {
-            Text = $"Confirmez avec le mot de passe de {_userProfile.Name}.",
+            Text = $"Confirme avec le mot de passe de {_userProfile.Name}.",
             TextWrapping = TextWrapping.Wrap,
             Opacity = 0.72,
             FontSize = 12
@@ -2116,7 +2116,7 @@ public sealed partial class MainWindow
             await ShowSimpleDialogAsync(
                 "Réinitialisation impossible",
                 "Le dossier du profil est toujours utilisé par Lumora (mot de passe correct, mais la suppression a échoué). " +
-                "Fermez tous les onglets ouverts puis réessayez." +
+                "Ferme tous les onglets ouverts puis réessaie." +
                 (deleteError is null ? "" : $"\n\nDétail : {deleteError.Message}"));
             return;
         }
@@ -2140,7 +2140,7 @@ public sealed partial class MainWindow
         // valider explicitement, comme demande, avant le redemarrage.
         await ShowSimpleDialogAsync(
             "Profil réinitialisé",
-            "Votre profil a été supprimé. Lumora va redémarrer pour repartir de zéro.",
+            "Ton profil a été supprimé. Lumora va redémarrer pour repartir de zéro.",
             closeButtonText: "OK");
 
         RestartApp();

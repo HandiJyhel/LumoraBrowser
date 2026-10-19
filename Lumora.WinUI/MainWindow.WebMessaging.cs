@@ -132,14 +132,14 @@ public sealed partial class MainWindow
             if (type == "newtab_personalize")
             {
                 OpenPersonalizationSettings();
-                StatusText.Text = "Personnalisez votre mode, votre accueil et vos repères Lumora.";
+                StatusText.Text = "Personnalise ton mode d'usage et ton accueil.";
                 return;
             }
 
             if (type == "newtab_modules")
             {
                 ShowPanel(ModulesPanel, "Modules Lumora");
-                StatusText.Text = "Choisissez les modules à épingler dans la barre Lumora.";
+                StatusText.Text = "Choisis les modules à épingler dans la barre Lumora.";
                 return;
             }
 
@@ -236,11 +236,11 @@ public sealed partial class MainWindow
             case "command_palette":
                 if (!_uiSettings.CommandPaletteEnabled)
                 {
-                    StatusText.Text = "Palette Ctrl+K désactivée. Activez-la dans Mon Lumora.";
+                    StatusText.Text = "Palette Ctrl+K désactivée. Active-la dans Mon Lumora.";
                     return;
                 }
 
-                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Nouvel onglet");
                 ShowCommandPalette();
                 break;
 
@@ -249,7 +249,7 @@ public sealed partial class MainWindow
                 break;
 
             case "reader":
-                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Nouvel onglet");
                 await ToggleReaderModeAsync(ensureOpen: true);
                 break;
 

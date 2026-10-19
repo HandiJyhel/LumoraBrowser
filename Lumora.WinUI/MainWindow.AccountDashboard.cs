@@ -65,7 +65,7 @@ public sealed partial class MainWindow
         else
         {
             AccountLastBackupHeadlineText.Text = "Aucune sauvegarde effectuée avec ce compte";
-            AccountLastBackupDetailText.Text = "Exportez une sauvegarde pour pouvoir tout récupérer, compte inclus, en cas de besoin.";
+            AccountLastBackupDetailText.Text = "Exporte une sauvegarde pour pouvoir tout récupérer, compte inclus, en cas de besoin.";
         }
     }
 

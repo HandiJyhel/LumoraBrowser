@@ -92,8 +92,8 @@ public sealed partial class MainWindow
         }
 
         var password = await PromptAccountPasswordAsync(
-            "Confirmer votre mot de passe",
-            "Entrez le mot de passe de votre compte Lumora pour créer la sauvegarde.");
+            "Confirmer ton mot de passe",
+            "Entre le mot de passe de ton compte Lumora pour créer la sauvegarde.");
         if (password is null) return;
 
         if (!await Task.Run(() => _userProfile.VerifyPassword(password)))
@@ -175,7 +175,7 @@ public sealed partial class MainWindow
 
         var password = await PromptAccountPasswordAsync(
             "Importer une sauvegarde",
-            "Entrez le mot de passe du compte associé à cette sauvegarde.");
+            "Entre le mot de passe du compte associé à cette sauvegarde.");
         if (password is null) return false;
 
         try
@@ -229,7 +229,7 @@ public sealed partial class MainWindow
             Opacity = 0.7,
             FontSize = 12
         });
-        var pwBox = new PasswordBox { PlaceholderText = "Mot de passe de votre compte", MinWidth = 280 };
+        var pwBox = new PasswordBox { PlaceholderText = "Mot de passe de ton compte", MinWidth = 280 };
         panel.Children.Add(pwBox);
 
         var dialog = new ContentDialog

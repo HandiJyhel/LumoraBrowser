@@ -20,8 +20,8 @@ internal static class DownloadOpenConfirmation
             var dialog = new ContentDialog
             {
                 Title = "Ouvrir ce fichier ?",
-                Content = $"« {Path.GetFileName(path)} » peut exécuter des programmes sur votre ordinateur.\n\n"
-                          + "Ne l'ouvrez que si vous connaissez sa provenance et lui faites confiance.",
+                Content = $"« {Path.GetFileName(path)} » peut exécuter des programmes sur ton ordinateur.\n\n"
+                          + "Ne l'ouvre que si tu connais sa provenance et que tu lui fais confiance.",
                 PrimaryButtonText = "Ouvrir quand même",
                 CloseButtonText = "Annuler",
                 DefaultButton = ContentDialogButton.Close,

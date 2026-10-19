@@ -53,7 +53,7 @@ public sealed partial class MainWindow
         if (!_vault.HasMasterPassword) return true;
         if (!_vault.IsLocked) return true;
 
-        var pw = await PromptMasterPasswordAsync("Coffre verrouillé - entrez le mot de passe du profil", confirm: false);
+        var pw = await PromptMasterPasswordAsync("Coffre verrouillé : entre le mot de passe du profil", confirm: false);
         if (string.IsNullOrWhiteSpace(pw)) return false;
 
         return _vault.Unlock(pw);
@@ -67,7 +67,7 @@ public sealed partial class MainWindow
 
         if (_userProfile.HasPinLogin)
         {
-            var pin = await PromptMasterPasswordAsync("Entrez votre code PIN pour ouvrir le coffre", confirm: false);
+            var pin = await PromptMasterPasswordAsync("Entre ton code PIN pour ouvrir le coffre", confirm: false);
             if (string.IsNullOrWhiteSpace(pin) || !_userProfile.VerifyPin(pin)) return false;
             // Le PIN du profil est correct, mais ça ne garantit pas que le coffre
             // se déverrouille avec (coffre créé avant le couplage automatique,
@@ -83,7 +83,7 @@ public sealed partial class MainWindow
             return true;
         }
 
-        var pw = await PromptMasterPasswordAsync("Entrez votre mot de passe pour ouvrir le coffre", confirm: false);
+        var pw = await PromptMasterPasswordAsync("Entre ton mot de passe pour ouvrir le coffre", confirm: false);
         if (string.IsNullOrWhiteSpace(pw) || !_userProfile.VerifyPassword(pw)) return false;
         if (_vault.IsLocked && !_vault.EnsureUnlockedWith(pw))
         {

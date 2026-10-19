@@ -410,7 +410,7 @@ public sealed partial class MainWindow
         _pendingNotificationArgs = args;
         _pendingNotificationDeferral = deferral;
 
-        NotificationPermissionText.Text = $"{rootDomain} souhaite vous envoyer des notifications";
+        NotificationPermissionText.Text = $"{rootDomain} souhaite t'envoyer des notifications";
         NotificationPermissionBar.Visibility = Visibility.Visible;
         _visualFlashService?.FlashIfEnabled();
     }
@@ -494,7 +494,7 @@ public sealed partial class MainWindow
     {
         if (loginRelatedBlockSeen && !compatibilityEnabled)
         {
-            return "Un blocage récent ressemble à une ressource de connexion. Si un bouton Connexion ne répond pas, autorisez seulement le flux de connexion pour ce site.";
+            return "Un blocage récent ressemble à une ressource de connexion. Si un bouton Connexion ne répond pas, autorise seulement le flux de connexion pour ce site.";
         }
 
         if (compatibilityEnabled)
@@ -504,7 +504,7 @@ public sealed partial class MainWindow
 
         if (trackerCount > 0)
         {
-            return "Lumora bloque surtout des trackers ou de la télémétrie sur cette page. Vous pouvez continuer sans action.";
+            return "Lumora bloque surtout des trackers ou de la télémétrie sur cette page. Tu peux continuer sans rien faire.";
         }
 
         return blockedCount > 0
@@ -520,7 +520,7 @@ public sealed partial class MainWindow
 
         if (recentBlocks.Any(IsLikelyLoginRelatedBlock) && !compatibilityEnabled)
         {
-            return "Connexion muette ? Ouvrez le Centre du site pour autoriser seulement le flux de connexion.";
+            return "Connexion muette ? Ouvre le Centre du site pour autoriser seulement le flux de connexion.";
         }
 
         if (compatibilityEnabled)

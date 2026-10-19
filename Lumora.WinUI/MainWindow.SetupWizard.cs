@@ -304,7 +304,7 @@ public sealed partial class MainWindow
         var dialog = new ContentDialog
         {
             Title = "Sauvegarde importée",
-            Content = "Vos favoris, onglets, coffre et réglages ont été restaurés. Redémarrez Lumora pour que tout s'applique correctement.",
+            Content = "Tes favoris, onglets, coffre et réglages ont été restaurés. Redémarre Lumora pour que tout s'applique correctement.",
             PrimaryButtonText = "Fermer Lumora",
             CloseButtonText = "Plus tard",
             DefaultButton = ContentDialogButton.Primary,

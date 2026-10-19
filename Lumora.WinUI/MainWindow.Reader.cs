@@ -34,7 +34,7 @@ public sealed partial class MainWindow
         var address = tab?.View?.Source?.ToString() ?? tab?.Address ?? string.Empty;
         if (core is null || !BookmarkStore.IsWebUrl(address))
         {
-            StatusText.Text = "Ouvrez une page web pour utiliser le mode lecture.";
+            StatusText.Text = "Ouvre une page web pour utiliser le mode lecture.";
             return;
         }
 
@@ -58,8 +58,8 @@ public sealed partial class MainWindow
             if (result.Contains("on", StringComparison.Ordinal))
             {
                 StatusText.Text = annotations.Count > 0
-                    ? $"Mode lecture : {annotations.Count} annotation(s) réaffichée(s). Sélectionnez du texte pour en ajouter."
-                    : "Mode lecture : sélectionnez du texte pour le surligner ou le commenter.";
+                    ? $"Mode lecture : {annotations.Count} annotation(s) réaffichée(s). Sélectionne du texte pour en ajouter."
+                    : "Mode lecture : sélectionne du texte pour le surligner ou le commenter.";
             }
             else
             {
@@ -160,8 +160,8 @@ public sealed partial class MainWindow
         if (!isWeb)
         {
             ReaderAnnotationBadge.Visibility = Visibility.Collapsed;
-            ToolTipService.SetToolTip(ReaderModeButton, "Mode lecture - ouvrez une page web pour annoter");
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ReaderModeButton, "Mode lecture - ouvrez une page web pour annoter");
+            ToolTipService.SetToolTip(ReaderModeButton, "Mode lecture : ouvre une page web pour annoter");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ReaderModeButton, "Mode lecture : ouvre une page web pour annoter");
             return;
         }
 

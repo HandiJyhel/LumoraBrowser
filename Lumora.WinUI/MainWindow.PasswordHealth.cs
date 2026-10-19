@@ -97,7 +97,7 @@ public sealed partial class MainWindow
 
             breachSection.Children.Add(HealthSectionHeader(
                 $"Trouvés dans une fuite connue ({breachedCredentials.Count})",
-                "Changez ces mots de passe dès que possible : ils sont déjà connus des attaquants."));
+                "Change ces mots de passe dès que possible : ils sont déjà connus des attaquants."));
             foreach (var cred in breachedCredentials)
             {
                 breachSection.Children.Add(HealthItem(PasswordManagerService.DisplayName(cred)));
@@ -144,7 +144,7 @@ public sealed partial class MainWindow
         {
             panel.Children.Add(HealthSectionHeader(
                 $"Réutilisés sur plusieurs sites ({report.ReusedCount} compte(s))",
-                "Un mot de passe volé sur un site ouvre tous les autres. Donnez un mot de passe unique à chaque site."));
+                "Un mot de passe volé sur un site ouvre tous les autres. Donne un mot de passe unique à chaque site."));
             foreach (var group in report.ReusedGroups)
             {
                 var names = group.Select(PasswordManagerService.DisplayName)

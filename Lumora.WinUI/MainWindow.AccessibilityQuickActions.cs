@@ -123,8 +123,8 @@ public sealed partial class MainWindow
 
         AccessibilityQuickProfileTitleText.Text = $"Profil courant : {label}";
         AccessibilityQuickProfileSummaryText.Text = normalized == "custom"
-            ? "Mélange manuel détecté : vos interrupteurs actuels gardent la priorité."
-            : preset?.Summary ?? "Choisissez un profil de confort.";
+            ? "Mélange manuel détecté : tes interrupteurs actuels gardent la priorité."
+            : preset?.Summary ?? "Choisis un profil de confort.";
         AccessibilityQuickStateText.Text = DescribeAccessibilityComfortState();
         UpdateAccessibilityQuickContextUi();
         UpdateAccessibilityQuickRescueUi();
@@ -154,7 +154,7 @@ public sealed partial class MainWindow
 
     private void AccessibilityQuickOpenSettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        ShowPanel(SettingsPanel, "Paramètres");
+        ShowPanel(SettingsPanel, "Réglages");
         SettingsAccessibilityShortcutButton_Click(sender, e);
     }
 

@@ -18,7 +18,7 @@ namespace Lumora.WinUI;
 public sealed partial class MainWindow
 {
     private const string DictationShortcutTip =
-        "Dictée vocale : cliquez dans un champ de texte puis appuyez sur Win+H pour utiliser la dictée Windows.";
+        "Dictée vocale : clique dans un champ de texte puis appuie sur Win+H pour utiliser la dictée Windows.";
 
     private void UpdateDictationButtonVisibility()
     {

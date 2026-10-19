@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     {
         if (!_uiSettings.AccessibilityReadingLensEnabled)
         {
-            StatusText.Text = "Activez la loupe de lecture dans Réglages > Confort pour l'utiliser.";
+            StatusText.Text = "Active la loupe de lecture dans Réglages > Confort pour l'utiliser.";
             return;
         }
 
@@ -42,7 +42,7 @@ public sealed partial class MainWindow
         var address = tab?.View?.Source?.ToString() ?? tab?.Address ?? string.Empty;
         if (core is null || !BookmarkStore.IsWebUrl(address))
         {
-            StatusText.Text = "Ouvrez une page web pour utiliser la loupe de lecture.";
+            StatusText.Text = "Ouvre une page web pour utiliser la loupe de lecture.";
             return;
         }
 

@@ -120,6 +120,9 @@ internal sealed class UiSettings
     public string PersonalizationMotionStyle { get; set; } = "luminous";
     public bool NewTabFocusSearchOnOpen { get; set; }
     public bool NewTabShortcutsVisible { get; set; }
+    // Ligne "Tu etais sur X, il y a 12 minutes." du Nouvel onglet (mode Neutre),
+    // lue dans l'historique local. Active par defaut, coupable (ecran partage).
+    public bool NewTabShowResume { get; set; } = true;
     public List<NewTabShortcut> NewTabShortcuts { get; set; } = [];
     // Menu contextuel personnalisable (2026-09-11, chantier "Reglages
     // sur-mesure"). Catalogue AUTO-DECOUVERT : chaque entree reellement vue

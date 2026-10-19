@@ -122,19 +122,19 @@ internal static class IncognitoWelcomeHtml
           </div>
           <div class="fact">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2Zm7.9 9h-3.95a15.6 15.6 0 0 0-1.13-5.4A8.02 8.02 0 0 1 19.9 11ZM12 4.06c.9 1.2 1.94 3.3 2.13 6.94H9.87c.19-3.64 1.23-5.74 2.13-6.94ZM9.18 5.6A15.6 15.6 0 0 0 8.05 11H4.1a8.02 8.02 0 0 1 5.08-5.4ZM4.1 13h3.95c.12 2.1.55 3.98 1.13 5.4A8.02 8.02 0 0 1 4.1 13Zm7.9 6.94c-.9-1.2-1.94-3.3-2.13-6.94h4.26c-.19 3.64-1.23 5.74-2.13 6.94Zm2.82-1.54c.58-1.42 1.01-3.3 1.13-5.4h3.95a8.02 8.02 0 0 1-5.08 5.4Z"/></svg>
-            <p>Ça protège votre historique local, pas votre trafic réseau : sans Tor, votre fournisseur d'accès et les sites visités voient toujours votre adresse IP réelle, comme en navigation normale.</p>
+            <p>Ça protège ton historique local, pas ton trafic réseau : sans Tor, ton fournisseur d'accès et les sites visités voient toujours ton adresse IP réelle, comme en navigation normale.</p>
           </div>
           <div class="fact claim {{(torEnabled ? "masked" : "unmasked")}}">
             {{(torEnabled
                 ? "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5l-9-4Zm-1.1 14.3-3.2-3.2 1.4-1.4 1.8 1.8 4.8-4.8 1.4 1.4-6.2 6.2Z\"/></svg>"
                 : "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 5c-5.5 0-10 4.3-11.6 7 1.6 2.7 6.1 7 11.6 7s10-4.3 11.6-7C22 9.3 17.5 5 12 5Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-7.2a2.7 2.7 0 1 0 0 5.4 2.7 2.7 0 0 0 0-5.4Z\"/></svg>")}}
             <p>{{(torEnabled
-                ? "Tor est actif : votre adresse IP réelle est masquée, elle n'est visible ni du site visité ni d'un relais Tor unique. En échange, la navigation est plus lente."
-                : "Votre adresse IP réelle N'est PAS masquée : le site visité et votre réseau la voient normalement. Le bouton Tor (en haut à droite) la masque en faisant transiter votre trafic par le réseau Tor, au prix d'une navigation plus lente - désactivé par défaut car tout le monde n'a pas besoin de cette protection réseau en plus de la confidentialité locale.")}}</p>
+                ? "Tor est actif : ton adresse IP réelle est masquée, elle n'est visible ni du site visité ni d'un relais Tor unique. En échange, la navigation est plus lente."
+                : "Ton adresse IP réelle N'est PAS masquée : le site visité et ton réseau la voient normalement. Le bouton Tor (en haut à droite) la masque en faisant passer ton trafic par le réseau Tor, au prix d'une navigation plus lente. Il est désactivé par défaut, car tout le monde n'a pas besoin de cette protection réseau en plus de la confidentialité locale.")}}</p>
           </div>
           <div class="fact">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3-3 1.4 1.4-5.4 5.4-5.4-5.4L7.9 10.6l3 3V4a1 1 0 0 1 1-1ZM5 19h14v2H5v-2Z"/></svg>
-            <p>Les fichiers que vous téléchargez volontairement sont, eux, conservés sur le disque.</p>
+            <p>Les fichiers que tu télécharges volontairement sont, eux, conservés sur le disque.</p>
           </div>
         </div>
         </div>

@@ -194,7 +194,7 @@ public sealed partial class MainWindow
         var address = CurrentTab()?.Address ?? string.Empty;
         if (!BookmarkStore.IsWebUrl(address))
         {
-            StatusText.Text = "Ouvrez une page web pour y rattacher la note.";
+            StatusText.Text = "Ouvre une page web pour y rattacher la note.";
             return;
         }
 

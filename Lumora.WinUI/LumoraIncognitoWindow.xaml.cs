@@ -366,7 +366,7 @@ public sealed partial class LumoraIncognitoWindow : Window
             Title = wantsTor ? "Activer Tor ?" : "Désactiver Tor ?",
             Content = "Cette fenêtre Incognito va se fermer et une nouvelle va s'ouvrir avec Tor "
                 + (wantsTor ? "activé" : "désactivé")
-                + ". Les onglets ouverts seront perdus. Vous resterez en Incognito.",
+                + ". Les onglets ouverts seront perdus. Tu resteras en Incognito.",
             PrimaryButtonText = wantsTor ? "Activer Tor" : "Désactiver Tor",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,
@@ -796,7 +796,7 @@ public sealed partial class LumoraIncognitoWindow : Window
 
         if (core is null)
         {
-            FailTab(item, tab, "Moteur web indisponible : la session n'a pas pu démarrer. Fermez et rouvrez la fenêtre Incognito.");
+            FailTab(item, tab, "Moteur web indisponible : la session n'a pas pu démarrer. Ferme puis rouvre la fenêtre Incognito.");
             return null;
         }
 

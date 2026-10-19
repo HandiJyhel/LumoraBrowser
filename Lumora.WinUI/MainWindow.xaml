@@ -1422,7 +1422,7 @@
                 <SymbolIcon Symbol="More" />
                 <Button.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedRight">
-                        <MenuFlyoutItem Text="LUMORA • lumière locale" IsEnabled="False">
+                        <MenuFlyoutItem Text="Lumora" IsEnabled="False">
                             <MenuFlyoutItem.Icon>
                                 <FontIcon Glyph="&#xE790;" FontFamily="Segoe MDL2 Assets" />
                             </MenuFlyoutItem.Icon>
@@ -1515,7 +1515,7 @@
                             </MenuFlyoutItem>
                         </MenuFlyoutSubItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Paramètres" Click="SettingsMenu_Click">
+                        <MenuFlyoutItem Text="Réglages" Click="SettingsMenu_Click">
                             <MenuFlyoutItem.Icon><SymbolIcon Symbol="Setting" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutItem Text="À propos" Click="AboutMenu_Click">
@@ -2118,6 +2118,19 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center" />
                             </Border>
+                            <!-- Point de lumiere (2026-10-19, session "moins IA") : un petit
+                                 point qui sort du bouclier chaque fois qu'un traceur est reellement
+                                 bloque (voir MainWindow.ShieldFirefly.cs). Invisible au repos,
+                                 jamais interactif. -->
+                            <Grid x:Name="ShieldFireflyHost" Width="14" Height="14"
+                                  IsHitTestVisible="False" Opacity="0"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Grid.RenderTransform>
+                                    <TranslateTransform x:Name="ShieldFireflyShift" />
+                                </Grid.RenderTransform>
+                                <Ellipse Width="14" Height="14" Fill="#40FFD79A" />
+                                <Ellipse Width="4" Height="4" Fill="#FFFFE9BD" />
+                            </Grid>
                         </Grid>
                         <Button.Flyout>
                             <Flyout x:Name="ShieldFlyout"
@@ -2152,7 +2165,7 @@
                                             Style="{StaticResource NovaButtonStyle}"
                                             HorizontalAlignment="Stretch"
                                             Click="ShieldSiteCenterButton_Click" />
-                                    <HyperlinkButton Content="Paramètres de confidentialité"
+                                    <HyperlinkButton Content="Réglages de confidentialité"
                                                      Click="ShieldSettingsLink_Click"
                                                      HorizontalAlignment="Left"
                                                      Padding="0" />
@@ -2875,8 +2888,7 @@
                         Margin="2,0,10,0"
                         VerticalAlignment="Center"
                         Opacity="0.6">
-                <TextBlock Text="✦" FontSize="10" Foreground="{StaticResource NovaAccentBrush}" />
-                <TextBlock Text="Constellation" FontSize="10.5" Foreground="{StaticResource NovaTextMutedBrush}" />
+                <TextBlock Text="Favoris" FontSize="10.5" Foreground="{StaticResource NovaTextMutedBrush}" />
             </StackPanel>
             <StackPanel x:Name="BookmarksBarPanel"
                         Grid.Column="1"
@@ -3121,7 +3133,7 @@
                 <InfoBar x:Name="SessionPurgeInfoBar" Grid.Row="0" Severity="Informational"
                          Margin="10,8,10,0"
                          IsOpen="False" Title="Sessions de la visite précédente nettoyées"
-                         Message="Les sites que vous n'avez pas marqués comme sites de confiance repartent à zéro à chaque démarrage de Lumora."
+                         Message="Les sites que tu n'as pas marqués comme sites de confiance repartent à zéro à chaque démarrage de Lumora."
                          Closed="SessionPurgeInfoBar_Closed">
                     <InfoBar.ActionButton>
                         <Button Content="Gérer les sites connectés" Style="{StaticResource NovaButtonStyle}" Click="SessionsManageLink_Click" />
@@ -3359,7 +3371,7 @@
                         <FontIcon Grid.Column="0" Glyph="&#xE7E7;" FontFamily="Segoe MDL2 Assets" FontSize="15" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                             <TextBlock x:Name="NotificationPermissionText" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                            <TextBlock Text="Vous pourrez changer d'avis à tout moment dans le Centre du site." Opacity="0.68" FontSize="12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Tu pourras changer d'avis à tout moment dans le Centre du site." Opacity="0.68" FontSize="12" TextWrapping="Wrap"/>
                         </StackPanel>
                         <Button x:Name="NotificationPermissionBlock" Grid.Column="2" Content="Bloquer" Click="NotificationPermissionBlock_Click" Style="{StaticResource NovaCompactButtonStyle}"/>
                         <Button x:Name="NotificationPermissionAllow" Grid.Column="3" Content="Autoriser" Click="NotificationPermissionAllow_Click" Style="{StaticResource NovaButtonPrimaryStyle}" Padding="10,2" FontSize="12"/>
@@ -3676,8 +3688,8 @@
                             Margin="24,26,16,18"
                             Spacing="22">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="Centre Lumora" FontSize="19" FontWeight="SemiBold" FontStyle="Italic" />
-                        <TextBlock Text="Ambiance, organisation, confort et données locales."
+                        <TextBlock Text="Réglages" FontSize="19" FontWeight="SemiBold" FontStyle="Italic" />
+                        <TextBlock Text="Apparence, navigation, confidentialité et données du profil."
                                    Style="{StaticResource NovaPanelDescriptionStyle}" TextWrapping="Wrap" />
                     </StackPanel>
 
@@ -3806,32 +3818,6 @@
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="28,22,28,18" Margin="0,0,18,0">
                     <StackPanel Spacing="18" MaxWidth="760">
-                        <!-- Refonte organique "Encre chaude" (2026-09-12) : plus de carte
-                             encadrant l'en-tete - typographie seule (grand titre + texte),
-                             et UN SEUL bouton plein pour tout l'ecran ("Mon Lumora" - le
-                             plus consulte de la Vue d'ensemble), les 2 autres raccourcis
-                             redeviennent des liens texte (HyperlinkButton). -->
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Façonnez un navigateur qui vous ressemble"
-                                       Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Lumora garde une base claire : lumière, relief et lisibilité. Ensuite, vous choisissez votre rythme, vos panneaux et votre confort sans vous perdre dans des sous-menus."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <StackPanel Orientation="Horizontal" Spacing="18" VerticalAlignment="Center">
-                                <Button Content="Mon Lumora"
-                                        Tag="appearance"
-                                        Click="SettingsNavigateButton_Click"
-                                        Style="{StaticResource NovaButtonPrimaryStyle}" />
-                                <HyperlinkButton Content="Espace de travail"
-                                        Tag="navigation"
-                                        Click="SettingsNavigateButton_Click"
-                                        Padding="0" />
-                                <HyperlinkButton Content="Vie privee"
-                                        Tag="privacy"
-                                        Click="SettingsNavigateButton_Click"
-                                        Padding="0" />
-                            </StackPanel>
-                        </StackPanel>
-
                         <!-- Recherche de reglages (0.94.0.0-dev, "Reglages, piste A") : filtre
                              par mot-cle a travers les 9 sections ET leurs sous-onglets caches
                              (Mon Lumora/Accessibilite/Confidentialite en ont 5 chacun) - voir
@@ -3861,97 +3847,28 @@
 
                         <!-- Section : Vue d'ensemble -->
                         <StackPanel x:Name="SettingsSectionOverview" Spacing="14">
-                            <TextBlock Text="Centre Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Un point d'entrée pour façonner votre navigateur : ambiance, organisation, confidentialité locale et données du profil."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" />
-                            <!-- Refonte organique "Encre chaude" (2026-09-12) : la grille de
-                                 6 cartes encadrees + 6 boutons identiques devient une liste
-                                 editoriale a traits fins, icone pleine (meme famille de
-                                 couleur que le rail) + lien texte plutot qu'un bouton par
-                                 ligne - un seul bouton plein existe deja plus haut sur cet
-                                 ecran (Mon Lumora), pas besoin d'un 2e. Chaque ligne est une
-                                 Grid a 3 colonnes fixes (icone / texte extensible / lien) et
-                                 non plus un StackPanel horizontal (retour utilisateur
-                                 2026-09-14, session "3.5" : HorizontalAlignment="Right" sur le
-                                 lien n'avait aucun effet dans un StackPanel - il collait juste
-                                 apres le texte, donc tombait a une position differente selon
-                                 la longueur du libelle au-dessus. La 3e colonne a une largeur
-                                 fixe (110) commune aux 6 lignes pour que tous les liens
-                                 s'alignent sur le meme bord droit, "Personnaliser" etant le
-                                 plus long libelle). -->
-                            <StackPanel>
-                                <Grid ColumnDefinitions="20,*,110" Padding="0,14" BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}">
-                                    <Path Grid.Column="0" Width="20" Height="20" Stretch="Uniform" VerticalAlignment="Top" Margin="0,2,14,0"
-                                          Fill="{StaticResource NovaTileFamilyContentBrush}"
-                                          Data="M12,3.5 C15,6.9 18,10.8 18,14.1 A6,6 0 1 1 6,14.1 C6,10.8 9,6.9 12,3.5 Z" />
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="Mon Lumora" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                        <TextBlock Text="Avatar, thème, accueil, rythme visuel et confort de l'interface." Style="{StaticResource NovaPanelDescriptionStyle}" />
-                                    </StackPanel>
-                                    <HyperlinkButton Grid.Column="2" Content="Personnaliser" Tag="appearance" Click="SettingsNavigateButton_Click" HorizontalAlignment="Right" Padding="0" VerticalAlignment="Center" />
-                                </Grid>
-                                <Grid ColumnDefinitions="20,*,110" Padding="0,14" BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}">
-                                    <Grid Grid.Column="0" Width="20" Height="20" VerticalAlignment="Top" Margin="0,2,14,0">
-                                        <Rectangle Width="8.3" Height="8.3" RadiusX="2.5" RadiusY="2.5" Fill="{StaticResource NovaTileFamilyToolsBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
-                                        <Rectangle Width="8.3" Height="8.3" RadiusX="2.5" RadiusY="2.5" Fill="{StaticResource NovaTileFamilyToolsBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" />
-                                        <Rectangle Width="8.3" Height="8.3" RadiusX="2.5" RadiusY="2.5" Fill="{StaticResource NovaTileFamilyToolsBrush}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
-                                        <Rectangle Width="8.3" Height="8.3" RadiusX="2.5" RadiusY="2.5" Fill="{StaticResource NovaTileFamilyToolsBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
-                                    </Grid>
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="Espace de travail" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                        <TextBlock Text="Recherche, onglets, barre verticale, commandes rapides et outils de productivité." Style="{StaticResource NovaPanelDescriptionStyle}" />
-                                    </StackPanel>
-                                    <HyperlinkButton Grid.Column="2" Content="Organiser" Tag="navigation" Click="SettingsNavigateButton_Click" HorizontalAlignment="Right" Padding="0" VerticalAlignment="Center" />
-                                </Grid>
-                                <Grid ColumnDefinitions="20,*,110" Padding="0,14" BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}">
-                                    <Path Grid.Column="0" Width="20" Height="20" Stretch="Uniform" VerticalAlignment="Top" Margin="0,2,14,0"
-                                          Fill="{StaticResource NovaTileFamilyProtectionBrush}"
-                                          Data="M12,3.2 L18.6,5.9 L18.6,11 C18.6,15.6 15.9,19.1 12,20.8 C8.1,19.1 5.4,15.6 5.4,11 L5.4,5.9 Z" />
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="Confidentialité" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                        <TextBlock Text="Protections actives, sessions, cookies, listes de filtrage et exceptions." Style="{StaticResource NovaPanelDescriptionStyle}" />
-                                    </StackPanel>
-                                    <HyperlinkButton Grid.Column="2" Content="Protéger" Tag="privacy" Click="SettingsNavigateButton_Click" HorizontalAlignment="Right" Padding="0" VerticalAlignment="Center" />
-                                </Grid>
-                                <Grid ColumnDefinitions="20,*,110" Padding="0,14" BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}">
-                                    <Path Grid.Column="0" Width="20" Height="20" Stretch="Uniform" VerticalAlignment="Top" Margin="0,2,14,0"
-                                          Fill="{StaticResource NovaTileFamilyProtectionBrush}"
-                                          Data="M12,3.2 L18.6,5.9 L18.6,11 C18.6,15.6 15.9,19.1 12,20.8 C8.1,19.1 5.4,15.6 5.4,11 L5.4,5.9 Z" />
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="Coffre et données" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                        <TextBlock Text="Mots de passe, portefeuille, sauvegardes et stockage local du profil." Style="{StaticResource NovaPanelDescriptionStyle}" />
-                                    </StackPanel>
-                                    <HyperlinkButton Grid.Column="2" Content="Gérer" Tag="vault" Click="SettingsNavigateButton_Click" HorizontalAlignment="Right" Padding="0" VerticalAlignment="Center" />
-                                </Grid>
-                                <Grid ColumnDefinitions="20,*,110" Padding="0,14" BorderThickness="0,0,0,1" BorderBrush="{StaticResource NovaChromeStrokeSoftBrush}">
-                                    <Path Grid.Column="0" Width="20" Height="20" Stretch="Uniform" VerticalAlignment="Top" Margin="0,2,14,0"
-                                          Fill="{StaticResource NovaTileFamilyContentBrush}"
-                                          Data="M8.4,8.4 A3.6,3.6 0 1 0 15.6,8.4 A3.6,3.6 0 1 0 8.4,8.4 Z M4.8,20 A7.2,6 0 0 1 19.2,20 Z" />
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="Profils locaux" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                        <TextBlock Text="Identité, verrouillage, PIN, récupération et profils sur cet ordinateur." Style="{StaticResource NovaPanelDescriptionStyle}" />
-                                    </StackPanel>
-                                    <HyperlinkButton Grid.Column="2" Content="Ouvrir" Tag="profile" Click="SettingsNavigateButton_Click" HorizontalAlignment="Right" Padding="0" VerticalAlignment="Center" />
-                                </Grid>
-                                <Grid ColumnDefinitions="20,*,110" Padding="0,14">
-                                    <Path Grid.Column="0" Width="20" Height="20" Stretch="Uniform" VerticalAlignment="Top" Margin="0,2,14,0"
-                                          Fill="{StaticResource NovaTileFamilyContentBrush}"
-                                          Data="M12,20 C12,20 4,14 4,9 A4,4 0 0 1 12,7 A4,4 0 0 1 20,9 C20,14 12,20 12,20 Z" />
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" Margin="0,0,14,0">
-                                        <TextBlock Text="Accessibilité" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                        <TextBlock Text="Lisibilité, focus clavier, réduction des animations, voix et lecture à haute voix." Style="{StaticResource NovaPanelDescriptionStyle}" />
-                                    </StackPanel>
-                                    <HyperlinkButton Grid.Column="2" Content="Adapter" Tag="accessibility" Click="SettingsNavigateButton_Click" HorizontalAlignment="Right" Padding="0" VerticalAlignment="Center" />
-                                </Grid>
-                            </StackPanel>
-                            <TextBlock Text="Lumora garde ces choix dans votre profil local. Aucun tableau de bord distant, aucune synchronisation forcée."
-                                       Style="{StaticResource NovaPanelDescriptionStyle}" FontStyle="Italic" />
+                            <TextBlock Text="Réglages" Style="{StaticResource NovaPanelPageTitleStyle}" />
+                            <!-- Vue d'ensemble en quelques phrases vraies (2026-10-19, session
+                                 "moins IA") : remplace l'en-tete + les 6 lignes qui repetaient le
+                                 menu de gauche. Texte et action composes par
+                                 SettingsOverviewText/RefreshSettingsOverview
+                                 (MainWindow.SettingsOverview.cs). -->
+                            <TextBlock x:Name="SettingsOverviewBody"
+                                       FontSize="17" LineHeight="30" MaxWidth="540"
+                                       TextWrapping="Wrap" HorizontalAlignment="Left" />
+                            <Button x:Name="SettingsOverviewPrimaryButton"
+                                    Click="SettingsOverviewAction_Click"
+                                    Style="{StaticResource NovaButtonPrimaryStyle}"
+                                    HorizontalAlignment="Left" Visibility="Collapsed" />
+                            <HyperlinkButton x:Name="SettingsOverviewLinkButton"
+                                             Click="SettingsOverviewAction_Click"
+                                             Padding="0" HorizontalAlignment="Left" Visibility="Collapsed" />
                         </StackPanel>
 
                         <!-- Section : Espace de travail -->
                         <StackPanel x:Name="SettingsSectionNavigation" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Espace de travail" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Organisez les repères qui vous servent tous les jours : recherche, onglets, commandes rapides et modules utiles."
+                            <TextBlock Text="Range ce que tu utilises tous les jours : recherche, onglets, commandes rapides et modules."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <TextBlock Text="Recherche" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
@@ -3963,13 +3880,13 @@
                                 <ComboBoxItem Content="Bing" Tag="bing" />
                             </ComboBox>
                             <ToggleSwitch x:Name="AddressSuggestionsSwitch" Header="Suggestions dans la barre d'adresse" Toggled="AddressSuggestionsSwitch_Toggled"
-                                          ToolTipService.ToolTip="Pendant la frappe, propose vos onglets ouverts, favoris et pages déjà visitées. Calcul 100% local sur cet appareil : ce que vous tapez n'est jamais envoyé à un service de suggestions." />
+                                          ToolTipService.ToolTip="Pendant que tu tapes, propose tes onglets ouverts, tes favoris et les pages déjà visitées. Le calcul se fait sur cet appareil : ce que tu tapes n'est jamais envoyé à un service de suggestions." />
                             <ToggleSwitch x:Name="TranslationEnabledSwitch" Header="Proposer de traduire les pages" Toggled="TranslationEnabledSwitch_Toggled"
                                           ToolTipService.ToolTip="Traduction neuronale locale (actuellement anglais vers français). Le modèle est téléchargé une seule fois puis la traduction se fait entièrement hors ligne, jamais de texte envoyé à un serveur." />
                             <ToggleSwitch x:Name="SearchAssistEnabledSwitch" Header="Assistant IA pour préciser mes recherches" Toggled="SearchAssistEnabledSwitch_Toggled"
-                                          ToolTipService.ToolTip="Désactivé par défaut : nécessite un téléchargement unique d'environ 2,7 Go (modèle de langage local Phi-3-mini). Une fois téléchargée, la reformulation se fait hors ligne ; seule la requête finale que vous validez est envoyée à votre moteur de recherche, exactement comme aujourd'hui." />
+                                          ToolTipService.ToolTip="Désactivé par défaut : nécessite un téléchargement unique d'environ 2,7 Go (modèle de langage local Phi-3-mini). Une fois le modèle téléchargé, la reformulation se fait hors ligne ; seule la requête finale que tu valides est envoyée à ton moteur de recherche, exactement comme aujourd'hui." />
                             <ToggleSwitch x:Name="HistorySemanticSearchEnabledSwitch" Header="Recherche intelligente dans l'historique" Toggled="HistorySemanticSearchEnabledSwitch_Toggled"
-                                          ToolTipService.ToolTip="Retrouvez une page par son sens plutôt que par mot-clé exact (« cet article sur la fiscalité des indépendants »), même sans vous souvenir du titre ou du site. Désactivé par défaut : nécessite un téléchargement unique d'environ 120 Mo (modèle d'embedding local multilingual-e5-small). Une fois activé, le contenu texte des pages visitées est analysé et indexé localement (chiffré comme le reste de l'historique) ; rien n'est jamais envoyé à un serveur." />
+                                          ToolTipService.ToolTip="Retrouve une page par son sens plutôt que par mot-clé exact (« cet article sur la fiscalité des indépendants »), même si tu ne te souviens plus du titre ni du site. Désactivé par défaut : nécessite un téléchargement unique d'environ 120 Mo (modèle d'embedding local multilingual-e5-small). Une fois activé, le texte des pages visitées est analysé et indexé localement (chiffré comme le reste de l'historique) ; rien n'est jamais envoyé à un serveur." />
 
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,4,0,0" />
                             <TextBlock Text="Onglets" Style="{StaticResource NovaPanelSectionTitleStyle}" Opacity="0.72" />
@@ -4021,17 +3938,17 @@
                             <ToggleSwitch x:Name="CommandPaletteWebPagesSwitch"
                                           Header="Autoriser Ctrl+K depuis les pages web"
                                           Toggled="CommandPaletteContextSwitch_Toggled"
-                                          ToolTipService.ToolTip="Activez ces deux autorisations uniquement si vous voulez que Lumora intercepte Ctrl+K même quand une page ou un champ de texte a le focus." />
+                                          ToolTipService.ToolTip="Active ces deux autorisations uniquement si tu veux que Lumora intercepte Ctrl+K même quand une page ou un champ de texte a le focus." />
                             <ToggleSwitch x:Name="CommandPaletteTextFieldsSwitch"
                                           Header="Autoriser Ctrl+K pendant la saisie dans un champ"
                                           Toggled="CommandPaletteContextSwitch_Toggled"
-                                          ToolTipService.ToolTip="Activez ces deux autorisations uniquement si vous voulez que Lumora intercepte Ctrl+K même quand une page ou un champ de texte a le focus." />
+                                          ToolTipService.ToolTip="Active ces deux autorisations uniquement si tu veux que Lumora intercepte Ctrl+K même quand une page ou un champ de texte a le focus." />
                         </StackPanel>
 
                         <!-- Section : Personnalisation -->
                         <StackPanel x:Name="SettingsSectionAppearance" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Mon Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Choisissez l'ambiance, le rythme et les repères visuels qui rendent Lumora confortable pour vous."
+                            <TextBlock Text="Choisis le thème, la couleur, la taille des boutons et les fonds d'écran."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <TextBlock x:Name="AppearancePendingText"
                                        Text="Les positions des onglets/favoris s'appliquent tout de suite. Les autres changements visuels de cette section restent regroupés sous le bouton global en bas."
@@ -4176,7 +4093,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                             <ComboBox x:Name="UsageModeCombo" Header="Mode d'usage" Width="280"
                                       SelectionChanged="UsageModeCombo_SelectionChanged"
-                                      ToolTipService.ToolTip="Le mode d'usage adapte l'accueil Lumora et prépare la logique des futurs espaces de travail.">
+                                      ToolTipService.ToolTip="Le mode d'usage adapte la page d'accueil de Lumora.">
                                 <ComboBoxItem Content="Neutre" Tag="neutral" />
                                 <ComboBoxItem Content="Équilibre" Tag="balanced" />
                                 <ComboBoxItem Content="Focus" Tag="focus" />
@@ -4203,7 +4120,7 @@
                                  dans le schema (donnees existantes non perdues) mais ne sont
                                  plus lus/ecrits par cette UI. -->
                             <TextBlock Text="Couleur d'accentuation" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
-                            <TextBlock Text="Une seule couleur, reprise avec mesure à travers Lumora : onglet actif, boutons, dossiers de favoris, contour des champs en focus et halo au survol des menus - jamais en aplat sur une grande surface. Réinitialiser revient à la teinte Lumora d'origine. Sans effet si le contraste élevé (Accessibilité) est actif."
+                            <TextBlock Text="Une seule couleur, utilisée en petites touches : onglet actif, boutons, dossiers de favoris, contour des champs et survol des menus. Jamais en grand aplat. Réinitialiser remet la teinte d'origine. Sans effet si le contraste élevé (Accessibilité) est activé."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <!-- Les 7 pastilles a plat, sans clic prealable pour les decouvrir
                                  (2026-09-14, retour utilisateur explicite : "je m'attendais
@@ -4290,7 +4207,7 @@
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="Disposition Lumora"
                                                Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                    <TextBlock Text="Le thème Lumora reste la signature de base ; ici, vous composez votre propre ergonomie en plaçant les zones du navigateur autour du contenu."
+                                    <TextBlock Text="Place les barres du navigateur où tu veux autour de la page."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                     <ComboBox x:Name="TabStripPositionCombo"
                                               Header="Position des onglets"
@@ -4327,7 +4244,7 @@
                                                 Click="WorkspacePresetButton_Click"
                                                 Style="{StaticResource NovaCompactButtonStyle}" />
                                     </StackPanel>
-                                    <TextBlock Text="Halo garde une lecture classique lumineuse, Atelier ouvre un espace de travail latéral, Flux pousse les zones d'outil hors du haut de fenêtre pour libérer la vue. Les positions ci-dessus et ces présets s'appliquent maintenant tout de suite."
+                                    <TextBlock Text="Halo : disposition classique et lumineuse. Atelier : un espace de travail sur le côté. Flux : les outils quittent le haut de la fenêtre pour libérer la vue. Les positions ci-dessus et ces préréglages s'appliquent tout de suite."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                 </StackPanel>
                             </Border>
@@ -4355,10 +4272,10 @@
                             <ToggleSwitch x:Name="FullScreenAutoHideChromeSwitch"
                                           Header="Masquer les barres en plein écran et les révéler au survol"
                                           Toggled="FullScreenAutoHideChromeSwitch_Toggled"
-                                          ToolTipService.ToolTip="En plein écran, approchez la souris du haut pour les actions principales, ou du bord gauche pour retrouver le rail latéral." />
+                                          ToolTipService.ToolTip="En plein écran, approche la souris du haut pour les actions principales, ou du bord gauche pour retrouver le rail latéral." />
                             <ComboBox x:Name="PersonalizationMotionCombo" Header="Animations et réactions" Width="280"
                                       SelectionChanged="AppearanceOption_Changed"
-                                      ToolTipService.ToolTip="Ce réglage module l'accueil, les effets lumineux et les réactions visuelles. L'option d'accessibilité Réduire les animations reste prioritaire.">
+                                      ToolTipService.ToolTip="Règle l'intensité des animations de l'accueil et des effets lumineux. L'option d'accessibilité Réduire les animations reste prioritaire.">
                                 <ComboBoxItem Content="Discret" Tag="subtle" />
                                 <ComboBoxItem Content="Lumineux" Tag="luminous" />
                                 <ComboBoxItem Content="Dynamique" Tag="dynamic" />
@@ -4369,12 +4286,15 @@
                             <TextBlock Text="Nouvel onglet" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBox x:Name="NewTabTitleBox"
-                                     Header="Titre affiché"
-                                     MaxLength="32"
-                                     LostFocus="NewTabTitleBox_LostFocus" />
+                                     Header="Phrase d'accueil"
+                                     MaxLength="60"
+                                     Width="380"
+                                     PlaceholderText="Ex. Rien n'est vrai, tout est permis"
+                                     LostFocus="NewTabTitleBox_LostFocus"
+                                     ToolTipService.ToolTip="Vide : une salutation selon l'heure, avec ton prénom. Remplie : ta phrase reste affichée en permanence sur le nouvel onglet." />
                             <Button x:Name="PinNewTabTitleButton" Tag="newtab.title" Click="PinSettingButton_Click"
                                     Style="{StaticResource NovaCompactButtonStyle}" VerticalAlignment="Bottom"
-                                    AutomationProperties.Name="Épingler Titre affiché" Content="☆" />
+                                    AutomationProperties.Name="Épingler Phrase d'accueil" Content="☆" />
                             </StackPanel>
                             <ComboBox x:Name="NewTabStyleCombo" Header="Style du nouvel onglet" Width="260"
                                       SelectionChanged="AppearanceOption_Changed">
@@ -4390,6 +4310,10 @@
                                           Header="Afficher les raccourcis"
                                           Toggled="NewTabShortcutsSwitch_Toggled"
                                           ToolTipService.ToolTip="Désactiver masque uniquement la liste des raccourcis déjà ajoutés. Le bouton d'ajout rapide (+) reste toujours disponible sur la page nouvel onglet." />
+                            <ToggleSwitch x:Name="NewTabShowResumeSwitch"
+                                          Header="Montrer la dernière page ouverte"
+                                          Toggled="NewTabShowResumeSwitch_Toggled"
+                                          ToolTipService.ToolTip="Affiche une ligne « Tu étais sur… » avec la dernière page de ton historique local. Désactive-la si quelqu'un peut voir ton écran. Jamais affichée en mode invité." />
                             <TextBox x:Name="NewTabShortcutsBox"
                                      Header="Raccourcis"
                                      AcceptsReturn="True"
@@ -4402,10 +4326,10 @@
 
                             <StackPanel x:Name="AppearanceGroupAdvanced" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Avancé — Menu contextuel (clic droit)" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
-                            <TextBlock Text="Choisissez ce qui apparaît quand vous faites un clic droit sur une page, et dans quel ordre. Cette liste se remplit d'elle-même au fil de vos clics droits - rien à configurer avant d'en avoir vu au moins un."
+                            <TextBlock Text="Choisis ce qui apparaît quand tu fais un clic droit sur une page, et dans quel ordre. Cette liste se remplit d'elle-même au fil de tes clics droits. Rien à configurer avant d'en avoir fait au moins un."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <TextBlock x:Name="ContextMenuEmptyText"
-                                       Text="Aucune entrée découverte pour l'instant. Faites un clic droit sur une page web, puis revenez ici."
+                                       Text="Aucune entrée découverte pour l'instant. Fais un clic droit sur une page web, puis reviens ici."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" Opacity="0.65" />
                             <ListView x:Name="ContextMenuItemsList" SelectionMode="None" IsItemClickEnabled="False" />
                             </StackPanel>
@@ -4415,7 +4339,7 @@
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="8">
                                     <TextBlock Text="Écran de bienvenue" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                    <TextBlock Text="Revoir la présentation de Lumora montrée au tout premier lancement (fonctions majeures), sans toucher à votre profil ni à vos réglages actuels."
+                                    <TextBlock Text="Revois la présentation montrée au tout premier lancement, sans toucher à ton profil ni à tes réglages actuels."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                     <Button Content="Revoir l'écran de bienvenue"
                                             Click="ReplayWelcomeSlidesButton_Click"
@@ -4486,14 +4410,14 @@
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="8">
                                     <TextBlock Text="Base rapide" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                    <TextBlock Text="Lumora peut partir d'un profil de confort cohérent, puis vous laisser retoucher chaque aide juste en dessous."
+                                    <TextBlock Text="Lumora peut partir d'un profil de confort tout fait, puis tu retouches chaque aide juste en dessous."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                     <RadioButtons x:Name="AccessibilityComfortProfileRadio"
                                                   SelectionChanged="AccessibilityComfortProfileRadio_SelectionChanged">
                                         <RadioButton Tag="balanced">
                                             <StackPanel Spacing="2">
                                                 <TextBlock Text="Aucune aide" FontWeight="SemiBold" />
-                                                <TextBlock Text="Point de départ : rien n'est activé, à vous de choisir un profil ou de régler chaque aide à la main."
+                                                <TextBlock Text="Point de départ : rien n'est activé, à toi de choisir un profil ou de régler chaque aide à la main."
                                                            Style="{StaticResource NovaPanelDescriptionStyle}" />
                                             </StackPanel>
                                         </RadioButton>
@@ -4507,7 +4431,7 @@
                                         <RadioButton Tag="custom">
                                             <StackPanel Spacing="2">
                                                 <TextBlock Text="Personnalisé" FontWeight="SemiBold" />
-                                                <TextBlock Text="Pour vos réglages mélangés à la main, sans revenir à un préset."
+                                                <TextBlock Text="Pour tes réglages mélangés à la main, sans repartir d'un profil tout fait."
                                                            Style="{StaticResource NovaPanelDescriptionStyle}" />
                                             </StackPanel>
                                         </RadioButton>
@@ -4520,7 +4444,7 @@
                             <Border Style="{StaticResource NovaPanelCardStyle}">
                                 <StackPanel Spacing="8">
                                     <TextBlock Text="Mode secours" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                    <TextBlock Text="Ce n'est pas un profil à choisir dans la liste ci-dessus : c'est un geste d'urgence pour reprendre la main tout de suite si la lisibilité s'effondre (texte, contraste, repères). Un seul retour arrière est mémorisé, et il se perd à la fermeture de Lumora."
+                                    <TextBlock Text="Un bouton d'urgence, à part des profils ci-dessus : il règle d'un coup la lisibilité si tu n'arrives plus à lire (texte, contraste, repères). Un seul retour en arrière est mémorisé, et il disparaît quand tu fermes Lumora."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                     <TextBlock x:Name="AccessibilityRescueStatusText"
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
@@ -4544,12 +4468,12 @@
 
                             <StackPanel x:Name="AccessibilityGroupDisplay" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Affichage de Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
-                            <TextBlock Text="Ces réglages ajustent la chrome Lumora (fenêtre, panneaux, boutons) - pas le contenu des pages web visitées."
+                            <TextBlock Text="Ces réglages changent l'interface de Lumora (fenêtre, panneaux, boutons), pas le contenu des pages web."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="AccessibilityHighContrastSwitch"
                                           Header="Contraste renforcé"
                                           Toggled="AccessibilitySwitch_Toggled"
-                                          ToolTipService.ToolTip="Augmente les contrastes de la chrome Lumora, des panneaux et de la page d'accueil." />
+                                          ToolTipService.ToolTip="Augmente les contrastes de l'interface de Lumora, des panneaux et de la page d'accueil." />
                             <ToggleSwitch x:Name="AccessibilityLargeTextSwitch"
                                           Header="Texte plus lisible"
                                           Toggled="AccessibilitySwitch_Toggled"
@@ -4561,16 +4485,16 @@
                             <ToggleSwitch x:Name="AccessibilityVisibleFocusSwitch"
                                           Header="Focus clavier plus visible"
                                           Toggled="AccessibilitySwitch_Toggled"
-                                          ToolTipService.ToolTip="Renforce les contours visibles quand vous naviguez avec Tab, Entrée ou les flèches." />
+                                          ToolTipService.ToolTip="Renforce les contours visibles quand tu navigues avec Tab, Entrée ou les flèches." />
                             <ToggleSwitch x:Name="AccessibilityLargeTargetsSwitch"
                                           Header="Boutons plus grands"
                                           Toggled="AccessibilitySwitch_Toggled"
-                                          ToolTipService.ToolTip="Agrandit les boutons de la barre de navigation (retour, avancer, recharger...) pour des cibles plus faciles à viser. Désactivé par défaut : la taille compacte reste la norme, cette aide est à votre choix." />
+                                          ToolTipService.ToolTip="Agrandit les boutons de la barre de navigation (retour, avancer, recharger...) pour des cibles plus faciles à viser. Désactivé par défaut : la taille compacte reste la norme, cette aide est à ton choix." />
                             </StackPanel>
 
                             <StackPanel x:Name="AccessibilityGroupWebContent" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Contenu des pages web" Style="{StaticResource NovaPanelPageTitleStyle}" FontSize="17" />
-                            <TextBlock Text="Contrairement au reste de cette page (qui ajuste la chrome Lumora), ces réglages agissent directement sur le contenu des pages web visitées."
+                            <TextBlock Text="Contrairement au reste de cette page (qui change l'interface de Lumora), ces réglages agissent directement sur le contenu des pages web que tu visites."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <ToggleSwitch x:Name="AccessibilityReduceBlueLightSwitch"
                                           Header="Réduire la lumière bleue"
@@ -4595,9 +4519,9 @@
                             <ToggleSwitch x:Name="ReadAloudEnabledSwitch" Header="Lire les pages à voix haute" Toggled="ReadAloudEnabledSwitch_Toggled"
                                           ToolTipService.ToolTip="Ajoute un bouton dans la barre d'outils pour faire lire le texte de la page à voix haute (utile en cas de difficulté de lecture). Synthèse vocale 100% locale (Windows), aucun texte de page envoyé à un serveur externe." />
                             <ToggleSwitch x:Name="ReadingLensEnabledSwitch" Header="Loupe de lecture" Toggled="ReadingLensEnabledSwitch_Toggled"
-                                          ToolTipService.ToolTip="Ajoute un bouton dans la barre d'outils qui capture la page dans un panneau zoomable, utile pour un captcha visuel déformé ou un texte minuscule. Aucune résolution automatique : une image locale agrandie, vous lisez et répondez vous-même." />
+                                          ToolTipService.ToolTip="Ajoute un bouton dans la barre d'outils qui capture la page dans un panneau zoomable, utile pour un captcha visuel déformé ou un texte minuscule. Aucune résolution automatique : une image locale agrandie, tu lis et tu réponds toi-même." />
                             <ToggleSwitch x:Name="ReadingGuideEnabledSwitch" Header="Guide de lecture immersif" Toggled="ReadingGuideEnabledSwitch_Toggled"
-                                          ToolTipService.ToolTip="Assombrit légèrement le reste de la page et garde une bande nette qui suit la lecture dans le viewport. Pratique pour ne pas perdre sa ligne sur les longs articles, tableaux ou formulaires denses." />
+                                          ToolTipService.ToolTip="Assombrit légèrement le reste de la page et garde une bande nette qui suit ta lecture. Pratique pour ne pas perdre ta ligne sur les longs articles, les tableaux ou les formulaires chargés." />
                             <ComboBox x:Name="ReadingGuideBandHeightCombo"
                                       Header="Hauteur de la bande de lecture"
                                       SelectionChanged="ReadingGuideBandHeightCombo_SelectionChanged"
@@ -4675,7 +4599,7 @@
                                     <ToggleSwitch x:Name="AccessibilityLargeCursorSwitch"
                                                   Header="Curseur agrandi et contrasté"
                                                   Toggled="AccessibilityLargeCursorSwitch_Toggled"
-                                                  ToolTipService.ToolTip="Remplace, sur les pages visitées, le curseur par défaut par une flèche noire épaisse sur fond jaune, deux fois plus grande - utile si le pointeur système standard se perd facilement. Pour la fenêtre Lumora elle-même, utilisez le réglage « Pointeur » des Options d'ergonomie de Windows, qui couvre déjà toute la machine." />
+                                                  ToolTipService.ToolTip="Remplace, sur les pages visitées, le curseur par défaut par une flèche noire épaisse sur fond jaune, deux fois plus grande, utile si le pointeur système standard se perd facilement. Pour la fenêtre Lumora elle-même, utilise le réglage « Pointeur » des Options d'ergonomie de Windows, qui couvre déjà toute la machine." />
                                 </StackPanel>
                             </Border>
 
@@ -4686,7 +4610,7 @@
                                                   Header="Réordonner sans glisser"
                                                   Toggled="AccessibilityClickToReorderSwitch_Toggled"
                                                   ToolTipService.ToolTip="Ajoute une poignée à chaque favori de la barre : un clic la décroche, un clic sur un emplacement la repose - aucune pression maintenue nécessaire, en plus du glisser-déposer qui reste disponible." />
-                                    <TextBlock Text="Une petite poignée apparaît sur chaque favori de la barre. Cliquez dessus pour le décrocher, puis cliquez un emplacement pour l'y reposer - Échap ou un second clic sur la poignée annule."
+                                    <TextBlock Text="Une petite poignée apparaît sur chaque favori de la barre. Clique dessus pour le décrocher, puis clique sur un emplacement pour le reposer. Échap ou un second clic sur la poignée annule."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                 </StackPanel>
                             </Border>
@@ -4706,7 +4630,7 @@
                                         <ComboBoxItem Content="Après 45 min" Tag="45" />
                                         <ComboBoxItem Content="Après 1 h 30" Tag="90" />
                                     </ComboBox>
-                                    <TextBlock Text="Une note discrète s'affiche en bas de la fenêtre après ce temps d'utilisation continue de Lumora, pour penser à faire une pause. Elle ne bloque rien : vous pouvez continuer sans y répondre."
+                                    <TextBlock Text="Une note discrète s'affiche en bas de la fenêtre après ce temps d'utilisation continue de Lumora, pour penser à faire une pause. Elle ne bloque rien : tu peux continuer sans y répondre."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                 </StackPanel>
                             </Border>
@@ -4718,7 +4642,7 @@
                                                   Header="Remplacer les sons par un flash visuel"
                                                   Toggled="AccessibilitySoundsAsVisualFlashSwitch_Toggled"
                                                   ToolTipService.ToolTip="Coupe les sons de clic/bascule de Lumora et les remplace par un bref éclair visuel discret sur la fenêtre." />
-                                    <TextBlock Text="Aucun son de Lumora ne joue plus : les clics et bascules restent silencieux, et un bref éclair traverse la fenêtre à la place (par exemple pour le rappel de pause, ou quand un site demande à vous envoyer des notifications)."
+                                    <TextBlock Text="Aucun son de Lumora ne joue plus : les clics et bascules restent silencieux, et un bref éclair traverse la fenêtre à la place (par exemple pour le rappel de pause, ou quand un site demande à t'envoyer des notifications)."
                                                Style="{StaticResource NovaPanelDescriptionStyle}" />
                                 </StackPanel>
                             </Border>
@@ -4741,12 +4665,12 @@
                         <!-- Section : Coffre et données -->
                         <StackPanel x:Name="SettingsSectionVault" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Coffre et données" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="vault.lumora reste local, chiffré et lié à votre profil."
+                            <TextBlock Text="vault.lumora reste local, chiffré et lié à ton profil."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
                             <Border Background="{StaticResource NovaWarningSurfaceBrush}"
                                     CornerRadius="6" Padding="12,8" Margin="0,4,0,0">
                                 <TextBlock TextWrapping="Wrap" FontSize="13"
-                                           Text="La récupération n'est possible qu'avec la clé de récupération locale que vous avez notée. Sans mot de passe et sans cette clé, Lumora ne peut pas déchiffrer le coffre." />
+                                           Text="La récupération n'est possible qu'avec la clé de récupération locale que tu as notée. Sans mot de passe et sans cette clé, Lumora ne peut pas déchiffrer le coffre." />
                             </Border>
                             <TextBlock Text="Le mot de passe du coffre se change depuis Profil."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
@@ -4786,7 +4710,7 @@
                                     Background="{StaticResource NovaInfoSurfaceBrush}" CornerRadius="7"
                                     Padding="10,7" Visibility="Collapsed">
                                 <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.9"
-                                           Text="Un code à usage unique, généré par une application comme Lumora, à saisir en plus du mot de passe. Utile si quelqu'un devine ou vole votre mot de passe : il lui manquera encore ce code, renouvelé toutes les 30 secondes." />
+                                           Text="Un code à usage unique, généré par une application comme Lumora, à saisir en plus du mot de passe. Si quelqu'un devine ou vole ton mot de passe, il lui manquera encore ce code, renouvelé toutes les 30 secondes." />
                             </Border>
                             <ToggleSwitch x:Name="VaultPasskeyFeatureToggle"
                                           Header="Clés d'accès (Passkeys)"
@@ -4797,7 +4721,7 @@
                                     Background="{StaticResource NovaInfoSurfaceBrush}" CornerRadius="7"
                                     Padding="10,7" Visibility="Collapsed">
                                 <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.9"
-                                           Text="Remplace le mot de passe par votre empreinte, votre visage ou le code de votre appareil. Rien à retenir ni à taper, mais utilisable seulement depuis un appareil que vous avez déjà approuvé." />
+                                           Text="Remplace le mot de passe par ton empreinte, ton visage ou le code de ton appareil. Rien à retenir ni à taper, mais utilisable seulement depuis un appareil que tu as déjà approuvé." />
                             </Border>
                             <Border Height="1" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
                                     Margin="0,8,0,0" />
@@ -4899,7 +4823,7 @@
                                 <StackPanel x:Name="AccountTabOverviewContent" Spacing="12" Margin="0,14,0,0">
                                     <Border Style="{StaticResource NovaPanelCardStyle}">
                                         <StackPanel Spacing="10">
-                                            <TextBlock Text="Vos données en un coup d'œil" Style="{StaticResource NovaPanelSectionTitleStyle}" />
+                                            <TextBlock Text="Tes données en un coup d'œil" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
                                                        Text="Ce qui est réellement stocké dans ce profil — le même périmètre que « Exporter une sauvegarde »." />
                                             <Grid ColumnSpacing="1" RowSpacing="1" Background="{StaticResource NovaChromeStrokeSoftBrush}"
@@ -4984,7 +4908,7 @@
                                                 </Border>
                                                 <StackPanel Spacing="2">
                                                     <TextBlock Text="Changer le nom" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                                    <TextBlock Text="Ce que voient vos autres profils" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                    <TextBlock Text="Ce que voient tes autres profils" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
                                                 </StackPanel>
                                             </StackPanel>
                                         </Button>
@@ -4999,7 +4923,7 @@
                                                 </Border>
                                                 <StackPanel Spacing="2">
                                                     <TextBlock Text="Changer le mot de passe" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                                    <TextBlock Text="Aussi la clé de vos sauvegardes" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                    <TextBlock Text="Aussi la clé de tes sauvegardes" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
                                                 </StackPanel>
                                             </StackPanel>
                                         </Button>
@@ -5014,7 +4938,7 @@
                                                 </Border>
                                                 <StackPanel Spacing="2">
                                                     <TextBlock Text="Nouvelle clé de récupération" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                                    <TextBlock Text="Pour débloquer si vous oubliez tout" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
+                                                    <TextBlock Text="Pour débloquer si tu oublies tout" Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11" />
                                                 </StackPanel>
                                             </StackPanel>
                                         </Button>
@@ -5062,7 +4986,7 @@
                                                 <TextBlock x:Name="AccountLastBackupHeadlineText" Text="Aucune sauvegarde effectuée avec ce compte"
                                                            Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                                 <TextBlock x:Name="AccountLastBackupDetailText"
-                                                           Text="Exportez une sauvegarde pour pouvoir tout récupérer, compte inclus, en cas de besoin."
+                                                           Text="Exporte une sauvegarde pour pouvoir tout récupérer, compte inclus, en cas de besoin."
                                                            Style="{StaticResource NovaPanelDescriptionStyle}" />
                                             </StackPanel>
                                             <Button Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource NovaButtonPrimaryStyle}"
@@ -5131,7 +5055,7 @@
                                                         <RadioButton Content="Mécanique" Tag="mecanique" Style="{StaticResource NovaSubTabRadioButtonStyle}" />
                                                         <RadioButton Content="Arcade" Tag="arcade" Style="{StaticResource NovaSubTabRadioButtonStyle}" />
                                                     </RadioButtons>
-                                                    <TextBlock Text="&quot;Arcade&quot; : bips inspirés des jeux vidéo rétro, sans reprendre une œuvre précise. Cliquez un pack pour l'écouter."
+                                                    <TextBlock Text="« Arcade » : bips inspirés des jeux vidéo rétro, sans reprendre une œuvre précise. Clique sur un pack pour l'écouter."
                                                                Style="{StaticResource NovaPanelDescriptionStyle}" FontSize="11.5" />
                                                 </StackPanel>
 
@@ -5171,7 +5095,7 @@
                                         <TextBlock Text="Zone dangereuse" FontWeight="SemiBold"
                                                    Foreground="{StaticResource NovaDangerBrush}" />
                                         <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                                   Text="Supprime définitivement toutes vos données : favoris, historique, onglets, paramètres, coffre et identifiants de connexion. Opération irréversible." />
+                                                   Text="Supprime définitivement toutes tes données : favoris, historique, onglets, réglages, coffre et identifiants de connexion. Opération irréversible." />
                                         <Button Content="Réinitialiser ce profil..."
                                                 Style="{StaticResource NovaButtonDangerStyle}"
                                                 HorizontalAlignment="Left"
@@ -5182,7 +5106,7 @@
                             </StackPanel>
                             <InfoBar x:Name="ProfileGuestRestrictedNotice"
                                      Title="Indisponible en mode invité"
-                                     Message="La gestion des utilisateurs locaux et la réinitialisation de profil touchent aux données d'un vrai profil : connectez-vous ou créez un profil pour y accéder."
+                                     Message="La gestion des utilisateurs locaux et la réinitialisation de profil touchent aux données d'un vrai profil : connecte-toi ou crée un profil pour y accéder."
                                      Severity="Informational"
                                      IsOpen="False" />
                         </StackPanel>
@@ -5201,7 +5125,7 @@
 
                             <InfoBar x:Name="StorageRestartBar"
                                      Title="Redémarrage requis"
-                                     Message="Le dossier de données a été modifié. Redémarrez Lumora pour appliquer le changement."
+                                     Message="Le dossier de données a été modifié. Redémarre Lumora pour appliquer le changement."
                                      Severity="Warning"
                                      IsOpen="False">
                                 <InfoBar.ActionButton>
@@ -5222,7 +5146,7 @@
 
                             <TextBlock Text="Sauvegarde" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                       Text="Favoris, historique, onglets et paramètres dans un fichier chiffré. Le coffre reste lié au compte Windows." />
+                                       Text="Favoris, historique, onglets et réglages dans un fichier chiffré. Le coffre reste lié au compte Windows." />
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <Button Content="Exporter une sauvegarde..." Style="{StaticResource NovaButtonStyle}" Click="ExportBackupButton_Click" />
                                 <Button Content="Importer une sauvegarde..." Style="{StaticResource NovaButtonStyle}" Click="ImportBackupButton_Click" />
@@ -5230,7 +5154,7 @@
 
                             <InfoBar x:Name="StorageImportBar"
                                      Title="Restauration réussie"
-                                     Message="Les données ont été importées. Redémarrez Lumora pour appliquer tous les changements."
+                                     Message="Les données ont été importées. Redémarre Lumora pour appliquer tous les changements."
                                      Severity="Success"
                                      IsOpen="False">
                                 <InfoBar.ActionButton>
@@ -5242,7 +5166,7 @@
                         <!-- Section : Vie privée locale -->
                         <StackPanel x:Name="SettingsSectionPrivacy" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Confidentialité" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Publicités et traceurs, anti-pistage technique, sécurité de connexion et hygiène de session : tout tourne en local, sans tableau de bord distant."
+                            <TextBlock Text="Pubs et traceurs, anti-pistage, connexion sécurisée et nettoyage des sessions : tout tourne sur ton ordinateur."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                             <!-- Compteur de blocages : reflete surtout le bloqueur pub/trackers ci-dessous -->
@@ -5357,7 +5281,7 @@
                             <!-- CNAME uncloaker -->
                             <TextBlock Text="CNAME cloaking" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                             <ToggleSwitch x:Name="CnameUncloakerSwitch"
-                                         Header="Détecter le CNAME cloaking"
+                                         Header="Détecter les traceurs cachés (CNAME)"
                                          Toggled="CnameUncloakerSwitch_Toggled"
                                          ToolTipService.ToolTip="Détecte les trackers cachés derrière un alias DNS." />
 
@@ -5366,14 +5290,14 @@
                             <ToggleSwitch x:Name="WebRtcLeakProtectionSwitch"
                                          Header="Bloquer les fuites d'IP WebRTC"
                                          Toggled="WebRtcLeakProtectionSwitch_Toggled"
-                                         ToolTipService.ToolTip="Empêche les sites de révéler votre IP locale/publique réelle via WebRTC (utile même sans VPN actif). Nécessite un redémarrage de Lumora pour s'appliquer." />
+                                         ToolTipService.ToolTip="Empêche les sites de révéler ton IP locale ou publique réelle via WebRTC (utile même sans VPN actif). Nécessite un redémarrage de Lumora pour s'appliquer." />
 
                             <!-- Position fictive (geolocalisation) -->
                             <TextBlock Text="Géolocalisation" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
                             <ToggleSwitch x:Name="GeolocationSpoofingSwitch"
                                          Header="Position fictive"
                                          Toggled="GeolocationSpoofingSwitch_Toggled"
-                                         ToolTipService.ToolTip="Renvoie une position fixe aux sites qui demandent votre localisation (cartes, météo, recherche « près de moi ») au lieu de la position réelle de l'appareil. Sans effet sur le catalogue des services de streaming, qui se base sur l'adresse IP, pas sur cette API. Un site autorisé explicitement (onglet Site actuel) reçoit toujours la vraie position." />
+                                         ToolTipService.ToolTip="Renvoie une position fixe aux sites qui demandent ta localisation (cartes, météo, recherche « près de moi ») au lieu de la position réelle de l'appareil. Sans effet sur le catalogue des services de streaming, qui se base sur l'adresse IP, pas sur cette API. Un site autorisé explicitement (onglet Site actuel) reçoit toujours la vraie position." />
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -5390,7 +5314,7 @@
                             <ToggleSwitch x:Name="FingerprintProtectionSwitch"
                                          Header="Brouiller l'empreinte du navigateur"
                                          Toggled="FingerprintProtectionSwitch_Toggled"
-                                         ToolTipService.ToolTip="Ajoute un léger bruit à la lecture du Canvas, du WebGL et de l'AudioContext (les techniques de fingerprinting les plus courantes) pour rendre le pistage inter-sites plus difficile, sans casser l'affichage ni ralentir la navigation." />
+                                         ToolTipService.ToolTip="Ajoute un léger bruit à la lecture du Canvas, du WebGL et de l'AudioContext, les techniques de pistage par empreinte les plus courantes, pour rendre le suivi d'un site à l'autre plus difficile sans casser l'affichage ni ralentir la navigation." />
 
                             <!-- Gestionnaire de consentement cookies -->
                             <TextBlock Text="Cookies" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
@@ -5440,7 +5364,7 @@
                             <ToggleSwitch x:Name="SessionPurgeSwitch"
                                          Header="Purger les sessions au démarrage"
                                          Toggled="SessionPurgeSwitch_Toggled"
-                                         ToolTipService.ToolTip="Purge les sessions au démarrage, sauf pour les sites que vous gardez connectés." />
+                                         ToolTipService.ToolTip="Purge les sessions au démarrage, sauf pour les sites que tu gardes connectés." />
                             <HyperlinkButton Content="Gérer les sites connectés"
                                              Click="SessionsManageLink_Click"
                                              HorizontalAlignment="Left"
@@ -5516,7 +5440,7 @@
                     </Border>
                     <TextBlock Text="Lumora" FontSize="34" FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
-                    <TextBlock Text="Lumière locale, navigation web claire"
+                    <TextBlock Text="Le navigateur web qui reste chez toi"
                                Opacity="0.74"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Développé par HandiJyhel"
@@ -5582,7 +5506,7 @@
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="Vue d'ensemble" FontSize="24" FontWeight="SemiBold" />
                                     <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
-                                               Text="Lumora associe maintenant son idée de lumière à un symbole de navigation web : un cœur lumineux, des arcs de globe et une trajectoire locale, au service d'un navigateur clair et maîtrisable." />
+                                               Text="Le logo montre un cœur lumineux entouré d'arcs de globe : un navigateur web qui garde tout sur ta machine." />
                                 </StackPanel>
                                 <Grid ColumnSpacing="12" RowSpacing="12">
                                     <Grid.ColumnDefinitions>
@@ -5611,20 +5535,20 @@
                                         <StackPanel Spacing="6">
                                             <TextBlock Text="Accessibilité" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                                       Text="Profils prédéfinis, confort de lecture, contenu des pages et navigation clavier / lecteur d'écran : chantier actif de cette version." />
+                                                       Text="Profils de confort, aides à la lecture et navigation au clavier ou au lecteur d'écran." />
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource NovaPanelCardStyle}">
                                         <StackPanel Spacing="6">
                                             <TextBlock Text="Transparence" Style="{StaticResource NovaPanelSectionTitleStyle}" />
                                             <TextBlock Style="{StaticResource NovaPanelDescriptionStyle}"
-                                                       Text="Les dépendances open source, le build et le profil local sont détaillés dans les sections dédiées." />
+                                                       Text="Les bibliothèques open source, la version et le profil local sont détaillés plus bas." />
                                         </StackPanel>
                                     </Border>
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button Content="Modules Lumora" Style="{StaticResource NovaButtonStyle}" Click="ModulesMenu_Click" />
-                                    <Button Content="Paramètres" Style="{StaticResource NovaCompactButtonStyle}" Click="SettingsMenu_Click" />
+                                    <Button Content="Réglages" Style="{StaticResource NovaCompactButtonStyle}" Click="SettingsMenu_Click" />
                                 </StackPanel>
                             </StackPanel>
 
@@ -5632,7 +5556,7 @@
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="Modules Lumora" FontSize="24" FontWeight="SemiBold" />
                                     <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
-                                               Text="Les modules sont des outils intégrés au navigateur : ils restent locaux, activables à la demande, et rangés comme de vraies fonctions de Lumora. Même répartition que le menu Démarrer (Modules Lumora)." />
+                                               Text="Les modules sont des outils intégrés à Lumora. Ils tournent sur ton ordinateur et tu les actives quand tu en as besoin. Ils sont rangés comme dans le menu Démarrer." />
                                 </StackPanel>
                                 <Grid RowSpacing="10">
                                     <Grid.RowDefinitions>
@@ -5678,7 +5602,7 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="Lumora et profil" FontWeight="SemiBold" />
-                                            <TextBlock Grid.Column="1" Text="Paramètres, profils locaux (PIN, verrouillage), Studio pour la disposition des onglets/favoris, et cet écran À propos" Opacity="0.72" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="1" Text="Réglages, profils locaux (PIN, verrouillage), Studio pour la disposition des onglets/favoris, et cet écran À propos" Opacity="0.72" TextWrapping="Wrap" />
                                         </Grid>
                                     </Border>
                                 </Grid>
@@ -5688,7 +5612,7 @@
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="Confidentialité" FontSize="24" FontWeight="SemiBold" />
                                     <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
-                                               Text="Lumora doit protéger l'utilisateur sans rendre la navigation pénible." />
+                                               Text="Lumora doit te protéger sans rendre la navigation pénible." />
                                 </StackPanel>
                                 <Border Style="{StaticResource NovaPanelCardStyle}">
                                     <StackPanel Spacing="8">
@@ -5696,7 +5620,7 @@
                                         <TextBlock TextWrapping="Wrap" Opacity="0.82" LineHeight="22"
                                                    Text="Pas de synchronisation vers un serveur Lumora. Pas de télémétrie cachée. Pas de profil publicitaire." />
                                         <TextBlock TextWrapping="Wrap" Opacity="0.72" LineHeight="20"
-                                                   Text="Favoris, historique, données de session et informations sensibles restent sur votre machine." />
+                                                   Text="Favoris, historique, données de session et informations sensibles restent sur ta machine." />
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -5705,12 +5629,12 @@
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="Authenticité du build" FontSize="24" FontWeight="SemiBold" />
                                     <TextBlock TextWrapping="Wrap" Opacity="0.76" LineHeight="20"
-                                               Text="Pendant le développement, Lumora peut être distribué sans certificat Windows payant." />
+                                               Text="Lumora n'a pas encore de certificat Windows payant." />
                                 </StackPanel>
                                 <Border Style="{StaticResource NovaPanelCardStyle}">
                                     <StackPanel Spacing="12">
                                         <TextBlock TextWrapping="Wrap" Opacity="0.82" LineHeight="20"
-                                                   Text="L'authenticité repose alors sur un build propre, une empreinte SHA256 vérifiable et, à terme, une signature open source Sigstore." />
+                                                   Text="Pour vérifier ton téléchargement, compare son empreinte SHA256 avec celle publiée. Une signature open source Sigstore est prévue à terme." />
                                         <Grid ColumnSpacing="12" RowSpacing="8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="180" />
@@ -5737,7 +5661,7 @@
                                     </StackPanel>
                                 </Border>
                                 <TextBlock TextWrapping="Wrap" Opacity="0.66" LineHeight="20"
-                                           Text="Si Windows affiche Éditeur inconnu, cela signifie que ce build n'a pas encore de signature Authenticode reconnue. Le fichier VERIFICATION.txt fourni avec un build propre permet de comparer l'empreinte du fichier reçu." />
+                                           Text="Si Windows affiche Éditeur inconnu, c'est que cette version n'a pas encore de signature Authenticode reconnue. Le fichier VERIFICATION.txt fourni avec un build propre permet de comparer l'empreinte du fichier reçu." />
                             </StackPanel>
 
                             <StackPanel x:Name="AboutSectionCredits" Spacing="14" Visibility="Collapsed">
@@ -5925,8 +5849,6 @@
                                         <TextBlock x:Name="AboutProfilePathText" TextWrapping="Wrap" Opacity="0.78" FontFamily="Consolas" FontSize="12" />
                                     </StackPanel>
                                 </Border>
-                                <TextBlock TextWrapping="Wrap" Opacity="0.66" LineHeight="20"
-                                           Text="Les installateurs propres doivent démarrer avec un profil vierge dédié, sans reprendre les profils de développement." />
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
@@ -5951,7 +5873,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Spacing="4">
                         <TextBlock Text="Historique" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                        <TextBlock Text="Trajectoires visitees localement sur cet appareil." Style="{StaticResource NovaPanelDescriptionStyle}" />
+                        <TextBlock Text="Pages visitées sur cet appareil." Style="{StaticResource NovaPanelDescriptionStyle}" />
                     </StackPanel>
                     <HyperlinkButton x:Name="ClearHistoryButton" Grid.Column="1"
                             Content="Vider l'historique"
@@ -6069,7 +5991,7 @@
                 <Border Margin="0,0,0,16" Style="{StaticResource NovaPanelShellCardStyle}">
                     <StackPanel Spacing="4">
                         <TextBlock Text="Groupes enregistrés" FontSize="24" FontWeight="SemiBold" />
-                        <TextBlock Text="Vos groupes d'onglets rangés. Ouvrez-en un pour retrouver tous ses onglets d'un coup. Tout est stocké localement sur cet appareil."
+                        <TextBlock Text="Tes groupes d'onglets rangés. Ouvres-en un pour retrouver d'un coup tous ses onglets. Tout est stocké sur cet appareil."
                                    Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
                     </StackPanel>
                 </Border>
@@ -6099,7 +6021,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Notes" FontSize="24" FontWeight="SemiBold" />
-                        <TextBlock Text="Vos pages annotées en mode lecture et vos notes libres. Rouvrez une page annotée pour reprendre votre lecture là où vous l'aviez laissée. Tout est chiffré dans votre profil et ne quitte jamais cet appareil."
+                        <TextBlock Text="Tes pages annotées en mode lecture et tes notes libres. Rouvre une page annotée pour reprendre ta lecture là où tu l'avais laissée. Tout est chiffré dans ton profil et ne quitte jamais cet appareil."
                                    Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
                     </StackPanel>
                     <Button Grid.Column="1" x:Name="NotesAddButton" VerticalAlignment="Bottom"
@@ -6195,7 +6117,7 @@
                             </Button>
                         </StackPanel>
                         <TextBox Grid.Row="2" x:Name="NoteContentBox"
-                                 PlaceholderText="Écrivez votre note ici..."
+                                 PlaceholderText="Écris ta note ici…"
                                  AutomationProperties.Name="Contenu de la note"
                                  AcceptsReturn="True" TextWrapping="Wrap"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -6215,7 +6137,7 @@
                         </Grid>
                     </Grid>
                     <TextBlock Grid.Column="1" x:Name="NotesEmptyText"
-                               Text="Rien pour l'instant. Surlignez un passage d'une page web via le Mode lecture (bouton dans la barre d'outils) : la page annotée apparaîtra ici. Vous pouvez aussi créer une note libre."
+                               Text="Rien pour l'instant. Surligne un passage d'une page web avec le Mode lecture (bouton dans la barre d'outils) : la page annotée apparaîtra ici. Tu peux aussi créer une note libre."
                                Opacity="0.6" TextWrapping="Wrap" MaxWidth="420"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
@@ -6239,7 +6161,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Flux RSS" FontSize="24" FontWeight="SemiBold" />
-                        <TextBlock Text="Suivez vos sites préférés sans algorithme ni compte : ajoutez l'adresse d'un flux RSS ou Atom, les articles sont récupérés en direct à chaque consultation."
+                        <TextBlock Text="Suis tes sites préférés sans algorithme ni compte : ajoute l'adresse d'un flux RSS ou Atom, les articles sont récupérés en direct à chaque consultation."
                                    Opacity="0.68" TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
                     </StackPanel>
                     <Button Grid.Column="1" x:Name="RssAddButton" VerticalAlignment="Bottom"
@@ -6262,7 +6184,7 @@
                               AutomationProperties.Name="Liste des flux RSS suivis"
                               SelectionChanged="RssFeedsList_SelectionChanged" />
                     <TextBlock x:Name="RssFeedsEmptyText"
-                               Text="Aucun flux pour l'instant. Ajoutez l'adresse d'un flux RSS ou Atom pour commencer."
+                               Text="Aucun flux pour l'instant. Ajoute l'adresse d'un flux RSS ou Atom pour commencer."
                                Opacity="0.6" TextWrapping="Wrap" MaxWidth="280"
                                HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
 
@@ -6301,7 +6223,7 @@
                                   ItemClick="RssArticlesList_ItemClick" />
                     </Grid>
                     <TextBlock Grid.Column="1" x:Name="RssArticlesEmptyText"
-                               Text="Sélectionnez un flux à gauche pour voir ses articles."
+                               Text="Sélectionne un flux à gauche pour voir ses articles."
                                Opacity="0.6" TextWrapping="Wrap" MaxWidth="420"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
@@ -6451,7 +6373,7 @@
                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <FontIcon Glyph="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="32"
                                           Opacity="0.35" HorizontalAlignment="Center" />
-                                <TextBlock Text="Sélectionnez un identifiant dans la liste pour voir ses détails."
+                                <TextBlock Text="Sélectionne un identifiant dans la liste pour voir ses détails."
                                            Opacity="0.55" TextWrapping="Wrap" TextAlignment="Center" />
                             </StackPanel>
                             <StackPanel x:Name="VaultDetailPanel" Spacing="12" Visibility="Collapsed" />
@@ -6463,7 +6385,7 @@
             <!-- Panneau Portefeuille (moyens de paiement locaux) -->
             <Grid x:Name="WalletPanel" Grid.Column="3" Padding="16" Visibility="Collapsed"
                   AutomationProperties.Name="Portefeuille"
-                  AutomationProperties.HelpText="Ajoutez une carte locale, modifiez-la ou utilisez-la sur la page active.">
+                  AutomationProperties.HelpText="Ajoute une carte locale, modifie-la ou utilise-la sur la page active.">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -6473,7 +6395,7 @@
                 <StackPanel Margin="0,0,0,16">
                     <TextBlock Text="Portefeuille" FontSize="24" FontWeight="SemiBold" />
                     <TextBlock TextWrapping="Wrap" Opacity="0.68" Margin="0,4,0,0"
-                               Text="Vos moyens de paiement sont stockés uniquement dans vault.lumora, chiffrés comme vos mots de passe. Rien n'est confié au moteur web, rien ne quitte votre machine. Le cryptogramme (CVV) n'est jamais enregistré : vous le saisissez au moment du paiement." />
+                               Text="Tes moyens de paiement sont stockés uniquement dans vault.lumora, chiffrés comme tes mots de passe. Rien n'est confié au moteur web, rien ne quitte ta machine. Le cryptogramme (CVV) n'est jamais enregistré : tu le saisis au moment du paiement." />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,16">
@@ -6519,7 +6441,7 @@
                         </Border>
                         <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
                             <TextBlock Text="Modules Lumora" Style="{StaticResource NovaPanelPageTitleStyle}" />
-                            <TextBlock Text="Des outils locaux visibles, utiles et faciles à épingler. Lumora les présente comme des briques de votre propre ergonomie, pas comme un magasin d'extensions."
+                            <TextBlock Text="Des outils intégrés à Lumora, faciles à épingler dans la barre. Pas d'extensions à installer."
                                        Style="{StaticResource NovaPanelDescriptionStyle}" MaxWidth="760" />
                         </StackPanel>
                     </Grid>
@@ -6557,7 +6479,7 @@
                         <Border Style="{StaticResource NovaFlyoutHeroCardStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="Mode d'usage" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                <TextBlock Text="Changez rapidement le rythme de Lumora sans quitter le hub des modules."
+                                <TextBlock Text="Change de mode d'usage sans quitter cette page."
                                            Style="{StaticResource NovaPanelDescriptionStyle}" />
                                 <ComboBox x:Name="ModulesUsageModeCombo"
                                           Header="Mode actuel"
@@ -6598,7 +6520,7 @@
                         <Border Style="{StaticResource NovaPanelShellCardStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="Modules épinglables" Style="{StaticResource NovaPanelSectionTitleStyle}" />
-                                <TextBlock Text="Choisissez ce qui reste visible dans la barre. Les modules non épinglés restent disponibles dans le bouton puzzle."
+                                <TextBlock Text="Choisis ce qui reste visible dans la barre. Les modules non épinglés restent disponibles dans le bouton puzzle."
                                            Style="{StaticResource NovaPanelDescriptionStyle}" />
 
                                 <Grid ColumnSpacing="12" RowSpacing="8">
@@ -6707,7 +6629,7 @@
                 <StackPanel Margin="0,0,0,16" Spacing="4">
                     <TextBlock Text="Loupe de lecture" FontSize="24" FontWeight="SemiBold" />
                     <TextBlock TextWrapping="Wrap" Opacity="0.68" MaxWidth="720" HorizontalAlignment="Left"
-                               Text="Capture agrandie de la page pour mieux lire un texte minuscule ou déformé (par exemple un captcha visuel). Molette + Ctrl (ou pincer) pour zoomer, barres de défilement pour naviguer dans l'image. Rien n'est transmis : c'est une image locale, vous lisez et répondez vous-même." />
+                               Text="Capture agrandie de la page pour mieux lire un texte minuscule ou déformé (par exemple un captcha visuel). Molette + Ctrl (ou pincer) pour zoomer, barres de défilement pour naviguer dans l'image. Rien n'est transmis : c'est une image locale, tu lis et tu réponds toi-même." />
                     <Button x:Name="ReadingLensRefreshButton" Content="Actualiser la capture"
                             Style="{StaticResource NovaButtonStyle}"
                             HorizontalAlignment="Left" Margin="0,4,0,0" Click="ReadingLensRefreshButton_Click" />
@@ -6725,7 +6647,7 @@
                     <Image x:Name="ReadingLensImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" />
                 </ScrollViewer>
                 <TextBlock x:Name="ReadingLensEmptyText" Grid.Row="1"
-                           Text="Ouvrez une page web puis cliquez sur la loupe dans la barre d'outils."
+                           Text="Ouvre une page web puis clique sur la loupe dans la barre d'outils."
                            HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" />
             </Grid>
 
@@ -7017,8 +6939,7 @@
                             Margin="2,0,10,0"
                             VerticalAlignment="Center"
                             Opacity="0.6">
-                    <TextBlock Text="✦" FontSize="10" Foreground="{StaticResource NovaAccentBrush}" />
-                    <TextBlock Text="Constellation" FontSize="10.5" Foreground="{StaticResource NovaTextMutedBrush}" />
+                    <TextBlock Text="Favoris" FontSize="10.5" Foreground="{StaticResource NovaTextMutedBrush}" />
                 </StackPanel>
                 <StackPanel x:Name="BookmarksBottomBarPanel"
                             Grid.Column="1"
@@ -7061,7 +6982,7 @@
                 Margin="8,0,0,0"
                 Style="{StaticResource NovaChromeIconButtonStyle}"
                 AutomationProperties.Name="Menu Lumora"
-                ToolTipService.ToolTip="Menu Lumora — modules, favoris, paramètres">
+                ToolTipService.ToolTip="Menu Lumora : modules, favoris, réglages">
             <!-- Vraie marque Lumora (2026-08-10, retour utilisateur : l'ancien
                  tracé abstrait ne ressemblait a rien par rapport aux autres
                  icones, ET c'etait une marque differente de celle deja
@@ -7154,7 +7075,7 @@
                                             </ItemsRepeater.Layout>
                                         </ItemsRepeater>
                                         <TextBlock x:Name="StartMenuRecommendedEmptyText"
-                                                   Text="Rien à recommander pour l'instant : ouvrez quelques modules, ils apparaîtront ici."
+                                                   Text="Rien à recommander pour l'instant : ouvre quelques modules, ils apparaîtront ici."
                                                    Style="{StaticResource NovaPanelDescriptionStyle}"
                                                    TextWrapping="Wrap"
                                                    Visibility="Collapsed" />
@@ -7227,7 +7148,7 @@
                                                            FontSize="18"
                                                            Foreground="{StaticResource NovaBrandChipForegroundBrush}" />
                                                 <TextBlock x:Name="ProfileFlyoutSubtitleText"
-                                                           Text="Gérez l'utilisateur local, les profils et les réglages de cette session."
+                                                           Text="Gère l'utilisateur local, les profils et les réglages de cette session."
                                                            TextWrapping="Wrap"
                                                            FontSize="12"
                                                            Opacity="0.82"
@@ -7240,7 +7161,7 @@
                                                            Text="Aucun profil actif"
                                                            FontWeight="SemiBold" />
                                                 <TextBlock x:Name="ProfileFlyoutCurrentStateText"
-                                                           Text="Créer ou choisir un profil local pour garder vos données."
+                                                           Text="Créer ou choisir un profil local pour garder tes données."
                                                            TextWrapping="Wrap"
                                                            FontSize="12"
                                                            Opacity="0.68" />
@@ -7252,7 +7173,7 @@
                                             <StackPanel Orientation="Horizontal" Spacing="10">
                                                 <FontIcon Glyph="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
                                                 <StackPanel Spacing="2">
-                                                    <TextBlock Text="Paramètres utilisateur" FontWeight="SemiBold" />
+                                                    <TextBlock Text="Réglages utilisateur" FontWeight="SemiBold" />
                                                     <TextBlock Text="Ouvrir les réglages du profil local, du PIN et des autres comptes." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
                                                 </StackPanel>
                                             </StackPanel>
@@ -7291,7 +7212,7 @@
                 Background="{StaticResource NovaChromeStrokeSoftBrush}" />
 
             <TextBlock x:Name="StatusText" Grid.Column="2" Padding="10,4"
-                       Text="Lumora WinUI 3 initialise." Opacity="0.72"
+                       Text="Lumora est prêt." Opacity="0.72"
                        FontSize="12"
                        AutomationProperties.Name="État Lumora"
                        AutomationProperties.HelpText="Annonce les changements importants de navigation, de sécurité et d'accessibilité."
@@ -7390,7 +7311,7 @@
                                                    FontWeight="SemiBold"
                                                    FontSize="18"
                                                    Foreground="{StaticResource NovaBrandChipForegroundBrush}" />
-                                        <TextBlock Text="Ajuste le rythme de Lumora selon ce que vous faites."
+                                        <TextBlock Text="Choisis ce que tu fais, l'accueil s'adapte."
                                                    TextWrapping="Wrap"
                                                    FontSize="12"
                                                    Opacity="0.82"
@@ -7583,7 +7504,7 @@
                                                      MinHeight="84"
                                                      AcceptsReturn="True"
                                                      TextWrapping="Wrap"
-                                                     PlaceholderText="Votre compagnon garde cela ici."
+                                                     PlaceholderText="Ton compagnon garde cela ici."
                                                      AutomationProperties.Name="Mémoire du compagnon" />
                                             <Button x:Name="ModeCompanionSaveButton"
                                                     Content="Garder dans Lumie"
@@ -7599,7 +7520,7 @@
                                             <FontIcon x:Name="ModeCompanionPrimaryIcon" Glyph="&#xE70B;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" />
                                             <StackPanel Spacing="2">
                                                 <TextBlock x:Name="ModeCompanionPrimaryTitleText" Text="Ouvrir Notes" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="ModeCompanionPrimaryHintText" Text="Gardez l'outil du mode sous la main." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
+                                                <TextBlock x:Name="ModeCompanionPrimaryHintText" Text="Garde l'outil du mode sous la main." FontSize="12" Opacity="0.68" TextWrapping="Wrap" />
                                             </StackPanel>
                                         </StackPanel>
                                     </Button>
@@ -7714,7 +7635,7 @@
                                         BorderThickness="1">
                                     <StackPanel Spacing="6">
                                         <TextBlock x:Name="AccessibilityQuickRescueStatusText"
-                                                   Text="Aucun retour memorise pour l'instant."
+                                                   Text="Aucun retour mémorisé pour l'instant."
                                                    TextWrapping="Wrap"
                                                    FontSize="11.5"
                                                    Opacity="0.68" />
@@ -8187,7 +8108,7 @@
                         <StackPanel x:Name="ProfilePickerPanel" Spacing="10" Visibility="Collapsed">
                             <TextBlock Text="Choisir un profil" FontSize="18" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" TextAlignment="Center" />
-                            <TextBlock Text="Chaque profil garde ses favoris, son historique, ses sessions, son coffre et ses paramètres séparés."
+                            <TextBlock Text="Chaque profil garde ses favoris, son historique, ses sessions, son coffre et ses réglages séparés."
                                        TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center"
                                        FontSize="13" Margin="0,0,0,6" />
                             <ListBox x:Name="ProfilePickerList"
@@ -8391,7 +8312,7 @@
                             </Grid>
                             <TextBlock x:Name="CreateProfileTitleText" Text="Bienvenue" FontSize="18" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" TextAlignment="Center" />
-                            <TextBlock x:Name="CreateProfileSubtitleText" Text="Créez votre profil pour protéger vos données."
+                            <TextBlock x:Name="CreateProfileSubtitleText" Text="Crée ton profil pour protéger tes données."
                                        TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center"
                                        FontSize="13" Margin="0,0,0,6" />
                             <TextBox x:Name="ProfileNameBox" Header="Prénom ou pseudo"
@@ -8435,7 +8356,7 @@
                                           Toggled="NoPasswordSwitch_Toggled" Margin="0,4,0,0" />
                             <InfoBar x:Name="NoPasswordWarningBar" IsClosable="False"
                                      Severity="Warning" Visibility="Collapsed"
-                                     Message="L'usage normal de Lumora (favoris, Coffre, navigation) reste inchangé. Par contre, la récupération de ce profil sera verrouillée au maximum : aucune sauvegarde complète possible, aucune clé de récupération, et son dossier ne pourra être ouvert ni par vous ni par un autre profil de cette machine. Ce choix est définitif : impossible d'ajouter un mot de passe plus tard sur ce profil." />
+                                     Message="L'usage normal de Lumora (favoris, Coffre, navigation) reste inchangé. Par contre, la récupération de ce profil sera verrouillée au maximum : aucune sauvegarde complète possible, aucune clé de récupération, et son dossier ne pourra être ouvert ni par toi ni par un autre profil de cette machine. Ce choix est définitif : impossible d'ajouter un mot de passe plus tard sur ce profil." />
                             <ToggleSwitch x:Name="EnablePinSwitch" Header="Connexion rapide par PIN"
                                           Toggled="EnablePinSwitch_Toggled" Margin="0,4,0,0" />
                             <PasswordBox x:Name="PinSetupBox" Header="Code PIN (6 chiffres)"
@@ -8490,10 +8411,10 @@
                                 <Border Grid.Column="1" Height="3" CornerRadius="2" Background="{StaticResource NovaIdentityMarkBrush}" />
                                 <Border Grid.Column="2" Height="3" CornerRadius="2" Background="{StaticResource NovaChromeStrokeBrush}" />
                             </Grid>
-                            <TextBlock Text="Où stocker votre profil ?"
+                            <TextBlock Text="Où stocker ton profil ?"
                                        FontSize="18" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" TextAlignment="Center" />
-                            <TextBlock Text="Votre profil contient tout ce qui vous appartient :"
+                            <TextBlock Text="Ton profil contient tout ce qui t'appartient :"
                                        TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center"
                                        FontSize="13" Margin="0,0,0,2" />
 
@@ -8505,7 +8426,7 @@
                                     <TextBlock Text="• Favoris et historique de navigation" FontSize="13" />
                                     <TextBlock Text="• Mots de passe (coffre chiffré AES-256)" FontSize="13" />
                                     <TextBlock Text="• Onglets ouverts et sessions" FontSize="13" />
-                                    <TextBlock Text="• Paramètres et préférences" FontSize="13" />
+                                    <TextBlock Text="• Réglages et préférences" FontSize="13" />
                                 </StackPanel>
                             </Border>
 
@@ -8513,7 +8434,7 @@
                                 <TextBlock Text="Emplacement de stockage"
                                            FontWeight="SemiBold" FontSize="13" />
                                 <TextBlock TextWrapping="Wrap" Opacity="0.6" FontSize="12">
-En choisissant un dossier personnalise (disque externe, dossier Documents...), votre profil restera accessible apres une reinstallation de Windows. Par defaut, le profil est dans %LOCALAPPDATA%\Lumora\profile.
+En choisissant un dossier personnalisé (disque externe, dossier Documents...), ton profil restera accessible après une réinstallation de Windows. Par défaut, le profil est dans %LOCALAPPDATA%\Lumora\profile.
                                 </TextBlock>
                                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
                                     <TextBlock x:Name="ProfileLocationPathText"
@@ -8546,12 +8467,12 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                 <Border Grid.Column="1" Height="3" CornerRadius="2" Background="{StaticResource NovaIdentityMarkBrush}" />
                                 <Border Grid.Column="2" Height="3" CornerRadius="2" Background="{StaticResource NovaIdentityMarkBrush}" />
                             </Grid>
-                            <TextBlock Text="Importer vos favoris ?" FontSize="15" FontWeight="SemiBold"
+                            <TextBlock Text="Importer tes favoris ?" FontSize="15" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" TextAlignment="Center" />
-                            <TextBlock Text="Sélectionnez un navigateur pour récupérer vos favoris."
+                            <TextBlock Text="Sélectionne un navigateur pour récupérer tes favoris."
                                        TextWrapping="Wrap" Opacity="0.65" TextAlignment="Center" FontSize="13" />
                             <ListBox x:Name="MigrationSourcesList" MaxHeight="180" />
-                            <TextBlock Text="Firefox : exportez d'abord vos favoris en HTML depuis Firefox (Signets › Afficher tous les signets › Importer et sauvegarder › Exporter en HTML), puis utilisez le bouton ci-dessous."
+                            <TextBlock Text="Firefox : exporte d'abord tes favoris en HTML depuis Firefox (Signets › Afficher tous les signets › Importer et sauvegarder › Exporter en HTML), puis utilise le bouton ci-dessous."
                                        TextWrapping="Wrap" Opacity="0.45" FontSize="11" />
                             <Button x:Name="MigrationImportButton" Content="Importer les favoris"
                                     Style="{StaticResource NovaButtonPrimaryStyle}"
@@ -8729,7 +8650,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStepMode" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Bienvenue dans Lumora" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Comment voulez-vous configurer votre navigateur ?"
+                            <TextBlock Text="Comment veux-tu configurer ton navigateur ?"
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <RadioButton x:Name="WizardModeQuick" GroupName="WizardModeGroup" IsChecked="True">
@@ -8753,7 +8674,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStepQuick" Spacing="12" Visibility="Collapsed">
                             <TextBlock Text="Presque fini" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Vous pourrez tout changer plus tard dans les Réglages."
+                            <TextBlock Text="Tu pourras tout changer plus tard dans les Réglages."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <TextBlock Text="Thème" FontWeight="SemiBold" FontSize="13" />
@@ -8789,17 +8710,17 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStep0" Spacing="14">
                             <TextBlock Text="Bienvenue !" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Lumora démarre volontairement épuré : aucun module visible n'est imposé. Quelques réglages rapides permettent de construire votre expérience."
+                            <TextBlock Text="Lumora démarre sans rien d'imposé : aucun module visible. Quelques réglages rapides, et tu le construis à ta façon."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
                                     CornerRadius="8" Padding="16,14">
                                 <StackPanel Spacing="12">
-                                    <TextBlock Text="Modules visibles choisis par vous"
+                                    <TextBlock Text="Modules visibles choisis par toi"
                                                FontSize="13" TextWrapping="Wrap" />
-                                    <TextBlock Text="Accueil personnalisable selon votre mode d'usage"
+                                    <TextBlock Text="Accueil adapté à ton mode d'usage"
                                                FontSize="13" TextWrapping="Wrap" />
-                                    <TextBlock Text="Données stockées uniquement sur votre machine"
+                                    <TextBlock Text="Données stockées uniquement sur ta machine"
                                                FontSize="13" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
@@ -8815,7 +8736,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStepTheme" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Clair ou sombre ?" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Vous pourrez changer d'avis à tout moment dans les réglages."
+                            <TextBlock Text="Tu pourras changer d'avis à tout moment dans les réglages."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <RadioButton x:Name="WizardThemeDark" Content="Sombre"
@@ -8833,7 +8754,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStep1" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Profil existant ?" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Si vous avez déjà utilisé Lumora, importez une sauvegarde (.lum) pour retrouver vos favoris, onglets, coffre et réglages."
+                            <TextBlock Text="Si tu as déjà utilisé Lumora, importe une sauvegarde (.lum) pour retrouver tes favoris, tes onglets, ton coffre et tes réglages."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Button x:Name="WizardImportBackupButton" Content="Importer une sauvegarde..."
@@ -8849,7 +8770,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                     Style="{StaticResource NovaButtonStyle}"
                                     HorizontalAlignment="Center"
                                     Click="WizardExistingProfileButton_Click" />
-                            <TextBlock Text="Sinon, cliquez sur Suivant pour créer un profil neuf."
+                            <TextBlock Text="Sinon, clique sur Suivant pour créer un profil neuf."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="12" Opacity="0.55" Margin="0,4,0,0" />
                         </StackPanel>
@@ -8858,7 +8779,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStep2" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Moteur de recherche" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Quel moteur souhaitez-vous utiliser par défaut ?"
+                            <TextBlock Text="Quel moteur veux-tu utiliser par défaut ?"
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <RadioButton x:Name="WizardSearchGoogle" Content="Google"
@@ -8879,7 +8800,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStep3" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Disposition des onglets" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Où voulez-vous voir vos onglets ouverts ?"
+                            <TextBlock Text="Où veux-tu voir tes onglets ouverts ?"
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <RadioButton x:Name="WizardTabsHorizontal" Content="Horizontaux, en haut de la fenêtre"
@@ -8892,9 +8813,9 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
 
                         <!-- Etape 4 : Experience personnelle -->
                         <StackPanel x:Name="WizardStep4" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Votre Lumora" FontSize="22" FontWeight="SemiBold"
+                            <TextBlock Text="Ton Lumora" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Choisissez un mode d'usage, puis les modules que vous voulez voir dans la barre. Vous pouvez tout laisser vide pour partir d'une interface nue."
+                            <TextBlock Text="Choisis un mode d'usage, puis les modules que tu veux voir dans la barre. Tu peux tout laisser vide pour partir d'une interface nue."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
@@ -8959,7 +8880,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                         <StackPanel x:Name="WizardStep5" Spacing="14" Visibility="Collapsed">
                             <TextBlock Text="Une photo de profil ?" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Facultatif : elle s'affichera à côté de votre nom. Vous pourrez la changer à tout moment dans Paramètres."
+                            <TextBlock Text="Facultatif : elle s'affichera à côté de ton nom. Tu pourras la changer à tout moment dans les Réglages."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Grid HorizontalAlignment="Center" Width="88" Height="88">
@@ -9007,9 +8928,9 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
 
                         <!-- Etape 7 : Resume et confirmation -->
                         <StackPanel x:Name="WizardStep7" Spacing="14" Visibility="Collapsed">
-                            <TextBlock Text="Vous êtes prêt !" FontSize="22" FontWeight="SemiBold"
+                            <TextBlock Text="Tu es prêt !" FontSize="22" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" />
-                            <TextBlock Text="Lumora est configuré. Vous pouvez modifier ces réglages à tout moment dans le Centre Lumora."
+                            <TextBlock Text="Lumora est configuré. Tu peux modifier ces réglages à tout moment dans les Réglages."
                                        TextWrapping="Wrap" TextAlignment="Center"
                                        FontSize="14" Opacity="0.72" Margin="0,0,0,6" />
                             <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
@@ -9181,13 +9102,13 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                         <Image Source="ms-appx:///Assets/LumoraLogoMark.png" Stretch="Uniform" />
                                     </Border>
                                 </Grid>
-                                <TextBlock Text="VOTRE NAVIGATEUR" FontSize="12" FontWeight="SemiBold" CharacterSpacing="60"
+                                <TextBlock Text="TON NAVIGATEUR" FontSize="12" FontWeight="SemiBold" CharacterSpacing="60"
                                            HorizontalAlignment="Center" Foreground="{StaticResource NovaAccentBrush}" />
                                 <TextBlock FontSize="24" FontWeight="SemiBold"
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap">
                                     <Run Text="Bienvenue dans " /><Run Text="Lumora" Foreground="{StaticResource NovaAccentBrush}" />
                                 </TextBlock>
-                                <TextBlock Text="Un navigateur différent, pensé pour vous. Petit tour de ce qu'il sait faire, avant de créer votre identifiant."
+                                <TextBlock Text="Un petit tour de ce que Lumora sait faire, avant de créer ton identifiant."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -9217,7 +9138,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
                                     <Run Text="Un navigateur " /><Run Text="pas comme les autres" Foreground="{StaticResource NovaAccentBrush}" />
                                 </TextBlock>
-                                <TextBlock Text="Vos mots de passe, votre historique, vos favoris : tout reste chiffré sur votre appareil, jamais envoyé ailleurs. Lumora ne vend rien, ne vous suit pas, et n'affiche aucune publicité — nulle part, jamais."
+                                <TextBlock Text="Tes mots de passe, ton historique, tes favoris : tout reste chiffré sur ton appareil, jamais envoyé ailleurs. Lumora ne vend rien, ne te suit pas et n'affiche aucune publicité."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -9242,7 +9163,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" Foreground="{StaticResource NovaAccentBrush}" />
                                 <TextBlock FontSize="24" FontWeight="SemiBold"
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
-                                    <Run Text="Un " /><Run Text="coffre" Foreground="{StaticResource NovaAccentBrush}" /><Run Text=" pour vos mots de passe" />
+                                    <Run Text="Un " /><Run Text="coffre" Foreground="{StaticResource NovaAccentBrush}" /><Run Text=" pour tes mots de passe" />
                                 </TextBlock>
                                 <TextBlock Text="Mots de passe, cartes bancaires, clés d'accès et codes de vérification à deux facteurs — générés, remplis et chiffrés localement. Un code affiché à l'écran suffit à activer la double authentification d'un site."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
@@ -9271,7 +9192,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
                                     <Run Text="Incognito" Foreground="{StaticResource NovaCoolAccentBrush}" /><Run Text=", et Tor si besoin" />
                                 </TextBlock>
-                                <TextBlock Text="Une fenêtre privée qui ne garde aucune trace, avec un bouton pour faire transiter votre trafic par le réseau Tor et masquer votre adresse IP en un geste — vous pouvez même choisir le pays par lequel votre trafic ressort."
+                                <TextBlock Text="Une fenêtre privée qui ne garde aucune trace, avec un bouton pour faire passer ton trafic par le réseau Tor et masquer ton adresse IP. Tu peux même choisir le pays par lequel ton trafic ressort."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -9298,9 +9219,9 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" Foreground="{StaticResource NovaCoolAccentBrush}" />
                                 <TextBlock FontSize="24" FontWeight="SemiBold"
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
-                                    <Run Text="Tout ce que vous gardez, " /><Run Text="visible" Foreground="{StaticResource NovaCoolAccentBrush}" />
+                                    <Run Text="Tout ce que tu gardes, " /><Run Text="visible" Foreground="{StaticResource NovaCoolAccentBrush}" />
                                 </TextBlock>
-                                <TextBlock Text="Un tableau de bord répertorie vos favoris, votre historique et vos mots de passe. Une sauvegarde complète et chiffrée se restaure d'un clic, sur n'importe quelle machine."
+                                <TextBlock Text="Un tableau de bord répertorie tes favoris, ton historique et tes mots de passe. Une sauvegarde complète et chiffrée se restaure d'un clic, sur n'importe quelle machine."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -9327,7 +9248,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
                                     <Run Text="Lu, écouté, " /><Run Text="traduit" Foreground="{StaticResource NovaAccentBrush}" /><Run Text=", retrouvé" />
                                 </TextBlock>
-                                <TextBlock Text="Lecture à voix haute, traduction hors-ligne, et une recherche dans votre historique qui comprend le sens de ce que vous cherchez, pas juste les mots exacts."
+                                <TextBlock Text="Lecture à voix haute, traduction hors ligne, et une recherche dans ton historique qui comprend le sens de ce que tu cherches, pas juste les mots exacts."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -9354,7 +9275,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
                                     <Run Text="Confortable" Foreground="{StaticResource NovaCoolAccentBrush}" /><Run Text=" pour de vrai" />
                                 </TextBlock>
-                                <TextBlock Text="Profils de confort prêts à l'emploi, navigation complète au clavier, contrastes renforcés et guide de lecture : l'accessibilité est une priorité, pas une case cachée."
+                                <TextBlock Text="Profils de confort prêts à l'emploi, navigation complète au clavier, contrastes renforcés et guide de lecture."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>
@@ -9386,7 +9307,7 @@ En choisissant un dossier personnalise (disque externe, dossier Documents...), v
                                            HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Width="360">
                                     <Run Text="Toujours " /><Run Text="connecté" Foreground="{StaticResource NovaAccentBrush}" /><Run Text=", sans y repenser" />
                                 </TextBlock>
-                                <TextBlock Text="Vos connexions restent actives d'une fermeture à l'autre, comme sur n'importe quel navigateur. Vous préférez tout effacer à chaque démarrage ? C'est une option dans Vie privée et sécurité."
+                                <TextBlock Text="Tes connexions restent actives d'une fermeture à l'autre, comme sur n'importe quel navigateur. Tu préfères tout effacer à chaque démarrage ? C'est une option dans Vie privée et sécurité."
                                            TextWrapping="Wrap" TextAlignment="Center" Width="340"
                                            FontSize="14" Opacity="0.72" />
                             </StackPanel>

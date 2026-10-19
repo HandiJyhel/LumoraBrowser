@@ -138,6 +138,7 @@ public sealed partial class MainWindow
     private void UpdateToolbarPrivacyIndicator()
     {
         var counters = _privacy.PageCounters;
+        PlayShieldFireflyIfBlocked(counters.Total);
         if (TelemetryActivityBadge is not null)
         {
             TelemetryActivityBadge.Visibility = counters.Total > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -261,8 +262,8 @@ public sealed partial class MainWindow
         SaveUiSettings();
         SyncTogglePair(WebRtcLeakProtectionSwitch, ModulesWebRtcSwitch, enabled);
         StatusText.Text = enabled
-            ? "Anti-fuite WebRTC activée : redémarrez Lumora pour l'appliquer."
-            : "Anti-fuite WebRTC désactivée : redémarrez Lumora pour l'appliquer.";
+            ? "Anti-fuite WebRTC activée : redémarre Lumora pour l'appliquer."
+            : "Anti-fuite WebRTC désactivée : redémarre Lumora pour l'appliquer.";
     }
 
     // Bascule deux ToggleSwitch representant le meme reglage (hub Modules +
@@ -699,7 +700,7 @@ public sealed partial class MainWindow
     {
         ShieldFlyout.Hide();
         StorageCurrentFolderText.Text = _profile.ProfileDir;
-        ShowPanel(SettingsPanel, "Paramètres");
+        ShowPanel(SettingsPanel, "Réglages");
         SettingsSectionNavigation.Visibility = Visibility.Collapsed;
         SettingsSectionStartup.Visibility    = Visibility.Collapsed;
         SettingsSectionVault.Visibility      = Visibility.Collapsed;

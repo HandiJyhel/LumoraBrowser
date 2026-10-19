@@ -36,7 +36,7 @@ namespace Lumora.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    internal const string Version = "0.94.31.2-dev";
+    internal const string Version = "0.94.31.3-dev";
 
     // Numero de version RENDU PUBLIC, distinct du numero de version de
     // developpement ci-dessus. Les deux suivent des logiques totalement
@@ -669,7 +669,7 @@ public sealed partial class MainWindow : Window
         // (voir _pendingStartupPageApply). ShowPanel bascule quand meme sur le
         // panneau navigateur (vide pour l'instant) : LoginOverlay le recouvre
         // entierement (fond opaque) tant que le profil n'est pas deverrouille.
-        ShowPanel(BrowserPanel, "Accueil Lumora");
+        ShowPanel(BrowserPanel, "Nouvel onglet");
         _suppressTabSave = false;
         WinUiRuntimeTrace.Write("MainWindow constructor end");
         // Fenêtre liée (Nouvelle fenêtre/mono-instance/détacher un onglet) :
@@ -758,8 +758,8 @@ public sealed partial class MainWindow : Window
 
     private void HomeMenu_Click(object sender, RoutedEventArgs e)
     {
-        NavigateCurrentTab("lumora://accueil", "Accueil Lumora");
-        ShowPanel(BrowserPanel, "Accueil Lumora");
+        NavigateCurrentTab("lumora://accueil", "Nouvel onglet");
+        ShowPanel(BrowserPanel, "Nouvel onglet");
     }
 
     private void AboutMenu_Click(object sender, RoutedEventArgs e)
@@ -819,7 +819,7 @@ public sealed partial class MainWindow : Window
     private void SettingsMenu_Click(object sender, RoutedEventArgs e)
     {
         StorageCurrentFolderText.Text = _profile.ProfileDir;
-        ShowPanel(SettingsPanel, "Centre Lumora");
+        ShowPanel(SettingsPanel, "Réglages");
         SettingsNavOverview.IsChecked = true;
         SettingsNav_Click(SettingsNavOverview, new RoutedEventArgs());
     }
@@ -848,6 +848,7 @@ public sealed partial class MainWindow : Window
         // revenant simplement sur cet onglet (bug réel trouvé en audit le
         // 2026-08-19).
         if (section == "profile") RefreshProfileSettings();
+        if (section == "overview") RefreshSettingsOverview();
 
         SettingsSectionOverview.Visibility = section == "overview" ? Visibility.Visible : Visibility.Collapsed;
         SettingsSectionNavigation.Visibility = section == "navigation" ? Visibility.Visible : Visibility.Collapsed;
@@ -1066,7 +1067,7 @@ public sealed partial class MainWindow : Window
     // panneau Parametres avant de selectionner la section.
     private void ModulesProtectionsSettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        ShowPanel(SettingsPanel, "Paramètres");
+        ShowPanel(SettingsPanel, "Réglages");
         SettingsNavigateButton_Click(sender, e);
     }
 
@@ -1124,11 +1125,11 @@ public sealed partial class MainWindow : Window
     {
         if (!_uiSettings.CommandPaletteEnabled)
         {
-            UpdateStatusText("Activez d'abord la palette de commande Ctrl+K.");
+            UpdateStatusText("Active d'abord la palette de commande Ctrl+K.");
             return;
         }
 
-        ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+        ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Nouvel onglet");
         ToggleCommandPalette();
     }
 
@@ -1146,11 +1147,11 @@ public sealed partial class MainWindow : Window
         ModulesFlyout.Hide();
         if (!_uiSettings.CommandPaletteEnabled)
         {
-            UpdateStatusText("Activez d'abord la palette de commande Ctrl+K.");
+            UpdateStatusText("Active d'abord la palette de commande Ctrl+K.");
             return;
         }
 
-        ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+        ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Nouvel onglet");
         ShowCommandPalette();
     }
 
@@ -1159,7 +1160,7 @@ public sealed partial class MainWindow : Window
         ModulesFlyout.Hide();
         if (!_uiSettings.ReadAloudEnabled)
         {
-            UpdateStatusText("Activez la lecture à voix haute dans Paramètres > Accessibilité.");
+            UpdateStatusText("Active la lecture à voix haute dans Réglages > Accessibilité.");
             return;
         }
 
@@ -1193,7 +1194,7 @@ public sealed partial class MainWindow : Window
         var address = view?.Source?.ToString() ?? tab?.Address ?? string.Empty;
         if (view is null || !BookmarkStore.IsWebUrl(address))
         {
-            UpdateStatusText("Ouvrez une page web pour utiliser la traduction.");
+            UpdateStatusText("Ouvre une page web pour utiliser la traduction.");
             return;
         }
 
@@ -1259,6 +1260,7 @@ public sealed partial class MainWindow : Window
 
         visiblePanel.Visibility = Visibility.Visible;
         AttachScrollViewerPointerSupport(visiblePanel);
+        if (ReferenceEquals(visiblePanel, SettingsPanel)) RefreshSettingsOverview();
         UpdateStatusText(DescribePanelStatus(visiblePanel, status));
 
         // Depuis un panneau interne (coffre, historique, paramètres...), la barre
@@ -1284,32 +1286,32 @@ public sealed partial class MainWindow : Window
 
         if (ReferenceEquals(visiblePanel, WalletPanel))
         {
-            return $"{status}. Ajoutez une carte locale ou utilisez-en une sur la page active.";
+            return $"{status}. Ajoute une carte locale ou utilises-en une sur la page active.";
         }
 
         if (ReferenceEquals(visiblePanel, SiteControlPanel))
         {
-            return $"{status}. Vérifiez la sécurité du site, les permissions et le confort local.";
+            return $"{status}. Vérifie la sécurité du site, les permissions et le confort local.";
         }
 
         if (ReferenceEquals(visiblePanel, SessionsPanel))
         {
-            return $"{status}. Consultez les sessions gardées et oubliez-les si nécessaire.";
+            return $"{status}. Consulte les sessions gardées et oublie-les si nécessaire.";
         }
 
         if (ReferenceEquals(visiblePanel, VaultPanel))
         {
-            return $"{status}. Parcourez vos identifiants, recherchez-en un ou ajoutez-en un nouveau.";
+            return $"{status}. Parcours tes identifiants, cherches-en un ou ajoutes-en un nouveau.";
         }
 
         if (ReferenceEquals(visiblePanel, SettingsPanel))
         {
-            return $"{status}. Réglez Lumora puis appliquez les changements.";
+            return $"{status}. Règle Lumora puis applique les changements.";
         }
 
         if (ReferenceEquals(visiblePanel, ModulesPanel))
         {
-            return $"{status}. Choisissez un module ou revenez à votre page web.";
+            return $"{status}. Choisis un module ou reviens à ta page web.";
         }
 
         return status;
@@ -1739,7 +1741,7 @@ public sealed partial class MainWindow : Window
     private void BackToPageButton_Click(object sender, RoutedEventArgs e)
     {
         var tab = CurrentTab();
-        ShowPanel(BrowserPanel, tab?.Title ?? "Accueil Lumora");
+        ShowPanel(BrowserPanel, tab?.Title ?? "Nouvel onglet");
 
         if (tab?.View is { } view && BookmarkStore.IsWebUrl(tab.Address))
         {

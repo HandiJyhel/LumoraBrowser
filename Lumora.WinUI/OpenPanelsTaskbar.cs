@@ -38,7 +38,7 @@ public static class OpenPanelsTaskbar
         new(StartMenuTileIds.Vault, "Coffre", StartMenuGlyphs.Padlock),
         new(StartMenuTileIds.Favoris, "Favoris", StartMenuGlyphs.Star),
         new(StartMenuTileIds.History, "Historique", StartMenuGlyphs.Clock),
-        new(StartMenuTileIds.Settings, "Param\u00E8tres", StartMenuGlyphs.Sliders),
+        new(StartMenuTileIds.Settings, "R\u00E9glages", StartMenuGlyphs.Sliders),
         new(StartMenuTileIds.Notes, "Notes", StartMenuGlyphs.Notes),
         new(RssId, "Flux RSS", StartMenuGlyphs.Rss),
         new(StartMenuTileIds.Downloads, "T\u00E9l\u00E9chargements", StartMenuGlyphs.Download),

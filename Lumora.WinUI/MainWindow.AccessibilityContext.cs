@@ -143,7 +143,7 @@ public sealed partial class MainWindow
         if (ReferenceEquals(panel, BrowserPanel))
         {
             var tab = CurrentTab();
-            var title = tab?.Title ?? "Accueil Lumora";
+            var title = tab?.Title ?? "Nouvel onglet";
             var host = DescribeAccessibilityHost(tab?.Address);
             return string.IsNullOrWhiteSpace(host)
                 ? $"Surface : {title}."
@@ -152,7 +152,7 @@ public sealed partial class MainWindow
 
         if (ReferenceEquals(panel, SettingsPanel))
         {
-            return $"Surface : Paramètres, section {CurrentSettingsSectionLabel()}.";
+            return $"Surface : Réglages, section {CurrentSettingsSectionLabel()}.";
         }
 
         return $"Surface : {DescribeAccessibilityPanelLabel(panel)}.";

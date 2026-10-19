@@ -44,8 +44,10 @@ public sealed partial class MainWindow
             "barre favoris visible masquer", "BookmarksBarSwitch"),
         new("appearance", "layout", "Mise en veille des onglets inactifs", "Mon Lumora › Disposition",
             "mise en veille onglets inactifs mémoire processeur délai inactivité", "TabSuspensionEnabledSwitch"),
-        new("appearance", "newtab", "Titre affiché du nouvel onglet", "Mon Lumora › Nouvel onglet",
-            "titre affiché nom logiciel personnalisé nouvel onglet", "NewTabTitleBox"),
+        new("appearance", "newtab", "Phrase d'accueil du nouvel onglet", "Mon Lumora › Nouvel onglet",
+            "phrase accueil titre affiché salutation message personnalisé nouvel onglet", "NewTabTitleBox"),
+        new("appearance", "newtab", "Montrer la dernière page ouverte", "Mon Lumora › Nouvel onglet",
+            "dernière page ouverte reprendre tu étais sur historique nouvel onglet", "NewTabShowResumeSwitch"),
         // Pas de TargetControlName ici : ListView.Focus() echoue sur
         // ContextMenuItemsList (trouve en verifiant en direct, cause non
         // elucidee - peut-etre lie a son remplissage dynamique). Atterrir sur
@@ -257,6 +259,7 @@ public sealed partial class MainWindow
             "BookmarksBarSwitch" => BookmarksBarSwitch,
             "TabSuspensionEnabledSwitch" => TabSuspensionEnabledSwitch,
             "NewTabTitleBox" => NewTabTitleBox,
+            "NewTabShowResumeSwitch" => NewTabShowResumeSwitch,
             "ContextMenuItemsList" => ContextMenuItemsList,
             "SessionTimeoutCombo" => SessionTimeoutCombo,
             "SearchEngineCombo" => SearchEngineCombo,

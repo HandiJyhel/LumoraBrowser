@@ -232,7 +232,7 @@ public sealed partial class MainWindow
         if (wasVisible)
         {
             var tab = CurrentTab();
-            ShowPanel(BrowserPanel, tab?.Title ?? "Accueil Lumora");
+            ShowPanel(BrowserPanel, tab?.Title ?? "Nouvel onglet");
             return;
         }
 

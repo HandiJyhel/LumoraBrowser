@@ -39,7 +39,7 @@ public sealed partial class MainWindow
         new(
             "balanced",
             "Aucune aide",
-            "Point de départ : aucune aide de confort activée (seul le focus visible reste, comme partout ailleurs dans Lumora). Choisissez un profil ci-dessous pour activer des aides.",
+            "Point de départ : aucune aide de confort activée (seul le focus visible reste, comme partout ailleurs dans Lumora). Choisis un profil ci-dessous pour activer des aides.",
             HighContrast: false,
             LargeText: false,
             ReduceMotion: false,
@@ -114,12 +114,12 @@ public sealed partial class MainWindow
             if (ResolveAccessibilityComfortProfileFromControls() != "custom")
             {
                 UpdateAccessibilityComfortProfileFromControls();
-                StatusText.Text = "Le profil Personnalisé apparaît automatiquement dès que vous mélangez les réglages à la main.";
+                StatusText.Text = "Le profil Personnalisé apparaît automatiquement dès que tu mélanges les réglages à la main.";
                 return;
             }
 
             UpdateAccessibilityComfortProfileSummary("custom");
-            StatusText.Text = "Profil personnalisé : réglez chaque aide de confort à votre rythme.";
+            StatusText.Text = "Profil personnalisé : règle chaque aide de confort comme tu veux.";
             return;
         }
 
@@ -255,7 +255,7 @@ public sealed partial class MainWindow
         var preset = FindAccessibilityComfortPreset(normalized);
         AccessibilityComfortProfileSummaryText.Text = normalized == "custom"
             ? "Personnalisé : Lumora a détecté un mélange manuel de réglages. Les interrupteurs ci-dessous gardent toujours la priorité."
-            : preset?.Summary ?? "Choisissez un profil pour appliquer une base de confort locale.";
+            : preset?.Summary ?? "Choisis un profil pour appliquer une base de confort locale.";
     }
 
     private static void SelectRadioByTag(RadioButtons radioButtons, string? tag, string fallbackTag)

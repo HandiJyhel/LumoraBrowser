@@ -108,7 +108,7 @@ public sealed partial class MainWindow
             _pendingWallpaperSourcePath = file.Path;
             _pendingWallpaperRemoval = false;
             WallpaperPreviewBrush.ImageSource = new BitmapImage(new Uri(file.Path, UriKind.Absolute));
-            WallpaperPendingText.Text = "Nouveau fond d'écran prêt. Cliquez sur Appliquer les changements pour l'utiliser.";
+            WallpaperPendingText.Text = "Nouveau fond d'écran prêt. Clique sur Appliquer les changements pour l'utiliser.";
             WallpaperPendingText.Visibility = Visibility.Visible;
             MarkSettingsChangesPending("Fond d'écran en attente de validation.");
             StatusText.Text = "Fond d'écran en attente de validation.";
@@ -126,7 +126,7 @@ public sealed partial class MainWindow
             _pendingWallpaperSourcePath = null;
             _pendingWallpaperRemoval = true;
             WallpaperPreviewBrush.ImageSource = null;
-            WallpaperPendingText.Text = "Suppression en attente. Cliquez sur Appliquer les changements pour confirmer.";
+            WallpaperPendingText.Text = "Suppression en attente. Clique sur Appliquer les changements pour confirmer.";
             WallpaperPendingText.Visibility = Visibility.Visible;
             MarkSettingsChangesPending("Suppression du fond d'écran en attente.");
             StatusText.Text = "Suppression du fond d'écran en attente de validation.";

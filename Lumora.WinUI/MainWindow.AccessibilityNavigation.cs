@@ -25,11 +25,11 @@ public sealed partial class MainWindow
 
     private static readonly AccessibilityShellZoneDefinition[] AccessibilityShellZones =
     [
-        new(AccessibilityShellZone.Tabs, "Onglets", "Parcourez vos onglets ouverts."),
-        new(AccessibilityShellZone.Address, "Barre d'adresse", "Saisissez une adresse ou une recherche."),
-        new(AccessibilityShellZone.Content, "Contenu actif", "Interagissez avec la page ou le panneau ouvert."),
-        new(AccessibilityShellZone.Tools, "Outils et navigation", "Ouvrez le menu de navigation ou les modules Lumora."),
-        new(AccessibilityShellZone.Companion, "Compagnon et statut", "Retrouvez le compagnon Lumie et les actions de pied de page.")
+        new(AccessibilityShellZone.Tabs, "Onglets", "Parcours tes onglets ouverts."),
+        new(AccessibilityShellZone.Address, "Barre d'adresse", "Saisis une adresse ou une recherche."),
+        new(AccessibilityShellZone.Content, "Contenu actif", "Interagis avec la page ou le panneau ouvert."),
+        new(AccessibilityShellZone.Tools, "Outils et navigation", "Ouvre le menu de navigation ou les modules Lumora."),
+        new(AccessibilityShellZone.Companion, "Compagnon et statut", "Retrouve le compagnon Lumie et les actions de pied de page.")
     ];
 
     private void RegisterAccessibilityZoneAccelerators()

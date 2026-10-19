@@ -24,7 +24,7 @@ public sealed partial class MainWindow
         <html lang="fr">
         <head>
         <meta charset="utf-8">
-        <title>Accueil Lumora</title>
+        <title>Nouvel onglet</title>
         <style>
         *{box-sizing:border-box;margin:0;padding:0}
         {{NewTabThemeVariablesCss()}}
@@ -33,8 +33,6 @@ public sealed partial class MainWindow
         body::after{content:"";position:fixed;inset:-22%;background:{{NewTabLightTraceCss()}};opacity:{{NewTabLightTraceOpacityCss()}};pointer-events:none;mix-blend-mode:screen;transform:translate3d(-6%,0,0) rotate(0.001deg)}
         main{width:min(1320px,100%);display:flex;flex-direction:column;align-items:stretch;gap:38px;position:relative}
         .signature-shell{position:relative;display:flex;flex-direction:column;gap:28px}
-        .signature-shell::before{content:"";position:absolute;top:12px;right:26px;width:250px;height:250px;border-radius:50%;background:radial-gradient(circle at center,{{NewTabAccentSolidCss()}}24 0,transparent 58%);filter:blur(4px);opacity:.78;pointer-events:none}
-        .signature-shell::after{content:"";position:absolute;top:38px;right:58px;width:176px;height:176px;border-radius:50%;border:1px solid {{NewTabModeBorderCss()}};opacity:.42;pointer-events:none}
         .signature-masthead{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 18px;border:1px solid {{NewTabModeBorderCss()}};border-radius:20px;background:var(--nt-context-bg);box-shadow:var(--nt-elev-card);position:relative;overflow:hidden}
         .signature-masthead::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.04),transparent 40%,{{NewTabAccentSolidCss()}}12);pointer-events:none}
         .signature-copy,.signature-actions{position:relative;z-index:1}
@@ -191,20 +189,7 @@ public sealed partial class MainWindow
         .balanced-action strong{display:block;font-size:13px;color:{{NewTabLogoTextColorCss()}};margin-bottom:3px}
         .balanced-action span{display:block;font-size:12px;line-height:1.28;color:{{NewTabModeMutedCss()}}}
         .balanced-action:hover,.balanced-action:focus{transform:none;background:transparent;box-shadow:none;outline:none;text-decoration:underline;text-decoration-color:currentColor}
-        .mode-neutral{align-items:center}
-        .mode-neutral::after{display:none}
-        .mode-neutral main{width:min(860px,100%);gap:0}
-        .neutral-home{width:100%;min-height:64vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;position:relative}
-        .neutral-home::before{content:"";position:absolute;top:50%;left:50%;width:560px;height:560px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at center,{{NewTabAccentSolidCss()}}14 0,transparent 62%);filter:blur(6px);opacity:.85;pointer-events:none;z-index:0}
-        .neutral-home>*{position:relative;z-index:1}
-        .neutral-brand{display:flex;align-items:center;justify-content:center;gap:10px;opacity:.9}
-        .neutral-logo{width:46px;height:46px;border-radius:12px;object-fit:contain;filter:drop-shadow(0 12px 24px rgba(0,0,0,.3))}
-        .neutral-name{font-size:20px;font-weight:600;color:{{NewTabLogoTextColorCss()}}}
-        .neutral-greeting{font-size:13px;font-weight:500;color:{{NewTabModeMutedCss()}};margin-top:-10px}
-        .neutral-clock{font-size:{{(_uiSettings.AccessibilityLargeText ? "68px" : "58px")}};font-weight:520;letter-spacing:0;color:{{NewTabLogoTextColorCss()}};line-height:1}
-        .neutral-search{width:min(660px,100%);box-shadow:var(--nt-elev-search)}
-        .mode-neutral .shortcuts{justify-content:center;max-width:660px}
-        .mode-neutral .shortcut-card{background:var(--nt-shortcut-bg)}
+        {{NewTabNeutralCss()}}
         .personalize-invite{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px;border:1px solid {{NewTabModeBorderCss()}};border-radius:10px;background:{{NewTabPersonalizationInviteSurfaceCss()}};box-shadow:var(--nt-elev-invite)}
         .invite-eyebrow{font-size:12px;color:{{NewTabModeMutedCss()}};margin-bottom:3px}
         .invite-title{font-size:19px;font-weight:650;color:{{NewTabLogoTextColorCss()}}}
@@ -317,18 +302,7 @@ public sealed partial class MainWindow
     {
         if (NewTabUsageMode() == "neutral")
         {
-            return $$"""
-              <section class="neutral-home" aria-label="Accueil neutre Lumora">
-                <div class="neutral-brand" aria-label="{{NewTabMarkup.HtmlText(_uiSettings.NewTabTitle)}}">
-                  <img class="neutral-logo" src="{{LumoraLogoDataUri()}}" alt="" aria-hidden="true">
-                  <span class="neutral-name">{{NewTabMarkup.HtmlText(_uiSettings.NewTabTitle)}}</span>
-                </div>
-                <div class="neutral-greeting">{{NewTabMarkup.HtmlText(NewTabGreetingMoment())}}</div>
-                <time class="neutral-clock" datetime="{{DateTime.Now:HH\:mm}}" aria-label="Heure locale">{{DateTime.Now:HH:mm}}</time>
-                {{NewTabSearchFormHtml("neutral-search")}}
-                {{NewTabShortcutsHtml()}}
-              </section>
-            """;
+            return NewTabNeutralHtml();
         }
 
         if (NewTabUsageMode() == "balanced")
@@ -337,7 +311,7 @@ public sealed partial class MainWindow
               <section class="signature-shell balanced-shell" aria-label="Accueil quotidien Lumora">
                 <div class="signature-masthead">
                   <div class="signature-copy">
-                    <div class="signature-eyebrow">Lumora • lumière locale</div>
+                    <div class="signature-eyebrow">Lumora</div>
                     <div class="signature-title">{{NewTabMarkup.HtmlText(NewTabStageTitle())}}</div>
                     <div class="signature-text">{{NewTabMarkup.HtmlText(NewTabStageText())}}</div>
                   </div>
@@ -387,10 +361,10 @@ public sealed partial class MainWindow
         }
 
         return $$"""
-          <section class="signature-shell" aria-label="Accueil Lumora">
+          <section class="signature-shell" aria-label="Nouvel onglet">
             <div class="signature-masthead">
               <div class="signature-copy">
-                <div class="signature-eyebrow">Lumora • lumière locale</div>
+                <div class="signature-eyebrow">Lumora</div>
                 <div class="signature-title">{{NewTabMarkup.HtmlText(NewTabStageTitle())}}</div>
                 <div class="signature-text">{{NewTabMarkup.HtmlText(NewTabStageText())}}</div>
               </div>
@@ -436,16 +410,16 @@ public sealed partial class MainWindow
 
     private string NewTabStageTitle() => NewTabUsageMode() switch
     {
-        "focus" => "Cap Focus actif",
-        "reading" => "Cap Lecture actif",
-        "creative" => "Cap Création actif",
-        "research" => "Cap Recherche actif",
-        "night" => "Cap Nuit actif",
-        _ => "Cap quotidien Lumora"
+        "focus" => "Mode Focus",
+        "reading" => "Mode Lecture",
+        "creative" => "Mode Création",
+        "research" => "Mode Recherche",
+        "night" => "Mode Nuit",
+        _ => "Mode quotidien"
     };
 
     private string NewTabStageText() =>
-        $"Composez un navigateur plus personnel sans casser votre rythme : {NewTabGreeting().ToLowerInvariant()}, modules locaux, repères visuels et ambiance Lumora restent à portée.";
+        $"Tes raccourcis, tes modules et ton thème sont à portée de clic.";
 
     private string NewTabSearchFormHtml(string extraClass = "")
     {
@@ -453,7 +427,7 @@ public sealed partial class MainWindow
         return $$"""
               <form class="{{NewTabMarkup.HtmlAttribute(searchClass)}}" onsubmit="go(event)">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.5 3a6.5 6.5 0 0 1 5.16 10.45l4.44 4.45-1.2 1.2-4.45-4.44A6.5 6.5 0 1 1 9.5 3m0 1.7a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6"/></svg>
-                <input id="q" value="" {{(_uiSettings.NewTabFocusSearchOnOpen ? "autofocus" : "")}} autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" placeholder="Rechercher ou saisir une URL">
+                <input id="q" value="" {{(_uiSettings.NewTabFocusSearchOnOpen ? "autofocus" : "")}} autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" placeholder="Chercher ou saisir une adresse">
               </form>
         """;
     }
@@ -539,21 +513,11 @@ public sealed partial class MainWindow
         "reading" => "Un accueil calme pour lire, annoter, reprendre les pages longues et garder la navigation douce.",
         "creative" => "Un espace plus expressif pour ouvrir des idées, lancer des recherches et garder les notes proches.",
         "research" => "Un point de départ orienté collecte : recherche, onglets, historique local et sources à comparer.",
-        "night" => "Un rythme plus doux pour naviguer tard, avec moins d'éclat et une présence visuelle plus posée.",
-        _ => "Un équilibre entre confort, rapidité et repères personnels pour la navigation quotidienne."
+        "night" => "Un accueil plus doux pour naviguer tard, avec moins d'éclat.",
+        _ => "Un accueil pour la navigation de tous les jours : recherche, raccourcis et modules."
     };
 
-    private string NewTabGreetingMoment()
-    {
-        var hour = DateTime.Now.Hour;
-        return hour switch
-        {
-            >= 5 and < 12 => "Bonjour",
-            >= 12 and < 18 => "Bon après-midi",
-            >= 18 and < 23 => "Bonsoir",
-            _ => "Navigation nocturne"
-        };
-    }
+    private string NewTabGreetingMoment() => NewTabText.GreetingMoment(DateTime.Now.Hour);
 
     private string NewTabGreeting() => $"{NewTabGreetingMoment()} · {DateTime.Now:HH:mm}";
 
@@ -679,7 +643,7 @@ public sealed partial class MainWindow
             "focus" => new NewTabModeContext(
                 "Priorité locale",
                 "Objectif de maintenant",
-                "Notez la seule chose à terminer. La note reste dans le profil Lumora.",
+                "Note la seule chose à terminer. La note reste dans ton profil Lumora.",
                 "Ex. Finir la page de réglages, vérifier un bug, répondre à un message important...",
                 "Enregistrer l'objectif",
                 "Objectif Focus",
@@ -689,7 +653,7 @@ public sealed partial class MainWindow
             "reading" => new NewTabModeContext(
                 "Lecture active",
                 "Marque-page de lecture",
-                "Gardez une phrase, une idée ou une page à reprendre sans quitter l'accueil.",
+                "Garde une phrase, une idée ou une page à reprendre sans quitter l'accueil.",
                 "Ex. À relire : section sécurité locale, vérifier les annotations, reprendre ce passage...",
                 "Garder la note",
                 "Note de lecture",
@@ -709,7 +673,7 @@ public sealed partial class MainWindow
             "research" => new NewTabModeContext(
                 "Collecte locale",
                 "Source ou piste à vérifier",
-                "Notez une source, une hypothèse ou une comparaison. Lumora garde la trace localement.",
+                "Note une source, une hypothèse ou une comparaison. Lumora la garde sur ton ordinateur.",
                 "Ex. Comparer WebView2/CEF, vérifier une doc, garder une URL ou une question...",
                 "Ajouter la piste",
                 "Piste de recherche",
@@ -719,7 +683,7 @@ public sealed partial class MainWindow
             "night" => new NewTabModeContext(
                 "Navigation calme",
                 "Rappel pour plus tard",
-                "Posez une note courte pour demain et gardez l'interface légère maintenant.",
+                "Pose une note courte pour demain et garde l'interface légère.",
                 "Ex. Reprendre cette recherche demain, fermer les onglets inutiles, lire hors écran...",
                 "Garder pour demain",
                 "Rappel Nuit",
@@ -729,7 +693,7 @@ public sealed partial class MainWindow
             _ => new NewTabModeContext(
                 "Repère rapide",
                 "Note de navigation",
-                "Gardez une note simple sans transformer l'accueil en tableau de bord.",
+                "Garde une note simple, sans transformer l'accueil en tableau de bord.",
                 "Ex. Page à consulter, idée rapide, rappel lié à la navigation...",
                 "Enregistrer la note",
                 "Note rapide Lumora",
@@ -755,8 +719,8 @@ public sealed partial class MainWindow
           <section class="personalize-invite" aria-label="Personnalisation Lumora">
             <div>
               <div class="invite-eyebrow">Profil épuré</div>
-              <div class="invite-title">Construisez votre Lumora</div>
-              <div class="invite-text">Aucun module ni raccourci n'est imposé. Choisissez votre mode, vos outils visibles et l'accueil qui vous met le plus à l'aise.</div>
+              <div class="invite-title">Construis ton Lumora</div>
+              <div class="invite-text">Aucun module ni raccourci n'est imposé. Choisis ton mode, tes outils visibles et l'accueil qui te convient.</div>
             </div>
             <div class="invite-actions">
               <button class="invite-button primary" type="button" onclick="personalizeLumora()">Personnaliser</button>
@@ -1119,7 +1083,7 @@ public sealed partial class MainWindow
             {
                 "calm" => $"linear-gradient(180deg,{palette.Ink} 0%,#f7f3ec 100%)",
                 "minimal" => $"linear-gradient(180deg,{palette.Ink} 0%,#faf6ef 100%)",
-                _ => $"radial-gradient(circle at 48% 26%,{palette.Accent}14,transparent 23%),radial-gradient(circle at 72% 18%,{palette.Accent2}12,transparent 26%),radial-gradient(circle at 18% 72%,#ff7f3512,transparent 28%),linear-gradient(180deg,{palette.Ink} 0%,#faf6ef 100%)"
+                _ => $"linear-gradient(180deg,{palette.Ink} 0%,#faf6ef 100%)"
             };
         }
 
@@ -1152,7 +1116,7 @@ public sealed partial class MainWindow
         {
             "calm" => $"linear-gradient(180deg,{palette.Ink} 0%,#1a1a1a 100%)",
             "minimal" => $"linear-gradient(180deg,{palette.Ink} 0%,#141414 100%)",
-            _ => $"radial-gradient(circle at 48% 26%,{palette.Accent}33,transparent 23%),radial-gradient(circle at 72% 18%,{palette.Accent2}24,transparent 26%),radial-gradient(circle at 18% 72%,#ff7f3520,transparent 28%),linear-gradient(180deg,{palette.Ink} 0%,#141414 100%)"
+            _ => $"linear-gradient(180deg,{palette.Ink} 0%,#141414 100%)"
         };
     }
 
@@ -1239,7 +1203,7 @@ public sealed partial class MainWindow
                 var jsTitle = NewTabMarkup.JsAttribute(shortcut.Title);
                 var jsUrl = NewTabMarkup.JsAttribute(NewTabMarkup.NormalizeShortcutUrl(shortcut.Url));
                 html.AppendLine($"""
-                <div class="shortcut-card" style="--d:{i * 42}ms">
+                <div class="shortcut-card" style="--d:{i * 42}ms;--tile:{NewTabText.TileColor(shortcut.Title)}">
                   <a class="shortcut-link" href="{url}" title="{url}">
                     <span class="shortcut-dot">{initial}</span>
                     <span class="shortcut-title">{title}</span>

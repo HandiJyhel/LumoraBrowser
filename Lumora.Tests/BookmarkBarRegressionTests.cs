@@ -432,7 +432,7 @@ public sealed class BookmarkBarRegressionTests
             Assert.Contains("Spacing=\"16\"", window, StringComparison.Ordinal);
         }
 
-        Assert.Contains("FontSize = 9,", code, StringComparison.Ordinal);
+        Assert.Contains("FontSize = 14,", code, StringComparison.Ordinal);
         Assert.Contains("Opacity = 0.6,", code, StringComparison.Ordinal);
         Assert.Contains("const double panelSpacing = 16d;", code, StringComparison.Ordinal);
     }

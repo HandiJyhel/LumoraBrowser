@@ -193,7 +193,7 @@ public sealed partial class MainWindow : Window
         SetCompanionMemory(mode, text);
         _uiSettings.Save(_profile.UiSettingsFile);
         RefreshNovaHomePages();
-        StatusText.Text = $"Lumie garde votre {ModeCompanion(mode).MemoryName}.";
+        StatusText.Text = $"Lumie garde {ModeCompanion(mode).MemoryName}.";
     }
 
     private string CompanionMemory(string mode) =>
@@ -248,7 +248,7 @@ public sealed partial class MainWindow : Window
                 break;
 
             case "reader":
-                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+                ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Nouvel onglet");
                 await ToggleReaderModeAsync(ensureOpen: true);
                 StatusText.Text = "Compagnon Lecture ouvert.";
                 break;
@@ -305,7 +305,7 @@ public sealed partial class MainWindow : Window
                 "\uE121",
                 "Le mode Neutre garde Lumora discret, mais laisse un accès rapide aux raccourcis et aux actions utiles.",
                 "Mémo neutre",
-                "votre mémo neutre",
+                "ton mémo neutre",
                 "Ex. rappel minimal de navigation...",
                 "add_shortcut",
                 "\uE710",
@@ -317,9 +317,9 @@ public sealed partial class MainWindow : Window
                 "Ouvrir Ctrl+K sans quitter la page."),
             "focus" => new ModeCompanionDefinition(
                 "\uE8A7",
-                "Gardez votre objectif et les commandes rapides sous la main sans revenir à l'accueil.",
+                "Garde ton objectif et les commandes rapides sous la main sans revenir à l'accueil.",
                 "Objectif courant",
-                "votre objectif",
+                "ton objectif",
                 "Ex. terminer cette tâche, vérifier un bug, rester sur une seule priorité...",
                 "command_palette",
                 "\uE721",
@@ -333,7 +333,7 @@ public sealed partial class MainWindow : Window
                 "\uE736",
                 "Lecture, annotations, notes et voix locale restent accessibles pendant la navigation.",
                 "Note de lecture",
-                "votre note de lecture",
+                "ta note de lecture",
                 "Ex. passage à relire, idée importante, page à reprendre...",
                 "reader",
                 "\uE736",
@@ -342,12 +342,12 @@ public sealed partial class MainWindow : Window
                 "notes",
                 "\uE70B",
                 "Notes de lecture",
-                "Retrouver vos notes locales."),
+                "Retrouver tes notes locales."),
             "creative" => new ModeCompanionDefinition(
                 "\uE70B",
-                "Le post-it de création devient un compagnon : vos idées restent proches pendant les pages web.",
+                "Le post-it de création devient un compagnon : tes idées restent proches pendant les pages web.",
                 "Post-it de création",
-                "votre post-it",
+                "ton post-it",
                 "Ex. idée, brouillon, piste créative à ne pas perdre...",
                 "notes",
                 "\uE70B",
@@ -359,9 +359,9 @@ public sealed partial class MainWindow : Window
                 "Reformuler une piste avec l'assistant local si activé."),
             "research" => new ModeCompanionDefinition(
                 "\uE721",
-                "Collectez et comparez sans perdre le fil : historique, favoris et actions rapides restent proches.",
+                "Collecte et compare sans perdre le fil : historique, favoris et actions rapides restent proches.",
                 "Piste de recherche",
-                "votre piste",
+                "ta piste",
                 "Ex. source à comparer, question à vérifier, lien ou hypothèse...",
                 "history",
                 "\uE81C",
@@ -375,7 +375,7 @@ public sealed partial class MainWindow : Window
                 "\uE708",
                 "Un compagnon plus calme pour lire, écouter ou réduire l'éclat sans chercher les commandes.",
                 "Rappel calme",
-                "votre rappel",
+                "ton rappel",
                 "Ex. à reprendre demain, page à finir plus tard, action minimale...",
                 "reader",
                 "\uE736",
@@ -389,7 +389,7 @@ public sealed partial class MainWindow : Window
                 "\uE9D2",
                 "Compagnon léger : modules et commandes utiles restent disponibles sans surcharger l'accueil.",
                 "Mémo Lumora",
-                "votre mémo",
+                "ton mémo",
                 "Ex. rappel de navigation, page à consulter, petite note...",
                 "modules",
                 "\uE713",

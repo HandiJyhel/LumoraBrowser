@@ -1363,6 +1363,7 @@ public sealed partial class MainWindow
         var label = new Border
         {
             VerticalAlignment = VerticalAlignment.Center,
+            Visibility = string.IsNullOrEmpty(TabHeaderBadge(tab)) ? Visibility.Collapsed : Visibility.Visible,
             Padding = new Thickness(7, 2, 7, 2),
             CornerRadius = new CornerRadius(9),
             Background = (Brush)RootShell.Resources[active ? "NovaTabBadgeActiveBackgroundBrush" : "NovaTabBadgeInactiveBackgroundBrush"],
@@ -1441,7 +1442,7 @@ public sealed partial class MainWindow
     {
         if (string.Equals(address, "lumora://accueil", StringComparison.OrdinalIgnoreCase))
         {
-            return "foyer lumineux";
+            return "Lumora";
         }
 
         var domain = ExtractDomain(address);
@@ -1455,12 +1456,9 @@ public sealed partial class MainWindow
             return "EPI";
         }
 
-        if (string.Equals(tab.Address, "lumora://accueil", StringComparison.OrdinalIgnoreCase))
-        {
-            return "HOME";
-        }
-
-        return "WEB";
+        // Plus de pastille sur les onglets ordinaires : "WEB" / "HOME" ne
+        // disaient rien a la personne (2026-10-19, session "moins IA").
+        return string.Empty;
     }
 
     private void RefreshHorizontalTabHeaders()

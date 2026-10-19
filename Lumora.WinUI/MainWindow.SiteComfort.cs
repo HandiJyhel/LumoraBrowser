@@ -74,7 +74,7 @@ public sealed partial class MainWindow
 
         SiteControlComfortText.Text = hasOverrides
             ? BuildSiteComfortSummary(rootDomain, zoomPercent, largeText, reduceMotion)
-            : "Réglage indépendant du Confort global (Réglages > Confort) : vous pouvez mémoriser ici, pour ce site précis uniquement, un zoom, un texte plus lisible ou des animations limitées.";
+            : "Réglage indépendant du Confort global (Réglages > Confort) : tu peux mémoriser ici, pour ce site précis uniquement, un zoom, un texte plus lisible ou des animations limitées.";
 
         _suppressSiteComfortUi = true;
         try

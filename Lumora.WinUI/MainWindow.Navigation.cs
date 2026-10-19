@@ -773,7 +773,7 @@ public sealed partial class MainWindow
 
         if (isActive)
         {
-            StatusText.Text = args.IsSuccess ? $"Page chargée: {title}" : $"Navigation échouée: {args.WebErrorStatus}";
+            StatusText.Text = args.IsSuccess ? $"Page chargée : {title}" : $"Navigation échouée : {args.WebErrorStatus}";
             if (args.IsSuccess && BookmarkStore.IsWebUrl(address))
             {
                 // Reprise d'activité : signaler les annotations laissées sur cette
@@ -781,7 +781,7 @@ public sealed partial class MainWindow
                 var annotationCount = _annotations.CountForPage(address);
                 if (annotationCount > 0)
                 {
-                    StatusText.Text = $"Page chargée: {title} - {annotationCount} annotation(s) à retrouver en mode lecture.";
+                    StatusText.Text = $"Page chargée : {title}. {annotationCount} annotation(s) à retrouver en mode lecture.";
                 }
                 OpenReaderIfPending(address);
             }
@@ -1215,7 +1215,7 @@ public sealed partial class MainWindow
     {
         CloseAddressSuggestions();
         var address = NormalizeAddress(AddressBox.Text);
-        var title = address == "lumora://accueil" ? "Accueil Lumora" : DisplayTitle(address);
+        var title = address == "lumora://accueil" ? "Nouvel onglet" : DisplayTitle(address);
         NavigateCurrentTab(address, title);
         ShowPanel(BrowserPanel, title);
     }
@@ -1279,7 +1279,7 @@ public sealed partial class MainWindow
         }
 
         var tab = CurrentTab();
-        ShowPanel(BrowserPanel, tab?.Title ?? "Accueil Lumora");
+        ShowPanel(BrowserPanel, tab?.Title ?? "Nouvel onglet");
     }
 
     private void BrowserTabs_Tapped(object sender, TappedRoutedEventArgs e) =>
@@ -1326,7 +1326,7 @@ public sealed partial class MainWindow
             {
                 browser.CoreWebView2.NavigateToString(HomePageHtml());
                 _ = ClearHomeSearchFieldAfterDelayAsync(blur: true);
-                StatusText.Text = "Accueil Lumora.";
+                StatusText.Text = "Nouvel onglet.";
                 return;
             }
 

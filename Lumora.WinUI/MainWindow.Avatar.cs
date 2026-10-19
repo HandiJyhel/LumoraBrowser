@@ -65,7 +65,7 @@ public sealed partial class MainWindow
             _pendingAvatarSourcePath = file.Path;
             _pendingAvatarRemoval = false;
             ProfileAvatarBrush.ImageSource = new BitmapImage(new Uri(file.Path, UriKind.Absolute));
-            AvatarPendingText.Text = "Nouvelle image prête. Cliquez sur Appliquer les changements pour l'utiliser partout.";
+            AvatarPendingText.Text = "Nouvelle image prête. Clique sur Appliquer les changements pour l'utiliser partout.";
             AvatarPendingText.Visibility = Visibility.Visible;
             MarkSettingsChangesPending("Avatar en attente de validation.");
             StatusText.Text = "Image de profil en attente de validation.";
@@ -83,7 +83,7 @@ public sealed partial class MainWindow
             _pendingAvatarSourcePath = null;
             _pendingAvatarRemoval = true;
             ProfileAvatarBrush.ImageSource = null;
-            AvatarPendingText.Text = "Suppression en attente. Cliquez sur Appliquer les changements pour confirmer.";
+            AvatarPendingText.Text = "Suppression en attente. Clique sur Appliquer les changements pour confirmer.";
             AvatarPendingText.Visibility = Visibility.Visible;
             MarkSettingsChangesPending("Suppression de l'avatar en attente.");
             StatusText.Text = "Suppression de l'image en attente de validation.";

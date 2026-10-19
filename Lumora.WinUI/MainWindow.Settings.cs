@@ -100,7 +100,7 @@ public sealed partial class MainWindow
         if (mode == "restore")
         {
             if (!RestoreTabSession())
-                AddTab("Accueil Lumora", "lumora://accueil", select: true);
+                AddTab("Nouvel onglet", "lumora://accueil", select: true);
         }
         else if (mode == "custom" && !string.IsNullOrWhiteSpace(_uiSettings.StartupUrl))
         {
@@ -108,7 +108,7 @@ public sealed partial class MainWindow
         }
         else
         {
-            AddTab("Accueil Lumora", "lumora://accueil", select: true);
+            AddTab("Nouvel onglet", "lumora://accueil", select: true);
         }
     }
 
@@ -230,6 +230,15 @@ public sealed partial class MainWindow
             : "Le curseur ne se place plus automatiquement dans la recherche.");
     }
 
+    private void NewTabShowResumeSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressUiSettingsSave) return;
+        _uiSettings.NewTabShowResume = NewTabShowResumeSwitch.IsOn;
+        _uiSettings.Save(_profile.UiSettingsFile);
+        RefreshNovaHomePages();
+        UpdateStatusText(NewTabShowResumeSwitch.IsOn ? "Dernière page affichée." : "Dernière page masquée.");
+    }
+
     private void NewTabShortcutsSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressUiSettingsSave) return;
@@ -290,7 +299,7 @@ public sealed partial class MainWindow
         AnnounceAccessibilityContext(
             "Raccourcis Lumora : F6 ou Maj plus F6 pour changer de zone. " +
             "Contrôle Alt 1 à 5 pour aller directement aux onglets, à la barre d'adresse, au contenu actif, aux outils ou au compagnon. " +
-            "Contrôle Alt F relit votre repère courant. Contrôle Alt R recentre le focus sur la zone utile. " +
+            "Contrôle Alt F relit le repère courant. Contrôle Alt R recentre le focus sur la zone utile. " +
             "Contrôle Alt S active le mode secours. Contrôle Alt X restaure l'état de confort précédent. " +
             "Contrôle K ouvre la palette de commande. Win H lance la dictée Windows dans un champ de texte. " +
             "Contrôle T nouvel onglet. Contrôle W ferme l'onglet actif. Contrôle L met le focus sur la barre d'adresse. " +
@@ -574,7 +583,7 @@ public sealed partial class MainWindow
         new("theme.mode", "Thème", "theme", PinThemeModeButton),
         new("theme.usagemode", "Mode d'usage", "theme", PinUsageModeButton),
         new("layout.density", "Taille de l'interface", "layout", PinDensityButton),
-        new("newtab.title", "Titre affiché", "newtab", PinNewTabTitleButton),
+        new("newtab.title", "Phrase d'accueil", "newtab", PinNewTabTitleButton),
     ];
 
     private void PinSettingButton_Click(object sender, RoutedEventArgs e)
@@ -623,7 +632,7 @@ public sealed partial class MainWindow
     // que de dupliquer leur logique d'affichage/effets de bord.
     private void NavigateToSettingsSection(string topSection, string? appearanceSubNavTag = null)
     {
-        ShowPanel(SettingsPanel, "Paramètres");
+        ShowPanel(SettingsPanel, "Réglages");
 
         RadioButton? topButton = topSection switch
         {
@@ -671,7 +680,7 @@ public sealed partial class MainWindow
     private void MarkSettingsChangesPending(string message)
     {
         SettingsPendingText.Text = message;
-        AppearancePendingText.Text = "Changements en attente. Cliquez sur Appliquer les changements.";
+        AppearancePendingText.Text = "Changements en attente. Clique sur Appliquer les changements.";
     }
 
     private void ClearSettingsChangesPending(string message)
@@ -687,7 +696,7 @@ public sealed partial class MainWindow
         if (avatarWasPending && !avatarChanged)
         {
             WinUiRuntimeTrace.Write("ApplySettingsChangesButton_Click: retour anticipe (avatar)");
-            SettingsPendingText.Text = "L'avatar n'a pas pu être appliqué. Vérifiez l'image choisie.";
+            SettingsPendingText.Text = "L'avatar n'a pas pu être appliqué. Vérifie l'image choisie.";
             return;
         }
 
@@ -696,7 +705,7 @@ public sealed partial class MainWindow
         if (wallpaperWasPending && !wallpaperChanged)
         {
             WinUiRuntimeTrace.Write("ApplySettingsChangesButton_Click: retour anticipe (fond d'ecran)");
-            SettingsPendingText.Text = "Le fond d'écran n'a pas pu être appliqué. Vérifiez l'image choisie.";
+            SettingsPendingText.Text = "Le fond d'écran n'a pas pu être appliqué. Vérifie l'image choisie.";
             return;
         }
 
@@ -720,7 +729,7 @@ public sealed partial class MainWindow
         ClearSettingsChangesPending("Changements appliqués.");
         StatusText.Text = avatarChanged || wallpaperChanged || modeAccentColorsChanged
             ? "Personnalisation appliquée."
-            : "Paramètres appliqués.";
+            : "Réglages appliqués.";
         WinUiRuntimeTrace.Write($"ApplySettingsChangesButton_Click: fin, StatusText.Text='{StatusText.Text}'");
     }
 
@@ -1009,6 +1018,7 @@ public sealed partial class MainWindow
             InitializeModeAccentColorPickers();
             NewTabFocusSearchSwitch.IsOn = _uiSettings.NewTabFocusSearchOnOpen;
             NewTabShortcutsSwitch.IsOn = _uiSettings.NewTabShortcutsVisible;
+            NewTabShowResumeSwitch.IsOn = _uiSettings.NewTabShowResume;
             NewTabShortcutsBox.Text = NewTabShortcutsToText(_uiSettings.NewTabShortcuts);
             SelectComboByTag(ThemeModeCombo, _uiSettings.ThemeMode, "dark");
             RefreshPinnedSettingsUi();
@@ -1275,6 +1285,7 @@ public sealed partial class MainWindow
             _uiSettings.PersonalizationMotionStyle = motionItem.Tag?.ToString() ?? "luminous";
         _uiSettings.NewTabFocusSearchOnOpen = NewTabFocusSearchSwitch.IsOn;
         _uiSettings.NewTabShortcutsVisible = NewTabShortcutsSwitch.IsOn;
+        _uiSettings.NewTabShowResume = NewTabShowResumeSwitch.IsOn;
         _uiSettings.NewTabShortcuts = ParseNewTabShortcuts(NewTabShortcutsBox.Text);
         _uiSettings.AccessibilityHighContrast = AccessibilityHighContrastSwitch.IsOn;
         _uiSettings.AccessibilityLargeText = AccessibilityLargeTextSwitch.IsOn;

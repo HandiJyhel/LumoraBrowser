@@ -31,7 +31,7 @@ public sealed partial class MainWindow
         {
             Text = _uiSettings.SessionPurgeEnabled
                 ? "Effacées à chaque démarrage, sauf les sites ci-dessous."
-                : "Toutes vos connexions restent actives par défaut — rien n'est effacé au démarrage.",
+                : "Toutes tes connexions restent actives par défaut : rien n'est effacé au démarrage.",
             Opacity = 0.7,
             FontSize = AccessibilitySecondaryFontSize(),
             TextWrapping = TextWrapping.Wrap

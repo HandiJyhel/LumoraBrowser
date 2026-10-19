@@ -22,7 +22,7 @@ public sealed partial class MainWindow
         if (sender is not MenuFlyoutItem { Tag: TabGroup group }) return;
         if (SaveLiveGroup(group))
         {
-            StatusText.Text = $"Groupe « {group.Name} » enregistré. Retrouvez-le dans Naviguer > Groupes enregistrés.";
+            StatusText.Text = $"Groupe « {group.Name} » enregistré. Retrouve-le dans Naviguer > Groupes enregistrés.";
         }
         else
         {
@@ -104,7 +104,7 @@ public sealed partial class MainWindow
         {
             SavedTabGroupsPanelItems.Children.Add(new TextBlock
             {
-                Text = "Aucun groupe enregistré pour l'instant. Depuis un groupe d'onglets, choisissez « Enregistrer le groupe » pour le retrouver ici.",
+                Text = "Aucun groupe enregistré pour l'instant. Depuis un groupe d'onglets, choisis « Enregistrer le groupe » pour le retrouver ici.",
                 Opacity = 0.65,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 8, 0, 0)
@@ -222,7 +222,7 @@ public sealed partial class MainWindow
         if (group is null) return;
 
         OpenSavedGroup(group);
-        ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Accueil Lumora");
+        ShowPanel(BrowserPanel, CurrentTab()?.Title ?? "Nouvel onglet");
     }
 
     // Reconstruit un groupe vivant a partir d'une entree de la bibliotheque : un

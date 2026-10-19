@@ -8,6 +8,7 @@ public sealed class UsageModeVisualIdentityTests
     public void Accueil_lumora_garde_une_signature_visuelle_par_mode()
     {
         var source = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
+        var neutral = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabNeutral.cs");
 
         Assert.Contains("mode-visual", source, StringComparison.Ordinal);
         Assert.Contains("NewTabThemeVariablesCss()", source, StringComparison.Ordinal);
@@ -16,9 +17,9 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("--nt-shortcut-border", source, StringComparison.Ordinal);
         Assert.Contains("--nt-add-shortcut-shadow", source, StringComparison.Ordinal);
         Assert.Contains("NewTabModeSignatureBarCss", source, StringComparison.Ordinal);
-        Assert.Contains("mode-neutral", source, StringComparison.Ordinal);
-        Assert.Contains("neutral-clock", source, StringComparison.Ordinal);
-        Assert.Contains("neutral-logo", source, StringComparison.Ordinal);
+        Assert.Contains("mode-neutral", neutral, StringComparison.Ordinal);
+        Assert.Contains("neutral-phrase", neutral, StringComparison.Ordinal);
+        Assert.Contains("neutral-logo", neutral, StringComparison.Ordinal);
         Assert.Contains("balanced-home", source, StringComparison.Ordinal);
         Assert.Contains("balanced-dock", source, StringComparison.Ordinal);
         Assert.Contains("NewTabModePanelPatternCss", source, StringComparison.Ordinal);
@@ -229,6 +230,7 @@ public sealed class UsageModeVisualIdentityTests
     {
         var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
         var navigation = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabHome.cs");
+        var neutral = ReadRepoFile("Lumora.WinUI", "MainWindow.NewTabNeutral.cs");
         var usageMode = ReadRepoFile("Lumora.WinUI", "MainWindow.UsageMode.cs");
         var webMessaging = ReadRepoFile("Lumora.WinUI", "MainWindow.WebMessaging.cs");
         var uiSettings = ReadRepoFile("Lumora.WinUI", "Models", "UiSettings.cs");
@@ -239,10 +241,10 @@ public sealed class UsageModeVisualIdentityTests
         Assert.Contains("Content=\"Neutre\" Tag=\"neutral\"", xaml, StringComparison.Ordinal);
         Assert.Contains("WizardUsageNeutral", xaml, StringComparison.Ordinal);
         Assert.Contains("NewTabHomeContentHtml", navigation, StringComparison.Ordinal);
-        Assert.Contains("NewTabSearchFormHtml(\"neutral-search\")", navigation, StringComparison.Ordinal);
-        Assert.Contains("{{NewTabShortcutsHtml()}}", navigation, StringComparison.Ordinal);
-        Assert.Contains("neutral-logo", navigation, StringComparison.Ordinal);
-        Assert.Contains("neutral-name", navigation, StringComparison.Ordinal);
+        Assert.Contains("NewTabSearchFormHtml(\"neutral-search\")", neutral, StringComparison.Ordinal);
+        Assert.Contains("{{NewTabNeutralShortcutsHtml()}}", neutral, StringComparison.Ordinal);
+        Assert.Contains("neutral-logo", neutral, StringComparison.Ordinal);
+        Assert.Contains("neutral-name", neutral, StringComparison.Ordinal);
         Assert.Contains("if (mode == \"neutral\" || mode == \"balanced\")", navigation, StringComparison.Ordinal);
         Assert.Contains("NewTabUsageMode() != \"neutral\"", navigation, StringComparison.Ordinal);
         Assert.Contains("PinnedModuleIds.Clear()", usageMode, StringComparison.Ordinal);
@@ -360,7 +362,7 @@ public sealed class UsageModeVisualIdentityTests
         var profile = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
 
         Assert.Contains("ProfileStatusFlyout", xaml, StringComparison.Ordinal);
-        Assert.Contains("Paramètres utilisateur", xaml, StringComparison.Ordinal);
+        Assert.Contains("Réglages utilisateur", xaml, StringComparison.Ordinal);
         Assert.Contains("Changer d'utilisateur", xaml, StringComparison.Ordinal);
         Assert.Contains("Créer un utilisateur", xaml, StringComparison.Ordinal);
         Assert.Contains("ToolTipService.ToolTip=\"Ouvrir le menu profil\"", xaml, StringComparison.Ordinal);
@@ -379,10 +381,10 @@ public sealed class UsageModeVisualIdentityTests
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.94.31.2-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.2-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.2-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.2-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.3-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.3-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.3-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.3-dev", installerScript, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

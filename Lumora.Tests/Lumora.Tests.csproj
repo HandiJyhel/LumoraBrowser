@@ -86,6 +86,8 @@
     <Compile Include="..\Lumora.WinUI\Accessibility\ZoomStepPolicy.cs" Link="Product\ZoomStepPolicy.cs" />
     <Compile Include="..\Lumora.WinUI\Accessibility\ClickToReorder.cs" Link="Product\ClickToReorder.cs" />
     <Compile Include="..\Lumora.WinUI\Settings\NewTabShortcutText.cs" Link="Product\NewTabShortcutText.cs" />
+    <Compile Include="..\Lumora.WinUI\NewTabText.cs" Link="Product\NewTabText.cs" />
+    <Compile Include="..\Lumora.WinUI\Settings\SettingsOverviewText.cs" Link="Product\SettingsOverviewText.cs" />
     <Compile Include="..\Lumora.WinUI\WebApps\ShortcutNaming.cs" Link="Product\ShortcutNaming.cs" />
     <Compile Include="..\Lumora.WinUI\WheelScrollMath.cs" Link="Product\WheelScrollMath.cs" />
     <Compile Include="..\Lumora.WinUI\Models\HistoryTimeFormatter.cs" Link="Product\HistoryTimeFormatter.cs" />

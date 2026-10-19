@@ -207,8 +207,8 @@ public sealed partial class MainWindow
         var warn = new ContentDialog
         {
             Title = "Exporter en clair ?",
-            Content = "Le fichier CSV généré contiendra vos mots de passe EN CLAIR, non chiffrés. " +
-                      "Rangez-le en lieu sûr et supprimez-le après usage. Continuer ?",
+            Content = "Le fichier CSV généré contiendra tes mots de passe EN CLAIR, non chiffrés. " +
+                      "Range-le en lieu sûr et supprime-le après usage. Continuer ?",
             PrimaryButtonText = "Exporter",
             CloseButtonText = "Annuler",
             DefaultButton = ContentDialogButton.Close,

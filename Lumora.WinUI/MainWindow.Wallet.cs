@@ -309,7 +309,7 @@ public sealed partial class MainWindow
         panel.Children.Add(noteBox);
         panel.Children.Add(new TextBlock
         {
-            Text = "Le cryptogramme (CVV) n'est jamais enregistré : vous le saisirez au moment du paiement.",
+            Text = "Le cryptogramme (CVV) n'est jamais enregistré : tu le saisiras au moment du paiement.",
             Opacity = 0.6,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap
@@ -356,7 +356,7 @@ public sealed partial class MainWindow
     private static string? ValidateCardInput(string number, double month, double year)
     {
         if (!PaymentCardUtil.IsValidNumber(number))
-            return "Numéro de carte invalide : vérifiez la saisie.";
+            return "Numéro de carte invalide : vérifie la saisie.";
         if (double.IsNaN(month) || double.IsNaN(year) ||
             !PaymentCardUtil.IsValidExpiry((int)month, (int)year))
             return "Date d'expiration invalide (mois 1-12, année ex. 2027).";
@@ -482,7 +482,7 @@ public sealed partial class MainWindow
             var resultJson = await core.ExecuteScriptAsync(script);
             var filled = ParseWalletFillResult(resultJson);
             return filled > 0
-                ? (true, $"Carte remplie ({filled} champ{(filled > 1 ? "s" : "")}). Saisissez le CVV vous-même.")
+                ? (true, $"Carte remplie ({filled} champ{(filled > 1 ? "s" : "")}). Saisis le CVV toi-même.")
                 : (false, "Aucun champ de carte accessible sur cette page (formulaire dans un cadre externe ?).");
         }
         catch (Exception ex)

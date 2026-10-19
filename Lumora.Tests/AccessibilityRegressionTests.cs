@@ -135,7 +135,7 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("AccessibilityShortcutHelpButton_Click", settings, StringComparison.Ordinal);
         Assert.Contains("UpdateStatusText(\"Aide clavier Lumora annoncée.\", announce: false);", settings, StringComparison.Ordinal);
         Assert.Contains("Raccourcis Lumora : F6 ou Maj plus F6 pour changer de zone.", settings, StringComparison.Ordinal);
-        Assert.Contains("Contrôle Alt F relit votre repère courant.", settings, StringComparison.Ordinal);
+        Assert.Contains("Contrôle Alt F relit le repère courant.", settings, StringComparison.Ordinal);
         Assert.Contains("Contrôle Alt R recentre le focus sur la zone utile.", settings, StringComparison.Ordinal);
         Assert.Contains("Contrôle Alt S active le mode secours.", settings, StringComparison.Ordinal);
         Assert.Contains("Contrôle Alt X restaure l'état de confort précédent.", settings, StringComparison.Ordinal);
@@ -289,7 +289,7 @@ public sealed class AccessibilityRegressionTests
         Assert.Contains("AutomationProperties.Name=\"Appliquer les changements\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"WalletAddCardButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.Name=\"Ajouter une carte au portefeuille\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("AutomationProperties.HelpText=\"Ajoutez une carte locale, modifiez-la ou utilisez-la sur la page active.\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.HelpText=\"Ajoute une carte locale, modifie-la ou utilise-la sur la page active.\"", xaml, StringComparison.Ordinal);
     }
 
     [Fact]

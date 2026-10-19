@@ -79,7 +79,7 @@ public static class StartMenuTileRegistry
         new(StartMenuTileIds.ReopenTab, "Navigation", "Onglet fermé", "Rouvrir le dernier", StartMenuGlyphs.Restore),
         new(StartMenuTileIds.TabGroups, "Navigation", "Groupes d'onglets", "Enregistrés", StartMenuGlyphs.TabStack),
 
-        new(StartMenuTileIds.Settings, "Lumora et profil", "Paramètres", "Centre Lumora", StartMenuGlyphs.Sliders),
+        new(StartMenuTileIds.Settings, "Lumora et profil", "Réglages", "Apparence et options", StartMenuGlyphs.Sliders),
         new(StartMenuTileIds.Profiles, "Lumora et profil", "Profils locaux", "PIN, verrouillage", StartMenuGlyphs.Person),
         new(StartMenuTileIds.About, "Lumora et profil", "À propos", "Version, licences", StartMenuGlyphs.Info),
         new(StartMenuTileIds.Studio, "Lumora et profil", "Studio", "Position des onglets/favoris", StartMenuGlyphs.Layout),

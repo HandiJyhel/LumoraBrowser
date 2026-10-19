@@ -17,7 +17,7 @@ namespace Lumora.Privacy.CnameUncloaker;
 internal sealed class CnameUncloakerModule : IPrivacyModule
 {
     public string Id => "cname-uncloaker";
-    public string DisplayName => "Détection CNAME cloaking";
+    public string DisplayName => "Détection des traceurs cachés (CNAME)";
     public bool IsEnabled { get; set; } = true;
 
     // Hosts confirmés comme cloakés (écrits depuis thread DNS, lus depuis WebResourceRequested)
