@@ -35,7 +35,20 @@ public sealed partial class MainWindow
             return;
         }
 
-        var focused = Content?.XamlRoot is { } xamlRoot ? FocusManager.GetFocusedElement(xamlRoot) : null;
+        // Fenetre deja fermee (RestartApp, fermeture en cours) : WinUI leve une
+        // COMException en lisant Content - rien a recuperer dans ce cas, et
+        // surtout pas d'exception non geree dans le journal (2026-10-19, trouve
+        // en verifiant la release : un Activated tardif pendant le redemarrage).
+        object? focused;
+        try
+        {
+            focused = Content?.XamlRoot is { } xamlRoot ? FocusManager.GetFocusedElement(xamlRoot) : null;
+        }
+        catch (System.Runtime.InteropServices.COMException)
+        {
+            return;
+        }
+
         WinUiRuntimeTrace.Write(
             $"MainWindow_Activated: state={args.WindowActivationState}, focusedElement={(focused is FrameworkElement fe ? fe.Name : focused?.GetType().Name) ?? "null"}");
 
