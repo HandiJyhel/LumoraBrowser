@@ -3,7 +3,7 @@
 
   # Lumora
 
-  *Un navigateur différent, pensé pour vous.*
+  *Le navigateur web qui reste chez toi.*
 
   ![Licence GPLv3](https://img.shields.io/badge/licence-GPLv3-25897D)
   ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-D97D28)
@@ -18,10 +18,10 @@ comme des options : quelque part dans un menu, désactivées par défaut, à
 découvrir soi-même. Lumora part du principe inverse — ce sont les réglages
 de base, pas des extras qu'il faut aller chercher.
 
-Concrètement : aucune donnée ne quitte votre machine. Pas de compte à
+Concrètement : aucune donnée ne quitte ta machine. Pas de compte à
 créer, pas de synchronisation vers un serveur, pas de télémétrie qui
 remonte discrètement en arrière-plan. Mots de passe, favoris, historique
-restent chez vous, chiffrés sur votre disque, nulle part ailleurs.
+restent chez toi, chiffrés sur ton disque, nulle part ailleurs.
 
 Ce n'est pas un navigateur « allégé » qui sacrifie le confort pour la
 confidentialité. Lumora s'appuie sur le même moteur de rendu que les
@@ -38,7 +38,7 @@ navigateur principal au quotidien.
 
 - **Coffre local chiffré** — mots de passe, passkeys et codes
   d'authentification à deux facteurs (TOTP) regroupés au même endroit,
-  chiffrés sur votre disque, jamais envoyés vers un service tiers.
+  chiffrés sur ton disque, jamais envoyés vers un service tiers.
 - **Bloqueur de publicités et traqueurs** intégré et activé par défaut —
   pas une extension à installer, pas une case à trouver dans les réglages.
 - **Profils locaux et vrai mode invité** — chaque profil protégé par mot
@@ -51,14 +51,14 @@ navigateur principal au quotidien.
 - **Accessibilité de premier ordre** — aides à la lecture, loupe, lecture
   à voix haute, modes visuels pour la fatigue oculaire ou la basse vision,
   intégrés à l'interface plutôt que relégués dans un sous-menu.
-- **Un navigateur qui se façonne** — thème, densité, disposition, mode
-  d'usage : Lumora s'adapte à votre façon de travailler plutôt que
+- **Un navigateur réglable** — thème, densité, disposition, mode
+  d'usage : Lumora s'adapte à ta façon de travailler plutôt que
   l'inverse. Les onglets peuvent être placés sur le côté, réduits en une
   colonne d'icônes et rouverts au simple survol de la souris.
 - **Une prise en main rapide** — au premier lancement, une configuration
   rapide en un seul écran (thème, moteur de recherche, position des
   onglets) ou, pour qui veut tout régler, la configuration avancée.
-- **Import de vos favoris** — Chrome, Edge, Brave, Opera, Vivaldi et
+- **Import de tes favoris** — Chrome, Edge, Brave, Opera, Vivaldi et
   Firefox sont détectés, y compris les favoris rattachés à un compte.
 - **Sauvegarde et restauration complètes** du profil, et un installateur
   qui n'exige aucun prérequis système, pour changer de machine sans rien
@@ -79,7 +79,7 @@ navigateur principal au quotidien.
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src=".github/readme/reglages.png" width="100%" alt="Centre Lumora, écran des réglages"><br>
+      <img src=".github/readme/reglages.png" width="100%" alt="Écran des réglages de Lumora"><br>
       <sub><b>Réglages</b></sub>
     </td>
     <td align="center" width="50%">
@@ -119,7 +119,7 @@ Visual Studio à la place :
 ```
 
 Ce script compile en configuration Debug et lance l'application. Pour un
-build de test isolé (sans toucher à votre profil Lumora existant), voir
+build de test isolé (sans toucher à ton profil Lumora existant), voir
 `scripts\build-clean-test-artifact.ps1` puis `scripts\build-installer.ps1`.
 
 ### Tests
