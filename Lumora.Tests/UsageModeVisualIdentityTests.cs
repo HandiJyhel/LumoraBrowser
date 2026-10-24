@@ -381,10 +381,27 @@ public sealed class UsageModeVisualIdentityTests
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.94.31.4-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.4-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.4-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.4-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.0-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.0-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.0-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.0-dev", installerScript, StringComparison.Ordinal);
+    }
+
+    // Bouton "Rechercher des mises a jour" (0.94.32.0-dev) : ouvre la page des
+    // releases a la demande, sans AUCUNE verification automatique (zero appel
+    // reseau au demarrage - releases toutes nommees "1.0.0", promesse "zero suivi").
+    [Fact]
+    public void Le_bouton_de_mises_a_jour_ouvre_la_page_des_releases_sans_appel_reseau()
+    {
+        var xaml = ReadRepoFile("Lumora.WinUI", "MainWindow.xaml");
+        var updates = ReadRepoFile("Lumora.WinUI", "MainWindow.Updates.cs");
+        var palette = ReadRepoFile("Lumora.WinUI", "MainWindow.CommandPalette.cs");
+
+        Assert.Contains("https://github.com/HandiJyhel/LumoraBrowser/releases", updates, StringComparison.Ordinal);
+        Assert.Contains("Click=\"CheckUpdatesButton_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Rechercher des mises à jour", palette, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpClient", updates, StringComparison.Ordinal);
+        Assert.DoesNotContain("api.github.com", updates, StringComparison.Ordinal);
     }
 
     // Le journal de diagnostic est livre avec l'installateur (lanceur "Lancer avec

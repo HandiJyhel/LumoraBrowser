@@ -61,8 +61,13 @@ public sealed partial class MainWindow
             return;
         }
 
-        panel.PointerMoved += BookmarkGridDragPanel_PointerMoved;
-        panel.PointerReleased += BookmarkGridDragPanel_PointerReleased;
+        // Sans capture avant le seuil de glissement, PointerMoved/PointerReleased
+        // arrivent par remontee depuis la vignette : handledEventsToo car la
+        // vignette (ListViewItem) peut les marquer traites avant qu'ils
+        // n'atteignent le panneau (le relachement d'un simple clic doit aussi
+        // reinitialiser l'etat).
+        panel.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler(BookmarkGridDragPanel_PointerMoved), true);
+        panel.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler(BookmarkGridDragPanel_PointerReleased), true);
         panel.PointerCaptureLost += BookmarkGridDragPanel_PointerCaptureLost;
         _bookmarkGridWiredPanel = panel;
     }
@@ -83,14 +88,27 @@ public sealed partial class MainWindow
         var point = e.GetCurrentPoint(panel).Position;
         _bookmarkGridDragStartX = point.X;
         _bookmarkGridDragStartY = point.Y;
-        panel.CapturePointer(e.Pointer);
+        // Pas de CapturePointer ici (2026-10-24, 0.94.31.5-dev) : capturer des
+        // l'appui privait la vignette de son propre pointeur - la selection ne se
+        // faisait pas et le double-clic n'ouvrait plus les dossiers/favoris
+        // depuis le glisser-deposer du 2026-08-31. La capture se fait au
+        // franchissement du seuil, dans BookmarkGridDragPanel_PointerMoved.
     }
 
     private void BookmarkGridDragPanel_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
         if (_bookmarkGridDraggedId is null || sender is not Panel panel) return;
 
-        var point = e.GetCurrentPoint(panel).Position;
+        var currentPoint = e.GetCurrentPoint(panel);
+        var point = currentPoint.Position;
+
+        // Bouton relache sans que le relachement nous soit parvenu : on ne
+        // transforme pas un simple survol en glisser.
+        if (!_bookmarkGridIsDragging && !currentPoint.Properties.IsLeftButtonPressed)
+        {
+            ResetBookmarkGridDragState();
+            return;
+        }
 
         if (!_bookmarkGridIsDragging)
         {
@@ -98,6 +116,7 @@ public sealed partial class MainWindow
                     _bookmarkGridDragStartX, _bookmarkGridDragStartY, point.X, point.Y, BookmarkGridDragThreshold))
                 return;
             _bookmarkGridIsDragging = true;
+            panel.CapturePointer(e.Pointer);
             if (_bookmarkGridDraggedContainer is not null) _bookmarkGridDraggedContainer.Opacity = 0.55;
         }
 
@@ -168,13 +187,21 @@ public sealed partial class MainWindow
 
     private void BookmarkGridDragPanel_PointerReleased(object sender, PointerRoutedEventArgs e)
     {
+        // Etat lu AVANT ReleasePointerCapture : celui-ci declenche
+        // PointerCaptureLost, qui remet l'etat a zero - sans cette lecture
+        // prealable le depot ne s'executait jamais (constate le 2026-10-24).
+        var wasDragging = _bookmarkGridIsDragging;
+        var droppedId = _bookmarkGridDraggedId;
+        var dropTargetId = _bookmarkGridPendingTargetId;
+        var dropInto = _bookmarkGridPendingIntoFolder;
+
         if (sender is UIElement releasedPanel) releasedPanel.ReleasePointerCapture(e.Pointer);
         if (_bookmarkGridDraggedContainer is not null) _bookmarkGridDraggedContainer.Opacity = 1;
         SetGridDropHighlight(null);
 
-        if (_bookmarkGridIsDragging && _bookmarkGridDraggedId is { } draggedId && _bookmarkGridPendingTargetId is { } targetId)
+        if (wasDragging && droppedId is { } draggedId && dropTargetId is { } targetId)
         {
-            var into = _bookmarkGridPendingIntoFolder;
+            var into = dropInto;
             // Differe l'operation reelle : eviter de reconstruire la grille
             // (ReloadBookmarks) pendant que ce meme gestionnaire, declenche
             // par un conteneur de cette grille, est encore sur la pile

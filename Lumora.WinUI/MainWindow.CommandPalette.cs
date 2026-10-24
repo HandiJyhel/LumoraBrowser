@@ -215,6 +215,8 @@ public sealed partial class MainWindow
             () => ImportMenu_Click(this, new RoutedEventArgs())), 76);
         Add(new("Lumora", "À propos", "Informations sur Lumora", "\uE946",
             () => AboutMenu_Click(this, new RoutedEventArgs())), 60);
+        Add(new("Lumora", "Rechercher des mises à jour", "Ouvre la page des versions de Lumora sur GitHub", "",
+            () => CheckUpdatesButton_Click(this, new RoutedEventArgs())), 59);
 
         foreach (var tab in _tabs)
         {

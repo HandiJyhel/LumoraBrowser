@@ -389,7 +389,11 @@ public sealed partial class MainWindow
 
     private void BookmarksList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (BookmarksList.SelectedItem is not BookmarkListItem item)
+        // La vignette reellement double-cliquee d'abord, la selection ensuite :
+        // la selection n'est pas garantie au moment du double-clic (0.94.31.5-dev).
+        var item = FindBookmarkItem(e.OriginalSource as DependencyObject)
+            ?? BookmarksList.SelectedItem as BookmarkListItem;
+        if (item is null)
         {
             return;
         }
