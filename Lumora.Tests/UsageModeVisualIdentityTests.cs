@@ -381,10 +381,24 @@ public sealed class UsageModeVisualIdentityTests
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.94.31.3-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.3-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.3-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.94.31.3-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.4-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.4-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.4-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.31.4-dev", installerScript, StringComparison.Ordinal);
+    }
+
+    // Le journal de diagnostic est livre avec l'installateur (lanceur "Lancer avec
+    // journal de diagnostic") : il ne doit jamais contenir les touches tapees, sinon
+    // le code PIN saisi au pave numerique y est ecrit en clair (constate le 2026-10-24).
+    [Fact]
+    public void Le_journal_de_diagnostic_ne_trace_pas_les_touches_tapees()
+    {
+        var profile = ReadRepoFile("Lumora.WinUI", "MainWindow.Profile.cs");
+        var rootKeyDown = profile[profile.IndexOf("private void RootKeyDown", StringComparison.Ordinal)..];
+        rootKeyDown = rootKeyDown[..rootKeyDown.IndexOf("\n    }", StringComparison.Ordinal)];
+
+        Assert.DoesNotContain("WinUiRuntimeTrace", rootKeyDown, StringComparison.Ordinal);
+        Assert.DoesNotContain("e.Key}", profile, StringComparison.Ordinal);
     }
 
     private static string ReadRepoFile(params string[] segments)

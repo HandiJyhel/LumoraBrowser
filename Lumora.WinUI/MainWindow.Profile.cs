@@ -1663,7 +1663,10 @@ public sealed partial class MainWindow
 
     private void RootKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        WinUiRuntimeTrace.Write($"RootKeyDown: key={e.Key} handled={e.Handled} addressBoxFocusState={AddressBox.FocusState}");
+        // Aucune trace des touches ici (2026-10-24) : l'ancienne ligne de
+        // diagnostic ecrivait chaque touche tapee dans winui-runtime-trace.log,
+        // donc le code PIN saisi au pave numerique s'y retrouvait. Le lanceur
+        // "Lancer avec journal de diagnostic" est livre avec l'installateur.
         ResetSessionTimer();
         if (e.Key == Windows.System.VirtualKey.K && IsControlKeyDown() &&
             LoginOverlay.Visibility != Visibility.Visible &&
