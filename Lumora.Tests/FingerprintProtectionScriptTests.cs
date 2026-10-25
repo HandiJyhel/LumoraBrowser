@@ -31,17 +31,27 @@ public class FingerprintProtectionScriptTests
     }
 
     [Fact]
-    public void Le_script_couvre_bien_canvas_webgl_et_audio()
+    public void Le_script_couvre_bien_canvas_et_audio()
     {
         var script = FingerprintProtectionScript.Build(1L);
 
         Assert.Contains("getImageData", script, StringComparison.Ordinal);
         Assert.Contains("toDataURL", script, StringComparison.Ordinal);
         Assert.Contains("toBlob", script, StringComparison.Ordinal);
-        Assert.Contains("getParameter", script, StringComparison.Ordinal);
         Assert.Contains("getChannelData", script, StringComparison.Ordinal);
-        Assert.Contains("hardwareConcurrency", script, StringComparison.Ordinal);
-        Assert.Contains("deviceMemory", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Aucune_valeur_materielle_truquee_que_les_anti_bots_detectent()
+    {
+        var script = FingerprintProtectionScript.Build(1L);
+
+        // Ces trois leviers faisaient echouer la connexion PlayStation (Kasada/
+        // Akamai) : ne jamais les reintroduire sans refaire le test en direct.
+        Assert.DoesNotContain("Generic Vendor", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("getParameter", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("hardwareConcurrency", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("deviceMemory", script, StringComparison.Ordinal);
     }
 
     [Fact]

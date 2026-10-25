@@ -4,10 +4,18 @@ namespace Lumora.Privacy.FingerprintProtection;
 
 // Ajoute un bruit leger et coherent (meme graine pour toute la session, donc
 // stable d'une page a l'autre, mais differente a chaque lancement de Lumora)
-// aux trois vecteurs de fingerprinting les plus utilises : Canvas, WebGL et
-// AudioContext. Normalise aussi hardwareConcurrency/deviceMemory vers des
-// valeurs courantes. Aucun serveur, aucun intermediaire reseau : uniquement
-// du cote navigateur, comme la position fictive.
+// aux deux vecteurs de fingerprinting les plus utilises cote script : Canvas
+// et AudioContext. Aucun serveur, aucun intermediaire reseau : uniquement du
+// cote navigateur, comme la position fictive.
+//
+// Volontairement ABSENT (0.94.32.3-dev) : le remplacement des chaines WebGL
+// (« Generic Vendor/Renderer ») et le forcage de hardwareConcurrency/
+// deviceMemory. Ces valeurs truquees sont detectees par les anti-bots (Kasada/
+// Akamai) : la connexion PlayStation echouait (« Une erreur s'est produite »,
+// « Impossible de se connecter au serveur »). Bissection en direct : canvas
+// seul et audio seul passent, WebGL seul et navigator seul font echouer la
+// connexion. Un faux profil materiel unique rend en plus l'utilisateur plus
+// reconnaissable, pas moins.
 internal static class FingerprintProtectionScript
 {
     private const string Template = """
@@ -47,17 +55,6 @@ internal static class FingerprintProtectionScript
         noisifyCanvas(this);
         return origToBlob.apply(this,arguments);
         };
-        function patchGetParameter(proto){
-        if(!proto)return;
-        var orig=proto.getParameter;
-        proto.getParameter=function(p){
-        if(p===37445)return'Generic Vendor';
-        if(p===37446)return'Generic Renderer';
-        return orig.call(this,p);
-        };
-        }
-        patchGetParameter(window.WebGLRenderingContext&&window.WebGLRenderingContext.prototype);
-        patchGetParameter(window.WebGL2RenderingContext&&window.WebGL2RenderingContext.prototype);
         if(window.AudioBuffer){
         var origGetChannelData=AudioBuffer.prototype.getChannelData;
         AudioBuffer.prototype.getChannelData=function(){
@@ -68,8 +65,6 @@ internal static class FingerprintProtectionScript
         return data;
         };
         }
-        try{Object.defineProperty(navigator,'hardwareConcurrency',{get:function(){return 4;}});}catch(e){}
-        try{if('deviceMemory' in navigator)Object.defineProperty(navigator,'deviceMemory',{get:function(){return 8;}});}catch(e){}
         })();
         """;
 

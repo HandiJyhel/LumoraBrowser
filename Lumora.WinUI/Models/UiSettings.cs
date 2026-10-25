@@ -180,8 +180,7 @@ internal sealed class UiSettings
     public bool GeolocationSpoofingEnabled { get; set; } = true;
     public double GeolocationSpoofLatitude { get; set; } = 48.8566;
     public double GeolocationSpoofLongitude { get; set; } = 2.3522;
-    // Bruit leger sur Canvas/WebGL/AudioContext + normalisation
-    // hardwareConcurrency/deviceMemory : rend le pistage par empreinte
+    // Bruit leger sur Canvas/AudioContext : rend le pistage par empreinte
     // (fingerprinting) inter-sites plus difficile. Aucun intermediaire
     // reseau, aucun cout de vitesse, actif par defaut comme les autres
     // protections gratuites.

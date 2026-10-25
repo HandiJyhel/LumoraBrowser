@@ -5314,7 +5314,7 @@
                             <ToggleSwitch x:Name="FingerprintProtectionSwitch"
                                          Header="Brouiller l'empreinte du navigateur"
                                          Toggled="FingerprintProtectionSwitch_Toggled"
-                                         ToolTipService.ToolTip="Ajoute un léger bruit à la lecture du Canvas, du WebGL et de l'AudioContext, les techniques de pistage par empreinte les plus courantes, pour rendre le suivi d'un site à l'autre plus difficile sans casser l'affichage ni ralentir la navigation." />
+                                         ToolTipService.ToolTip="Ajoute un léger bruit à la lecture du Canvas et de l'AudioContext, deux techniques de pistage par empreinte courantes, pour rendre le suivi d'un site à l'autre plus difficile sans casser l'affichage ni ralentir la navigation." />
 
                             <!-- Gestionnaire de consentement cookies -->
                             <TextBlock Text="Cookies" Style="{StaticResource NovaPanelSectionTitleStyle}" Margin="0,10,0,0" />
