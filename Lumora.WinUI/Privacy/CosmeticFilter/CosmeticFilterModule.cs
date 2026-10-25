@@ -159,9 +159,13 @@ internal sealed class CosmeticFilterModule : IPrivacyModule
             .Replace("\r", "")
             .Replace("\n", "");
 
+        // Pas encore de racine (cadre about:blank en cours de création) : rien à
+        // injecter, plutôt qu'une exception non rattrapée dans la page.
         return $@"(function(){{
+var r=document.documentElement||document.head;
+if(!r)return;
 var e=document.getElementById('{styleId}');
-if(!e){{e=document.createElement('style');e.id='{styleId}';(document.documentElement||document.head).appendChild(e);}}
+if(!e){{e=document.createElement('style');e.id='{styleId}';r.appendChild(e);}}
 e.textContent='{escaped}';
 }})();";
     }

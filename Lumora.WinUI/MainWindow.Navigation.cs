@@ -1750,46 +1750,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            await core.AddScriptToExecuteOnDocumentCreatedAsync("""
-                (function(){
-                    if(window.__nova_passkey_monitor)return;
-                    window.__nova_passkey_monitor=true;
-
-                    var _origCreate=navigator.credentials.create.bind(navigator.credentials);
-                    navigator.credentials.create=function(options){
-                        // Retourner null pour les passkeys : évite la popup Windows Hello sans crasher Chromium
-                        if(options&&options.publicKey){
-                            return Promise.resolve(null);
-                        }
-                        var p=_origCreate(options);
-                        if(p&&typeof p.then==='function'){
-                            p.then(function(cred){
-                                if(cred){
-                                    try{window.chrome.webview.postMessage(JSON.stringify({t:'passkey_created',o:location.origin}));}catch(_){}
-                                }
-                            }).catch(function(){});
-                        }
-                        return p;
-                    };
-
-                    var _origGet=navigator.credentials.get.bind(navigator.credentials);
-                    navigator.credentials.get=function(options){
-                        // Retourner null pour les passkeys : le site tombe sur le formulaire mot de passe classique
-                        if(options&&options.publicKey){
-                            return Promise.resolve(null);
-                        }
-                        var p=_origGet(options);
-                        if(p&&typeof p.then==='function'){
-                            p.then(function(cred){
-                                if(cred){
-                                    try{window.chrome.webview.postMessage(JSON.stringify({t:'passkey_used',o:location.origin}));}catch(_){}
-                                }
-                            }).catch(function(){});
-                        }
-                        return p;
-                    };
-                })();
-                """);
+            await core.AddScriptToExecuteOnDocumentCreatedAsync(PasskeyMonitorScript.Source);
         }
         catch { }
     }
