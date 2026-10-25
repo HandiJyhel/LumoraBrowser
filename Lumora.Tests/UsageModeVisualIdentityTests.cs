@@ -381,10 +381,10 @@ public sealed class UsageModeVisualIdentityTests
         var cleanArtifactScript = ReadRepoFile("scripts", "build-clean-test-artifact.ps1");
         var installerScript = ReadRepoFile("scripts", "build-installer.ps1");
 
-        Assert.Contains("0.94.32.0-dev", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("0.94.32.0-dev", agents, StringComparison.Ordinal);
-        Assert.Contains("0.94.32.0-dev", cleanArtifactScript, StringComparison.Ordinal);
-        Assert.Contains("0.94.32.0-dev", installerScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.1-dev", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.1-dev", agents, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.1-dev", cleanArtifactScript, StringComparison.Ordinal);
+        Assert.Contains("0.94.32.1-dev", installerScript, StringComparison.Ordinal);
     }
 
     // Bouton "Rechercher des mises a jour" (0.94.32.0-dev) : ouvre la page des

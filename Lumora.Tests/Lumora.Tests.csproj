@@ -48,6 +48,7 @@
     <Compile Include="..\Lumora.WinUI\PathMiniLanguage.cs"               Link="Product\PathMiniLanguage.cs" />
     <Compile Include="..\Lumora.WinUI\OpenPanelsTaskbar.cs"              Link="Product\OpenPanelsTaskbar.cs" />
     <Compile Include="..\Lumora.WinUI\Models\Profiles.cs"                Link="Product\Profiles.cs" />
+    <Compile Include="..\Lumora.WinUI\Models\BookmarkImportTree.cs"      Link="Product\BookmarkImportTree.cs" />
     <Compile Include="..\Lumora.WinUI\LumoraConfig.cs"                    Link="Product\LumoraConfig.cs" />
     <Compile Include="..\Lumora.WinUI\Storage\LumoraFile.cs"              Link="Product\LumoraFile.cs" />
     <Compile Include="..\Lumora.WinUI\Storage\ProfileEntropyStore.cs"     Link="Product\ProfileEntropyStore.cs" />

@@ -953,37 +953,6 @@ public sealed class BookmarkStore
     }
 }
 
-public sealed record BookmarkImportItem(string Title, string? Url, List<BookmarkImportItem> Children, string IconPath = "")
-{
-    public static BookmarkImportItem Folder(string title, IEnumerable<BookmarkImportItem> children) =>
-        new(title, null, children.ToList());
-
-    public static BookmarkImportItem UrlItem(string title, string url, string iconPath = "") =>
-        new(title, url, new List<BookmarkImportItem>(), iconPath);
-}
-
-public sealed record BookmarkImportTree(List<BookmarkImportItem> Toolbar, List<BookmarkImportItem> Other)
-{
-    private static readonly Regex AnchorRegex = new(
-        "<A\\s+[^>]*HREF\\s*=\\s*[\"'](?<url>[^\"']+)[\"'][^>]*>(?<title>.*?)</A>",
-        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
-
-    public static BookmarkImportTree FromHtml(string html, string sourceName)
-    {
-        var items = AnchorRegex.Matches(html)
-            .Select(match => BookmarkImportItem.UrlItem(
-                WebUtility.HtmlDecode(Regex.Replace(match.Groups["title"].Value, "<.*?>", string.Empty)).Trim(),
-                WebUtility.HtmlDecode(match.Groups["url"].Value).Trim()))
-            .Where(item => BookmarkStore.IsWebUrl(item.Url ?? string.Empty))
-            .ToList();
-
-        return new BookmarkImportTree(new List<BookmarkImportItem>(), new List<BookmarkImportItem>
-        {
-            BookmarkImportItem.Folder($"Import HTML {sourceName}", items)
-        });
-    }
-}
-
 public sealed record MigrationBrowserEntry(string Name, BrowserImportSource? Source)
 {
     public string Label => Source is not null
