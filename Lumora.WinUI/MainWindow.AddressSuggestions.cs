@@ -143,11 +143,35 @@ public sealed partial class MainWindow
         {
             DispatcherQueue.TryEnqueue(() =>
             {
-                if (AddressBox.FocusState == FocusState.Unfocused)
-                {
-                    AddressBox.Focus(FocusState.Programmatic);
-                }
+                if (AddressBox.FocusState != FocusState.Unfocused) return;
+                if (FocusWentToAnotherElement()) return;
+                AddressBox.Focus(FocusState.Programmatic);
             });
+        }
+    }
+
+    // Correctif 2026-10-26 ("impossible d'ecrire dans un champ d'une page, tout
+    // part dans la barre d'adresse") : GotFocus bascule la barre sur l'URL
+    // complete, donc des qu'on avait clique la barre une fois, TOUTE perte de
+    // focus ressemblait a une "edition interrompue" (texte != affichage simplifie)
+    // - y compris un clic dans un champ de la page, que RootPointerPressed ne
+    // voit pas (le contenu WebView2 est une fenetre enfant, hors du XAML). La
+    // reprise de focus volait alors le clavier a la page a chaque clic. Elle ne
+    // vaut que pour le cas qu'elle repare (Popup de suggestions qui se ferme, plus
+    // aucun element ne tient le focus) : si un autre element l'a recu (page web,
+    // bouton, champ...), c'est un choix de l'utilisateur, on n'y touche pas.
+    private bool FocusWentToAnotherElement()
+    {
+        try
+        {
+            var focused = Content?.XamlRoot is { } xamlRoot ? FocusManager.GetFocusedElement(xamlRoot) : null;
+            var other = focused is not null && !ReferenceEquals(focused, AddressBox);
+            WinUiRuntimeTrace.Write($"AddressBox refocus: focusedElement={(focused is FrameworkElement fe ? fe.Name : focused?.GetType().Name) ?? "null"} skip={other}");
+            return other;
+        }
+        catch (System.Runtime.InteropServices.COMException)
+        {
+            return true;
         }
     }
 

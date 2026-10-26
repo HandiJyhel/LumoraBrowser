@@ -2,6 +2,8 @@
 
 ## Index mémoire — Sessions récentes
 
+- [Frappe qui part dans la barre d'adresse au lieu du champ de la page](#frappe-qui-part-dans-la-barre-dadresse-au-lieu-du-champ-de-la-page-2026-10-26) — 2026-10-26, retour d'usage réel de l'utilisateur (+ « le navigateur continue de freeze », **non investigué**) ; cause trouvée dans le code (`AddressBox_LostFocus` reprenait le focus après un clic dans la page) et correctif posé (`FocusWentToAnotherElement`), build + 1088 tests OK, **vérifié en direct avec vrais clics, avant/après** (ancien code : « abc » tapé dans la barre ; code corrigé : « abc » dans le champ de la page, barre intacte) -> `0.94.32.4-dev`
+
 - [23e release 1.0.0](#23e-release-1-0-0-2026-10-25) — 2026-10-25, avec le correctif anti-empreinte (`0.94.32.3-dev`, commit `93df031`) ; installateur SHA256 `3b7c18cc…a6079` dans `artifacts/installer/nouveau-r23/` (r22 laissé en place : contient encore la 2e cause du bug PlayStation) ; vérifié en direct sur l'artefact propre AVEC faux identifiants (réponse identique à Edge), 0 UNHANDLED ; commits locaux, pas poussés
 - [Connexion PlayStation, 2e cause : anti-empreinte détecté](#connexion-playstation-2e-cause--anti-empreinte-detecte-par-kasadaakamai-2026-10-25) — 2026-10-25, la 22e release laissait échouer la validation du mot de passe (« Une erreur s'est produite ») ; reproduit avec de FAUX identifiants une fois le harnais CDP rendu indétectable ; bissection : WebGL truqué et `hardwareConcurrency`/`deviceMemory` forcés = rejet, canvas/audio seuls = OK ; les deux retirés -> `0.94.32.3-dev`, 1088 tests OK, comportement identique à Edge
 - [22e release 1.0.0](#22e-release-1-0-0-2026-10-25) — 2026-10-25, avec le correctif des passkeys WebAuthn (`0.94.32.2-dev`, commit `1fe64bb`) ; installateur SHA256 `2eed53e7…a9485` posé dans `artifacts/installer/nouveau-r22/` (r19, r20, r21 laissés en place : tous contiennent le bug PlayStation, suppression à demander), vérifié en direct sur l'artefact propre (titre, PlayStation + GitHub chargés, 0 UNHANDLED), worktree supprimé
@@ -30537,3 +30539,25 @@ Avec la session « moins IA » : Nouvel onglet utile et personnel, Vue d'ensembl
 - **Installateur** : SHA256 `3b7c18cc3f68d845b6ed95dae8e54ef012b92259354578bf7bf31b8b9e3a6079` (script + `Get-FileHash` source et copie + `.VERIFICATION.txt` concordants), 571 763 730 octets, **posé dans `artifacts/installer/nouveau-r23/`**. `nouveau-r22/` laissé en place (redemander avant suppression). Manifestes `.sha256` copiés AVANT suppression du worktree ; `ReleaseVersion` toujours `null` sur `main`.
 - L'utilisateur installe lui-même (installateur jamais lancé par Claude) ; il a déjà publié r22 sur GitHub : à remplacer par r23.
 - **Suite (même jour)** : sur « fais tout ce que tu as à faire », `nouveau-r22/` supprimé (seul `artifacts/installer/nouveau-r23/` reste) et commits poussés sur `origin/main`.
+
+## Frappe qui part dans la barre d'adresse au lieu du champ de la page (2026-10-26)
+
+Retour d'usage réel : sur n'importe quel site, impossible d'écrire dans un champ de la page, tout part dans la barre d'adresse. L'utilisateur signale aussi que « le navigateur continue de freeze » (rien investigué sur ce point : à documenter par l'utilisateur, quand, sur quels sites).
+
+**Cause (lue dans le code, pas reproduite en direct)** : `AddressBox_GotFocus` bascule la barre sur l'URL complète. Dès qu'on a cliqué la barre une fois, toute perte de focus ressemble à une « édition interrompue » (texte != affichage simplifié) dans `AddressBox_LostFocus` (`MainWindow.AddressSuggestions.cs`). Un clic dans la page (WebView2 = fenêtre enfant, invisible pour `RootPointerPressed`) ne réécrit donc jamais le texte, et la reprise de focus ajoutée le 2026-08-24 (pour le cas du Popup de suggestions qui se ferme) redonnait le focus à la barre à chaque clic dans la page.
+
+**Correctif posé** : la reprise ne se fait que si plus aucun élément XAML ne tient le focus (`FocusWentToAnotherElement`, `FocusManager.GetFocusedElement`) ; trace `AddressBox refocus: focusedElement=... skip=...`. Build MSBuild 0 erreur, `dotnet test` 1088/1088.
+
+**Vérifié en direct (Go « option A » de l'utilisateur, son Lumora fermé)** : instance de test isolée (`LUMORA_PROFILE_DIR`, mode invité), page locale servie en **http** (`python -m http.server`) avec un champ qui recopie sa valeur dans le titre de l'onglet, vrais clics souris (`mouse_event`) + `SendKeys`. Ancien code (`git stash` du seul fichier) : « abc » finit dans la barre d'adresse = bug reproduit. Code corrigé : onglet `VAL:abc`, barre inchangée, trace `AddressBox refocus: focusedElement=<WebView2> skip=True` = `GetFocusedElement` renvoie bien le WebView2. `0.94.32.4-dev` (4e chiffre, micro-correction), build + 1088 tests OK.
+
+**Pièges de vérification (réutilisables)** :
+- **Une URL `file://` ne reproduit PAS le bug** : l'affichage simplifié est identique à l'URL complète, donc `stillEditing` reste faux. Il faut une URL `http(s)://` (serveur local suffit).
+- Retirer `autofocus` de la page de test, sinon le champ a le focus sans clic et le test est faux (premier essai invalidé pour cette raison).
+- Coordonnées relatives à la fenêtre : lire le rectangle UIA de la fenêtre et de `AddressBox`, ne pas supposer la position posée par `SetWindowPos`.
+- `SendKeys` : `~` = Entrée (le chemin court `HANDI-~1` tronque l'URL tapée), utiliser le chemin long ; Chrome de l'utilisateur (Threes-AI, plein écran) vole le premier plan : fenêtre de test en topmost, astuce Alt avant `SetForegroundWindow`, et vérifier `GetForegroundWindow` == PID de test AVANT chaque clic/frappe, sinon abandon.
+- `R` est un alias PowerShell (`Invoke-History`) : ne pas nommer une fonction `R`.
+- Une capture plein écran montrait un Chrome (favoris réels, jeu Threes) pris à tort pour un Lumora : toujours identifier la fenêtre par PID/titre (UIA racine) avant de conclure.
+
+**Incident de session** : des `Stop-Process -Force` sur tous les `Lumora.WinUI` ont été lancés au début pour nettoyer les instances de test ; ils auraient pu fermer une instance réelle de l'utilisateur (même nom de processus). Ne plus tuer par nom, seulement par PID lancé par la session (ou par chemin d'exécutable).
+
+**Freeze** : toujours pas investigué (l'utilisateur n'a pas encore détaillé quand/quoi).
