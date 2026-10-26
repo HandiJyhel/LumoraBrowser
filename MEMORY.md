@@ -2,6 +2,7 @@
 
 ## Index mémoire — Sessions récentes
 
+- [24e release 1.0.0](#24e-release-1-0-0-2026-10-26) — 2026-10-26, avec le correctif de la frappe volée par la barre d'adresse (`0.94.32.4-dev`, commit `245321c`) ; installateur SHA256 `df9da175…2cf2` dans `artifacts/installer/nouveau-r24/` (r23 laissé en place) ; vérifié en direct sur l'artefact propre (titre, frappe dans la page, 0 UNHANDLED) ; commits locaux, pas poussés ; **freeze non traité**
 - [Frappe qui part dans la barre d'adresse au lieu du champ de la page](#frappe-qui-part-dans-la-barre-dadresse-au-lieu-du-champ-de-la-page-2026-10-26) — 2026-10-26, retour d'usage réel de l'utilisateur (+ « le navigateur continue de freeze », **non investigué**) ; cause trouvée dans le code (`AddressBox_LostFocus` reprenait le focus après un clic dans la page) et correctif posé (`FocusWentToAnotherElement`), build + 1088 tests OK, **vérifié en direct avec vrais clics, avant/après** (ancien code : « abc » tapé dans la barre ; code corrigé : « abc » dans le champ de la page, barre intacte) -> `0.94.32.4-dev`
 
 - [23e release 1.0.0](#23e-release-1-0-0-2026-10-25) — 2026-10-25, avec le correctif anti-empreinte (`0.94.32.3-dev`, commit `93df031`) ; installateur SHA256 `3b7c18cc…a6079` dans `artifacts/installer/nouveau-r23/` (r22 laissé en place : contient encore la 2e cause du bug PlayStation) ; vérifié en direct sur l'artefact propre AVEC faux identifiants (réponse identique à Edge), 0 UNHANDLED ; commits locaux, pas poussés
@@ -30544,7 +30545,7 @@ Avec la session « moins IA » : Nouvel onglet utile et personnel, Vue d'ensembl
 
 Retour d'usage réel : sur n'importe quel site, impossible d'écrire dans un champ de la page, tout part dans la barre d'adresse. L'utilisateur signale aussi que « le navigateur continue de freeze » (rien investigué sur ce point : à documenter par l'utilisateur, quand, sur quels sites).
 
-**Cause (lue dans le code, pas reproduite en direct)** : `AddressBox_GotFocus` bascule la barre sur l'URL complète. Dès qu'on a cliqué la barre une fois, toute perte de focus ressemble à une « édition interrompue » (texte != affichage simplifié) dans `AddressBox_LostFocus` (`MainWindow.AddressSuggestions.cs`). Un clic dans la page (WebView2 = fenêtre enfant, invisible pour `RootPointerPressed`) ne réécrit donc jamais le texte, et la reprise de focus ajoutée le 2026-08-24 (pour le cas du Popup de suggestions qui se ferme) redonnait le focus à la barre à chaque clic dans la page.
+**Cause (lue dans le code, puis reproduite et confirmée en direct, voir plus bas)** : `AddressBox_GotFocus` bascule la barre sur l'URL complète. Dès qu'on a cliqué la barre une fois, toute perte de focus ressemble à une « édition interrompue » (texte != affichage simplifié) dans `AddressBox_LostFocus` (`MainWindow.AddressSuggestions.cs`). Un clic dans la page (WebView2 = fenêtre enfant, invisible pour `RootPointerPressed`) ne réécrit donc jamais le texte, et la reprise de focus ajoutée le 2026-08-24 (pour le cas du Popup de suggestions qui se ferme) redonnait le focus à la barre à chaque clic dans la page.
 
 **Correctif posé** : la reprise ne se fait que si plus aucun élément XAML ne tient le focus (`FocusWentToAnotherElement`, `FocusManager.GetFocusedElement`) ; trace `AddressBox refocus: focusedElement=... skip=...`. Build MSBuild 0 erreur, `dotnet test` 1088/1088.
 
@@ -30561,3 +30562,10 @@ Retour d'usage réel : sur n'importe quel site, impossible d'écrire dans un cha
 **Incident de session** : des `Stop-Process -Force` sur tous les `Lumora.WinUI` ont été lancés au début pour nettoyer les instances de test ; ils auraient pu fermer une instance réelle de l'utilisateur (même nom de processus). Ne plus tuer par nom, seulement par PID lancé par la session (ou par chemin d'exécutable).
 
 **Freeze** : toujours pas investigué (l'utilisateur n'a pas encore détaillé quand/quoi).
+
+## 24e release 1.0.0 (2026-10-26)
+
+- **Demande** : Go « option A » puis « ensuite tu fais une nouvelle release en version 1.0.0 » ; contient le correctif de la frappe volée par la barre d'adresse (`0.94.32.4-dev`, commit local `245321c`, sans attribution Claude, **non poussé**).
+- **Release** : protocole habituel (worktree `C:\lumora100` détaché sur `245321c`, runtime Fixed Version copié, `ReleaseVersion = "1.0.0"` local au worktree). **Vérification en direct sur l'artefact propre** `Lumora-1.0.0-win-x64-clean-20261026-183453` : titre « Lumora 1.0.0 — Mode invité », scénario complet (clic barre, clic champ, frappe) -> « abc » dans le champ de la page (onglet `VAL:abc`), barre inchangée, trace `AddressBox refocus ... skip=True`, 0 `UNHANDLED`.
+- **Installateur** : SHA256 `df9da1756e0ddbfa2a5753caf520d0b9f75bd79c5e7b69507b5c567472012cf2` (script + `Get-FileHash` source et copie + `.VERIFICATION.txt` concordants), 571 763 770 octets, **posé dans `artifacts/installer/nouveau-r24/`**. `nouveau-r23/` laissé en place (redemander avant suppression). Manifestes `.sha256` copiés AVANT suppression du worktree ; `ReleaseVersion` toujours `null` sur `main`.
+- Installateur jamais lancé par Claude ; l'utilisateur installe lui-même et remplace r23 sur GitHub. **Le freeze signalé n'est pas traité par cette release.**
