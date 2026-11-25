@@ -18,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
@@ -132,6 +133,10 @@
     <Compile Include="..\Lumora.WinUI\Tor\TorTrustedRelease.cs" Link="Product\TorTrustedRelease.cs" />
     <Compile Include="..\Lumora.WinUI\Tor\TorEngineState.cs" Link="Product\TorEngineState.cs" />
     <Compile Include="..\Lumora.WinUI\Tor\TorEngineProvider.cs" Link="Product\TorEngineProvider.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorSignatureVerifier.cs" Link="Product\TorSignatureVerifier.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorSigningKey.cs" Link="Product\TorSigningKey.cs" />
+    <Compile Include="..\Lumora.WinUI\Tor\TorReleaseFeed.cs" Link="Product\TorReleaseFeed.cs" />
+    <None Include="Fixtures\Tor\*" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="..\Lumora.WinUI\Tor\TorExitCountrySelector.cs" Link="Product\TorExitCountrySelector.cs" />
     <EmbeddedResource Include="..\Lumora.WinUI\Credentials\public_suffix_list.dat" Link="public_suffix_list.dat" />
   </ItemGroup>

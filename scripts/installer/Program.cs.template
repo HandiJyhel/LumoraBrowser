@@ -934,7 +934,7 @@ internal sealed class InstallerForm : Form
 
         try
         {
-            SetStatus($"Téléchargement du moteur Tor {TorTrustedRelease.Version} (dist.torproject.org)...", 60);
+            SetStatus("Recherche de la dernière version du moteur Tor (dist.torproject.org)...", 60);
             TorEngineProvider.DownloadEngineAsync(torExePath, new Progress<string>(message => SetStatus(message)))
                 .GetAwaiter().GetResult();
             SetStatus("Moteur Tor installé.", 62);

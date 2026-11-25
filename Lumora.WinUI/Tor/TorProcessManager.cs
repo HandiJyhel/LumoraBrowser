@@ -12,8 +12,9 @@ namespace Lumora.WinUI.Tor;
 // ExpectedExecutablePath (etape suivante, hors perimetre de cette version).
 // Chemins isoles au profil Lumora, jamais partages avec un Tor systeme.
 // Avant tout lancement, l'integrite du binaire est verifiee par empreinte
-// SHA256 contre la liste epinglee de TorTrustedRelease : un fichier absent,
-// inconnu ou modifie n'est jamais execute (voir VerifyEngineIntegrityAsync).
+// SHA256 contre le recu d'installation (verifie par signature OpenPGP lors du
+// telechargement, voir TorEngineProvider) : un fichier absent, inconnu ou
+// modifie n'est jamais execute (voir VerifyEngineIntegrityAsync).
 internal sealed class TorProcessManager : IDisposable
 {
     public const int DefaultSocksPort = 9050;
@@ -54,9 +55,29 @@ internal sealed class TorProcessManager : IDisposable
     // une empreinte SHA256 connue (TorTrustedRelease.TrustedFileHashes).
     // Un fichier absent ou dont le hash ne correspond a aucune version
     // verifiee fait echouer la verification : StartAsync ne l'executera pas.
-    public static Task<bool> VerifyEngineIntegrityAsync(
-        LumoraProfilePaths profile, CancellationToken cancellationToken = default) =>
-        VerifyEngineIntegrityAsync(profile, TorTrustedRelease.TrustedFileHashes, cancellationToken);
+    // Depuis 1.0.1 la version de Tor n'est plus epinglee dans le code : la
+    // reference est le recu ecrit a l'installation (TorEngineProvider) apres
+    // verification de la signature OpenPGP officielle. L'empreinte historique de
+    // la 15.0.20 (installations de la 1.0.0, sans recu) reste acceptee.
+    public static async Task<bool> VerifyEngineIntegrityAsync(
+        LumoraProfilePaths profile, CancellationToken cancellationToken = default)
+    {
+        var receipt = TorEngineProvider.ReadReceipt(ExpectedExecutablePath(profile));
+        if (receipt is not null)
+        {
+            var receiptHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["tor.exe"] = receipt.TorExeSha256,
+            };
+            if (await VerifyEngineIntegrityAsync(profile, receiptHashes, cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        return await VerifyEngineIntegrityAsync(
+            profile, TorTrustedRelease.LegacyTrustedFileHashes, cancellationToken);
+    }
 
     // Surcharge testable : accepte la table de hashes en parametre plutot que
     // de toujours lire TorTrustedRelease, pour permettre aux tests de verifier

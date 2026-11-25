@@ -129,10 +129,11 @@ revisitee cette session, a reverifier avant d'agir dessus)
   l'oubli simultane.
 - **Duplication entre les scripts de build** (`Get-Sha256Hex` copie dans
   `build-clean-test-artifact.ps1` et `build-installer.ps1`).
-- **`TorTrustedRelease` epingle une version Tor precise (15.0.18) en dur** :
-  pas de mecanisme de mise a jour automatique du pin, une nouvelle
-  version de Tor a supporter demande une reverification manuelle
-  complete (voir `logs/2026-07-19-integrite-tor-0-83-25.md`).
+- **Tor : version non epinglee depuis 1.0.1 (chantier en cours)** : la derniere
+  version stable est lue sur dist.torproject.org et verifiee par signature
+  OpenPGP contre la cle principale epinglee (voir `TorTrustedRelease.cs`,
+  `TorSignatureVerifier.cs`). Reste a surveiller : rotation de la cle principale
+  (changement d'empreinte = nouvelle version de Lumora) et `MinimumVersion`.
 
 ---
 

@@ -1,49 +1,66 @@
 namespace Lumora.WinUI.Tor;
 
-// Liste des fichiers autorises a etre executes depuis <profil>/tor/, avec leur
-// empreinte SHA256 epinglee en dur. Aucune valeur ici n'est inventee : chaque
-// hash a ete calcule localement sur l'archive officielle telechargee depuis
-// dist.torproject.org, apres verification de la signature GPG detachee du
-// fichier de sommes de controle (sha256sums-signed-build.txt.asc) par la cle
-// "Tor Browser Developers (signing key)" (empreinte principale
-// EF6E 286D DA85 EA2A 4BA7 DE68 4E2C 6E87 9329 8290, sous-cle de signature
-// CAAE 408A EBE2 288E 96FC 5D5E 1574 32CF 78A6 5729) et comparaison du SHA256
-// de l'archive avec l'entree correspondante de ce fichier signe.
+// Parametres de confiance pour le moteur Tor (depuis 1.0.1 : plus AUCUNE
+// version de Tor n'est epinglee en dur).
 //
-// Source verifiee : tor-expert-bundle-windows-x86_64-15.0.20.tar.gz
-// (https://dist.torproject.org/torbrowser/15.0.20/), SHA256 archive
-// d59bff934e3ad876e1623e24ae60c19aeea56f50178093b9f86fba230639f949.
-// Re-verifie le 2026-08-21 (signature GPG "Good signature" confirmee contre
-// la cle ci-dessus, gpg --verify local) suite au retrait de la version
-// 15.0.19 du miroir officiel (404 constate en usage reel) - dist.torproject.org
-// n'archive qu'un nombre limite de versions a la fois (15.0.18 avait deja ete
-// retiree de la meme facon le 2026-07-22).
+// Historique : jusqu'a la 1.0.0, ce fichier epinglait une version precise de
+// Tor (15.0.18, puis 15.0.19, puis 15.0.20) avec ses empreintes SHA256.
+// dist.torproject.org n'archive qu'un nombre limite de versions : chaque
+// retrait d'une version epinglee rendait l'installation de Tor impossible
+// (404) jusqu'a une nouvelle version de Lumora - arrive trois fois (2026-07-22,
+// 2026-08-21, puis 15.0.20 retiree au profit de la branche 16).
 //
-// Ce bundle Windows ne contient aucune DLL separee (tor.exe est le seul
-// executable utilise par TorProcessManager ; tor-gencert.exe et les
-// transports enfichables ne sont pas references par le code actuel et ne
-// sont donc pas epingles ici).
-//
-// ArchiveUrl/ArchiveSha256 sont utilises par TorEngineProvider pour
-// telecharger et verifier l'archive avant extraction. Cette liste correspond
-// a une version precise et ne se met pas a jour seule : une nouvelle version
-// de Tor demande de refaire cette verification (signature GPG + SHA256) a la
-// main et de mettre a jour les valeurs ci-dessous - et le retrait d'une
-// ancienne version du miroir (comme pour 15.0.18) demande la meme chose.
+// Nouveau modele : le point de confiance n'est plus une version mais la CLE
+// DE SIGNATURE des developpeurs de Tor. TorEngineProvider lit la derniere
+// version stable sur le miroir officiel, telecharge l'archive et sa signature
+// OpenPGP detachee (.asc), puis n'installe que si la signature est valide
+// pour une sous-cle liee a la cle principale epinglee ci-dessous. Le SHA256 de
+// l'archive et de tor.exe calcules a l'installation sont ensuite consignes
+// dans un recu local (engine-receipt.json) que TorProcessManager reverifie a
+// chaque lancement.
 internal static class TorTrustedRelease
 {
-    public const string VersionLabel = "Tor Expert Bundle 15.0.20 (Windows x86_64)";
+    // Repertoire des releases Tor Browser (dont le "Tor Expert Bundle", seul
+    // artefact utilise : tor.exe sans le navigateur).
+    public const string MirrorBaseUrl = "https://dist.torproject.org/torbrowser/";
 
-    public const string Version = "15.0.20";
-    public const string ArchiveFileName = "tor-expert-bundle-windows-x86_64-15.0.20.tar.gz";
-    public const string ArchiveUrl =
-        $"https://dist.torproject.org/torbrowser/{Version}/{ArchiveFileName}";
-    public const string ArchiveSha256 =
-        "d59bff934e3ad876e1623e24ae60c19aeea56f50178093b9f86fba230639f949";
+    // Cle principale "Tor Browser Developers (signing key)" - SEUL point de
+    // confiance du dispositif. Verifiee a la main le 2026-11-25 : la signature
+    // OpenPGP de l'archive tor-expert-bundle-windows-x86_64-16.0.3.tar.gz est
+    // "Good signature" (gpg --verify) pour la sous-cle 022D A248 432D 2A0E
+    // 0F54 E65E 316C 1FAC D62D 07D9, liee a cette cle principale.
+    public const string PinnedSigningKeyFingerprint = "EF6E286DDA85EA2A4BA7DE684E2C6E8793298290";
 
-    public static readonly IReadOnlyDictionary<string, string> TrustedFileHashes =
+    // Source d'un bloc de cle a jour quand une release est signee par une
+    // sous-cle absente du bloc embarque (rotation periodique de la sous-cle
+    // de signature). Le contenu recupere n'est jamais cru sur parole : il
+    // repasse par les memes verifications que le bloc embarque.
+    public const string SigningKeyRefreshUrl =
+        "https://keys.openpgp.org/vks/v1/by-fingerprint/" + PinnedSigningKeyFingerprint;
+
+    // Plancher anti-retour-arriere : meme signee correctement, une version
+    // plus ancienne que celle-ci n'est jamais installee (un miroir compromis
+    // pourrait rejouer une ancienne archive legitime dont une faille est
+    // connue). Remonter cette valeur quand une version est verifiee a la main.
+    public static readonly Version MinimumVersion = new(16, 0, 3);
+
+    // Compatibilite avec les installations de la 1.0.0 : leur tor.exe (15.0.20)
+    // n'a pas de recu local. Son empreinte, verifiee a la main (signature GPG
+    // + SHA256, 2026-08-21), reste acceptee pour que Tor continue de demarrer
+    // jusqu'a la premiere mise a jour automatique, qui installera un recu.
+    public const string LegacyVersion = "15.0.20";
+
+    public static readonly IReadOnlyDictionary<string, string> LegacyTrustedFileHashes =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["tor.exe"] = "ea61ba0ed5b89d0622d2894b2a86f5ff34ce9b48e6e40d64341e7c0c7ee03e08",
         };
+
+    public static string ArchiveFileName(string version) =>
+        $"tor-expert-bundle-windows-x86_64-{version}.tar.gz";
+
+    public static string ArchiveUrl(string version) =>
+        $"{MirrorBaseUrl}{version}/{ArchiveFileName(version)}";
+
+    public static string SignatureUrl(string version) => ArchiveUrl(version) + ".asc";
 }

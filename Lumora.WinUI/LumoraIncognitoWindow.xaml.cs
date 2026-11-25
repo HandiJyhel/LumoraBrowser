@@ -360,6 +360,28 @@ public sealed partial class LumoraIncognitoWindow : Window
             return;
         }
 
+        if (wantsTor)
+        {
+            // Moteur deja installe : on verifie s'il existe une version plus recente
+            // sur le miroir officiel et, si oui, on la signature-verifie puis on
+            // remplace l'ancienne AVANT d'ouvrir la session Tor (le nouveau process
+            // lancera alors le moteur a jour). Jamais declenche hors de cette action
+            // explicite de l'utilisateur.
+            IncognitoTorSwitch.IsEnabled = false;
+            var statusBeforeUpdate = IncognitoTorStatusText.Text;
+            var (canContinue, updateNote) = await EnsureTorEngineUpToDateAsync();
+            IncognitoTorSwitch.IsEnabled = true;
+            if (!canContinue)
+            {
+                SetTorSwitchSilently(false);
+                IncognitoTorStatusText.Text = updateNote ?? statusBeforeUpdate;
+                IncognitoTorInstallButton.Visibility = Visibility.Visible;
+                return;
+            }
+
+            IncognitoTorStatusText.Text = updateNote ?? statusBeforeUpdate;
+        }
+
         var previousStatus = IncognitoTorStatusText.Text;
         var confirm = new ContentDialog
         {
@@ -384,6 +406,42 @@ public sealed partial class LumoraIncognitoWindow : Window
         _relaunchingIncognito = true;
         IncognitoProcessLauncher.Launch(torEnabled: wantsTor, returnToMain: _returnToMain);
         Close();
+    }
+
+    // Met le moteur Tor a jour si une version plus recente et verifiee est
+    // publiee. Ne bloque jamais l'activation de Tor quand le moteur installe
+    // reste utilisable : sans reseau, ou si la mise a jour echoue (par exemple
+    // tor.exe verrouille par une autre fenetre Incognito avec Tor), la version
+    // actuelle est conservee et la note l'explique. Le seul cas bloquant est
+    // un moteur dont l'integrite n'est pas verifiable ET qu'on n'a pas pu
+    // reinstaller : il ne demarrerait de toute facon pas.
+    private async Task<(bool CanContinue, string? Note)> EnsureTorEngineUpToDateAsync()
+    {
+        var exePath = TorProcessManager.ExpectedExecutablePath(_profile);
+        IncognitoTorStatusText.Text = "Recherche d'une mise à jour de Tor...";
+
+        var check = await TorEngineProvider.CheckForUpdateAsync(exePath);
+        if (!check.UpdateAvailable)
+        {
+            return (true, check.Problem is null ? null : "Mise à jour de Tor non vérifiée (hors ligne ?). Version actuelle utilisée.");
+        }
+
+        IncognitoTorStatusText.Text = check.InstalledVersion is null
+            ? $"Réinstallation du moteur Tor {check.LatestVersion}..."
+            : $"Mise à jour de Tor {check.InstalledVersion} → {check.LatestVersion}...";
+        try
+        {
+            var installed = await TorEngineProvider.DownloadEngineAsync(
+                exePath, new Progress<string>(text => IncognitoTorStatusText.Text = text));
+            return (true, $"Tor mis à jour vers {installed}.");
+        }
+        catch (Exception ex)
+        {
+            var note = $"Mise à jour de Tor impossible : {ex.Message}";
+            return check.InstalledVersion is null
+                ? (false, note)
+                : (true, note + " Version actuelle conservée.");
+        }
     }
 
     // Le port SOCKS par defaut de Tor (9050) convient a une seule fenetre,

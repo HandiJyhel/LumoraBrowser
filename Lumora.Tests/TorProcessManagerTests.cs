@@ -96,9 +96,9 @@ public class TorProcessManagerTests
     }
 
     [Fact]
-    public void TrustedFileHashes_ne_contient_pas_de_hash_duplique_et_est_bien_forme()
+    public void LegacyTrustedFileHashes_ne_contient_pas_de_hash_duplique_et_est_bien_forme()
     {
-        var hashes = TorTrustedRelease.TrustedFileHashes;
+        var hashes = TorTrustedRelease.LegacyTrustedFileHashes;
 
         Assert.NotEmpty(hashes);
         foreach (var (fileName, hash) in hashes)
@@ -111,6 +111,60 @@ public class TorProcessManagerTests
 
         var distinctHashes = new HashSet<string>(hashes.Values, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(hashes.Count, distinctHashes.Count);
+    }
+
+    private static string WriteTestReceipt(LumoraProfilePaths profile, string exeContent, string receiptHash)
+    {
+        var torDir = TorProcessManager.ExpectedDirectory(profile);
+        Directory.CreateDirectory(torDir);
+        var exePath = Path.Combine(torDir, "tor.exe");
+        File.WriteAllText(exePath, exeContent);
+        File.WriteAllText(
+            TorEngineProvider.ReceiptPath(exePath),
+            $$"""{"version":"16.0.3","torExeSha256":"{{receiptHash}}"}""");
+        return exePath;
+    }
+
+    [Fact]
+    public async Task Accepte_un_tor_exe_dont_le_hash_correspond_au_recu_d_installation()
+    {
+        var profile = CreateTempProfile();
+        var exePath = WriteTestReceipt(profile, "tor-exe-installe-par-lumora", new string('0', 64));
+        File.WriteAllText(
+            TorEngineProvider.ReceiptPath(exePath),
+            $$"""{"version":"16.0.3","torExeSha256":"{{ComputeSha256(exePath)}}"}""");
+
+        var ok = await TorProcessManager.VerifyEngineIntegrityAsync(profile);
+
+        Assert.True(ok);
+    }
+
+    [Fact]
+    public async Task Refuse_un_tor_exe_remplace_apres_l_installation_malgre_un_recu_valide()
+    {
+        var profile = CreateTempProfile();
+        var exePath = WriteTestReceipt(profile, "tor-exe-installe-par-lumora", new string('0', 64));
+        File.WriteAllText(
+            TorEngineProvider.ReceiptPath(exePath),
+            $$"""{"version":"16.0.3","torExeSha256":"{{ComputeSha256(exePath)}}"}""");
+        File.WriteAllText(exePath, "binaire-substitue-par-un-tiers");
+
+        var ok = await TorProcessManager.VerifyEngineIntegrityAsync(profile);
+
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public async Task Refuse_un_recu_corrompu_ou_illisible()
+    {
+        var profile = CreateTempProfile();
+        var exePath = WriteTestReceipt(profile, "tor-exe-quelconque", new string('0', 64));
+        File.WriteAllText(TorEngineProvider.ReceiptPath(exePath), "{ ceci n'est pas du json");
+
+        var ok = await TorProcessManager.VerifyEngineIntegrityAsync(profile);
+
+        Assert.False(ok);
+        Assert.Null(TorEngineProvider.ReadReceipt(exePath));
     }
 
     [Fact]

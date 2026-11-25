@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "0.94.32.4-dev",
+    [string]$Version = "0.94.32.5-dev",
     [string]$CleanArtifactDir = "",
     [string]$OutputDirectory = "artifacts\installer"
 )
@@ -169,17 +169,21 @@ if (Test-Path $iconSource) {
 Copy-Item -LiteralPath $logoSource -Destination (Join-Path $sourceDir "LumoraApp.png") -Force
 
 # Copie directe (pas de duplication de valeurs) des memes fichiers source que
-# l'app pour l'option "Installer et activer Tor" : TorTrustedRelease porte les
-# empreintes SHA256 epinglees, TorEngineProvider le telechargement/verification.
-# Les deux sont deja decouples de LumoraProfilePaths/WinUI (voir leurs
-# commentaires), donc compilables tels quels dans ce projet WinForms autonome.
+# l'app pour l'option "Installer et activer Tor" : TorTrustedRelease porte la
+# cle de signature epinglee, TorEngineProvider le telechargement/verification
+# (derniere version stable, signature OpenPGP), TorSignatureVerifier/TorSigningKey
+# la verification de signature et TorReleaseFeed la lecture des versions.
+# Tous sont deja decouples de LumoraProfilePaths/WinUI (voir leurs
+# commentaires), donc compilables tels quels dans ce projet WinForms autonome
+# (qui reference BouncyCastle.Cryptography, voir Lumora.Setup.csproj.template).
 $torSourceDir = Join-Path $repoRoot "Lumora.WinUI\Tor"
 $torDestDir = Join-Path $sourceDir "Tor"
-Assert-RequiredPath -Path (Join-Path $torSourceDir "TorTrustedRelease.cs") -Message "TorTrustedRelease.cs introuvable"
-Assert-RequiredPath -Path (Join-Path $torSourceDir "TorEngineProvider.cs") -Message "TorEngineProvider.cs introuvable"
+$torSharedFiles = @("TorTrustedRelease.cs", "TorEngineProvider.cs", "TorSignatureVerifier.cs", "TorSigningKey.cs", "TorReleaseFeed.cs")
 New-Item -ItemType Directory -Force -Path $torDestDir | Out-Null
-Copy-Item -LiteralPath (Join-Path $torSourceDir "TorTrustedRelease.cs") -Destination $torDestDir -Force
-Copy-Item -LiteralPath (Join-Path $torSourceDir "TorEngineProvider.cs") -Destination $torDestDir -Force
+foreach ($torFile in $torSharedFiles) {
+    Assert-RequiredPath -Path (Join-Path $torSourceDir $torFile) -Message "$torFile introuvable"
+    Copy-Item -LiteralPath (Join-Path $torSourceDir $torFile) -Destination $torDestDir -Force
+}
 
 $projectPath = Join-Path $sourceDir "Lumora.Setup.csproj"
 $programPath = Join-Path $sourceDir "Program.cs"
