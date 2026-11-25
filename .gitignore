@@ -35,3 +35,6 @@ Lumora.WinUI/artifacts/
 # OS cruft
 Thumbs.db
 Desktop.ini
+
+# Notes privees de l utilisateur (jamais publiees, voir MEMORY.md)
+/MEMORY-prive-local.md
